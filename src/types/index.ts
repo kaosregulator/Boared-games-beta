@@ -9,7 +9,11 @@ export type GameId =
   | 'blackjack'
   | 'gofish'
   | 'pawnrush'
-  | 'liarsdice';
+  | 'liarsdice'
+  | 'yahtzee'
+  | 'clue'
+  | 'life'
+  | 'monopoly';
 
 export * from './trivia';
 

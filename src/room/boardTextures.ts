@@ -175,6 +175,71 @@ export function makePanelTexture(gameId: GameId, panel: 'left' | 'center' | 'rig
     return texture(c);
   }
 
+  if (gameId === 'yahtzee') {
+    ctx.fillStyle = '#7f1d1d';
+    ctx.fillRect(0, 0, 512, 512);
+    ctx.fillStyle = '#fef3c7';
+    ctx.font = '800 36px sans-serif';
+    ctx.fillText(panel === 'center' ? 'YAHTZEE' : panel === 'left' ? 'DICE' : 'SCORE', 36, 64);
+    for (let i = 0; i < 5; i++) {
+      roundRect(ctx, 40 + i * 90, 180, 76, 76, 12);
+      ctx.fill();
+      ctx.fillStyle = '#7f1d1d';
+      ctx.beginPath();
+      ctx.arc(78 + i * 90, 218, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fef3c7';
+    }
+    return texture(c);
+  }
+
+  if (gameId === 'clue') {
+    const rooms = ['KITCHEN', 'HALL', 'LOUNGE', 'STUDY'];
+    ctx.fillStyle = '#14532d';
+    ctx.fillRect(0, 0, 512, 512);
+    rooms.forEach((room, i) => {
+      ctx.fillStyle = ['#f87171', '#facc15', '#4ade80', '#c084fc'][i];
+      roundRect(ctx, 36, 40 + i * 110, 440, 90, 12);
+      ctx.fill();
+      ctx.fillStyle = '#111827';
+      ctx.font = '800 28px sans-serif';
+      ctx.fillText(panel === 'center' ? room : panel === 'left' ? 'WHO' : 'HOW', 56, 96 + i * 110);
+    });
+    return texture(c);
+  }
+
+  if (gameId === 'life') {
+    ctx.fillStyle = '#ecfccb';
+    ctx.fillRect(0, 0, 512, 512);
+    const colors = ['#f97316', '#22c55e', '#3b82f6', '#eab308'];
+    for (let i = 0; i < 12; i++) {
+      ctx.fillStyle = colors[i % 4];
+      roundRect(ctx, 28 + (i % 4) * 118, 28 + Math.floor(i / 4) * 140, 100, 110, 14);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#14532d';
+    ctx.font = '800 32px sans-serif';
+    ctx.fillText(panel === 'center' ? 'LIFE' : 'SPIN', 36, 490);
+    return texture(c);
+  }
+
+  if (gameId === 'monopoly') {
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(0, 0, 512, 512);
+    ctx.strokeStyle = '#111827';
+    ctx.lineWidth = 8;
+    ctx.strokeRect(40, 40, 432, 432);
+    const deeds = ['#cbd5e1', '#f472b6', '#fb923c', '#4ade80', '#60a5fa', '#facc15'];
+    deeds.forEach((color, i) => {
+      ctx.fillStyle = color;
+      ctx.fillRect(70, 70 + i * 58, 370, 42);
+    });
+    ctx.fillStyle = '#111827';
+    ctx.font = '800 28px sans-serif';
+    ctx.fillText('MONOPOLY', 150, 490);
+    return texture(c);
+  }
+
   if (gameId === 'liarsdice') {
     ctx.fillStyle = '#7c4a2d';
     ctx.fillRect(0, 0, 512, 512);
@@ -237,4 +302,8 @@ export const BOX_FACE: Record<string, { card: string; face: string; ink: string 
   casino: { card: '#a16245', face: '#065f46', ink: '#d1fae5' },
   liarsdice: { card: '#a16245', face: '#854d0e', ink: '#fef9c3' },
   trivia: { card: '#a16245', face: '#4c1d95', ink: '#fde68a' },
+  yahtzee: { card: '#a16245', face: '#7f1d1d', ink: '#fef3c7' },
+  clue: { card: '#a16245', face: '#14532d', ink: '#fef9c7' },
+  life: { card: '#a16245', face: '#166534', ink: '#ecfccb' },
+  monopoly: { card: '#a16245', face: '#1d4ed8', ink: '#ffffff' },
 };

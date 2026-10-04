@@ -31,7 +31,15 @@ function Wing({
   );
 }
 
-function UnfoldRig({ game, onComplete }: { game: GameMetadata; onComplete: () => void }) {
+function UnfoldRig({
+  game,
+  onComplete,
+  mode,
+}: {
+  game: GameMetadata;
+  onComplete: () => void;
+  mode: 'open' | 'pack';
+}) {
   const rig = useRef<THREE.Group>(null);
   const lid = useRef<THREE.Group>(null);
   const board = useRef<THREE.Group>(null);
@@ -53,7 +61,7 @@ function UnfoldRig({ game, onComplete }: { game: GameMetadata; onComplete: () =>
   const card = BOX_FACE[game.id]?.card ?? '#a16245';
 
   useEffect(() => {
-    sound.playShelfSlide();
+    if (mode === 'open') sound.playShelfSlide();
     return () => {
       maps.left.dispose();
       maps.center.dispose();
@@ -65,22 +73,22 @@ function UnfoldRig({ game, onComplete }: { game: GameMetadata; onComplete: () =>
   useFrame(state => {
     if (started.current === null) started.current = state.clock.elapsedTime;
     const t = state.clock.elapsedTime - started.current;
-    const approach = ease(t, 0.05, 0.95);
-    const lidOpen = ease(t, 0.95, 1.9);
-    const lift = ease(t, 1.75, 2.3);
-    const leftOpen = ease(t, 2.2, 3.15);
-    const rightOpen = ease(t, 2.75, 3.7);
-    const present = ease(t, 3.6, 4.7);
+    const packing = mode === 'pack';
+    const approach = packing ? ease(t, 3.15, 4.2) : ease(t, 0.05, 0.95);
+    const lidOpen = packing ? 1 - ease(t, 2.25, 3.15) : ease(t, 0.95, 1.9);
+    const lift = packing ? 1 - ease(t, 1.7, 2.3) : ease(t, 1.75, 2.3);
+    const leftOpen = packing ? 1 - ease(t, 0.85, 1.75) : ease(t, 2.2, 3.15);
+    const rightOpen = packing ? 1 - ease(t, 0.25, 1.15) : ease(t, 2.75, 3.7);
+    const present = packing ? 1 - ease(t, 0.05, 0.35) : ease(t, 3.6, 4.7);
 
     if (rig.current) {
-      rig.current.position.z = THREE.MathUtils.lerp(0.7, 0.05, approach);
-      rig.current.position.y = THREE.MathUtils.lerp(0.05, 0, approach);
+      rig.current.position.z = THREE.MathUtils.lerp(0.7, 0.05, packing ? 1 - approach : approach);
+      rig.current.position.y = THREE.MathUtils.lerp(0.05, 0, packing ? 1 - approach : approach);
       rig.current.rotation.x = -0.22;
       rig.current.scale.setScalar(THREE.MathUtils.lerp(1, 1.12, present));
     }
     if (lid.current) lid.current.rotation.x = THREE.MathUtils.lerp(0, -2.15, lidOpen);
     if (board.current) board.current.position.y = THREE.MathUtils.lerp(0.12, 0.36, lift);
-    // Folded flat over the center, then swing out to the sides.
     if (left.current) left.current.rotation.z = THREE.MathUtils.lerp(-Math.PI + 0.08, 0, leftOpen);
     if (right.current) right.current.rotation.z = THREE.MathUtils.lerp(Math.PI - 0.08, 0, rightOpen);
 
@@ -88,25 +96,48 @@ function UnfoldRig({ game, onComplete }: { game: GameMetadata; onComplete: () =>
     state.camera.position.y = THREE.MathUtils.lerp(1.38, 1.2, present);
     state.camera.lookAt(0, 0.28, 0);
 
-    if (!flags.current.lid && t > 0.95) {
-      flags.current.lid = true;
-      sound.playCardboardLid();
-    }
-    if (!flags.current.left && t > 2.2) {
-      flags.current.left = true;
-      sound.playBoardFlap();
-    }
-    if (!flags.current.right && t > 2.7) {
-      flags.current.right = true;
-      sound.playBoardFlap();
-    }
-    if (!flags.current.settle && t > 3.5) {
-      flags.current.settle = true;
-      sound.playBoardSettle();
-    }
-    if (!flags.current.done && t > 6.5) {
-      flags.current.done = true;
-      onComplete();
+    if (!packing) {
+      if (!flags.current.lid && t > 0.95) {
+        flags.current.lid = true;
+        sound.playCardboardLid();
+      }
+      if (!flags.current.left && t > 2.2) {
+        flags.current.left = true;
+        sound.playBoardFlap();
+      }
+      if (!flags.current.right && t > 2.7) {
+        flags.current.right = true;
+        sound.playBoardFlap();
+      }
+      if (!flags.current.settle && t > 3.5) {
+        flags.current.settle = true;
+        sound.playBoardSettle();
+      }
+      if (!flags.current.done && t > 6.5) {
+        flags.current.done = true;
+        onComplete();
+      }
+    } else {
+      if (!flags.current.right && t > 0.3) {
+        flags.current.right = true;
+        sound.playBoardFlap();
+      }
+      if (!flags.current.left && t > 0.9) {
+        flags.current.left = true;
+        sound.playBoardFlap();
+      }
+      if (!flags.current.lid && t > 2.3) {
+        flags.current.lid = true;
+        sound.playCardboardLid();
+      }
+      if (!flags.current.settle && t > 3.2) {
+        flags.current.settle = true;
+        sound.playShelfSlide();
+      }
+      if (!flags.current.done && t > 4.6) {
+        flags.current.done = true;
+        onComplete();
+      }
     }
   });
 
@@ -157,9 +188,11 @@ function UnfoldRig({ game, onComplete }: { game: GameMetadata; onComplete: () =>
 export function BoardUnfoldScene({
   game,
   onComplete,
+  mode = 'open',
 }: {
   game: GameMetadata;
   onComplete: () => void;
+  mode?: 'open' | 'pack';
 }) {
   const done = useRef(false);
   const finish = () => {
@@ -176,7 +209,7 @@ export function BoardUnfoldScene({
       <spotLight position={[1.2, 3.2, 1.6]} angle={0.55} penumbra={0.5} intensity={28} castShadow color="#fff7ed" />
       <pointLight position={[-1.2, 1.2, 0.4]} intensity={6} color="#fb7185" distance={6} />
       <RoomBackdrop />
-      <UnfoldRig game={game} onComplete={finish} />
+      <UnfoldRig game={game} onComplete={finish} mode={mode} />
     </>
   );
 }

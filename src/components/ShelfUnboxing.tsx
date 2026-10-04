@@ -8,9 +8,15 @@ interface ShelfUnboxingProps {
   game: GameMetadata;
   onComplete: () => void;
   onBackToShelf: () => void;
+  direction?: 'open' | 'pack';
 }
 
-export const ShelfUnboxing: React.FC<ShelfUnboxingProps> = ({ game, onComplete, onBackToShelf }) => {
+export const ShelfUnboxing: React.FC<ShelfUnboxingProps> = ({
+  game,
+  onComplete,
+  onBackToShelf,
+  direction = 'open',
+}) => {
   const [entered, setEntered] = useState(false);
 
   return (
@@ -23,6 +29,7 @@ export const ShelfUnboxing: React.FC<ShelfUnboxingProps> = ({ game, onComplete, 
       >
         <BoardUnfoldScene
           game={game}
+          mode={direction}
           onComplete={() => {
             if (entered) return;
             setEntered(true);
@@ -46,7 +53,9 @@ export const ShelfUnboxing: React.FC<ShelfUnboxingProps> = ({ game, onComplete, 
 
       <div className="absolute top-4 left-4 right-4 z-10 flex items-start justify-between gap-3">
         <div className="bg-black/55 border border-white/15 rounded-2xl px-3 py-2 backdrop-blur-md">
-          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-amber-200">Opening the box</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-amber-200">
+            {direction === 'pack' ? 'Folding it away' : 'Opening the box'}
+          </p>
           <p className="text-sm font-bold">{game.title}</p>
         </div>
         <div className="flex gap-2">
@@ -68,7 +77,7 @@ export const ShelfUnboxing: React.FC<ShelfUnboxingProps> = ({ game, onComplete, 
             }}
             className="rounded-xl bg-amber-500 hover:bg-amber-400 text-black px-3 py-2 text-[10px] font-black uppercase tracking-wider"
           >
-            Skip to board
+            {direction === 'pack' ? 'Skip to room' : 'Skip to board'}
           </button>
         </div>
       </div>
