@@ -46,8 +46,8 @@ export const ROOM = {
     depth: 0.42,
   },
   spawn: {
-    position: [0, 1.55, 2.4] as [number, number, number],
-    lookAt: [0, 1.35, -1] as [number, number, number],
+    position: [0.2, 1.55, 2.6] as [number, number, number],
+    lookAt: [2.4, 1.35, -0.2] as [number, number, number],
   },
 };
 

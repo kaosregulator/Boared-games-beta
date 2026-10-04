@@ -20,7 +20,6 @@ interface InteractableProps {
   size?: [number, number, number];
   activeId: string | null;
   onHover: (target: HoverTarget | null) => void;
-  onSelect: (target: HoverTarget) => void;
   children: ReactNode;
 }
 
@@ -34,7 +33,6 @@ export function Interactable({
   size = [0.9, 0.9, 0.9],
   activeId,
   onHover,
-  onSelect,
   children,
 }: InteractableProps) {
   const group = useRef<THREE.Group>(null);
@@ -80,18 +78,13 @@ export function Interactable({
     document.body.style.cursor = 'default';
   };
 
-  const handleClick = (e: ThreeEvent<MouseEvent>) => {
-    e.stopPropagation();
-    onSelect(target);
-  };
-
   return (
     <group
       ref={group}
       position={position}
+      userData={{ interactable: target }}
       onPointerOver={handlePointerOver}
       onPointerOut={handlePointerOut}
-      onClick={handleClick}
     >
       {children}
       {isActive && (

@@ -7,6 +7,7 @@ import { ROOM } from './roomConfig';
 const FORWARD = new THREE.Vector3();
 const RIGHT = new THREE.Vector3();
 const MOVE = new THREE.Vector3();
+const LOOK_EULER = new THREE.Euler(0, 0, 0, 'YXZ');
 
 interface PlayerControllerProps {
   enabled: boolean;
@@ -80,7 +81,11 @@ export function PlayerController({ enabled, onLockChange }: PlayerControllerProp
 
     camera.position.x = THREE.MathUtils.clamp(camera.position.x, ROOM.bounds.minX, ROOM.bounds.maxX);
     camera.position.z = THREE.MathUtils.clamp(camera.position.z, ROOM.bounds.minZ, ROOM.bounds.maxZ);
-    camera.position.y = ROOM.playerHeight;
+
+    // Keep look pitch from flipping into floor/ceiling blackness
+    LOOK_EULER.setFromQuaternion(camera.quaternion, 'YXZ');
+    LOOK_EULER.x = THREE.MathUtils.clamp(LOOK_EULER.x, -1.1, 1.1);
+    camera.quaternion.setFromEuler(LOOK_EULER);
 
     // Subtle breathing sway while idle
     const t = performance.now() * 0.001;

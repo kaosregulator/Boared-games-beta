@@ -6,7 +6,6 @@ import { HoverTarget, Interactable } from './Interactable';
 interface BedroomSceneProps {
   activeId: string | null;
   onHover: (target: HoverTarget | null) => void;
-  onSelect: (target: HoverTarget) => void;
   doorOpen?: boolean;
 }
 
@@ -57,7 +56,7 @@ function Poster({
   );
 }
 
-export function BedroomScene({ activeId, onHover, onSelect, doorOpen = false }: BedroomSceneProps) {
+export function BedroomScene({ activeId, onHover, doorOpen = false }: BedroomSceneProps) {
   const { width, depth, height } = ROOM;
 
   return (
@@ -65,7 +64,7 @@ export function BedroomScene({ activeId, onHover, onSelect, doorOpen = false }: 
       {/* Floor */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[width, depth]} />
-        <meshStandardMaterial color="#1a1224" roughness={0.95} />
+        <meshStandardMaterial color="#2a1b38" roughness={0.92} />
       </mesh>
       {/* Wood plank hint strips */}
       {Array.from({ length: 8 }).map((_, i) => (
@@ -82,10 +81,10 @@ export function BedroomScene({ activeId, onHover, onSelect, doorOpen = false }: 
       </mesh>
 
       {/* Walls */}
-      <Wall position={[0, height / 2, -depth / 2]} size={[width, height, 0.12]} color="#241433" />
-      <Wall position={[-width / 2, height / 2, 0]} size={[0.12, height, depth]} color="#1f1230" />
-      <Wall position={[width / 2, height / 2, 0]} size={[0.12, height, depth]} color="#1f1230" />
-      <Wall position={[0, height / 2, depth / 2]} size={[width, height, 0.12]} color="#181022" />
+      <Wall position={[0, height / 2, -depth / 2]} size={[width, height, 0.12]} color="#3b2558" />
+      <Wall position={[-width / 2, height / 2, 0]} size={[0.12, height, depth]} color="#322047" />
+      <Wall position={[width / 2, height / 2, 0]} size={[0.12, height, depth]} color="#322047" />
+      <Wall position={[0, height / 2, depth / 2]} size={[width, height, 0.12]} color="#281832" />
 
       {/* Circular rug */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0.4, 0.02, 0.8]} receiveShadow>
@@ -192,7 +191,6 @@ export function BedroomScene({ activeId, onHover, onSelect, doorOpen = false }: 
         size={[0.85, 0.55, 0.2]}
         activeId={activeId}
         onHover={onHover}
-        onSelect={onSelect}
       >
         <mesh>
           <planeGeometry args={[0.72, 0.48]} />
@@ -232,7 +230,6 @@ export function BedroomScene({ activeId, onHover, onSelect, doorOpen = false }: 
         size={[1.1, 2.2, 0.25]}
         activeId={activeId}
         onHover={onHover}
-        onSelect={onSelect}
       >
         <mesh>
           <planeGeometry args={[0.7, 0.5]} />
@@ -259,7 +256,6 @@ export function BedroomScene({ activeId, onHover, onSelect, doorOpen = false }: 
         size={[0.55, 0.28, 0.3]}
         activeId={activeId}
         onHover={onHover}
-        onSelect={onSelect}
       >
         <mesh castShadow>
           <boxGeometry args={[0.5, 0.22, 0.25]} />
@@ -287,7 +283,6 @@ export function BedroomScene({ activeId, onHover, onSelect, doorOpen = false }: 
         size={[0.28, 0.08, 0.4]}
         activeId={activeId}
         onHover={onHover}
-        onSelect={onSelect}
       >
         <mesh castShadow rotation={[-0.4, 0.3, 0.1]}>
           <boxGeometry args={[0.22, 0.05, 0.35]} />
@@ -319,17 +314,20 @@ export function BedroomScene({ activeId, onHover, onSelect, doorOpen = false }: 
         BETA
       </Text>
 
-      {/* Warm lamps */}
-      <pointLight position={[-3.5, 1.4, -2]} intensity={1.1} distance={4} color="#fb923c" />
-      <pointLight position={[-1.2, 1.6, -3.3]} intensity={0.9} distance={3.5} color="#fdba74" />
-      <pointLight position={[3.2, 2.5, 0]} intensity={0.7} distance={4} color="#facc15" />
-      <pointLight position={[0.15, 1.4, -3.8]} intensity={doorOpen ? 2.2 : 0.35} distance={5} color="#c026ff" />
-      <pointLight position={[-1.9, 1.35, -3.2]} intensity={0.8} distance={3} color="#22d3ee" />
+      {/* Warm lamps — kept bright so the beta room reads clearly in browser demos */}
+      <pointLight position={[-3.5, 1.5, -2]} intensity={2.2} distance={7} color="#fb923c" castShadow />
+      <pointLight position={[-1.2, 1.7, -3.3]} intensity={1.8} distance={6} color="#fdba74" />
+      <pointLight position={[3.2, 2.5, 0]} intensity={1.6} distance={7} color="#facc15" />
+      <pointLight position={[0.15, 1.4, -3.8]} intensity={doorOpen ? 3.2 : 1.1} distance={7} color="#c026ff" />
+      <pointLight position={[-1.9, 1.35, -3.2]} intensity={1.6} distance={5} color="#22d3ee" />
+      <pointLight position={[0.4, 2.4, 0.8]} intensity={1.1} distance={8} color="#e9d5ff" />
+      <spotLight position={[0, 3.0, 1.5]} angle={0.85} penumbra={0.55} intensity={1.6} color="#fff7ed" castShadow />
 
-      <ambientLight intensity={0.22} color="#8b5cf6" />
-      <hemisphereLight args={['#312e81', '#1c1917', 0.35]} />
+      <ambientLight intensity={0.55} color="#c4b5fd" />
+      <hemisphereLight args={['#a78bfa', '#292524', 0.65]} />
+      <directionalLight position={[2, 4, 2]} intensity={0.45} color="#ffe4c7" />
 
-      <GameShelf activeId={activeId} onHover={onHover} onSelect={onSelect} />
+      <GameShelf activeId={activeId} onHover={onHover} />
     </group>
   );
 }

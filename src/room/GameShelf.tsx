@@ -5,7 +5,6 @@ import { HoverTarget, Interactable } from './Interactable';
 interface GameShelfProps {
   activeId: string | null;
   onHover: (target: HoverTarget | null) => void;
-  onSelect: (target: HoverTarget) => void;
 }
 
 function GameBox({
@@ -45,7 +44,7 @@ function GameBox({
   );
 }
 
-export function GameShelf({ activeId, onHover, onSelect }: GameShelfProps) {
+export function GameShelf({ activeId, onHover }: GameShelfProps) {
   const [sx, sy, sz] = ROOM.shelf.position;
   const { width, height, depth } = ROOM.shelf;
 
@@ -102,7 +101,6 @@ export function GameShelf({ activeId, onHover, onSelect }: GameShelfProps) {
             size={[0.36, 0.46, 0.14]}
             activeId={activeId}
             onHover={onHover}
-            onSelect={onSelect}
           >
             <GameBox color={game.color} accent={game.accent} shortLabel={game.shortLabel} />
           </Interactable>

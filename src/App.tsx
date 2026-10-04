@@ -101,7 +101,7 @@ export default function App() {
       isBotConsoleOpen={isBotConsoleOpen}
     >
       {/* Top Floating Action Bar for Profile Customizer, Chips, & Leaderboard */}
-      <div className="w-full max-w-6xl px-4 pt-3 flex items-center justify-between z-20 gap-2">
+      <div className={`w-full max-w-6xl px-4 pt-3 flex items-center justify-between z-20 gap-2 ${hubMode === 'room' && !activeGame ? 'hidden sm:flex opacity-90' : ''}`}>
         {/* Left: User Profile Pill & Chips */}
         <div className="flex items-center gap-2">
           <button

@@ -4,6 +4,7 @@ import { GameMetadata, GameId } from '../types';
 import { sound } from '../utils/audio';
 import { BedroomScene } from './BedroomScene';
 import { PlayerController } from './PlayerController';
+import { AimRaycaster } from './AimRaycaster';
 import { HoverTarget } from './Interactable';
 import {
   Crosshair,
@@ -95,26 +96,25 @@ export function FirstPersonGameRoom({
   );
 
   return (
-    <div className="relative w-full flex-1 h-[calc(100vh-6.5rem)] min-h-[560px] rounded-2xl overflow-hidden border border-fuchsia-500/20 shadow-[0_0_60px_-20px_rgba(192,38,255,0.45)] bg-[#0a0612] my-2 mx-2 sm:mx-4">
-      {/* 3D viewport */}
+    <div className="relative w-full h-[calc(100dvh-7rem)] min-h-[520px] overflow-hidden border border-fuchsia-500/20 shadow-[0_0_60px_-20px_rgba(192,38,255,0.45)] bg-[#12081c] sm:rounded-2xl sm:mx-3 sm:my-2">
+      {/* 3D viewport — Canvas must fill a sized parent (no absolute letterboxing) */}
       <Canvas
         shadows
-        camera={{ fov: 70, near: 0.08, far: 40, position: [0, 1.55, 2.4] }}
-        gl={{ antialias: true, powerPreference: 'high-performance' }}
-        className="absolute inset-0"
-        style={{ width: '100%', height: '100%' }}
+        camera={{ fov: 72, near: 0.08, far: 40, position: [0.2, 1.55, 2.6] }}
+        gl={{ antialias: true, powerPreference: 'high-performance', alpha: false }}
+        style={{ width: '100%', height: '100%', display: 'block' }}
         onPointerMissed={() => setHover(null)}
       >
-        <color attach="background" args={['#09050f']} />
-        <fog attach="fog" args={['#09050f', 6, 16]} />
+        <color attach="background" args={['#1a1030']} />
+        <fog attach="fog" args={['#1a1030', 10, 22]} />
         <Suspense fallback={null}>
           <BedroomScene
             activeId={hover?.id ?? pullingId}
             onHover={setHover}
-            onSelect={handleSelect}
             doorOpen={doorOpen}
           />
           <PlayerController enabled={!pullingId} onLockChange={setLocked} />
+          <AimRaycaster enabled={locked && !pullingId} onHover={setHover} onSelect={handleSelect} />
         </Suspense>
       </Canvas>
 
@@ -188,14 +188,27 @@ export function FirstPersonGameRoom({
             <p className="text-sm text-slate-300 mb-6">
               Walk the room. Look at anything interactive — shelf boxes glow when you aim. Pull a game to play.
             </p>
-            <button
-              id="enter-game-room"
-              type="button"
-              className="inline-flex items-center gap-2 rounded-2xl bg-fuchsia-500 hover:bg-fuchsia-400 text-white font-black uppercase tracking-wider px-6 py-3.5 shadow-lg shadow-fuchsia-900/50 transition-transform hover:scale-105 active:scale-95"
-            >
-              <MousePointer2 className="w-4 h-4" />
-              Click to Enter Room
-            </button>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <button
+                id="enter-game-room"
+                type="button"
+                className="inline-flex items-center gap-2 rounded-2xl bg-fuchsia-500 hover:bg-fuchsia-400 text-white font-black uppercase tracking-wider px-6 py-3.5 shadow-lg shadow-fuchsia-900/50 transition-transform hover:scale-105 active:scale-95"
+              >
+                <MousePointer2 className="w-4 h-4" />
+                Click to Enter Room
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playButtonClick();
+                  onOpenClassicShelf();
+                }}
+                className="inline-flex items-center gap-2 rounded-2xl border border-cyan-300/40 bg-black/40 hover:bg-black/60 text-cyan-100 font-bold uppercase tracking-wider px-5 py-3.5"
+              >
+                <Library className="w-4 h-4" />
+                Classic Shelf
+              </button>
+            </div>
             <div className="mt-5 flex flex-wrap items-center justify-center gap-4 text-[11px] text-slate-400">
               <span className="inline-flex items-center gap-1.5"><Keyboard className="w-3.5 h-3.5" /> WASD move · Shift sprint</span>
               <span className="inline-flex items-center gap-1.5"><Crosshair className="w-3.5 h-3.5" /> Mouse look · Click interact</span>

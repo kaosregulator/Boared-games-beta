@@ -219,7 +219,7 @@ export const DiscordActivityShell: React.FC<DiscordActivityShellProps> = ({
       </header>
 
       {/* Main Game Stage with Sleek Radial Slate Backdrop */}
-      <main className="flex-1 flex flex-col justify-start items-center relative overflow-y-auto game-table-bg w-full">
+      <main className="flex-1 flex flex-col justify-start items-stretch relative overflow-hidden game-table-bg w-full">
         {children}
       </main>
 
