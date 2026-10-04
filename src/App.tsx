@@ -8,6 +8,8 @@ import { DiscordBotConsole } from './components/DiscordBotConsole';
 import { DiscordEmbedCanvas } from './components/DiscordEmbedCanvas';
 import { ShelfUnboxing } from './components/ShelfUnboxing';
 import { RetroBookshelfMenu } from './components/RetroBookshelfMenu';
+import { DemoLanding } from './components/DemoLanding';
+import { FirstPersonGameRoom } from './room/FirstPersonGameRoom';
 import { RulesModal } from './components/RulesModal';
 import { AvatarMakerModal } from './components/AvatarMakerModal';
 import { LeaderboardModal } from './components/LeaderboardModal';
@@ -26,7 +28,10 @@ import { TriviaPartyGame } from './games/trivia/TriviaPartyGame';
 
 import { Sparkles, Terminal, Trophy, Hash, Coins } from 'lucide-react';
 
+type HubMode = 'landing' | 'room' | 'classic';
+
 export default function App() {
+  const [hubMode, setHubMode] = useState<HubMode>('landing');
   const [activeGame, setActiveGame] = useState<GameMetadata | null>(null);
   const [isUnboxing, setIsUnboxing] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<ViewMode>('isometric');
@@ -64,7 +69,19 @@ export default function App() {
     sound.playShelfSlide();
     setActiveGame(null);
     setIsUnboxing(false);
+    setHubMode(prev => (prev === 'landing' ? 'room' : prev));
   };
+
+  if (hubMode === 'landing' && !activeGame) {
+    return (
+      <DemoLanding
+        onEnterDemo={() => {
+          sound.playVictoryFanfare();
+          setHubMode('room');
+        }}
+      />
+    );
+  }
 
   const handleUpdateChips = (amount: number) => {
     setUserProfile(prev => ({
@@ -144,14 +161,41 @@ export default function App() {
         </div>
       </div>
 
-      {/* 1. If no game is picked: Show the Retro Bookshelf Stack Menu */}
-      {!activeGame && (
-        <RetroBookshelfMenu
+      {/* 1. Hub: first-person Game Room Beta (default) or classic shelf fallback */}
+      {!activeGame && hubMode === 'room' && (
+        <FirstPersonGameRoom
           games={GAME_CATALOG}
           onSelectGame={handleSelectGame}
+          onOpenClassicShelf={() => setHubMode('classic')}
           onOpenBotConsole={() => setIsBotConsoleOpen(true)}
           onOpenRulesForGame={game => setShowRulesForGame(game)}
         />
+      )}
+
+      {!activeGame && hubMode === 'classic' && (
+        <div className="w-full max-w-6xl px-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] uppercase tracking-[0.25em] text-fuchsia-300 font-bold">
+              Classic Shelf · Beta Fallback
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                sound.playButtonClick();
+                setHubMode('room');
+              }}
+              className="text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-xl bg-fuchsia-600 hover:bg-fuchsia-500 text-white"
+            >
+              Back to 3D Room
+            </button>
+          </div>
+          <RetroBookshelfMenu
+            games={GAME_CATALOG}
+            onSelectGame={handleSelectGame}
+            onOpenBotConsole={() => setIsBotConsoleOpen(true)}
+            onOpenRulesForGame={game => setShowRulesForGame(game)}
+          />
+        </div>
       )}
 
       {/* 2. If a game is selected and currently unboxing: Show 3D Shelf Unboxing Sequence */}

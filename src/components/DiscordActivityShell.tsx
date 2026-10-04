@@ -105,22 +105,25 @@ export const DiscordActivityShell: React.FC<DiscordActivityShellProps> = ({
           </button>
           <div>
             <h1 className="text-sm sm:text-base font-bold leading-tight tracking-wide text-white flex items-center gap-2">
-              PARTY PACK 01
+              GAME ROOM BETA
+              <span className="text-[9px] font-mono font-normal uppercase tracking-wider text-fuchsia-300 bg-fuchsia-950/60 px-2 py-0.5 rounded border border-fuchsia-700/60">
+                BETA
+              </span>
               {activeGameTitle && (
                 <span className="text-[10px] font-mono font-normal uppercase tracking-wider text-blue-400 bg-blue-950/60 px-2 py-0.5 rounded border border-blue-800/60">
                   {activeGameTitle}
                 </span>
               )}
             </h1>
-            <p className="text-[11px] text-slate-400 font-medium">Discord Board Game Collection</p>
+            <p className="text-[11px] text-slate-400 font-medium">First-Person Mini Game Menu · Pack 01</p>
           </div>
 
           <button
             onClick={onOpenShelf}
             className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-all border border-slate-700 ml-2"
           >
-            <Grid className="w-3.5 h-3.5 text-blue-400" />
-            <span>Shelf</span>
+            <Grid className="w-3.5 h-3.5 text-fuchsia-400" />
+            <span>Room</span>
           </button>
         </div>
 
@@ -216,7 +219,7 @@ export const DiscordActivityShell: React.FC<DiscordActivityShellProps> = ({
       </header>
 
       {/* Main Game Stage with Sleek Radial Slate Backdrop */}
-      <main className="flex-1 flex flex-col justify-start items-center relative overflow-y-auto game-table-bg">
+      <main className="flex-1 flex flex-col justify-start items-center relative overflow-y-auto game-table-bg w-full">
         {children}
       </main>
 
@@ -224,8 +227,8 @@ export const DiscordActivityShell: React.FC<DiscordActivityShellProps> = ({
       <footer className="h-10 bg-slate-900 border-t border-slate-800 flex items-center px-4 sm:px-8 justify-between text-[10px] text-slate-400 shrink-0 select-none">
         <div className="flex items-center gap-3 sm:gap-6">
           <span className="uppercase tracking-[2px] font-bold text-slate-400 flex items-center gap-1.5">
-            <Cpu className="w-3 h-3 text-blue-400" />
-            Engine: Phaser 4 (Simulated)
+            <Cpu className="w-3 h-3 text-fuchsia-400" />
+            Engine: Three.js FP Room · Beta
           </span>
           <span className="text-slate-700 hidden sm:inline">|</span>
           <span className="uppercase tracking-[2px] text-slate-400 font-mono hidden sm:inline flex items-center gap-1">

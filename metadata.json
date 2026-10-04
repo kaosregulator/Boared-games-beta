@@ -1,6 +1,6 @@
 {
-  "name": "Discord Mini Game Party Pack",
-  "description": "Realistic 2.5D visual turn-based tabletop game pack with nostalgic bedroom shelf unboxing, animated hand physics, dual-board Battleship, Connect Four, Staunton Chess, Checkers, Blackjack (21), Go Fish, 4-Player Revenge Race (Sorry), Avatar Maker, and Season Leaderboards.",
+  "name": "Game Room Beta",
+  "description": "First-person interactive mini-game menu beta. Walk a nostalgic midnight bedroom, highlight shelf boxes and room props, pull a game to unbox and play Battleship, Connect Four, Chess, Poker, Trivia, and more. Railway-ready demo.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
