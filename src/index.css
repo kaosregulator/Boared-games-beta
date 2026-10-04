@@ -56,6 +56,17 @@ body {
   border-color: rgba(232, 121, 249, 0.7);
 }
 
+.hand-reach {
+  animation: handReach 4.8s ease-in-out forwards;
+}
+
+@keyframes handReach {
+  0% { transform: translateY(58%); }
+  20% { transform: translateY(10%); }
+  50% { transform: translateY(0%); }
+  100% { transform: translateY(8%); }
+}
+
 .demo-landing__atmosphere {
   pointer-events: none;
   position: absolute;

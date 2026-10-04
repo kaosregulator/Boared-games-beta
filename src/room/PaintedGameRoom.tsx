@@ -70,7 +70,7 @@ export function PaintedGameRoom({
       setPullId(spot.id);
       sound.playShelfSlide();
       showToast(spot.launchNote || `Taking ${spot.label}…`);
-      window.setTimeout(() => onSelectGame(game), 650);
+      window.setTimeout(() => onSelectGame(game), 280);
     },
     [gameById, onSelectGame, showToast]
   );
