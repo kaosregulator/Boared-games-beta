@@ -39,7 +39,7 @@ export function DemoLanding({ onEnterDemo }: DemoLandingProps) {
               </span>
             </h1>
             <p className="text-base sm:text-lg text-slate-200/90 max-w-xl mb-8 leading-relaxed">
-              A nostalgic midnight bedroom is the menu. Move in first person, aim at the shelf, and pull a glowing game box to launch mini-games. This build is intentionally beta — the room, the name, the loop.
+              The painted bedroom is the menu. Look around the room, walk up to the shelf, and pull a box — Battleship, Sorry!, and the rest of the shelf — straight into a game.
             </p>
             <div className="flex flex-wrap gap-3">
               <button
@@ -62,7 +62,7 @@ export function DemoLanding({ onEnterDemo }: DemoLandingProps) {
           <div className="relative">
             <div className="absolute -inset-4 bg-gradient-to-br from-fuchsia-500/25 via-orange-400/10 to-cyan-400/20 blur-2xl rounded-[2rem]" aria-hidden />
             <img
-              src="/f055162f-d558-4000-abe6-b54c2dfb47fe.jpg"
+              src="/room-concept.jpg"
               alt="First-person 90s bedroom game room concept"
               className="relative w-full rounded-[1.5rem] border border-white/15 shadow-2xl object-cover aspect-[4/3]"
             />

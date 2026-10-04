@@ -148,7 +148,7 @@ export function FirstPersonGameRoom({
             className="bg-black/55 backdrop-blur-md border border-white/10 hover:border-cyan-400/40 rounded-xl px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-cyan-200 flex items-center gap-1.5"
           >
             <Library className="w-3.5 h-3.5" />
-            Classic Shelf
+            Painted Room
           </button>
           <button
             type="button"
@@ -206,7 +206,7 @@ export function FirstPersonGameRoom({
                 className="inline-flex items-center gap-2 rounded-2xl border border-cyan-300/40 bg-black/40 hover:bg-black/60 text-cyan-100 font-bold uppercase tracking-wider px-5 py-3.5"
               >
                 <Library className="w-4 h-4" />
-                Classic Shelf
+                Painted Room
               </button>
             </div>
             <div className="mt-5 flex flex-wrap items-center justify-center gap-4 text-[11px] text-slate-400">

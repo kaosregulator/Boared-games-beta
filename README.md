@@ -7,10 +7,12 @@ This project is intentionally branded as a **public beta**, end to end.
 ## Demo loop
 
 1. Open the landing site → **Enter the Room**
-2. Click to pointer-lock, then **WASD** walk + mouse look
-3. Aim at shelf boxes / CRT / boombox / door — they highlight
-4. Click a game box → unbox → play
-5. **Home / Room** returns you to the bedroom hub
+2. You are inside the illustrated bedroom (the painting is the room)
+3. **Shelf** / **A D** walks you up to the boxes. Hover outlines a box. Click to pull it.
+4. Battleship, Sorry!, Clue, Life, and Yahtzee launch playable games. Monopoly opens the unbox reel.
+5. **3D blockout** is the earlier prototype room. **Game list** is the old shelf.
+
+The way out of the grey blockout is this painted first-person view: one locked illustration, camera moves between the bed, TV, door, and shelf, and the boxes are real hit targets. A free-walk mesh that matches the painting needs modeled geometry later; this is the room that actually looks like the art.
 
 Classic CSS shelf remains available as a beta fallback (CRT TV or “Classic Shelf”).
 

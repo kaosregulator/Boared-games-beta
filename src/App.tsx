@@ -10,6 +10,7 @@ import { ShelfUnboxing } from './components/ShelfUnboxing';
 import { RetroBookshelfMenu } from './components/RetroBookshelfMenu';
 import { DemoLanding } from './components/DemoLanding';
 import { FirstPersonGameRoom } from './room/FirstPersonGameRoom';
+import { PaintedGameRoom } from './room/PaintedGameRoom';
 import { RulesModal } from './components/RulesModal';
 import { AvatarMakerModal } from './components/AvatarMakerModal';
 import { LeaderboardModal } from './components/LeaderboardModal';
@@ -28,7 +29,7 @@ import { TriviaPartyGame } from './games/trivia/TriviaPartyGame';
 
 import { Sparkles, Terminal, Trophy, Hash, Coins } from 'lucide-react';
 
-type HubMode = 'landing' | 'room' | 'classic';
+type HubMode = 'landing' | 'room' | 'classic' | 'blockout';
 
 export default function App() {
   const [hubMode, setHubMode] = useState<HubMode>('landing');
@@ -79,6 +80,18 @@ export default function App() {
           sound.playVictoryFanfare();
           setHubMode('room');
         }}
+      />
+    );
+  }
+
+  if (hubMode === 'room' && !activeGame) {
+    return (
+      <PaintedGameRoom
+        games={GAME_CATALOG}
+        onSelectGame={handleSelectGame}
+        onOpenClassicShelf={() => setHubMode('classic')}
+        onOpenBlockout={() => setHubMode('blockout')}
+        onOpenLanding={() => setHubMode('landing')}
       />
     );
   }
@@ -162,11 +175,11 @@ export default function App() {
       </div>
 
       {/* 1. Hub: first-person Game Room Beta (default) or classic shelf fallback */}
-      {!activeGame && hubMode === 'room' && (
+      {!activeGame && hubMode === 'blockout' && (
         <FirstPersonGameRoom
           games={GAME_CATALOG}
           onSelectGame={handleSelectGame}
-          onOpenClassicShelf={() => setHubMode('classic')}
+          onOpenClassicShelf={() => setHubMode('room')}
           onOpenBotConsole={() => setIsBotConsoleOpen(true)}
           onOpenRulesForGame={game => setShowRulesForGame(game)}
         />

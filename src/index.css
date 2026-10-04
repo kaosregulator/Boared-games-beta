@@ -39,6 +39,23 @@ body {
     linear-gradient(165deg, #14081f 0%, #0a0612 45%, #120818 100%);
 }
 
+.room-chip {
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #f8fafc;
+  border-radius: 0.85rem;
+  padding: 0.45rem 0.75rem;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  backdrop-filter: blur(10px);
+}
+
+.room-chip:hover {
+  border-color: rgba(232, 121, 249, 0.7);
+}
+
 .demo-landing__atmosphere {
   pointer-events: none;
   position: absolute;
