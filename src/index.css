@@ -1,0 +1,148 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+  --wood: #2d1e16;
+  --felt: #1a365d;
+  --neon-hit: #ff4d4d;
+  --neon-miss: #ffffff;
+  --bg-dark: #0f172a;
+  --card-dark: #1e293b;
+  --accent-blue: #3b82f6;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #0f172a;
+  color: #f8fafc;
+  margin: 0;
+  overflow-x: hidden;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Sleek Radial Background */
+.game-table-bg {
+  background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+}
+
+.sleek-card {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sleek-card-glow {
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5), 0 0 20px -5px rgba(59, 130, 246, 0.15);
+}
+
+/* Discord UI & Component Buttons */
+.discord-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 12px;
+  color: #ffffff;
+  transition: background-color 0.15s ease, transform 0.05s ease;
+  user-select: none;
+  cursor: pointer;
+  border: none;
+}
+
+.discord-btn:active {
+  transform: translateY(1px);
+}
+
+.discord-btn-primary {
+  background-color: #5865F2;
+}
+.discord-btn-primary:hover {
+  background-color: #4752C4;
+}
+
+.discord-btn-success {
+  background-color: #248046;
+}
+.discord-btn-success:hover {
+  background-color: #1a6334;
+}
+
+.discord-btn-danger {
+  background-color: #DA373C;
+}
+.discord-btn-danger:hover {
+  background-color: #a12828;
+}
+
+.discord-btn-secondary {
+  background-color: #4E5058;
+}
+.discord-btn-secondary:hover {
+  background-color: #6D6F78;
+}
+
+@layer utilities {
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  .perspective-1200 {
+    perspective: 1200px;
+  }
+  .perspective-1500 {
+    perspective: 1500px;
+  }
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+}
+
+/* Sleek 3D Pegs & Highlights */
+.peg-hit-glow {
+  background: #ff4d4d;
+  box-shadow: 0 0 12px #ff4d4d, 0 0 24px rgba(255, 77, 77, 0.6);
+}
+
+.peg-miss-glow {
+  background: #ffffff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.9);
+}
+
+.label-3d {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #94a3b8;
+}
+
+/* Custom 3D Board transforms */
+.rotate-x-6 {
+  transform: rotateX(6deg);
+}
+
+.rotate-x-12 {
+  transform: rotateX(12deg);
+}
+
+.rotate-x-18 {
+  transform: rotateX(18deg);
+}
+
+.rotate-x-40 {
+  transform: rotateX(40deg) rotateZ(-15deg);
+}
+
+.rotate-y-3 {
+  transform: rotateY(3deg);
+}
+
+.rotate-y-\[-2deg\] {
+  transform: rotateY(-2deg);
+}
