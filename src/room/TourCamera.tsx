@@ -67,7 +67,13 @@ export function TourCamera({ staticIndex, onWaypoint, onDone, loop = true }: Tou
 
   useFrame((_, delta) => {
     if (staticIndex !== undefined) return;
-    clock.current += Math.min(delta, 0.05);
+
+    // The capture harness drives the tour frame by frame so the recording is
+    // smooth regardless of how slowly software rendering actually runs.
+    const driven = (window as unknown as { __tourTime?: number }).__tourTime;
+    if (typeof driven === 'number') clock.current = driven;
+    else clock.current += Math.min(delta, 0.05);
+
     if (clock.current > total) {
       if (!loop) {
         onDone?.();

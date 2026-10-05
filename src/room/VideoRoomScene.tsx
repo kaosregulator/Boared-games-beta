@@ -701,9 +701,18 @@ function EastDesk({ crops }: { crops: Crops }) {
       ))}
       {/* beige tower monitor, keyboard and mouse */}
       <group position={[0.06, EAST_DESK.top + 0.03, -0.18]} rotation={[0, -Math.PI / 2 - 0.25, 0]}>
-        <mesh position={[0, 0.17, 0]} castShadow>
-          <boxGeometry args={[0.42, 0.34, 0.36]} />
+        {/* front shell and tapered tube housing, like a 90s CRT monitor */}
+        <mesh position={[0, 0.17, 0.105]} castShadow>
+          <boxGeometry args={[0.42, 0.34, 0.15]} />
           <meshStandardMaterial color="#bdb094" roughness={0.75} />
+        </mesh>
+        <mesh position={[0, 0.17, -0.085]} castShadow>
+          <boxGeometry args={[0.31, 0.26, 0.23]} />
+          <meshStandardMaterial color="#aa9e84" roughness={0.8} />
+        </mesh>
+        <mesh position={[0, 0.012, 0.03]} castShadow>
+          <boxGeometry args={[0.34, 0.024, 0.3]} />
+          <meshStandardMaterial color="#b3a68c" roughness={0.82} />
         </mesh>
         {/* recessed bezel so the tube reads as a tube, not a white block */}
         <mesh position={[0, 0.18, 0.181]}>

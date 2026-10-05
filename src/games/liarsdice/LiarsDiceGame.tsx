@@ -4,7 +4,8 @@ import {
   initializeLiarsDice,
   rollDice,
   countMatchingDice,
-  isValidBid
+  isValidBid,
+  nextLegalRaise
 } from './liarsDiceLogic';
 import { sound } from '../../utils/audio';
 import confetti from 'canvas-confetti';
@@ -130,6 +131,54 @@ export const LiarsDiceGame: React.FC<LiarsDiceGameProps> = ({
     }));
   };
 
+  /**
+   * Spot on (calza): claim the bid is exactly right. Land it and you win a die
+   * back, up to the five you started with; miss and you lose one.
+   */
+  const handleCallExact = () => {
+    if (state.roundPhase !== 'bidding' || !state.currentBid) return;
+
+    sound.playCupSlam();
+
+    const allDice = state.players.filter(p => !p.isEliminated).map(p => p.dice);
+    const actualMatches = countMatchingDice(allDice, state.currentBid.faceValue);
+    const spotOn = actualMatches === state.currentBid.quantity;
+
+    const bidder = state.players.find(p => p.id === state.currentBid!.playerId)!;
+    const caller = currentPlayer;
+
+    const nextPlayers = state.players.map(p => {
+      if (p.id !== caller.id) return p;
+      const nextCount = spotOn ? Math.min(5, p.diceCount + 1) : p.diceCount - 1;
+      return { ...p, diceCount: nextCount, isEliminated: nextCount <= 0 };
+    });
+
+    const remainingActive = nextPlayers.filter(p => !p.isEliminated);
+    let winner: LiarsDicePlayer | null = null;
+    if (remainingActive.length === 1) {
+      winner = remainingActive[0];
+      sound.playVictoryFanfare();
+      if (!winner.isBot) {
+        confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+      }
+    }
+
+    setState(prev => ({
+      ...prev,
+      players: nextPlayers,
+      roundPhase: winner ? 'game_over' : 'reveal',
+      revealedDice: prev.players.map(p => ({ playerId: p.id, dice: p.dice })),
+      revealSummary: {
+        challenger: `${caller.name} (spot on)`,
+        bidder: bidder.name,
+        actualCount: actualMatches,
+        bidCount: prev.currentBid!.quantity,
+        loser: spotOn ? `nobody — ${caller.name} wins a die back` : caller.name
+      },
+      winner
+    }));
+  };
+
   // Next Round reset
   const handleStartNextRound = () => {
     sound.playDiceShake();
@@ -202,15 +251,14 @@ export const LiarsDiceGame: React.FC<LiarsDiceGameProps> = ({
       if (state.currentBid.quantity > estimatedTotal + 1.2) {
         handleCallLiar();
       } else {
-        // Raise bid
-        const nextQty = state.currentBid.quantity + (Math.random() > 0.6 ? 1 : 0);
-        const nextFace = nextQty === state.currentBid.quantity ? Math.min(6, state.currentBid.faceValue + 1) : state.currentBid.faceValue;
+        const raise = nextLegalRaise(state.currentBid, currentPlayer.dice, totalDiceInPlay);
+        if (!raise) {
+          // Nothing legal left to say, so the bid has to be challenged.
+          handleCallLiar();
+          return;
+        }
 
-        const nextBid: LiarsDiceBid = {
-          playerId: currentPlayer.id,
-          quantity: nextQty,
-          faceValue: nextFace
-        };
+        const nextBid: LiarsDiceBid = { playerId: currentPlayer.id, ...raise };
 
         sound.playPawnHop();
         setState(prev => ({
@@ -500,6 +548,15 @@ export const LiarsDiceGame: React.FC<LiarsDiceGameProps> = ({
                     >
                       <Skull className="w-4 h-4" />
                       CALL "LIAR!" (DUDO)
+                    </button>
+                  )}
+
+                  {state.currentBid && (
+                    <button
+                      onClick={handleCallExact}
+                      className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-black font-black text-xs shadow-lg shadow-amber-600/30 transition-all hover:scale-105 active:scale-95"
+                    >
+                      CALL "SPOT ON!" (CALZA) · WIN A DIE BACK
                     </button>
                   )}
                 </div>
