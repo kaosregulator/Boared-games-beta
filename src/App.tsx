@@ -13,16 +13,25 @@ import { ActiveGameSwitch } from './components/ActiveGameSwitch';
 import { InRoomTable } from './components/InRoomTable';
 import { FirstPersonGameRoom } from './room/FirstPersonGameRoom';
 import { PaintedGameRoom } from './room/PaintedGameRoom';
+import { WalkRoom } from './room/WalkRoom';
 import { RulesModal } from './components/RulesModal';
 import { AvatarMakerModal } from './components/AvatarMakerModal';
 import { LeaderboardModal } from './components/LeaderboardModal';
 
 import { Sparkles, Terminal, Trophy, Hash, Coins } from 'lucide-react';
 
-type HubMode = 'landing' | 'room' | 'classic' | 'blockout';
+type HubMode = 'landing' | 'room' | 'classic' | 'blockout' | 'painted';
+
+/** `?tour`, `?shot` and `?room` drop straight into the walkable room. */
+function initialHubMode(): HubMode {
+  if (typeof window === 'undefined') return 'landing';
+  const params = new URLSearchParams(window.location.search);
+  if (params.has('tour') || params.has('shot') || params.has('room')) return 'room';
+  return 'landing';
+}
 
 export default function App() {
-  const [hubMode, setHubMode] = useState<HubMode>('landing');
+  const [hubMode, setHubMode] = useState<HubMode>(initialHubMode);
   const [activeGame, setActiveGame] = useState<GameMetadata | null>(null);
   const [isUnboxing, setIsUnboxing] = useState<boolean>(false);
   const [isPacking, setIsPacking] = useState<boolean>(false);
@@ -101,6 +110,17 @@ export default function App() {
   }
 
   if (hubMode === 'room' && !activeGame) {
+    return (
+      <WalkRoom
+        games={GAME_CATALOG}
+        onSelectGame={handleSelectGame}
+        onOpenClassicShelf={() => setHubMode('classic')}
+        onOpenLanding={() => setHubMode('landing')}
+      />
+    );
+  }
+
+  if (hubMode === 'painted' && !activeGame) {
     return (
       <PaintedGameRoom
         games={GAME_CATALOG}

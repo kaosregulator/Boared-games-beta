@@ -251,7 +251,7 @@ export const ChessGame: React.FC<ChessGameProps> = ({
     if (!isVersusAI || state.turn !== 'b' || state.isCheckmate || state.isStalemate) return;
 
     const timer = setTimeout(() => {
-      const bestMove = getBestChessMove(state.board, aiDifficulty);
+      const bestMove = getBestChessMove(state.board, 'b', aiDifficulty);
       if (bestMove) {
         const piece = state.board[bestMove.from.r][bestMove.from.c]!;
         executeMove(bestMove.from, bestMove.to, piece, undefined, true);

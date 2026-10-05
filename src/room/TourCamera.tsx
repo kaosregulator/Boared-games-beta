@@ -1,0 +1,97 @@
+import { useEffect, useMemo, useRef } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
+import * as THREE from 'three';
+import { PLAYER } from './videoRoom';
+
+export interface Waypoint {
+  /** Eye position. */
+  at: [number, number, number];
+  /** Point the camera is aimed at. */
+  look: [number, number, number];
+  /** Seconds spent travelling to this waypoint. */
+  travel: number;
+  /** Seconds held once arrived. */
+  hold: number;
+  label: string;
+}
+
+/**
+ * Standing camera marks around the room, used for the scripted walkthrough and
+ * for deterministic screenshots while checking the art.
+ */
+export const TOUR: Waypoint[] = [
+  { at: [0.0, PLAYER.height, 1.85], look: [0.1, 1.25, -2.4], travel: 0, hold: 2.0, label: 'Doorway view' },
+  { at: [-0.5, PLAYER.height, 0.55], look: [-0.3, 1.3, -2.45], travel: 2.6, hold: 1.6, label: 'CRT and posters' },
+  { at: [-1.35, PLAYER.height, 0.2], look: [-2.5, 0.9, -1.1], travel: 2.2, hold: 1.6, label: 'Bed and quilt' },
+  { at: [0.4, PLAYER.height, -0.6], look: [2.3, 1.3, -2.3], travel: 2.4, hold: 1.4, label: 'Turning to the shelf' },
+  { at: [1.55, PLAYER.height, -0.95], look: [2.1, 1.5, -2.4], travel: 2.2, hold: 1.8, label: 'At the shelf' },
+  { at: [2.0, PLAYER.height, -1.5], look: [2.1, 1.62, -2.4], travel: 1.8, hold: 2.2, label: 'Reaching the boxes' },
+  { at: [1.3, PLAYER.height, -0.4], look: [2.45, 1.1, -1.2], travel: 2.0, hold: 1.4, label: 'Computer desk' },
+  { at: [0.3, PLAYER.height, 0.9], look: [1.1, 1.1, -2.4], travel: 2.4, hold: 2.0, label: 'Back to idle' },
+];
+
+const EASE = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+
+const POS = new THREE.Vector3();
+const LOOK = new THREE.Vector3();
+
+interface TourCameraProps {
+  /** Freeze on a single waypoint instead of animating; used for screenshots. */
+  staticIndex?: number;
+  onWaypoint?: (label: string, index: number) => void;
+  onDone?: () => void;
+  loop?: boolean;
+}
+
+export function TourCamera({ staticIndex, onWaypoint, onDone, loop = true }: TourCameraProps) {
+  const { camera } = useThree();
+  const clock = useRef(0);
+  const announced = useRef(-1);
+
+  const legs = useMemo(() => {
+    let t = 0;
+    return TOUR.map((wp, i) => {
+      const start = t;
+      t += wp.travel + wp.hold;
+      return { wp, prev: TOUR[Math.max(0, i - 1)], start, end: t };
+    });
+  }, []);
+  const total = legs[legs.length - 1].end;
+
+  useEffect(() => {
+    if (staticIndex === undefined) return;
+    const wp = TOUR[Math.min(staticIndex, TOUR.length - 1)];
+    camera.position.set(...wp.at);
+    camera.lookAt(...wp.look);
+  }, [camera, staticIndex]);
+
+  useFrame((_, delta) => {
+    if (staticIndex !== undefined) return;
+    clock.current += Math.min(delta, 0.05);
+    if (clock.current > total) {
+      if (!loop) {
+        onDone?.();
+        return;
+      }
+      clock.current = 0;
+      announced.current = -1;
+    }
+    const t = clock.current;
+    const leg = legs.find(l => t >= l.start && t < l.end) ?? legs[legs.length - 1];
+    const idx = legs.indexOf(leg);
+    if (idx !== announced.current) {
+      announced.current = idx;
+      onWaypoint?.(leg.wp.label, idx);
+    }
+    const travelled = leg.wp.travel > 0 ? Math.min(1, (t - leg.start) / leg.wp.travel) : 1;
+    const k = EASE(travelled);
+    POS.set(...leg.prev.at).lerp(new THREE.Vector3(...leg.wp.at), k);
+    LOOK.set(...leg.prev.look).lerp(new THREE.Vector3(...leg.wp.look), k);
+    // walking sway so the dolly reads as footsteps rather than a crane
+    const sway = travelled > 0 && travelled < 1 ? Math.sin(t * 7.2) * 0.018 : Math.sin(t * 1.2) * 0.005;
+    camera.position.set(POS.x, POS.y + sway, POS.z);
+    camera.lookAt(LOOK);
+  });
+
+  return null;
+}

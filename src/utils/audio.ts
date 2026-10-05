@@ -32,6 +32,83 @@ class SoundEngine {
     this.volume = Math.max(0, Math.min(1, vol));
   }
 
+  /** Soft footfall on bedroom floorboards; alternates weight per step. */
+  public playFootstep(heavy = false) {
+    if (this.muted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const len = 0.11;
+    const buffer = this.ctx.createBuffer(1, Math.ceil(this.ctx.sampleRate * len), this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i += 1) {
+      const decay = Math.pow(1 - i / data.length, 3.2);
+      data[i] = (Math.random() * 2 - 1) * decay;
+    }
+    const src = this.ctx.createBufferSource();
+    src.buffer = buffer;
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(heavy ? 420 : 320, t);
+    const thump = this.ctx.createOscillator();
+    thump.type = 'sine';
+    thump.frequency.setValueAtTime(heavy ? 78 : 64, t);
+    thump.frequency.exponentialRampToValueAtTime(42, t + 0.09);
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime((heavy ? 0.16 : 0.1) * this.volume, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + len);
+    src.connect(filter);
+    filter.connect(gain);
+    thump.connect(gain);
+    gain.connect(this.ctx.destination);
+    src.start(t);
+    thump.start(t);
+    thump.stop(t + len);
+  }
+
+  /** Single die striking a wooden tray. */
+  public playDieLand() {
+    if (this.muted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime + Math.random() * 0.02;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(680 + Math.random() * 420, t);
+    osc.frequency.exponentialRampToValueAtTime(190, t + 0.06);
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1500, t);
+    filter.Q.setValueAtTime(1.6, t);
+    gain.gain.setValueAtTime(0.11 * this.volume, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.1);
+  }
+
+  /** Wooden pawn or token set down on a board. */
+  public playTokenPlace() {
+    if (this.muted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(340, t);
+    osc.frequency.exponentialRampToValueAtTime(120, t + 0.07);
+    gain.gain.setValueAtTime(0.13 * this.volume, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.11);
+  }
+
   // --- Shelf & Unboxing SFX ---
   public playShelfSlide() {
     if (this.muted) return;
