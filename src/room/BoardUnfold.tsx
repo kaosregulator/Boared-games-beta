@@ -89,7 +89,9 @@ function UnfoldRig({
 
   useFrame(state => {
     if (started.current === null) started.current = state.clock.elapsedTime;
-    const t = freeze ?? state.clock.elapsedTime - started.current;
+    // The capture harness drives the sequence frame by frame.
+    const driven = (window as unknown as { __unboxTime?: number }).__unboxTime;
+    const t = driven ?? freeze ?? state.clock.elapsedTime - started.current;
     const packing = mode === 'pack';
 
     // open: lid off -> board lifted out -> leaf folds open -> box set aside
@@ -128,7 +130,7 @@ function UnfoldRig({
     state.camera.position.set(PLAY_TABLE.x, camY, camZ);
     state.camera.lookAt(PLAY_TABLE.x, PLAY_TABLE.top, PLAY_TABLE.z + 0.02);
 
-    if (freeze !== null) return;
+    if (freeze !== null || driven !== undefined) return;
 
     const cue = (key: keyof typeof flags.current, at: number, play: () => void) => {
       if (!flags.current[key] && t > at) {
