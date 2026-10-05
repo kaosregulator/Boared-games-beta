@@ -1,31 +1,38 @@
-import { useEffect, useMemo, useRef, type RefObject } from 'react';
+import { Suspense, useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { GameId, GameMetadata } from '../types';
 import { sound } from '../utils/audio';
-import { ROOM_ART } from './paintedRoom';
-import { BOX_FACE, makeLidTexture, makePanelTexture } from './boardTextures';
+import { BOX_FACE, boardHalfTexture, lidTexture } from './realBoardArt';
+import { VideoRoomScene } from './VideoRoomScene';
+import { PLAY_TABLE } from './videoRoom';
+
+/**
+ * Real board-game dimensions in metres: a 48cm square board that folds in half
+ * into a 51x27cm long box, which is why the box reads as a box and the board
+ * covers the table.
+ */
+const BOARD = { span: 0.48, leaf: 0.24, card: 0.004 };
+const BOX = { w: 0.51, h: 0.055, d: 0.27 };
+/** The folded board, and so the box, sit on the near half of the table. */
+const BOX_Z = BOARD.leaf / 2;
 
 function ease(t: number, a: number, b: number) {
   const x = THREE.MathUtils.clamp((t - a) / (b - a), 0, 1);
   return x * x * (3 - 2 * x);
 }
 
-function Wing({
-  pivot,
-  side,
-  map,
-}: {
-  pivot: RefObject<THREE.Group | null>;
-  side: 'left' | 'right';
-  map: THREE.Texture;
-}) {
-  const sign = side === 'left' ? -1 : 1;
+function Leaf({ side, map }: { side: 'near' | 'far'; map: THREE.Texture }) {
+  const z = side === 'near' ? BOARD.leaf / 2 : -BOARD.leaf / 2;
   return (
-    <group ref={pivot} position={[sign * 0.42, 0.02, 0]}>
-      <mesh position={[sign * 0.42, 0, 0]} castShadow receiveShadow>
-        <boxGeometry args={[0.84, 0.018, 0.92]} />
-        <meshStandardMaterial map={map} roughness={0.72} metalness={0.02} />
+    <group position={[0, 0, z]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, BOARD.card / 2 + 0.0005, 0]} receiveShadow>
+        <planeGeometry args={[BOARD.span, BOARD.leaf]} />
+        <meshStandardMaterial map={map} roughness={0.62} metalness={0.02} />
+      </mesh>
+      <mesh castShadow receiveShadow>
+        <boxGeometry args={[BOARD.span, BOARD.card, BOARD.leaf]} />
+        <meshStandardMaterial color="#2a2018" roughness={0.95} />
       </mesh>
     </group>
   );
@@ -40,146 +47,129 @@ function UnfoldRig({
   onComplete: () => void;
   mode: 'open' | 'pack';
 }) {
-  const rig = useRef<THREE.Group>(null);
   const lid = useRef<THREE.Group>(null);
+  const tray = useRef<THREE.Group>(null);
   const board = useRef<THREE.Group>(null);
-  const left = useRef<THREE.Group>(null);
-  const right = useRef<THREE.Group>(null);
+  const farLeaf = useRef<THREE.Group>(null);
   const started = useRef<number | null>(null);
-  const flags = useRef({ lid: false, left: false, right: false, settle: false, done: false });
+  const flags = useRef({ lid: false, lift: false, fold: false, settle: false, done: false });
 
-  const maps = useMemo(() => {
-    const id = game.id as GameId;
-    return {
-      left: makePanelTexture(id, 'left'),
-      center: makePanelTexture(id, 'center'),
-      right: makePanelTexture(id, 'right'),
-      lid: makeLidTexture(game.title, BOX_FACE[id]?.face ?? '#1e293b', BOX_FACE[id]?.ink ?? '#fff'),
-    };
-  }, [game.id, game.title]);
+  const id = game.id as GameId;
+  const skin = BOX_FACE[id] ?? { card: '#a16245', face: '#1e293b', ink: '#ffffff' };
 
-  const card = BOX_FACE[game.id]?.card ?? '#a16245';
+  const maps = useMemo(
+    () => ({
+      near: boardHalfTexture(id, 'near'),
+      far: boardHalfTexture(id, 'far'),
+      lid: lidTexture(id, game.title, skin.face, skin.ink),
+    }),
+    [game.title, id, skin.face, skin.ink],
+  );
 
-  useEffect(() => {
-    if (mode === 'open') sound.playShelfSlide();
-    return () => {
-      maps.left.dispose();
-      maps.center.dispose();
-      maps.right.dispose();
+  useEffect(
+    () => () => {
+      maps.near.dispose();
+      maps.far.dispose();
       maps.lid.dispose();
-    };
-  }, [maps]);
+    },
+    [maps],
+  );
 
   useFrame(state => {
     if (started.current === null) started.current = state.clock.elapsedTime;
     const t = state.clock.elapsedTime - started.current;
     const packing = mode === 'pack';
-    const approach = packing ? ease(t, 3.15, 4.2) : ease(t, 0.05, 0.95);
-    const lidOpen = packing ? 1 - ease(t, 2.25, 3.15) : ease(t, 0.95, 1.9);
-    const lift = packing ? 1 - ease(t, 1.7, 2.3) : ease(t, 1.75, 2.3);
-    const leftOpen = packing ? 1 - ease(t, 0.85, 1.75) : ease(t, 2.2, 3.15);
-    const rightOpen = packing ? 1 - ease(t, 0.25, 1.15) : ease(t, 2.75, 3.7);
-    const present = packing ? 1 - ease(t, 0.05, 0.35) : ease(t, 3.6, 4.7);
 
-    if (rig.current) {
-      rig.current.position.z = THREE.MathUtils.lerp(0.7, 0.05, packing ? 1 - approach : approach);
-      rig.current.position.y = THREE.MathUtils.lerp(0.05, 0, packing ? 1 - approach : approach);
-      rig.current.rotation.x = -0.22;
-      rig.current.scale.setScalar(THREE.MathUtils.lerp(1, 1.12, present));
+    // open: lid off -> board lifted out -> leaf folds open -> box set aside
+    const lidOff = packing ? 1 - ease(t, 2.6, 3.5) : ease(t, 0.5, 1.5);
+    const lifted = packing ? 1 - ease(t, 1.9, 2.6) : ease(t, 1.5, 2.3);
+    const opened = packing ? 1 - ease(t, 0.3, 1.5) : ease(t, 2.2, 3.4);
+    const aside = packing ? 1 - ease(t, 2.9, 3.8) : ease(t, 3.2, 4.2);
+
+    if (lid.current) {
+      // lifted straight up, tilted, and carried off to the left
+      lid.current.position.y = THREE.MathUtils.lerp(BOX.h, BOX.h + 0.14, lidOff);
+      lid.current.position.x = THREE.MathUtils.lerp(0, -0.42, lidOff);
+      lid.current.rotation.z = THREE.MathUtils.lerp(0, 0.5, lidOff);
+      lid.current.rotation.x = THREE.MathUtils.lerp(0, -0.22, lidOff);
     }
-    if (lid.current) lid.current.rotation.x = THREE.MathUtils.lerp(0, -2.15, lidOpen);
-    if (board.current) board.current.position.y = THREE.MathUtils.lerp(0.12, 0.36, lift);
-    if (left.current) left.current.rotation.z = THREE.MathUtils.lerp(-Math.PI + 0.08, 0, leftOpen);
-    if (right.current) right.current.rotation.z = THREE.MathUtils.lerp(Math.PI - 0.08, 0, rightOpen);
+    if (tray.current) {
+      tray.current.position.x = THREE.MathUtils.lerp(0, -0.46, aside);
+      tray.current.position.z = THREE.MathUtils.lerp(BOX_Z, BOX_Z + 0.1, aside);
+    }
+    if (board.current) {
+      board.current.position.y = THREE.MathUtils.lerp(BOX.h * 0.45, BOARD.card, lifted);
+      board.current.position.z = THREE.MathUtils.lerp(BOX_Z, 0, lifted);
+    }
+    if (farLeaf.current) {
+      // folded shut sits on top of the near leaf; open lies flat
+      farLeaf.current.rotation.x = THREE.MathUtils.lerp(Math.PI, 0, opened);
+      farLeaf.current.position.y = THREE.MathUtils.lerp(BOARD.card * 1.2, 0, opened);
+    }
 
-    state.camera.position.z = THREE.MathUtils.lerp(2.25, 1.85, present);
-    state.camera.position.y = THREE.MathUtils.lerp(1.38, 1.2, present);
-    state.camera.lookAt(0, 0.28, 0);
+    const settle = packing ? 0 : ease(t, 3.4, 4.6);
+    const camY = THREE.MathUtils.lerp(1.52, 1.24, packing ? 1 - aside : settle);
+    const camZ = THREE.MathUtils.lerp(-0.34, -0.66, packing ? 1 - aside : settle);
+    state.camera.position.set(PLAY_TABLE.x, camY, camZ);
+    state.camera.lookAt(PLAY_TABLE.x, PLAY_TABLE.top, PLAY_TABLE.z + 0.02);
+
+    const cue = (key: keyof typeof flags.current, at: number, play: () => void) => {
+      if (!flags.current[key] && t > at) {
+        flags.current[key] = true;
+        play();
+      }
+    };
 
     if (!packing) {
-      if (!flags.current.lid && t > 0.95) {
-        flags.current.lid = true;
-        sound.playCardboardLid();
-      }
-      if (!flags.current.left && t > 2.2) {
-        flags.current.left = true;
-        sound.playBoardFlap();
-      }
-      if (!flags.current.right && t > 2.7) {
-        flags.current.right = true;
-        sound.playBoardFlap();
-      }
-      if (!flags.current.settle && t > 3.5) {
-        flags.current.settle = true;
-        sound.playBoardSettle();
-      }
-      if (!flags.current.done && t > 6.5) {
-        flags.current.done = true;
-        onComplete();
-      }
+      cue('lid', 0.5, () => sound.playCardboardLid());
+      cue('lift', 1.5, () => sound.playShelfSlide());
+      cue('fold', 2.25, () => sound.playBoardFlap());
+      cue('settle', 3.4, () => sound.playBoardSettle());
+      cue('done', 5.4, onComplete);
     } else {
-      if (!flags.current.right && t > 0.3) {
-        flags.current.right = true;
-        sound.playBoardFlap();
-      }
-      if (!flags.current.left && t > 0.9) {
-        flags.current.left = true;
-        sound.playBoardFlap();
-      }
-      if (!flags.current.lid && t > 2.3) {
-        flags.current.lid = true;
-        sound.playCardboardLid();
-      }
-      if (!flags.current.settle && t > 3.2) {
-        flags.current.settle = true;
-        sound.playShelfSlide();
-      }
-      if (!flags.current.done && t > 4.6) {
-        flags.current.done = true;
-        onComplete();
-      }
+      cue('fold', 0.35, () => sound.playBoardFlap());
+      cue('lift', 1.95, () => sound.playBoardSettle());
+      cue('lid', 2.65, () => sound.playCardboardLid());
+      cue('settle', 3.6, () => sound.playShelfSlide());
+      cue('done', 4.4, onComplete);
     }
   });
 
   return (
-    <group ref={rig}>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]} receiveShadow>
-        <circleGeometry args={[1.8, 48]} />
-        <meshStandardMaterial color="#4a3424" roughness={0.9} />
-      </mesh>
-
-      <mesh position={[0, 0.09, 0]} castShadow receiveShadow>
-        <boxGeometry args={[0.92, 0.18, 0.62]} />
-        <meshStandardMaterial color={card} roughness={0.86} />
-      </mesh>
-      <mesh position={[0, 0.19, 0]}>
-        <boxGeometry args={[0.82, 0.02, 0.52]} />
-        <meshStandardMaterial color="#1c1410" roughness={1} />
-      </mesh>
-
-      <group ref={lid} position={[0, 0.18, -0.31]}>
-        <mesh position={[0, 0.02, 0.31]} castShadow>
-          <boxGeometry args={[0.94, 0.045, 0.64]} />
-          <meshStandardMaterial color={card} roughness={0.8} />
+    <group position={[PLAY_TABLE.x, PLAY_TABLE.top, PLAY_TABLE.z]}>
+      <group ref={tray} position={[0, 0, BOX_Z]}>
+        <mesh position={[0, BOX.h / 2, 0]} castShadow receiveShadow>
+          <boxGeometry args={[BOX.w, BOX.h, BOX.d]} />
+          <meshStandardMaterial color={skin.card} roughness={0.9} />
         </mesh>
-        <mesh position={[0, -0.005, 0.31]} rotation={[Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[0.78, 0.46]} />
-          <meshStandardMaterial map={maps.lid} roughness={0.55} side={THREE.DoubleSide} />
+        {/* printed inner wrap, visible once the lid is off */}
+        <mesh position={[0, BOX.h - 0.004, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[BOX.w - 0.02, BOX.d - 0.02]} />
+          <meshStandardMaterial color="#1b1511" roughness={1} />
         </mesh>
       </group>
 
-      <mesh position={[0, 0.1, 0.312]}>
-        <planeGeometry args={[0.72, 0.12]} />
-        <meshStandardMaterial map={maps.lid} roughness={0.55} />
-      </mesh>
-
-      <group ref={board} position={[0, 0.12, 0.02]}>
-        <Wing pivot={left} side="left" map={maps.left} />
-        <mesh position={[0, 0.02, 0]} castShadow receiveShadow>
-          <boxGeometry args={[0.84, 0.02, 0.92]} />
-          <meshStandardMaterial map={maps.center} roughness={0.7} />
+      <group ref={lid} position={[0, BOX.h, BOX_Z]}>
+        <mesh position={[0, 0.018, 0]} castShadow receiveShadow>
+          <boxGeometry args={[BOX.w + 0.008, 0.036, BOX.d + 0.008]} />
+          <meshStandardMaterial color={skin.card} roughness={0.85} />
         </mesh>
-        <Wing pivot={right} side="right" map={maps.right} />
+        <mesh position={[0, 0.0365, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[BOX.w, BOX.d]} />
+          <meshStandardMaterial map={maps.lid} roughness={0.5} />
+        </mesh>
+        {/* spine print on the long side you read on the shelf */}
+        <mesh position={[0, 0.018, BOX.d / 2 + 0.006]}>
+          <planeGeometry args={[BOX.w, 0.034]} />
+          <meshStandardMaterial map={maps.lid} roughness={0.5} />
+        </mesh>
+      </group>
+
+      <group ref={board}>
+        <Leaf side="near" map={maps.near} />
+        <group ref={farLeaf}>
+          <Leaf side="far" map={maps.far} />
+        </group>
       </group>
     </group>
   );
@@ -203,31 +193,22 @@ export function BoardUnfoldScene({
 
   return (
     <>
-      <color attach="background" args={['#120910']} />
-      <ambientLight intensity={0.45} color="#fde68a" />
-      <hemisphereLight args={['#fdba74', '#1c1917', 0.45]} />
-      <spotLight position={[1.2, 3.2, 1.6]} angle={0.55} penumbra={0.5} intensity={28} castShadow color="#fff7ed" />
-      <pointLight position={[-1.2, 1.2, 0.4]} intensity={6} color="#fb7185" distance={6} />
-      <RoomBackdrop />
+      {/* A reading lamp's worth of light over the table, under the ceiling. */}
+      <spotLight
+        position={[PLAY_TABLE.x, 2.3, PLAY_TABLE.z + 0.2]}
+        target-position={[PLAY_TABLE.x, PLAY_TABLE.top, PLAY_TABLE.z]}
+        angle={0.7}
+        penumbra={0.6}
+        intensity={7}
+        distance={5}
+        decay={2}
+        color="#ffe6bd"
+        castShadow
+      />
+      <Suspense fallback={null}>
+        <VideoRoomScene hoveredId={null} pulledGameId={null} tapeOn={false} lampsWarm={false} />
+      </Suspense>
       <UnfoldRig game={game} onComplete={finish} mode={mode} />
     </>
-  );
-}
-
-function RoomBackdrop() {
-  const map = useMemo(() => {
-    const loader = new THREE.TextureLoader();
-    const tex = loader.load(ROOM_ART);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.repeat.set(1, 0.72);
-    tex.offset.set(0, 0.28);
-    return tex;
-  }, []);
-
-  return (
-    <mesh position={[0, 1.35, -2.8]}>
-      <planeGeometry args={[7.2, 4.6]} />
-      <meshBasicMaterial map={map} color="#d6cce4" />
-    </mesh>
   );
 }

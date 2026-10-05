@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Canvas } from '@react-three/fiber';
+import * as THREE from 'three';
 import { GameMetadata } from '../types';
 import { sound } from '../utils/audio';
 import { BoardUnfoldScene } from '../room/BoardUnfold';
@@ -23,8 +24,14 @@ export const ShelfUnboxing: React.FC<ShelfUnboxingProps> = ({
     <div className="fixed inset-0 z-[80] bg-[#120910] text-white">
       <Canvas
         shadows
-        camera={{ position: [0, 1.42, 2.05], fov: 40, near: 0.05, far: 30 }}
+        dpr={[1, 1.8]}
+        camera={{ fov: 52, near: 0.03, far: 60 }}
         gl={{ antialias: true }}
+        onCreated={({ gl, scene }) => {
+          gl.toneMapping = THREE.ACESFilmicToneMapping;
+          gl.toneMappingExposure = 1.0;
+          scene.fog = new THREE.Fog('#160d15', 7, 20);
+        }}
         style={{ width: '100%', height: '100%', display: 'block' }}
       >
         <BoardUnfoldScene

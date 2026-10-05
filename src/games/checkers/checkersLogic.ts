@@ -99,6 +99,17 @@ export const getAllLegalMovesForColor = (
   return jumpMoves.length > 0 ? jumpMoves : allMoves;
 };
 
+/**
+ * Jumps the piece that just captured is still able to make. Official play forces
+ * the chain to be completed with the same piece, except that crowning ends the
+ * move immediately.
+ */
+export const getContinuationJumps = (board: CheckerBoard, r: number, c: number): CheckerMove[] => {
+  const piece = board[r][c];
+  if (!piece) return [];
+  return getLegalMovesForPiece(board, r, c, piece).filter(m => !!m.captured);
+};
+
 export const executeCheckerMove = (board: CheckerBoard, move: CheckerMove): CheckerBoard => {
   const newBoard = board.map(row => [...row]);
   const piece = newBoard[move.from.r][move.from.c];
