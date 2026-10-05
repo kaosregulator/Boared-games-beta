@@ -8,27 +8,45 @@ import { DiscordBotConsole } from './components/DiscordBotConsole';
 import { DiscordEmbedCanvas } from './components/DiscordEmbedCanvas';
 import { ShelfUnboxing } from './components/ShelfUnboxing';
 import { RetroBookshelfMenu } from './components/RetroBookshelfMenu';
+import { DemoLanding } from './components/DemoLanding';
+import { ActiveGameSwitch } from './components/ActiveGameSwitch';
+import { InRoomTable } from './components/InRoomTable';
+import { FirstPersonGameRoom } from './room/FirstPersonGameRoom';
+import { PaintedGameRoom } from './room/PaintedGameRoom';
+import { WalkRoom } from './room/WalkRoom';
 import { RulesModal } from './components/RulesModal';
 import { AvatarMakerModal } from './components/AvatarMakerModal';
 import { LeaderboardModal } from './components/LeaderboardModal';
 
-import { PokerGame } from './games/poker/PokerGame';
-import { CasinoLoungeGame } from './games/casino/CasinoLoungeGame';
-import { BattleshipGame } from './games/battleship/BattleshipGame';
-import { Connect4Game } from './games/connect4/Connect4Game';
-import { ChessGame } from './games/chess/ChessGame';
-import { CheckersGame } from './games/checkers/CheckersGame';
-import { BlackjackGame } from './games/blackjack/BlackjackGame';
-import { GoFishGame } from './games/gofish/GoFishGame';
-import { PawnRushGame } from './games/pawnrush/PawnRushGame';
-import { LiarsDiceGame } from './games/liarsdice/LiarsDiceGame';
-import { TriviaPartyGame } from './games/trivia/TriviaPartyGame';
-
 import { Sparkles, Terminal, Trophy, Hash, Coins } from 'lucide-react';
 
+type HubMode = 'landing' | 'room' | 'classic' | 'blockout' | 'painted';
+
+/** `?tour`, `?shot` and `?room` drop straight into the walkable room. */
+function initialHubMode(): HubMode {
+  if (typeof window === 'undefined') return 'landing';
+  const params = new URLSearchParams(window.location.search);
+  if (params.has('tour') || params.has('shot') || params.has('room')) return 'room';
+  return 'landing';
+}
+
+/** `?game=<id>` opens a title straight on the table, skipping the unboxing. */
+function initialGame(): GameMetadata | null {
+  if (typeof window === 'undefined') return null;
+  const id = new URLSearchParams(window.location.search).get('game');
+  if (!id) return null;
+  return GAME_CATALOG.find(g => g.id === id) ?? null;
+}
+
 export default function App() {
-  const [activeGame, setActiveGame] = useState<GameMetadata | null>(null);
-  const [isUnboxing, setIsUnboxing] = useState<boolean>(false);
+  const [hubMode, setHubMode] = useState<HubMode>(initialHubMode);
+  const [activeGame, setActiveGame] = useState<GameMetadata | null>(initialGame);
+  const [isUnboxing, setIsUnboxing] = useState<boolean>(
+    () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('unbox'),
+  );
+  const [isPacking, setIsPacking] = useState<boolean>(
+    () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('pack'),
+  );
   const [viewMode, setViewMode] = useState<ViewMode>('isometric');
   const [isBotConsoleOpen, setIsBotConsoleOpen] = useState<boolean>(false);
   const [isEmbedCanvasOpen, setIsEmbedCanvasOpen] = useState<boolean>(false);
@@ -64,6 +82,25 @@ export default function App() {
     sound.playShelfSlide();
     setActiveGame(null);
     setIsUnboxing(false);
+    setIsPacking(false);
+    setHubMode(prev => (prev === 'landing' ? 'room' : prev));
+  };
+
+  const finishPack = () => {
+    sound.playShelfSlide();
+    setActiveGame(null);
+    setIsUnboxing(false);
+    setIsPacking(false);
+    setHubMode('room');
+  };
+
+  const exitGame = () => {
+    if (activeGame && hubMode === 'room') {
+      setIsUnboxing(false);
+      setIsPacking(true);
+      return;
+    }
+    handleBackToShelf();
   };
 
   const handleUpdateChips = (amount: number) => {
@@ -72,6 +109,93 @@ export default function App() {
       chips: (prev.chips || 1000) + amount
     }));
   };
+
+  if (hubMode === 'landing' && !activeGame) {
+    return (
+      <DemoLanding
+        onEnterDemo={() => {
+          sound.playVictoryFanfare();
+          setHubMode('room');
+        }}
+      />
+    );
+  }
+
+  if (hubMode === 'room' && !activeGame) {
+    return (
+      <WalkRoom
+        games={GAME_CATALOG}
+        onSelectGame={handleSelectGame}
+        onOpenClassicShelf={() => setHubMode('classic')}
+        onOpenLanding={() => setHubMode('landing')}
+      />
+    );
+  }
+
+  if (hubMode === 'painted' && !activeGame) {
+    return (
+      <PaintedGameRoom
+        games={GAME_CATALOG}
+        onSelectGame={handleSelectGame}
+        onOpenClassicShelf={() => setHubMode('classic')}
+        onOpenBlockout={() => setHubMode('blockout')}
+        onOpenLanding={() => setHubMode('landing')}
+      />
+    );
+  }
+
+  if (hubMode === 'room' && activeGame && isPacking) {
+    return (
+      <ShelfUnboxing
+        direction="pack"
+        game={activeGame}
+        onComplete={finishPack}
+        onBackToShelf={finishPack}
+      />
+    );
+  }
+
+  if (hubMode === 'room' && activeGame && isUnboxing) {
+    return (
+      <ShelfUnboxing
+        direction="open"
+        game={activeGame}
+        onComplete={() => setIsUnboxing(false)}
+        onBackToShelf={() => {
+          setIsUnboxing(false);
+          setIsPacking(true);
+        }}
+      />
+    );
+  }
+
+  const gameBoard = activeGame ? (
+    <ActiveGameSwitch
+      activeGame={activeGame}
+      viewMode={viewMode}
+      onToggleViewMode={handleToggleViewMode}
+      onOpenRules={() => setShowRulesForGame(activeGame)}
+      onExit={exitGame}
+      onLaunch={handleLaunchGameById}
+      userProfile={userProfile}
+      onUpdateUserProfile={setUserProfile}
+      onUpdateChips={handleUpdateChips}
+      onGameOver={(winnerName, isRealMatch) => {
+        if (isRealMatch && winnerName.includes('You')) {
+          setUserProfile(prev => ({
+            ...prev,
+            wins: prev.wins + 1,
+            seasonScore: prev.seasonScore + 250,
+            winStreak: prev.winStreak + 1
+          }));
+        }
+      }}
+    />
+  ) : null;
+
+  if (hubMode === 'room' && activeGame && !isUnboxing && !isPacking) {
+    return <InRoomTable game={activeGame} onPackUp={exitGame}>{gameBoard}</InRoomTable>;
+  }
 
   return (
     <DiscordActivityShell
@@ -84,7 +208,7 @@ export default function App() {
       isBotConsoleOpen={isBotConsoleOpen}
     >
       {/* Top Floating Action Bar for Profile Customizer, Chips, & Leaderboard */}
-      <div className="w-full max-w-6xl px-4 pt-3 flex items-center justify-between z-20 gap-2">
+      <div className={`w-full max-w-6xl px-4 pt-3 flex items-center justify-between z-20 gap-2 ${hubMode === 'room' && !activeGame ? 'hidden sm:flex opacity-90' : ''}`}>
         {/* Left: User Profile Pill & Chips */}
         <div className="flex items-center gap-2">
           <button
@@ -144,14 +268,41 @@ export default function App() {
         </div>
       </div>
 
-      {/* 1. If no game is picked: Show the Retro Bookshelf Stack Menu */}
-      {!activeGame && (
-        <RetroBookshelfMenu
+      {/* 1. Hub: first-person Game Room Beta (default) or classic shelf fallback */}
+      {!activeGame && hubMode === 'blockout' && (
+        <FirstPersonGameRoom
           games={GAME_CATALOG}
           onSelectGame={handleSelectGame}
+          onOpenClassicShelf={() => setHubMode('room')}
           onOpenBotConsole={() => setIsBotConsoleOpen(true)}
           onOpenRulesForGame={game => setShowRulesForGame(game)}
         />
+      )}
+
+      {!activeGame && hubMode === 'classic' && (
+        <div className="w-full max-w-6xl px-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] uppercase tracking-[0.25em] text-fuchsia-300 font-bold">
+              Classic Shelf · Beta Fallback
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                sound.playButtonClick();
+                setHubMode('room');
+              }}
+              className="text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-xl bg-fuchsia-600 hover:bg-fuchsia-500 text-white"
+            >
+              Back to 3D Room
+            </button>
+          </div>
+          <RetroBookshelfMenu
+            games={GAME_CATALOG}
+            onSelectGame={handleSelectGame}
+            onOpenBotConsole={() => setIsBotConsoleOpen(true)}
+            onOpenRulesForGame={game => setShowRulesForGame(game)}
+          />
+        </div>
       )}
 
       {/* 2. If a game is selected and currently unboxing: Show 3D Shelf Unboxing Sequence */}
@@ -163,98 +314,9 @@ export default function App() {
         />
       )}
 
-      {/* 3. If a game is active and unboxed: Render the respective Game Board */}
       {activeGame && !isUnboxing && (
         <div className="w-full flex-1 flex flex-col items-center justify-start py-2">
-          {activeGame.id === 'trivia' && (
-            <TriviaPartyGame
-              onGameOver={(winnerName, isRealMatch) => {
-                if (isRealMatch && winnerName.includes('You')) {
-                  setUserProfile(prev => ({
-                    ...prev,
-                    wins: prev.wins + 1,
-                    seasonScore: prev.seasonScore + 250,
-                    winStreak: prev.winStreak + 1
-                  }));
-                }
-              }}
-              onExitToShelf={handleBackToShelf}
-            />
-          )}
-
-          {activeGame.id === 'poker' && (
-            <PokerGame
-              viewMode={viewMode}
-              onToggleViewMode={handleToggleViewMode}
-              onOpenRules={() => setShowRulesForGame(activeGame)}
-              onBackToShelf={handleBackToShelf}
-              onUpdateUserChips={handleUpdateChips}
-            />
-          )}
-
-          {activeGame.id === 'casino' && (
-            <CasinoLoungeGame
-              onBackToShelf={handleBackToShelf}
-              onOpenPoker={() => handleLaunchGameById('poker')}
-            />
-          )}
-
-          {activeGame.id === 'battleship' && (
-            <BattleshipGame
-              viewMode={viewMode}
-              onToggleViewMode={handleToggleViewMode}
-              onOpenRules={() => setShowRulesForGame(activeGame)}
-              onBackToShelf={handleBackToShelf}
-            />
-          )}
-
-          {activeGame.id === 'connect4' && (
-            <Connect4Game
-              viewMode={viewMode}
-              onToggleViewMode={handleToggleViewMode}
-              onOpenRules={() => setShowRulesForGame(activeGame)}
-              onBackToShelf={handleBackToShelf}
-              userProfile={userProfile}
-              onUpdateUserProfile={setUserProfile}
-            />
-          )}
-
-          {activeGame.id === 'chess' && (
-            <ChessGame
-              viewMode={viewMode}
-              onToggleViewMode={handleToggleViewMode}
-              onOpenRules={() => setShowRulesForGame(activeGame)}
-              onBackToShelf={handleBackToShelf}
-            />
-          )}
-
-          {activeGame.id === 'checkers' && (
-            <CheckersGame onBackToShelf={handleBackToShelf} />
-          )}
-
-          {activeGame.id === 'blackjack' && (
-            <BlackjackGame onBackToShelf={handleBackToShelf} />
-          )}
-
-          {activeGame.id === 'gofish' && (
-            <GoFishGame onBackToShelf={handleBackToShelf} />
-          )}
-
-          {activeGame.id === 'pawnrush' && (
-            <PawnRushGame
-              viewMode={viewMode}
-              onToggleViewMode={handleToggleViewMode}
-              onOpenRules={() => setShowRulesForGame(activeGame)}
-            />
-          )}
-
-          {activeGame.id === 'liarsdice' && (
-            <LiarsDiceGame
-              viewMode={viewMode}
-              onToggleViewMode={handleToggleViewMode}
-              onOpenRules={() => setShowRulesForGame(activeGame)}
-            />
-          )}
+          {gameBoard}
         </div>
       )}
 

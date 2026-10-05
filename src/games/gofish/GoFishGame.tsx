@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PlayingCard, CardRank, GoFishPlayer } from '../../types';
-import { createGoFishDeck, checkForBooks } from './goFishLogic';
+import { createGoFishDeck, checkForBooks, botChoice, type AskRecord } from './goFishLogic';
 import { sound } from '../../utils/audio';
 import { AnimatedHand } from '../../components/HandCursor';
 import { RotateCcw, HelpCircle, Sparkles, User, Bot, Waves, Trophy } from 'lucide-react';
@@ -20,6 +20,8 @@ export const GoFishGame: React.FC<GoFishGameProps> = ({ onBackToShelf }) => {
   const [gameMessage, setGameMessage] = useState<string>('Select an opponent and a card rank from your hand to ask!');
   const [showRules, setShowRules] = useState<boolean>(false);
   const [winner, setWinner] = useState<GoFishPlayer | null>(null);
+  /** Asks everyone at the table heard, which is what the bots play off. */
+  const [askLog, setAskLog] = useState<AskRecord[]>([]);
 
   // Animated Hand state
   const [handState, setHandState] = useState<{
@@ -75,6 +77,7 @@ export const GoFishGame: React.FC<GoFishGameProps> = ({ onBackToShelf }) => {
     setSelectedTargetId('p2');
     setSelectedRank(null);
     setWinner(null);
+    setAskLog([]);
     setGameMessage('Your turn! Ask an opponent for a card rank you hold.');
   };
 
@@ -93,6 +96,7 @@ export const GoFishGame: React.FC<GoFishGameProps> = ({ onBackToShelf }) => {
 
   const executeTurn = (asker: GoFishPlayer, targetId: string, rank: CardRank) => {
     sound.playButtonClick();
+    setAskLog(log => [...log.slice(-23), { askerId: asker.id, rank }]);
     const target = players.find(p => p.id === targetId)!;
     const matchingCards = target.hand.filter(c => c.rank === rank);
 
@@ -150,10 +154,10 @@ export const GoFishGame: React.FC<GoFishGameProps> = ({ onBackToShelf }) => {
   };
 
   const advanceTurn = () => {
-    // Check if total 13 books reached
+    // All thirteen books claimed, or the pond is dry and nobody can ask again.
     const totalBooks = players.reduce((sum, p) => sum + p.books.length, 0);
-    if (totalBooks >= 13 || deck.length === 0) {
-      // Game over
+    const cardsInPlay = players.reduce((sum, p) => sum + p.hand.length, 0);
+    if (totalBooks >= 13 || (deck.length === 0 && cardsInPlay === 0)) {
       const sorted = [...players].sort((a, b) => b.books.length - a.books.length);
       setWinner(sorted[0]);
       sound.playVictory();
@@ -185,24 +189,41 @@ export const GoFishGame: React.FC<GoFishGameProps> = ({ onBackToShelf }) => {
           return;
         }
 
-        // Pick random rank from bot's hand
-        const botRanks = currentPlayer.hand.map(c => c.rank);
-        const chosenRank = botRanks[Math.floor(Math.random() * botRanks.length)];
-
-        // Pick random other player with cards
-        const validTargets = players.filter(p => p.id !== currentPlayer.id && p.hand.length > 0);
-        if (validTargets.length === 0) {
+        const choice = botChoice(
+          currentPlayer,
+          players.filter(p => p.id !== currentPlayer.id),
+          askLog,
+        );
+        if (!choice) {
           advanceTurn();
           return;
         }
-
-        const chosenTarget = validTargets[Math.floor(Math.random() * validTargets.length)];
-        executeTurn(currentPlayer, chosenTarget.id, chosenRank);
+        executeTurn(currentPlayer, choice.targetId, choice.rank);
       }, 1400);
 
       return () => clearTimeout(timer);
     }
-  }, [currentTurnIndex, players, deck, winner]);
+  }, [currentTurnIndex, players, deck, winner, askLog]);
+
+  // You are out of cards: fish one so the turn can still be played.
+  useEffect(() => {
+    if (!currentPlayer || currentPlayer.isBot || winner) return;
+    if (currentPlayer.hand.length > 0) return;
+    if (deck.length === 0) {
+      advanceTurn();
+      return;
+    }
+    const drawn = deck[deck.length - 1];
+    setDeck(deck.slice(0, -1));
+    setPlayers(prev =>
+      prev.map(p => {
+        if (p.id !== currentPlayer.id) return p;
+        const { newBooks, remainingHand } = checkForBooks([...p.hand, drawn]);
+        return { ...p, hand: remainingHand, books: [...p.books, ...newBooks] };
+      }),
+    );
+    setGameMessage('Your hand was empty, so you fished a card from the pond.');
+  }, [currentPlayer, deck, winner]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="w-full max-w-5xl px-2 sm:px-6 py-4 flex flex-col items-center select-none animate-in fade-in duration-300">

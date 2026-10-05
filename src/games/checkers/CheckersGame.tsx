@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CheckerBoard, CheckerPieceColor, CheckerMove, ViewMode, GameMode } from '../../types';
-import { createInitialCheckersBoard, getAllLegalMovesForColor, executeCheckerMove, getAIMove, getLegalMovesForPiece } from './checkersLogic';
+import { createInitialCheckersBoard, getAllLegalMovesForColor, executeCheckerMove, getAIMove, getLegalMovesForPiece, getContinuationJumps } from './checkersLogic';
 import { sound } from '../../utils/audio';
 import { AnimatedHand } from '../../components/HandCursor';
 import { RotateCcw, Eye, Shield, Crown, Sparkles, User, Bot, HelpCircle, Trophy } from 'lucide-react';
@@ -16,6 +16,8 @@ export const CheckersGame: React.FC<CheckersGameProps> = ({ onBackToShelf }) => 
   const [turn, setTurn] = useState<CheckerPieceColor>('red');
   const [selectedSquare, setSelectedSquare] = useState<{ r: number; c: number } | null>(null);
   const [validMoves, setValidMoves] = useState<CheckerMove[]>([]);
+  /** Square a piece mid-chain must keep jumping from. */
+  const [chainFrom, setChainFrom] = useState<{ r: number; c: number } | null>(null);
   const [gameMode, setGameMode] = useState<GameMode>('ai');
   const [viewMode, setViewMode] = useState<ViewMode>('isometric');
   const [winner, setWinner] = useState<CheckerPieceColor | 'draw' | null>(null);
@@ -70,6 +72,9 @@ export const CheckersGame: React.FC<CheckersGameProps> = ({ onBackToShelf }) => 
       }
     }
 
+    // Mid-chain the piece that captured is the only one that may move.
+    if (chainFrom) return;
+
     // Select piece
     if (piece && piece.color === turn) {
       sound.playPieceSelect();
@@ -123,6 +128,19 @@ export const CheckersGame: React.FC<CheckersGameProps> = ({ onBackToShelf }) => 
 
     const nextBoard = executeCheckerMove(board, move);
     setBoard(nextBoard);
+
+    // A capture that opens another jump must be continued by the same piece,
+    // unless the piece was crowned on the way, which ends the move.
+    const chain =
+      move.captured && !move.becomesKing ? getContinuationJumps(nextBoard, move.to.r, move.to.c) : [];
+    if (chain.length > 0) {
+      setChainFrom({ r: move.to.r, c: move.to.c });
+      setSelectedSquare({ r: move.to.r, c: move.to.c });
+      setValidMoves(chain);
+      return;
+    }
+
+    setChainFrom(null);
     setSelectedSquare(null);
     setValidMoves([]);
 
@@ -156,7 +174,8 @@ export const CheckersGame: React.FC<CheckersGameProps> = ({ onBackToShelf }) => 
   useEffect(() => {
     if (gameMode === 'ai' && turn === 'black' && !winner) {
       const timer = setTimeout(() => {
-        const aiMove = getAIMove(board, 'black');
+        const chain = chainFrom ? getContinuationJumps(board, chainFrom.r, chainFrom.c) : [];
+        const aiMove = chain.length > 0 ? chain[Math.floor(Math.random() * chain.length)] : getAIMove(board, 'black');
         if (aiMove) {
           performMove(aiMove, true);
         } else {
@@ -174,6 +193,7 @@ export const CheckersGame: React.FC<CheckersGameProps> = ({ onBackToShelf }) => 
     setTurn('red');
     setSelectedSquare(null);
     setValidMoves([]);
+    setChainFrom(null);
     setWinner(null);
   };
 

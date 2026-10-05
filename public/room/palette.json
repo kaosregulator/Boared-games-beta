@@ -1,0 +1,11 @@
+{
+ "floor": "#2e1d1c",
+ "floorDark": "#241413",
+ "wall": "#4a3447",
+ "wallWarm": "#53364a",
+ "ceiling": "#352020",
+ "wood": "#4a2e22",
+ "neonPink": "#d94fe0",
+ "lampWarm": "#ffc98a",
+ "nightSky": "#2a2550"
+}

@@ -47,3 +47,46 @@ export const checkForBooks = (hand: PlayingCard[]): { newBooks: CardRank[]; rema
 
   return { newBooks, remainingHand };
 };
+
+/** Every ask made out loud, which is the information real players play off. */
+export interface AskRecord {
+  askerId: string;
+  rank: CardRank;
+}
+
+/**
+ * Bots play the table talk rather than guessing: if an opponent has asked for a
+ * rank this bot holds, that opponent almost certainly still holds one, so ask
+ * them for it. Failing that, lead with the rank the bot holds most of and press
+ * the fullest hand, which is where the cards are.
+ */
+export const botChoice = (
+  bot: GoFishPlayer,
+  others: GoFishPlayer[],
+  memory: AskRecord[],
+): { targetId: string; rank: CardRank } | null => {
+  const live = others.filter(p => p.hand.length > 0);
+  if (live.length === 0 || bot.hand.length === 0) return null;
+
+  const held = new Set(bot.hand.map(c => c.rank));
+  for (let i = memory.length - 1; i >= 0; i -= 1) {
+    const { askerId, rank } = memory[i];
+    if (askerId === bot.id || !held.has(rank)) continue;
+    const target = live.find(p => p.id === askerId);
+    if (target) return { targetId: target.id, rank };
+  }
+
+  const counts = new Map<CardRank, number>();
+  for (const card of bot.hand) counts.set(card.rank, (counts.get(card.rank) ?? 0) + 1);
+  let rank = bot.hand[0].rank;
+  let best = 0;
+  for (const [r, n] of counts) {
+    if (n > best) {
+      best = n;
+      rank = r;
+    }
+  }
+
+  const target = live.reduce((a, b) => (b.hand.length > a.hand.length ? b : a));
+  return { targetId: target.id, rank };
+};

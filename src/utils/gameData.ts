@@ -214,6 +214,82 @@ export const GAME_CATALOG: GameMetadata[] = [
     ],
     icon: 'Dice',
     rating: '4.9 ★★★★★'
+  },
+  {
+    id: 'yahtzee',
+    title: 'Yahtzee',
+    subtitle: 'Five dice, three rolls, full scorecard',
+    players: '1 player',
+    duration: '10 min',
+    boxColor: 'from-red-950 via-red-900 to-stone-950',
+    boxAccent: 'border-red-400/40 text-red-200',
+    badge: 'Dice card',
+    description: 'Classic Yahtzee on the table. Roll five dice up to three times, hold what you want, and fill every box on the card.',
+    rules: [
+      'Roll up to three times. Click a die to hold it.',
+      'After a roll, score exactly one open category.',
+      'Upper section scores the face totals. Lower section scores kinds, straights, full house, Yahtzee, and chance.',
+      'The card ends when every category has a score.'
+    ],
+    icon: 'Dice',
+    rating: '5.0 ★★★★★'
+  },
+  {
+    id: 'clue',
+    title: 'Clue',
+    subtitle: 'Suggest, refute, then accuse',
+    players: '1 vs the house',
+    duration: '8 min',
+    boxColor: 'from-emerald-950 via-green-950 to-slate-950',
+    boxAccent: 'border-emerald-400/40 text-emerald-200',
+    badge: 'Deduction',
+    description: 'A person, a weapon, and a room are in the envelope. Suggest combinations. The house shows a card when it can. Accuse when you know.',
+    rules: [
+      'You and the house are dealt the cards that are not in the envelope.',
+      'A suggestion asks about one person, one weapon, and one room.',
+      'If the house holds one of those cards, it shows it.',
+      'An accusation wins only if all three match the envelope. A wrong accusation loses.'
+    ],
+    icon: 'Search',
+    rating: '5.0 ★★★★★'
+  },
+  {
+    id: 'life',
+    title: 'The Game of Life',
+    subtitle: 'Spin, move, collect payday',
+    players: '1 vs rival',
+    duration: '8 min',
+    boxColor: 'from-lime-950 via-green-950 to-slate-950',
+    boxAccent: 'border-lime-400/40 text-lime-200',
+    badge: 'Spinner',
+    description: 'Spin and move along the track. Paydays, taxes, a career, and a house change your cash. Most money at retirement wins.',
+    rules: [
+      'Spin 1 to 6 and move that many spaces.',
+      'The space pays or costs the amount printed on it.',
+      'A rival spins on your turn.',
+      'When both pegs reach Retirement, the higher cash total wins.'
+    ],
+    icon: 'Sparkles',
+    rating: '4.8 ★★★★★'
+  },
+  {
+    id: 'monopoly',
+    title: 'Monopoly',
+    subtitle: 'Roll, buy deeds, collect rent',
+    players: '1 vs rival',
+    duration: '10 min',
+    boxColor: 'from-sky-950 via-blue-950 to-slate-950',
+    boxAccent: 'border-sky-400/40 text-sky-100',
+    badge: 'Deeds',
+    description: 'A short Monopoly circuit on the table. Pass Go for $200, buy unowned deeds, and pay rent on a rival color.',
+    rules: [
+      'Roll one die and move. Passing Go pays $200.',
+      'Landing on an unowned deed buys it if you can afford it.',
+      'Landing on a rival deed pays that rent.',
+      'Tax and Community Chest change your cash. The first player below $0 is out.'
+    ],
+    icon: 'Landmark',
+    rating: '4.8 ★★★★★'
   }
 ];
 
