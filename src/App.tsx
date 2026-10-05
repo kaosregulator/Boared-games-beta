@@ -44,7 +44,9 @@ export default function App() {
   const [isUnboxing, setIsUnboxing] = useState<boolean>(
     () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('unbox'),
   );
-  const [isPacking, setIsPacking] = useState<boolean>(false);
+  const [isPacking, setIsPacking] = useState<boolean>(
+    () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('pack'),
+  );
   const [viewMode, setViewMode] = useState<ViewMode>('isometric');
   const [isBotConsoleOpen, setIsBotConsoleOpen] = useState<boolean>(false);
   const [isEmbedCanvasOpen, setIsEmbedCanvasOpen] = useState<boolean>(false);
