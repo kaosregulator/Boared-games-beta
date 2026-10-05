@@ -63,10 +63,16 @@ export function ActiveGameSwitch({
       {activeGame.id === 'liarsdice' && (
         <LiarsDiceGame viewMode={viewMode} onToggleViewMode={onToggleViewMode} onOpenRules={onOpenRules} />
       )}
-      {activeGame.id === 'yahtzee' && <YahtzeeGame onBackToShelf={onExit} />}
-      {activeGame.id === 'clue' && <ClueGame onBackToShelf={onExit} />}
+      {activeGame.id === 'yahtzee' && (
+        <YahtzeeGame onBackToShelf={onExit} onGameOver={onGameOver} playerName={userProfile.name} />
+      )}
+      {activeGame.id === 'clue' && (
+        <ClueGame onBackToShelf={onExit} onGameOver={onGameOver} playerName={userProfile.name} />
+      )}
       {activeGame.id === 'life' && <LifeGame onBackToShelf={onExit} />}
-      {activeGame.id === 'monopoly' && <MonopolyGame onBackToShelf={onExit} />}
+      {activeGame.id === 'monopoly' && (
+        <MonopolyGame onBackToShelf={onExit} onGameOver={onGameOver} playerName={userProfile.name} />
+      )}
     </>
   );
 }

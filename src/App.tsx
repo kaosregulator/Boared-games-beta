@@ -30,9 +30,17 @@ function initialHubMode(): HubMode {
   return 'landing';
 }
 
+/** `?game=<id>` opens a title straight on the table, skipping the unboxing. */
+function initialGame(): GameMetadata | null {
+  if (typeof window === 'undefined') return null;
+  const id = new URLSearchParams(window.location.search).get('game');
+  if (!id) return null;
+  return GAME_CATALOG.find(g => g.id === id) ?? null;
+}
+
 export default function App() {
   const [hubMode, setHubMode] = useState<HubMode>(initialHubMode);
-  const [activeGame, setActiveGame] = useState<GameMetadata | null>(null);
+  const [activeGame, setActiveGame] = useState<GameMetadata | null>(initialGame);
   const [isUnboxing, setIsUnboxing] = useState<boolean>(false);
   const [isPacking, setIsPacking] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<ViewMode>('isometric');
