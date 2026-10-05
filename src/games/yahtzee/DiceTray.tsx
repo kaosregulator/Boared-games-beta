@@ -130,6 +130,8 @@ function Die({ index, held, holdSlot, rollToken, materials, onSettle, onToggleHo
   const reported = useRef(-1);
   const lastToken = useRef(-1);
   const landed = useRef(false);
+  /** Dice spawn at rest, so a face is only reported after a real throw. */
+  const thrown = useRef(false);
 
   /** Face value currently pointing up, or 0 if the die is cocked. */
   const readTop = useCallback(() => {
@@ -171,6 +173,7 @@ function Die({ index, held, holdSlot, rollToken, materials, onSettle, onToggleHo
     settleTimer.current = 0;
     reported.current = -1;
     landed.current = false;
+    thrown.current = true;
   }, [index]);
 
   useEffect(() => {
@@ -198,6 +201,8 @@ function Die({ index, held, holdSlot, rollToken, materials, onSettle, onToggleHo
       );
       return;
     }
+
+    if (!thrown.current) return;
 
     const vel = node.linvel();
     const ang = node.angvel();

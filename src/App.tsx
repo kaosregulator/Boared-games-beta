@@ -41,7 +41,9 @@ function initialGame(): GameMetadata | null {
 export default function App() {
   const [hubMode, setHubMode] = useState<HubMode>(initialHubMode);
   const [activeGame, setActiveGame] = useState<GameMetadata | null>(initialGame);
-  const [isUnboxing, setIsUnboxing] = useState<boolean>(false);
+  const [isUnboxing, setIsUnboxing] = useState<boolean>(
+    () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('unbox'),
+  );
   const [isPacking, setIsPacking] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<ViewMode>('isometric');
   const [isBotConsoleOpen, setIsBotConsoleOpen] = useState<boolean>(false);

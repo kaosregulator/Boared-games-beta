@@ -69,7 +69,9 @@ export function ActiveGameSwitch({
       {activeGame.id === 'clue' && (
         <ClueGame onBackToShelf={onExit} onGameOver={onGameOver} playerName={userProfile.name} />
       )}
-      {activeGame.id === 'life' && <LifeGame onBackToShelf={onExit} />}
+      {activeGame.id === 'life' && (
+        <LifeGame onBackToShelf={onExit} onGameOver={onGameOver} playerName={userProfile.name} />
+      )}
       {activeGame.id === 'monopoly' && (
         <MonopolyGame onBackToShelf={onExit} onGameOver={onGameOver} playerName={userProfile.name} />
       )}

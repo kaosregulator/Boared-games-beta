@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ROOM_ART } from '../room/paintedRoom';
+import { RoomBackdrop } from '../room/RoomBackdrop';
 import { GameMetadata } from '../types';
 
 export function InRoomTable({
@@ -13,8 +13,10 @@ export function InRoomTable({
 }) {
   return (
     <div className="fixed inset-0 z-40 bg-black text-white">
-      <img src={ROOM_ART} alt="" className="absolute inset-0 w-full h-full object-cover opacity-50" />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/35 to-black/70" />
+      <div className="absolute inset-0">
+        <RoomBackdrop />
+      </div>
+      <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/40 to-black/75" />
       <div className="relative z-10 h-full flex flex-col">
         <header className="flex items-center justify-between gap-3 px-4 py-3">
           <div>
