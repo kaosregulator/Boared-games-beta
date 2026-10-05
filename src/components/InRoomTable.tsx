@@ -16,7 +16,7 @@ export function InRoomTable({
       <div className="absolute inset-0">
         <RoomBackdrop />
       </div>
-      <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/40 to-black/75" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/30 to-black/60" />
       <div className="relative z-10 h-full flex flex-col">
         <header className="flex items-center justify-between gap-3 px-4 py-3">
           <div>

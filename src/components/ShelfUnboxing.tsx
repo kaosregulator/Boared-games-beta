@@ -25,7 +25,7 @@ export const ShelfUnboxing: React.FC<ShelfUnboxingProps> = ({
       <Canvas
         shadows
         dpr={[1, 1.8]}
-        camera={{ fov: 52, near: 0.03, far: 60 }}
+        camera={{ fov: 46, near: 0.03, far: 60 }}
         gl={{ antialias: true }}
         onCreated={({ gl, scene }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping;
@@ -44,19 +44,6 @@ export const ShelfUnboxing: React.FC<ShelfUnboxingProps> = ({
           }}
         />
       </Canvas>
-
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 overflow-hidden">
-        <svg className="hand-reach absolute left-[8%] bottom-0 w-56" viewBox="0 0 200 140" aria-hidden>
-          <path d="M20 140 C30 90 40 70 70 62 C88 56 100 70 108 90 L120 140 Z" fill="#c4846a" />
-          <path d="M55 70 C70 20 95 8 120 28 C132 38 128 58 112 64 C90 72 70 78 55 70Z" fill="#d7a08a" />
-          <path d="M0 140 L70 92 L10 140 Z" fill="#1e3a8a" />
-        </svg>
-        <svg className="hand-reach absolute right-[8%] bottom-0 w-56" viewBox="0 0 200 140" aria-hidden>
-          <path d="M180 140 C170 90 160 70 130 62 C112 56 100 70 92 90 L80 140 Z" fill="#c4846a" />
-          <path d="M145 70 C130 20 105 8 80 28 C68 38 72 58 88 64 C110 72 130 78 145 70Z" fill="#d7a08a" />
-          <path d="M200 140 L130 92 L190 140 Z" fill="#1e3a8a" />
-        </svg>
-      </div>
 
       <div className="absolute top-4 left-4 right-4 z-10 flex items-start justify-between gap-3">
         <div className="bg-black/55 border border-white/15 rounded-2xl px-3 py-2 backdrop-blur-md">

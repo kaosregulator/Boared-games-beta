@@ -3,10 +3,10 @@ import { Canvas, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { VideoRoomScene } from './VideoRoomScene';
 
-/** Seated at the play table, looking across the bedroom. */
+/** Seated at the play table, looking across the bedroom at the poster wall. */
 const SEAT = {
-  at: [1.18, 1.22, -0.28] as [number, number, number],
-  look: [-0.45, 1.12, -2.45] as [number, number, number],
+  at: [1.0, 1.24, -0.5] as [number, number, number],
+  look: [-0.3, 1.32, -2.48] as [number, number, number],
 };
 
 function SeatedCamera() {
@@ -20,14 +20,21 @@ function SeatedCamera() {
 
 /**
  * The backdrop renders on demand only. Nothing in it moves while a game is on
- * the table, so a handful of frames after the textures land is enough and the
- * GPU stays free for the board itself.
+ * the table, so a short burst of frames is enough and the GPU stays free for
+ * the board itself. This mounts inside the Suspense boundary, so the burst only
+ * starts once the room textures have actually decoded.
  */
-function RenderOnce() {
+function RenderBurst() {
   const invalidate = useThree(state => state.invalidate);
   useEffect(() => {
-    const timers = [0, 80, 240, 700, 1600].map(ms => window.setTimeout(invalidate, ms));
-    return () => timers.forEach(window.clearTimeout);
+    invalidate();
+    let left = 12;
+    const id = window.setInterval(() => {
+      invalidate();
+      left -= 1;
+      if (left <= 0) window.clearInterval(id);
+    }, 180);
+    return () => window.clearInterval(id);
   }, [invalidate]);
   return null;
 }
@@ -45,13 +52,13 @@ export function RoomBackdrop() {
       gl={{ antialias: false, powerPreference: 'low-power' }}
       onCreated={({ gl, scene }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
-        gl.toneMappingExposure = 0.95;
+        gl.toneMappingExposure = 1.15;
         scene.fog = new THREE.Fog('#160d15', 6, 18);
       }}
     >
       <SeatedCamera />
-      <RenderOnce />
       <Suspense fallback={null}>
+        <RenderBurst />
         <VideoRoomScene hoveredId={null} pulledGameId={null} tapeOn={false} lampsWarm={false} />
       </Suspense>
     </Canvas>

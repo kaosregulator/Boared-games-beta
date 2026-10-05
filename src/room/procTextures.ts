@@ -185,54 +185,6 @@ export function blindsTexture() {
   });
 }
 
-/** Spine label for library titles with no crop available in the clip. */
-export function spineTexture(title: string, color: string, accent: string) {
-  return memo(`spine:${title}`, () => {
-    const { c, ctx } = canvas(512, 96);
-    ctx.fillStyle = color;
-    ctx.fillRect(0, 0, 512, 96);
-    const grad = ctx.createLinearGradient(0, 0, 0, 96);
-    grad.addColorStop(0, 'rgba(255,255,255,0.18)');
-    grad.addColorStop(0.5, 'rgba(255,255,255,0)');
-    grad.addColorStop(1, 'rgba(0,0,0,0.3)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 512, 96);
-    ctx.strokeStyle = accent;
-    ctx.lineWidth = 3;
-    ctx.strokeRect(10, 10, 492, 76);
-    ctx.fillStyle = accent;
-    ctx.font = '800 44px Georgia, serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(title.toUpperCase(), 256, 52);
-    grain(ctx, 512, 96, 500, 0.12);
-    return finish(c);
-  });
-}
-
-/** Lid art for a boxed game: title band over a tinted board photo stand-in. */
-export function lidTexture(title: string, color: string, accent: string) {
-  return memo(`lid:${title}`, () => {
-    const { c, ctx } = canvas(512, 384);
-    ctx.fillStyle = color;
-    ctx.fillRect(0, 0, 512, 384);
-    ctx.fillStyle = 'rgba(0,0,0,0.22)';
-    ctx.fillRect(26, 120, 460, 230);
-    ctx.strokeStyle = accent;
-    ctx.lineWidth = 4;
-    ctx.strokeRect(26, 120, 460, 230);
-    ctx.fillStyle = accent;
-    ctx.font = '900 62px Georgia, serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(title.toUpperCase(), 256, 86);
-    ctx.font = '600 20px Helvetica, Arial, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.75)';
-    ctx.fillText('GAME ROOM EDITION', 256, 368);
-    grain(ctx, 512, 384, 1400, 0.1);
-    return finish(c);
-  });
-}
-
 /** Generic warm wood for carcasses and table tops. */
 export function woodTexture(base = PALETTE.wood, repeat: [number, number] = [2, 2]) {
   return memo(`wood:${base}:${repeat.join('x')}`, () => {

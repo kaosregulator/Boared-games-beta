@@ -84,7 +84,7 @@ const EDGE_ANGLE = { bottom: 0, left: Math.PI / 2, top: Math.PI, right: -Math.PI
 
 function drawMonopoly(ctx: CanvasRenderingContext2D) {
   const cell = S / 11;
-  paper(ctx, '#cfe3d0');
+  paper(ctx, '#bcd8bd');
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -160,7 +160,7 @@ function drawMonopoly(ctx: CanvasRenderingContext2D) {
 
   // Centre field with the wordmark and the two card decks.
   const inner = cell;
-  ctx.fillStyle = '#cfe3d0';
+  ctx.fillStyle = '#bcd8bd';
   ctx.fillRect(inner, inner, S - inner * 2, S - inner * 2);
 
   const deck = (x: number, y: number, angle: number, title: string, face: string, ink: string) => {
@@ -290,13 +290,13 @@ const LIFE_TINT: Record<string, string> = {
 function drawLife(ctx: CanvasRenderingContext2D) {
   // rolling landscape the track winds through
   const sky = ctx.createLinearGradient(0, 0, 0, S);
-  sky.addColorStop(0, '#9fd4ea');
-  sky.addColorStop(0.45, '#cfe9c4');
-  sky.addColorStop(1, '#a8cf96');
+  sky.addColorStop(0, '#5aa8cf');
+  sky.addColorStop(0.42, '#8dc48a');
+  sky.addColorStop(1, '#6aa35c');
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, S, S);
   for (let i = 0; i < 7; i += 1) {
-    ctx.fillStyle = `rgba(255,255,255,${0.1 + (i % 3) * 0.05})`;
+    ctx.fillStyle = `rgba(255,255,255,${0.16 + (i % 3) * 0.07})`;
     ctx.beginPath();
     ctx.ellipse(120 + i * 140, 70 + (i % 3) * 36, 86, 34, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -316,17 +316,23 @@ function drawLife(ctx: CanvasRenderingContext2D) {
   };
 
   // the road itself, drawn under the tiles
-  ctx.strokeStyle = '#efe7d4';
-  ctx.lineWidth = Math.min(cw, ch) * 0.78;
+  const road = () => {
+    ctx.beginPath();
+    TRACK.forEach((_, i) => {
+      const p = centreOf(i);
+      if (i === 0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    });
+    ctx.stroke();
+  };
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
-  ctx.beginPath();
-  TRACK.forEach((_, i) => {
-    const p = centreOf(i);
-    if (i === 0) ctx.moveTo(p.x, p.y);
-    else ctx.lineTo(p.x, p.y);
-  });
-  ctx.stroke();
+  ctx.strokeStyle = '#4a4036';
+  ctx.lineWidth = Math.min(cw, ch) * 0.84;
+  road();
+  ctx.strokeStyle = '#ece0c6';
+  ctx.lineWidth = Math.min(cw, ch) * 0.76;
+  road();
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -684,6 +690,33 @@ export function boardHalfTexture(id: GameId, side: 'near' | 'far'): THREE.Textur
   half.repeat.set(1, 0.5);
   half.offset.set(0, side === 'far' ? 0.5 : 0);
   return half;
+}
+
+/** Box spine: the strip you actually read when the box is shelved edge-out. */
+export function spineStripTexture(id: GameId, title: string, face: string, ink: string): THREE.Texture {
+  const w = 1024;
+  const h = 170;
+  const { c, ctx } = surface(w, h);
+  paper(ctx, face, w, h);
+
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.fillRect(0, h - 14, w, 14);
+  ctx.fillStyle = 'rgba(255,255,255,0.22)';
+  ctx.fillRect(0, 0, w, 8);
+
+  const art = boardFaceTexture(id).image as HTMLCanvasElement;
+  const tile = h - 34;
+  ctx.save();
+  roundRect(ctx, w - tile - 26, 17, tile, tile, 8);
+  ctx.clip();
+  ctx.drawImage(art, w - tile - 26, 17, tile, tile);
+  ctx.restore();
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = ink;
+  fitText(ctx, title.toUpperCase(), (w - tile - 26) / 2 + 20, h / 2, w - tile - 110, 108, '900');
+  return finish(c);
 }
 
 /**

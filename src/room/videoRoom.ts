@@ -71,13 +71,18 @@ export const RUG = { x: 0.35, z: -1.0, radius: 0.88 };
 export const BOOMBOX = { x: pxX(617), z: NORTH_Z + 0.3 };
 export const FAN = { x: 0, y: WALL.height - 0.18, z: -0.9 };
 
-/** Low table in front of the shelf where a board gets unfolded. */
+/**
+ * Low table in front of the shelf where a board gets unfolded. `top` is the
+ * centre of the table slab and `surface` is the height things actually rest on.
+ */
 export const PLAY_TABLE = {
   x: 1.42,
   z: -1.34,
   top: 0.72,
-  width: 0.9,
-  depth: 0.72,
+  thickness: 0.05,
+  surface: 0.745,
+  width: 1.08,
+  depth: 0.78,
 };
 
 export interface Decal {

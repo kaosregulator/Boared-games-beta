@@ -39,12 +39,17 @@ import {
   floorTexture,
   nightSkyTexture,
   rugTexture,
-  lidTexture,
-  spineTexture,
   wallTexture,
   woodTexture,
 } from './procTextures';
+import { BOX_FACE, lidTexture, spineStripTexture } from './realBoardArt';
 import type { HoverTarget } from './Interactable';
+
+/** Printed box art for a shelf slot, matched to that game's real board face. */
+function boxSkin(slot: ShelfSlot) {
+  const face = BOX_FACE[slot.id];
+  return { face: face?.face ?? slot.color, ink: face?.ink ?? '#ffffff' };
+}
 
 /** Art cut out of the reference clip, loaded straight off /room. */
 const CROPS = [
@@ -463,7 +468,8 @@ function BedroomDoor({ crops, hovered }: { crops: Crops; hovered: boolean }) {
 
 function spineMap(slot: ShelfSlot, crops: Crops) {
   if (slot.spine && crops[slot.spine as CropName]) return crops[slot.spine as CropName];
-  return spineTexture(slot.title, slot.color, slot.accent);
+  const skin = boxSkin(slot);
+  return spineStripTexture(slot.id, slot.title, skin.face, skin.ink);
 }
 
 function ShelfBox({
@@ -697,9 +703,18 @@ function EastDesk({ crops }: { crops: Crops }) {
       <group position={[0.06, EAST_DESK.top + 0.03, -0.18]} rotation={[0, -Math.PI / 2 - 0.25, 0]}>
         <mesh position={[0, 0.17, 0]} castShadow>
           <boxGeometry args={[0.42, 0.34, 0.36]} />
-          <meshStandardMaterial color="#c9bda4" roughness={0.75} />
+          <meshStandardMaterial color="#bdb094" roughness={0.75} />
         </mesh>
-        <mesh position={[0, 0.18, 0.182]}>
+        {/* recessed bezel so the tube reads as a tube, not a white block */}
+        <mesh position={[0, 0.18, 0.181]}>
+          <planeGeometry args={[0.37, 0.29]} />
+          <meshStandardMaterial color="#9c9075" roughness={0.85} />
+        </mesh>
+        <mesh position={[0, 0.02, 0.182]}>
+          <planeGeometry args={[0.34, 0.035]} />
+          <meshStandardMaterial color="#6f6553" roughness={0.9} />
+        </mesh>
+        <mesh position={[0, 0.183, 0.1825]}>
           <planeGeometry args={[0.32, 0.24]} />
           <meshStandardMaterial
             map={crops.desk_east}
@@ -733,7 +748,7 @@ function EastDesk({ crops }: { crops: Crops }) {
       </group>
       {/* boxed card games stacked on the desk */}
       {DESK_SLOTS.map((slot, i) => (
-        <group key={slot.id} position={[0, EAST_DESK.top + 0.06 + i * slot.boxHeight, -0.6]} userData={{
+        <group key={slot.id} position={[0, EAST_DESK.top + 0.06 + i * slot.boxHeight, 0.62]} userData={{
           interactable: {
             id: `game:${slot.id}`,
             kind: 'game',
@@ -744,11 +759,15 @@ function EastDesk({ crops }: { crops: Crops }) {
         }}>
           <mesh castShadow>
             <boxGeometry args={[0.34, slot.boxHeight, 0.26]} />
-            <meshStandardMaterial color={slot.color} roughness={0.9} />
+            <meshStandardMaterial color={boxSkin(slot).face} roughness={0.9} />
           </mesh>
           <mesh position={[0, slot.boxHeight / 2 + 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
             <planeGeometry args={[0.34, 0.26]} />
-            {paintedMaterial(lidTexture(slot.title, slot.color, slot.accent), 0.45)}
+            {paintedMaterial(lidTexture(slot.id, slot.title, boxSkin(slot).face, boxSkin(slot).ink), 0.45)}
+          </mesh>
+          <mesh position={[0, 0, 0.132]}>
+            <planeGeometry args={[0.34, slot.boxHeight]} />
+            {paintedMaterial(spineStripTexture(slot.id, slot.title, boxSkin(slot).face, boxSkin(slot).ink), 0.5)}
           </mesh>
         </group>
       ))}
@@ -860,7 +879,7 @@ function PlayTable() {
   return (
     <group position={[PLAY_TABLE.x, 0, PLAY_TABLE.z]}>
       <mesh position={[0, PLAY_TABLE.top, 0]} castShadow receiveShadow>
-        <boxGeometry args={[PLAY_TABLE.width, 0.05, PLAY_TABLE.depth]} />
+        <boxGeometry args={[PLAY_TABLE.width, PLAY_TABLE.thickness, PLAY_TABLE.depth]} />
         <meshStandardMaterial map={wood} roughness={0.78} />
       </mesh>
       {[
