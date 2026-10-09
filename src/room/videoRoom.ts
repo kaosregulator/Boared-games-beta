@@ -44,13 +44,20 @@ export const PLAYER = {
   spawnLook: [1.4, 1.3, -2.2] as [number, number, number],
 };
 
-export const DRESSER = { x: pxX(509), z: NORTH_Z + 0.275, width: pxW(218), height: 0.78, depth: 0.55 };
-export const CRT = { x: pxX(469), width: pxW(102), height: 0.6, depth: 0.52 };
-export const DOOR = { x: pxX(659), width: pxW(122), height: 2.05 };
-export const WINDOW_NORTH = { x: pxX(225), y: 1.62, width: pxW(90), height: 1.35 };
-export const LAVA = { x: pxX(568), y: DRESSER.height + 0.21 };
-export const SATURN = { x: pxX(581), y: 1.74 };
-export const TOY_SHELF = { x: pxX(540), y: 1.86, width: pxW(160) };
+/**
+ * The north wall is packed exactly like the painting, west to east: Street
+ * Sharks poster, window over the bed head, print column, Run DMC, Space Jam,
+ * a column of small prints, the toy shelf over the dresser/CRT, the neon
+ * Saturn, lava lamp and light switch, then the door and the game shelf.
+ */
+export const DRESSER = { x: 0.12, z: NORTH_Z + 0.275, width: 1.2, height: 0.78, depth: 0.55 };
+export const CRT = { x: -0.12, width: pxW(102), height: 0.6, depth: 0.52 };
+export const DOOR = { x: 1.15, width: pxW(122), height: 2.05 };
+export const WINDOW_NORTH = { x: -1.8, y: 1.62, width: 0.7, height: 1.06 };
+export const LAVA = { x: 0.42, y: DRESSER.height + 0.21 };
+export const SATURN = { x: 0.62, y: 1.72 };
+export const TOY_SHELF = { x: 0.15, y: 1.9, width: 0.9 };
+export const LIGHT_SWITCH = { x: 0.62, y: 1.22 };
 
 export const SHELF = {
   x: pxX(810),
@@ -62,14 +69,21 @@ export const SHELF = {
   rowY: [1.78, 1.58, 1.38, 1.18, 0.98, 0.78, 0.56, 0.34, 0.12],
 };
 
-export const BED = { x: WEST_X + 0.54, z: -0.95, width: 1.05, length: 2.1, top: 0.56 };
+export const BED = { x: WEST_X + 0.52, z: -0.95, width: 1.05, length: 2.1, top: 0.56 };
 export const EAST_DESK = { x: EAST_X - 0.35, z: -1.2, depth: 0.68, length: 1.6, top: 0.76 };
 export const EAST_TV = { x: EAST_X - 0.32, z: 0.8, width: 0.58, depth: 0.5, top: 0.55 };
-export const NIGHTSTAND = { x: WEST_X + 0.26, z: 0.68, width: 0.44, depth: 0.4, top: 0.6 };
-export const CORNER_DESK = { x: -1.9, z: NORTH_Z + 0.24, width: 0.9, depth: 0.45, top: 0.74 };
+/** Nightstand between the bed head and the desk, teddy and mug on top. */
+export const NIGHTSTAND = { x: -1.37, z: NORTH_Z + 0.22, width: 0.36, depth: 0.4, top: 0.56 };
+/** Student desk under the Run DMC poster: lava lamp, alarm clock, camera, books, lamp. */
+export const WEST_DESK = { x: -0.85, z: NORTH_Z + 0.26, width: 0.66, depth: 0.5, top: 0.74 };
+export const OFFICE_CHAIR = { x: -0.85, z: NORTH_Z + 0.86, seat: 0.46 };
+/** Wooden chair pushed in at the computer desk on the east wall. */
+export const WOOD_CHAIR = { x: EAST_X - 0.95, z: -1.1, seat: 0.45 };
 export const RUG = { x: 0.35, z: -1.0, radius: 0.88 };
-export const BOOMBOX = { x: pxX(617), z: NORTH_Z + 0.3 };
+export const BOOMBOX = { x: 0.86, z: NORTH_Z + 0.3 };
 export const FAN = { x: 0, y: WALL.height - 0.18, z: -0.9 };
+/** Second ceiling fixture over the shelf end of the room, as in the clip. */
+export const CEILING_LIGHT = { x: 1.5, z: 0.9 };
 
 /**
  * Low table in front of the shelf where a board gets unfolded. `top` is the
@@ -98,12 +112,20 @@ export interface Decal {
 
 /** Flat art pinned to the walls, cut straight out of the reference frames. */
 export const DECALS: Decal[] = [
-  { id: 'sharks', texture: 'poster_sharks', wall: 'north', along: pxX(146), y: 1.85, width: 0.5, height: 0.78 },
-  { id: 'rundmc', texture: 'poster_rundmc', wall: 'north', along: pxX(307), y: 1.9, width: 0.4, height: 0.62 },
-  { id: 'spacejam', texture: 'poster_spacejam', wall: 'north', along: pxX(386), y: 1.84, width: 0.65, height: 0.8 },
+  // north wall, west to east, sized from the painting's crop aspect ratios
+  { id: 'sharks', texture: 'poster_sharks_full', wall: 'north', along: -2.37, y: 1.8, width: 0.42, height: 0.81 },
+  { id: 'prints-west', texture: 'prints_west', wall: 'north', along: -1.38, y: 1.7, width: 0.2, height: 0.79 },
+  { id: 'rundmc', texture: 'poster_rundmc_full', wall: 'north', along: -1.1, y: 1.82, width: 0.36, height: 0.78 },
+  { id: 'photos-west', texture: 'photos_west', wall: 'north', along: -1.1, y: 1.28, width: 0.22, height: 0.18 },
+  { id: 'spacejam', texture: 'poster_spacejam_full', wall: 'north', along: -0.65, y: 1.8, width: 0.5, height: 1.0 },
+  { id: 'prints-north', texture: 'prints_north', wall: 'north', along: -0.37, y: 1.9, width: 0.18, height: 0.45 },
+  // side walls
   { id: 'west-frames', texture: 'frames_west', wall: 'west', along: 0.95, y: 1.72, width: 1.5, height: 1.2 },
   { id: 'west-frames-2', texture: 'frames_west', wall: 'west', along: -1.85, y: 1.78, width: 1.1, height: 0.9 },
-  { id: 'east-ufo', texture: 'ufo_poster', wall: 'east', along: -2.15, y: 1.78, width: 0.46, height: 0.6 },
+  { id: 'east-frames', texture: 'frames_east', wall: 'east', along: -2.05, y: 1.62, width: 0.5, height: 1.02 },
+  { id: 'east-frames-2', texture: 'frames_west', wall: 'east', along: -0.9, y: 1.72, width: 1.2, height: 0.95 },
+  { id: 'east-prints', texture: 'prints_west', wall: 'east', along: 0.05, y: 1.66, width: 0.22, height: 0.86 },
+  { id: 'east-photos', texture: 'photos_west', wall: 'east', along: 1.6, y: 1.5, width: 0.3, height: 0.25 },
   { id: 'south-sharks', texture: 'poster_sharks', wall: 'south', along: 1.2, y: 1.8, width: 0.56, height: 0.9 },
   { id: 'south-jam', texture: 'poster_spacejam', wall: 'south', along: -1.1, y: 1.8, width: 0.68, height: 0.84 },
 ];
@@ -126,9 +148,10 @@ export const COLLIDERS: Collider[] = [
   { x: SHELF.x, z: SHELF.z, hx: SHELF.width / 2, hz: SHELF.depth / 2, top: SHELF.height },
   { x: EAST_DESK.x, z: EAST_DESK.z, hx: EAST_DESK.depth / 2, hz: EAST_DESK.length / 2, top: EAST_DESK.top },
   { x: EAST_TV.x, z: EAST_TV.z, hx: EAST_TV.width / 2, hz: EAST_TV.depth / 2, top: EAST_TV.top },
-  { x: 1.75, z: -1.1, hx: 0.28, hz: 0.28, top: 0.52 },
+  { x: WOOD_CHAIR.x, z: WOOD_CHAIR.z, hx: 0.24, hz: 0.24, top: 0.9 },
+  { x: OFFICE_CHAIR.x, z: OFFICE_CHAIR.z, hx: 0.3, hz: 0.3, top: 0.95 },
   { x: PLAY_TABLE.x, z: PLAY_TABLE.z, hx: PLAY_TABLE.width / 2, hz: PLAY_TABLE.depth / 2, top: PLAY_TABLE.top },
-  { x: CORNER_DESK.x, z: CORNER_DESK.z, hx: CORNER_DESK.width / 2, hz: CORNER_DESK.depth / 2, top: CORNER_DESK.top },
+  { x: WEST_DESK.x, z: WEST_DESK.z, hx: WEST_DESK.width / 2, hz: WEST_DESK.depth / 2, top: WEST_DESK.top },
 ];
 
 export interface ShelfSlot {

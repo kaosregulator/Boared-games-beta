@@ -22,11 +22,14 @@ export interface Waypoint {
 export const TOUR: Waypoint[] = [
   { at: [0.0, PLAYER.height, 1.85], look: [0.1, 1.25, -2.4], travel: 0, hold: 2.0, label: 'Doorway view' },
   { at: [-0.5, PLAYER.height, 0.55], look: [-0.3, 1.3, -2.45], travel: 2.6, hold: 1.6, label: 'CRT and posters' },
-  { at: [-1.35, PLAYER.height, 0.2], look: [-2.5, 0.9, -1.1], travel: 2.2, hold: 1.6, label: 'Bed and quilt' },
+  { at: [-1.0, PLAYER.height, 0.6], look: [-2.3, 0.7, -1.5], travel: 2.2, hold: 1.6, label: 'Bed and quilt' },
+  { at: [-0.75, PLAYER.height, -0.8], look: [-1.0, 1.0, -2.45], travel: 2.0, hold: 1.8, label: 'Desk, clock and lava lamp' },
   { at: [0.4, PLAYER.height, -0.6], look: [2.3, 1.3, -2.3], travel: 2.4, hold: 1.4, label: 'Turning to the shelf' },
   { at: [1.55, PLAYER.height, -0.95], look: [2.1, 1.5, -2.4], travel: 2.2, hold: 1.8, label: 'At the shelf' },
   { at: [2.0, PLAYER.height, -1.5], look: [2.1, 1.62, -2.4], travel: 1.8, hold: 2.2, label: 'Reaching the boxes' },
+  { at: [0.9, PLAYER.height, -0.7], look: [1.15, 1.35, -2.5], travel: 1.8, hold: 1.6, label: 'Door, cap and jacket' },
   { at: [1.3, PLAYER.height, -0.4], look: [2.45, 1.1, -1.2], travel: 2.0, hold: 1.4, label: 'Computer desk' },
+  { at: [0.2, PLAYER.height, -0.3], look: [0.4, 0.0, -1.9], travel: 1.8, hold: 1.6, label: 'Toys on the floor' },
   { at: [0.3, PLAYER.height, 0.9], look: [1.1, 1.1, -2.4], travel: 2.4, hold: 2.0, label: 'Back to idle' },
 ];
 

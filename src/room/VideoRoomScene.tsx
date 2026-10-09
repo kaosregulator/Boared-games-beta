@@ -1,10 +1,9 @@
 import React, { useMemo, useRef } from 'react';
-import { useFrame, useLoader } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import {
   BED,
   BOOMBOX,
-  CORNER_DESK,
   CRT,
   DECALS,
   DESK_SLOTS,
@@ -33,17 +32,29 @@ import {
   type ShelfSlot,
 } from './videoRoom';
 import {
-  blindsTexture,
   ceilingTexture,
   crtScreenTexture,
   floorTexture,
-  nightSkyTexture,
   rugTexture,
   wallTexture,
   woodTexture,
 } from './procTextures';
 import { BOX_FACE, lidTexture, spineStripTexture } from './realBoardArt';
 import type { HoverTarget } from './Interactable';
+import { Cutout, Solid, paintedMaterial, useRoomCrops, type CropName, type Crops } from './roomCrops';
+import {
+  BedDressing,
+  CeilingLight,
+  DresserDressing,
+  Figures,
+  FloorProps,
+  NightstandTop,
+  OfficeChair,
+  ShelfTopItems,
+  Skateboard,
+  WestDesk,
+  WoodChair,
+} from './RoomDetails';
 
 /** Printed box art for a shelf slot, matched to that game's real board face. */
 function boxSkin(slot: ShelfSlot) {
@@ -51,72 +62,7 @@ function boxSkin(slot: ShelfSlot) {
   return { face: face?.face ?? slot.color, ink: face?.ink ?? '#ffffff' };
 }
 
-/** Art cut out of the reference clip, loaded straight off /room. */
-const CROPS = [
-  'poster_sharks',
-  'poster_rundmc',
-  'poster_spacejam',
-  'frames_west',
-  'toyshelf',
-  'dresser',
-  'door',
-  'ufo_poster',
-  'coat',
-  'desk_east',
-  'tv_east',
-  'deskchair',
-  'bed_quilt',
-  'bed_pillow',
-  'nightstand_west',
-  'boombox',
-  'crt_play',
-  'spine_monopoly',
-  'spine_battleship',
-  'spine_sorry',
-  'spine_clue',
-  'spine_life',
-  'spine_yahtzee',
-] as const;
-
-type CropName = (typeof CROPS)[number];
-export type Crops = Record<CropName, THREE.Texture>;
-
-export function useRoomCrops(): Crops {
-  const urls = useMemo(() => CROPS.map(name => `/room/${name}.png`), []);
-  const loaded = useLoader(THREE.TextureLoader, urls);
-  return useMemo(() => {
-    const out = {} as Crops;
-    CROPS.forEach((name, i) => {
-      const tex = loaded[i];
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.anisotropy = 8;
-      out[name] = tex;
-    });
-    return out;
-  }, [loaded]);
-}
-
-/**
- * The reference art is already lit, so props re-emit their own map at partial
- * strength. That keeps the painted highlights readable without flattening the
- * room's real lights.
- */
-function paintedMaterial(map: THREE.Texture, emissive = 0.42) {
-  return (
-    <meshStandardMaterial
-      map={map}
-      emissive="#ffffff"
-      emissiveMap={map}
-      emissiveIntensity={emissive}
-      roughness={0.82}
-      metalness={0.04}
-    />
-  );
-}
-
-function Solid({ color, rough = 0.85 }: { color: string; rough?: number }) {
-  return <meshStandardMaterial color={color} roughness={rough} metalness={0.05} />;
-}
+export { useRoomCrops, type Crops } from './roomCrops';
 
 interface SceneProps {
   /** Games already unlocked for pulling off the shelf. */
@@ -224,19 +170,24 @@ function WallDecals({ crops }: { crops: Crops }) {
   );
 }
 
-function NorthWindow() {
-  const sky = nightSkyTexture();
-  const blinds = blindsTexture();
+function NorthWindow({ crops }: { crops: Crops }) {
   const { x, y, width, height } = WINDOW_NORTH;
   return (
     <group position={[x, y, NORTH_Z]}>
-      <mesh position={[0, 0, 0.012]}>
-        <planeGeometry args={[width, height]} />
-        <meshBasicMaterial map={sky} />
+      {/* recessed reveal so the window sits in the wall instead of on it */}
+      <mesh position={[0, 0, -0.04]}>
+        <boxGeometry args={[width + 0.04, height + 0.04, 0.08]} />
+        <Solid color="#241a26" />
       </mesh>
-      <mesh position={[0, 0.06, 0.03]}>
-        <planeGeometry args={[width - 0.02, height * 0.82]} />
-        <meshStandardMaterial map={blinds} transparent emissive="#ffd9c0" emissiveIntensity={0.1} />
+      {/* half-drawn blinds over the city skyline, straight from the painting */}
+      <mesh position={[0, 0, 0.002]}>
+        <planeGeometry args={[width, height]} />
+        <meshStandardMaterial map={crops.window_glass} emissive="#ffffff" emissiveMap={crops.window_glass} emissiveIntensity={0.95} roughness={0.4} />
+      </mesh>
+      {/* sill */}
+      <mesh position={[0, -height / 2 - 0.05, 0.08]}>
+        <boxGeometry args={[width + 0.18, 0.035, 0.16]} />
+        <Solid color="#6a5a52" />
       </mesh>
       {/* frame */}
       {[
@@ -254,7 +205,7 @@ function NorthWindow() {
           <Solid color="#6a5a52" />
         </mesh>
       ))}
-      <pointLight position={[0, 0, 0.45]} color="#8ea2ff" intensity={0.85} distance={2.3} decay={2} />
+      <pointLight position={[0, 0, 0.45]} color="#9aa6ff" intensity={1.1} distance={2.6} decay={2} />
     </group>
   );
 }
@@ -262,6 +213,15 @@ function NorthWindow() {
 function Dresser({ crops }: { crops: Crops }) {
   const wood = woodTexture('#5a3826', [1, 1]);
   const { x, z, width, height, depth } = DRESSER;
+  // the painting's drawer front is wider than the real dresser, so use its
+  // middle span (handles and the NO FEAR sticker) at the right aspect ratio
+  const front = useMemo(() => {
+    const t = crops.dresser_full.clone();
+    t.repeat.set(0.57, 1);
+    t.offset.set(0.215, 0);
+    t.needsUpdate = true;
+    return t;
+  }, [crops.dresser_full]);
   return (
     <group position={[x, 0, z]}>
       <mesh position={[0, height / 2, 0]} castShadow receiveShadow>
@@ -271,7 +231,7 @@ function Dresser({ crops }: { crops: Crops }) {
       {/* painted drawer front straight off the clip */}
       <mesh position={[0, height / 2, depth / 2 + 0.006]}>
         <planeGeometry args={[width - 0.02, height - 0.02]} />
-        {paintedMaterial(crops.dresser, 0.5)}
+        {paintedMaterial(front, 0.5)}
       </mesh>
       <mesh position={[0, height + 0.012, 0]}>
         <boxGeometry args={[width + 0.05, 0.025, depth + 0.05]} />
@@ -295,7 +255,7 @@ function CrtTelevision({ crops, hovered }: { crops: Crops; hovered: boolean }) {
       {/* cabinet */}
       <mesh position={[0, CRT.height / 2, 0]} castShadow>
         <boxGeometry args={[CRT.width, CRT.height, CRT.depth]} />
-        <meshStandardMaterial color={hovered ? '#6d6d7a' : '#4a4a55'} roughness={0.68} />
+        <meshStandardMaterial color={hovered ? '#45454f' : '#2b2b33'} roughness={0.72} />
       </mesh>
       {/* glass */}
       <mesh position={[0, CRT.height / 2 + 0.01, CRT.depth / 2 + 0.004]}>
@@ -313,13 +273,17 @@ function CrtTelevision({ crops, hovered }: { crops: Crops; hovered: boolean }) {
         <planeGeometry args={[CRT.width, CRT.height]} />
         {paintedMaterial(crops.crt_play, 0.38)}
       </mesh>
-      {/* VCR stacked on top, as in the clip */}
-      <mesh position={[0, CRT.height + 0.055, -0.02]} castShadow>
-        <boxGeometry args={[CRT.width * 0.92, 0.1, CRT.depth * 0.8]} />
-        <Solid color="#2e2b33" rough={0.6} />
+      {/* VCR and cable box stacked on top, painted fronts from the reference */}
+      <mesh position={[0, CRT.height + 0.085, -0.02]} castShadow>
+        <boxGeometry args={[CRT.width * 0.94, 0.17, CRT.depth * 0.8]} />
+        <Solid color="#2a272e" rough={0.6} />
       </mesh>
-      <mesh position={[0.12, CRT.height + 0.055, CRT.depth * 0.4 + 0.002]}>
-        <planeGeometry args={[0.1, 0.03]} />
+      <mesh position={[0, CRT.height + 0.085, CRT.depth * 0.4 - 0.018]}>
+        <planeGeometry args={[CRT.width * 0.94, 0.17]} />
+        {paintedMaterial(crops.vcr_stack, 0.5)}
+      </mesh>
+      <mesh position={[0.14, CRT.height + 0.045, CRT.depth * 0.4 - 0.016]}>
+        <planeGeometry args={[0.08, 0.02]} />
         <meshBasicMaterial color="#7dff9b" />
       </mesh>
       <pointLight position={[0, CRT.height / 2, 0.55]} color="#89a6ff" intensity={hovered ? 1.5 : 0.95} distance={2.2} decay={2} />
@@ -365,7 +329,7 @@ function NeonSaturn() {
   );
 }
 
-function LavaLamp({ warm, hovered }: { warm: boolean; hovered: boolean }) {
+function LavaLamp({ crops, warm, hovered }: { crops: Crops; warm: boolean; hovered: boolean }) {
   const blobs = useRef<THREE.Group>(null);
   useFrame(({ clock }) => {
     if (!blobs.current) return;
@@ -387,30 +351,16 @@ function LavaLamp({ warm, hovered }: { warm: boolean; hovered: boolean }) {
         <cylinderGeometry args={[0.04, 0.055, 0.04, 20]} />
         <Solid color="#23232b" rough={0.5} />
       </mesh>
-      <mesh position={[0, 0.135, 0]}>
-        <coneGeometry args={[0.038, 0.2, 20, 1, true]} />
-        <meshStandardMaterial
-          color={warm ? '#e04a1c' : '#d92a62'}
-          emissive={warm ? '#ff6a28' : '#ff3f7c'}
-          emissiveIntensity={hovered ? 0.95 : 0.65}
-          transparent
-          opacity={0.72}
-          roughness={0.3}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-      <group ref={blobs} position={[0, 0.13, 0]}>
+      {/* the painted lamp, crossed so it reads from every side */}
+      <Cutout map={crops.lava_north} width={0.15} height={0.38} position={[0, 0.0, 0]} emissive={hovered ? 1.4 : warm ? 1.15 : 0.95} shadow={false} />
+      <group ref={blobs} position={[0, 0.2, 0.02]}>
         {[0, 1, 2].map(i => (
           <mesh key={i} position={[0, 0, 0]}>
-            <sphereGeometry args={[0.016, 10, 10]} />
-            <meshBasicMaterial color="#ffb860" />
+            <sphereGeometry args={[0.014, 10, 10]} />
+            <meshBasicMaterial color="#ffb860" transparent opacity={0.8} />
           </mesh>
         ))}
       </group>
-      <mesh position={[0, 0.25, 0]}>
-        <cylinderGeometry args={[0.022, 0.016, 0.04, 16]} />
-        <Solid color="#23232b" />
-      </mesh>
       <pointLight
         position={[0, 0.22, 0.1]}
         color={warm ? '#ff8f4a' : '#ff5c8a'}
@@ -438,7 +388,7 @@ function BedroomDoor({ crops, hovered }: { crops: Crops; hovered: boolean }) {
       </mesh>
       <mesh position={[0, DOOR.height / 2, 0.016]}>
         <planeGeometry args={[DOOR.width, DOOR.height]} />
-        {paintedMaterial(crops.door, hovered ? 0.78 : 0.56)}
+        {paintedMaterial(crops.door_full, hovered ? 0.78 : 0.56)}
       </mesh>
       {/* frame */}
       {[-1, 1].map(s => (
@@ -451,10 +401,14 @@ function BedroomDoor({ crops, hovered }: { crops: Crops; hovered: boolean }) {
         <boxGeometry args={[DOOR.width + 0.16, 0.08, 0.08]} />
         <Solid color="#43281f" />
       </mesh>
-      {/* coat on the hook beside the frame */}
-      <mesh position={[DOOR.width / 2 + 0.17, 1.22, 0.07]}>
-        <planeGeometry args={[0.26, 0.86]} />
-        {paintedMaterial(crops.coat, 0.5)}
+      {/* the painted cap and jacket, stood off the door so they hang in relief */}
+      <mesh position={[0.18, 1.845, 0.05]}>
+        <planeGeometry args={[0.22, 0.32]} />
+        {paintedMaterial(crops.hat_hook, 0.5, true)}
+      </mesh>
+      <mesh position={[0.15, 1.25, 0.065]}>
+        <planeGeometry args={[0.4, 0.92]} />
+        {paintedMaterial(crops.coat_full, 0.45, true)}
       </mesh>
       <mesh position={[0, 1.02, 0.045]}>
         <sphereGeometry args={[0.025, 10, 10]} />
@@ -607,17 +561,6 @@ function GameShelfUnit({
         />
       ))}
 
-      {/* top-shelf junk: helmet and smiley lamp from the clip */}
-      <mesh position={[-0.22, SHELF.height + 0.13, 0.02]} castShadow>
-        <sphereGeometry args={[0.1, 14, 14, 0, Math.PI * 2, 0, Math.PI * 0.62]} />
-        <meshStandardMaterial color="#7b2bb0" roughness={0.45} />
-      </mesh>
-      <mesh position={[0.16, SHELF.height + 0.13, 0.02]}>
-        <sphereGeometry args={[0.1, 18, 18]} />
-        <meshStandardMaterial color="#ffd93d" emissive="#ffd93d" emissiveIntensity={0.85} roughness={0.5} />
-      </mesh>
-      <pointLight position={[0.16, SHELF.height + 0.13, 0.2]} color="#ffdf6e" intensity={0.8} distance={1.6} decay={2} />
-
       <StringLights width={SHELF.width} height={SHELF.height} />
       <pointLight position={[0, 1.25, 0.7]} color="#ffb780" intensity={0.95} distance={2.3} decay={2} />
     </group>
@@ -644,16 +587,25 @@ function Bed({ crops, hovered }: { crops: Crops; hovered: boolean }) {
       {/* mattress + quilt */}
       <mesh position={[0, BED.top - 0.08, 0]} castShadow>
         <boxGeometry args={[BED.width, 0.16, BED.length]} />
-        <meshStandardMaterial color="#d8cfc2" roughness={0.95} />
+        <meshStandardMaterial color="#4a3650" roughness={0.98} />
       </mesh>
-      <mesh position={[0, BED.top + 0.004, 0.12]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[BED.width + 0.02, BED.length * 0.82]} />
+      {/* turned-down sheet under the pillows */}
+      <mesh position={[0, BED.top + 0.002, -BED.length / 2 + 0.3]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[BED.width, 0.6]} />
+        <meshStandardMaterial color="#cbbfb3" roughness={0.98} />
+      </mesh>
+      <mesh position={[0, BED.top + 0.004, 0.22]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[BED.width + 0.02, BED.length - 0.44]} />
         {paintedMaterial(crops.bed_quilt, hovered ? 0.78 : 0.6)}
       </mesh>
-      {/* pillow at the far end */}
-      <mesh position={[0, BED.top + 0.045, -BED.length / 2 + 0.22]} rotation={[-Math.PI / 2 + 0.22, 0, 0]}>
-        <planeGeometry args={[BED.width - 0.04, 0.42]} />
-        {paintedMaterial(crops.bed_pillow, 0.62)}
+      {/* quilt draped over the room-side edge */}
+      <mesh position={[BED.width / 2 + 0.012, BED.top - 0.1, 0.22]} rotation={[0, Math.PI / 2, 0]}>
+        <planeGeometry args={[BED.length - 0.44, 0.22]} />
+        {paintedMaterial(crops.bed_quilt, 0.4)}
+      </mesh>
+      <mesh position={[0, BED.top - 0.1, BED.length / 2 + 0.012]}>
+        <planeGeometry args={[BED.width + 0.02, 0.22]} />
+        {paintedMaterial(crops.bed_quilt, 0.4)}
       </mesh>
       {/* headboard */}
       <mesh position={[0, 0.62, -BED.length / 2 - 0.05]} castShadow>
@@ -675,12 +627,10 @@ function Nightstand({ crops }: { crops: Crops }) {
         <planeGeometry args={[NIGHTSTAND.width, NIGHTSTAND.top]} />
         {paintedMaterial(crops.nightstand_west, 0.52)}
       </mesh>
-      {/* table lamp */}
-      <mesh position={[0, NIGHTSTAND.top + 0.12, 0]}>
-        <cylinderGeometry args={[0.07, 0.1, 0.24, 18]} />
-        <meshStandardMaterial color="#f3dcb0" emissive="#ffcf92" emissiveIntensity={0.9} roughness={0.7} />
+      <mesh position={[0, NIGHTSTAND.top + 0.01, 0]}>
+        <boxGeometry args={[NIGHTSTAND.width + 0.03, 0.02, NIGHTSTAND.depth + 0.03]} />
+        <meshStandardMaterial map={woodTexture('#5a3826', [1, 1])} roughness={0.7} />
       </mesh>
-      <pointLight position={[0, NIGHTSTAND.top + 0.2, 0]} color={PALETTE.lampWarm} intensity={1.5} distance={2.7} decay={2} />
     </group>
   );
 }
@@ -784,25 +734,6 @@ function EastDesk({ crops }: { crops: Crops }) {
   );
 }
 
-function DeskChair({ crops }: { crops: Crops }) {
-  return (
-    <group position={[1.75, 0, -1.1]} rotation={[0, -0.5, 0]}>
-      <mesh position={[0, 0.26, 0]}>
-        <planeGeometry args={[0.62, 0.9]} />
-        {paintedMaterial(crops.deskchair, 0.55)}
-      </mesh>
-      <mesh position={[0, 0.26, -0.01]} rotation={[0, Math.PI, 0]}>
-        <planeGeometry args={[0.62, 0.9]} />
-        {paintedMaterial(crops.deskchair, 0.45)}
-      </mesh>
-      <mesh position={[0, 0.03, 0]}>
-        <cylinderGeometry args={[0.24, 0.26, 0.05, 16]} />
-        <Solid color="#1d1a1c" />
-      </mesh>
-    </group>
-  );
-}
-
 function EastTelevision({ crops, hovered }: { crops: Crops; hovered: boolean }) {
   const target: HoverTarget = {
     id: 'east-tv',
@@ -854,35 +785,6 @@ function Boombox({ crops, tapeOn, hovered }: { crops: Crops; tapeOn: boolean; ho
   );
 }
 
-function CornerDesk() {
-  return (
-    <group position={[CORNER_DESK.x, 0, CORNER_DESK.z]}>
-      <mesh position={[0, CORNER_DESK.top, 0]} castShadow receiveShadow>
-        <boxGeometry args={[CORNER_DESK.width, 0.05, CORNER_DESK.depth]} />
-        <meshStandardMaterial map={woodTexture('#523120', [1, 1])} roughness={0.8} />
-      </mesh>
-      {[-1, 1].map(s => (
-        <mesh key={s} position={[(s * (CORNER_DESK.width - 0.1)) / 2, CORNER_DESK.top / 2, 0]}>
-          <boxGeometry args={[0.07, CORNER_DESK.top, CORNER_DESK.depth - 0.06]} />
-          <meshStandardMaterial map={woodTexture('#523120', [1, 1])} roughness={0.85} />
-        </mesh>
-      ))}
-      {/* stack of books and a lamp */}
-      {[0, 1, 2].map(i => (
-        <mesh key={i} position={[-0.24, CORNER_DESK.top + 0.045 + i * 0.035, 0]} rotation={[0, i * 0.12, 0]}>
-          <boxGeometry args={[0.2, 0.032, 0.14]} />
-          <Solid color={['#7a2c2c', '#2c4a7a', '#6a5a2c'][i]} />
-        </mesh>
-      ))}
-      <mesh position={[0.24, CORNER_DESK.top + 0.13, 0]}>
-        <cylinderGeometry args={[0.06, 0.09, 0.2, 16]} />
-        <meshStandardMaterial color="#f0d9ab" emissive="#ffca8a" emissiveIntensity={0.8} />
-      </mesh>
-      <pointLight position={[0.24, CORNER_DESK.top + 0.2, 0.1]} color={PALETTE.lampWarm} intensity={1.3} distance={2.4} decay={2} />
-    </group>
-  );
-}
-
 function PlayTable() {
   const wood = woodTexture('#5a3621', [1, 1]);
   return (
@@ -913,53 +815,6 @@ function Rug() {
       <circleGeometry args={[RUG.radius, 48]} />
       <meshStandardMaterial map={tex} transparent roughness={0.98} />
     </mesh>
-  );
-}
-
-/** Die-cast cars and loose tapes left on the floor, as in the clip. */
-function FloorClutter() {
-  const cars = useMemo(
-    () => [
-      { p: [-0.55, -0.35], r: 0.6, c: '#b32a2a' },
-      { p: [0.2, 0.4], r: -0.9, c: '#2a4fb3' },
-      { p: [1.05, -0.2], r: 2.1, c: '#c2c2c8' },
-      { p: [-1.2, 0.75], r: 1.2, c: '#b38a2a' },
-      { p: [0.85, 0.95], r: -0.4, c: '#2a8f5a' },
-      { p: [-0.1, -1.75], r: 2.6, c: '#9c2a6a' },
-      { p: [1.95, 0.35], r: 0.2, c: '#b33a2a' },
-      { p: [-1.6, -1.9], r: -1.4, c: '#3a6ab3' },
-    ],
-    [],
-  );
-  const tapes = useMemo(
-    () => [
-      { p: [-0.95, 1.35], r: 0.3 },
-      { p: [0.55, 1.65], r: -0.8 },
-      { p: [1.35, -0.75], r: 1.7 },
-    ],
-    [],
-  );
-  return (
-    <group>
-      {cars.map((car, i) => (
-        <group key={i} position={[car.p[0], 0.03, car.p[1]]} rotation={[0, car.r, 0]}>
-          <mesh castShadow>
-            <boxGeometry args={[0.13, 0.035, 0.06]} />
-            <meshStandardMaterial color={car.c} roughness={0.35} metalness={0.45} />
-          </mesh>
-          <mesh position={[-0.008, 0.028, 0]}>
-            <boxGeometry args={[0.062, 0.025, 0.052]} />
-            <meshStandardMaterial color="#1c1c22" roughness={0.3} metalness={0.3} />
-          </mesh>
-        </group>
-      ))}
-      {tapes.map((t, i) => (
-        <mesh key={i} position={[t.p[0], 0.008, t.p[1]]} rotation={[-Math.PI / 2, 0, t.r]}>
-          <planeGeometry args={[0.1, 0.064]} />
-          <meshStandardMaterial color="#2b2b33" roughness={0.6} />
-        </mesh>
-      ))}
-    </group>
   );
 }
 
@@ -1018,25 +873,33 @@ export function VideoRoomScene({ hoveredId, pulledGameId, tapeOn, lampsWarm }: V
       <hemisphereLight args={['#9e86d6', '#2a150f', 0.24]} />
       <Shell />
       <WallDecals crops={crops} />
-      <NorthWindow />
+      <NorthWindow crops={crops} />
       <Dresser crops={crops} />
+      <DresserDressing crops={crops} />
       <CrtTelevision crops={crops} hovered={hoveredId === 'crt-tv'} />
       <ToyWallShelf crops={crops} />
       <NeonSaturn />
-      <LavaLamp warm={lampsWarm} hovered={hoveredId === 'lava-lamp'} />
+      <LavaLamp crops={crops} warm={lampsWarm} hovered={hoveredId === 'lava-lamp'} />
       <BedroomDoor crops={crops} hovered={hoveredId === 'door'} />
       <GameShelfUnit crops={crops} hoveredId={hoveredId} pulledId={pulledGameId} />
+      <ShelfTopItems crops={crops} />
       <Bed crops={crops} hovered={hoveredId === 'bed'} />
+      <BedDressing crops={crops} />
       <Nightstand crops={crops} />
-      <CornerDesk />
+      <NightstandTop crops={crops} />
+      <WestDesk crops={crops} />
+      <OfficeChair />
+      <Skateboard crops={crops} />
       <EastDesk crops={crops} />
-      <DeskChair crops={crops} />
+      <WoodChair />
+      <Figures crops={crops} />
       <EastTelevision crops={crops} hovered={hoveredId === 'east-tv'} />
       <Boombox crops={crops} tapeOn={tapeOn} hovered={hoveredId === 'boombox'} />
       <PlayTable />
       <Rug />
-      <FloorClutter />
+      <FloorProps crops={crops} />
       <CeilingFan />
+      <CeilingLight warm={lampsWarm} />
       {/* fill so no corner of the walkable floor goes fully black */}
       <pointLight position={[0, 1.75, 1.3]} color="#b48ce0" intensity={0.65} distance={5.0} decay={2} />
       <pointLight position={[-1.3, 1.3, -1.5]} color="#e09a6e" intensity={0.5} distance={3.6} decay={2} />
