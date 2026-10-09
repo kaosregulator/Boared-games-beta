@@ -81,8 +81,8 @@ export function wallTexture() {
     grad.addColorStop(1, PALETTE.wall);
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 512, 512);
-    for (let i = 0; i < 260; i += 1) {
-      ctx.fillStyle = `rgba(${Math.random() > 0.5 ? '235,210,240' : '18,8,22'},${0.008 + Math.random() * 0.016})`;
+    for (let i = 0; i < 180; i += 1) {
+      ctx.fillStyle = `rgba(${Math.random() > 0.55 ? '245,230,240' : '90,70,95'},${0.01 + Math.random() * 0.018})`;
       const r = 4 + Math.random() * 22;
       ctx.beginPath();
       ctx.arc(Math.random() * 512, Math.random() * 512, r, 0, Math.PI * 2);

@@ -209,10 +209,10 @@ export const ROOM_PROPS: RoomProp[] = [
 ];
 
 export const PALETTE = {
-  floor: '#30201d',
-  floorDark: '#1f1312',
-  wall: '#382739',
-  wallWarm: '#40293c',
+  floor: '#3a2620',
+  floorDark: '#271814',
+  wall: '#6e5a68',
+  wallWarm: '#7a6874',
   ceiling: '#2a1a19',
   wood: '#4d3024',
   trim: '#3a2219',
