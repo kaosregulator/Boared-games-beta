@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { useLoader } from '@react-three/fiber';
+import React, { useMemo, useRef } from 'react';
+import { useFrame, useLoader } from '@react-three/fiber';
 import * as THREE from 'three';
 
 /**
@@ -129,8 +129,9 @@ export function Solid({ color, rough = 0.85 }: { color: string; rough?: number }
 }
 
 /**
- * Alpha cut-out of a loose prop standing on a surface. Two crossed planes so it
- * reads from every walking angle, plus a soft contact shadow underneath.
+ * Alpha cut-out of a loose prop standing on a surface. The plane turns about
+ * its vertical axis to face the player, so the painted prop reads from every
+ * walking angle, and a soft contact shadow anchors it to the surface.
  */
 export function Cutout({
   map,
@@ -139,36 +140,114 @@ export function Cutout({
   position,
   rotation = 0,
   emissive = 0.5,
-  cross = true,
   shadow = true,
 }: {
   map: THREE.Texture;
   width: number;
   height: number;
   position: [number, number, number];
+  /** Fixed yaw; only used when `face` is off. */
   rotation?: number;
   emissive?: number;
-  cross?: boolean;
   shadow?: boolean;
 }) {
+  const plane = useRef<THREE.Mesh>(null);
+  useFrame(({ camera }) => {
+    const m = plane.current;
+    if (!m) return;
+    m.getWorldPosition(WORLD);
+    const yaw = Math.atan2(camera.position.x - WORLD.x, camera.position.z - WORLD.z);
+    // undo the parent's yaw so the plane faces the camera in world space
+    m.parent?.getWorldQuaternion(PARENT_Q);
+    EULER.setFromQuaternion(PARENT_Q, 'YXZ');
+    m.rotation.set(0, yaw - EULER.y, 0);
+  });
   return (
     <group position={position} rotation={[0, rotation, 0]}>
-      <mesh position={[0, height / 2, 0]}>
+      <mesh ref={plane} position={[0, height / 2, 0]}>
         <planeGeometry args={[width, height]} />
         {paintedMaterial(map, emissive, true)}
       </mesh>
-      {cross && (
-        <mesh position={[0, height / 2, 0]} rotation={[0, Math.PI / 2, 0]}>
-          <planeGeometry args={[width * 0.8, height]} />
-          {paintedMaterial(map, emissive, true)}
-        </mesh>
-      )}
       {shadow && (
         <mesh position={[0, 0.003, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <circleGeometry args={[width * 0.42, 16]} />
           <meshBasicMaterial color="#000000" transparent opacity={0.38} />
         </mesh>
       )}
+    </group>
+  );
+}
+
+const WORLD = new THREE.Vector3();
+const PARENT_Q = new THREE.Quaternion();
+const EULER = new THREE.Euler();
+
+/**
+ * Wrap a region of a painted crop around a tapered cylinder. The region is
+ * tiled `copies` times side by side on a canvas so the painted front shows from
+ * every angle without seams or alpha fringes -- the lava lamps use this.
+ */
+export function PaintedCone({
+  map,
+  region,
+  radiusTop,
+  radiusBottom,
+  height,
+  position,
+  emissive = 1.0,
+  copies = 2,
+  color = '#1b1b22',
+}: {
+  map: THREE.Texture;
+  /** u0, v0, u1, v1 of the crop to wrap (v measured from the top). */
+  region: [number, number, number, number];
+  radiusTop: number;
+  radiusBottom: number;
+  height: number;
+  position: [number, number, number];
+  emissive?: number;
+  copies?: number;
+  /** Cap and base colour. */
+  color?: string;
+}) {
+  const wrapped = useMemo(() => {
+    const img = map.image as HTMLImageElement | HTMLCanvasElement | undefined;
+    const c = document.createElement('canvas');
+    c.width = 256;
+    c.height = 256;
+    const ctx = c.getContext('2d');
+    if (ctx && img && img.width > 0) {
+      const [u0, v0, u1, v1] = region;
+      const sx = u0 * img.width;
+      const sy = v0 * img.height;
+      const sw = (u1 - u0) * img.width;
+      const sh = (v1 - v0) * img.height;
+      const slice = 256 / copies;
+      for (let i = 0; i < copies; i += 1) {
+        ctx.drawImage(img, sx, sy, sw, sh, i * slice, 0, slice, 256);
+      }
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 8;
+    return t;
+  }, [map, region, copies]);
+  const capR = radiusTop * 0.8;
+  return (
+    <group position={position}>
+      <mesh position={[0, height / 2 + 0.02, 0]} castShadow>
+        <cylinderGeometry args={[radiusTop, radiusBottom, height, 24, 1, true]} />
+        {/* unlit: the glass is its own light source, so the painted colour stays pure */}
+        <meshBasicMaterial map={wrapped} color={new THREE.Color(emissive, emissive, emissive)} />
+      </mesh>
+      <mesh position={[0, 0.01, 0]}>
+        <cylinderGeometry args={[radiusBottom * 0.75, radiusBottom * 1.05, 0.02, 20]} />
+        <Solid color={color} rough={0.5} />
+      </mesh>
+      <mesh position={[0, height + 0.02 + 0.012, 0]}>
+        <cylinderGeometry args={[capR * 0.8, capR, 0.025, 16]} />
+        <Solid color={color} rough={0.5} />
+      </mesh>
     </group>
   );
 }

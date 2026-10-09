@@ -41,7 +41,7 @@ import {
 } from './procTextures';
 import { BOX_FACE, lidTexture, spineStripTexture } from './realBoardArt';
 import type { HoverTarget } from './Interactable';
-import { Cutout, Solid, paintedMaterial, useRoomCrops, type CropName, type Crops } from './roomCrops';
+import { PaintedCone, Solid, paintedMaterial, useRoomCrops, type CropName, type Crops } from './roomCrops';
 import {
   BedDressing,
   CeilingLight,
@@ -324,7 +324,7 @@ function NeonSaturn() {
         <torusGeometry args={[0.16, 0.009, 8, 40]} />
         <meshBasicMaterial color="#ff8ef2" />
       </mesh>
-      <pointLight color={PALETTE.neonPink} intensity={1.25} distance={1.8} decay={2} />
+      <pointLight color={PALETTE.neonPink} intensity={0.8} distance={1.5} decay={2} />
     </group>
   );
 }
@@ -347,12 +347,11 @@ function LavaLamp({ crops, warm, hovered }: { crops: Crops; warm: boolean; hover
   };
   return (
     <group position={[LAVA.x, DRESSER.height + 0.025, DRESSER.z + 0.08]} userData={{ interactable: target }}>
-      <mesh position={[0, 0.02, 0]}>
-        <cylinderGeometry args={[0.04, 0.055, 0.04, 20]} />
+      <mesh position={[0, 0.012, 0]}>
+        <cylinderGeometry args={[0.045, 0.06, 0.024, 20]} />
         <Solid color="#23232b" rough={0.5} />
       </mesh>
-      {/* the painted lamp, crossed so it reads from every side */}
-      <Cutout map={crops.lava_north} width={0.15} height={0.38} position={[0, 0.0, 0]} emissive={hovered ? 1.4 : warm ? 1.15 : 0.95} shadow={false} />
+      <PaintedCone map={crops.lava_north} region={[0.35, 0.23, 0.66, 0.62]} radiusTop={0.028} radiusBottom={0.058} height={0.3} position={[0, 0.02, 0]} emissive={hovered ? 1.25 : warm ? 1.05 : 0.95} />
       <group ref={blobs} position={[0, 0.2, 0.02]}>
         {[0, 1, 2].map(i => (
           <mesh key={i} position={[0, 0, 0]}>
@@ -592,7 +591,7 @@ function Bed({ crops, hovered }: { crops: Crops; hovered: boolean }) {
       {/* turned-down sheet under the pillows */}
       <mesh position={[0, BED.top + 0.002, -BED.length / 2 + 0.3]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[BED.width, 0.6]} />
-        <meshStandardMaterial color="#cbbfb3" roughness={0.98} />
+        <meshStandardMaterial color="#8e8088" roughness={0.98} />
       </mesh>
       <mesh position={[0, BED.top + 0.004, 0.22]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[BED.width + 0.02, BED.length - 0.44]} />

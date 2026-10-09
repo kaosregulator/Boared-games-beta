@@ -44,7 +44,10 @@ async function settle(ms) {
 
 if (mode === 'shots') {
   const count = Number(process.env.SHOOT_COUNT ?? 8);
-  for (let i = 0; i < count; i += 1) {
+  const list = process.env.SHOOT_LIST
+    ? process.env.SHOOT_LIST.split(',').map(Number)
+    : Array.from({ length: count }, (_, i) => i);
+  for (const i of list) {
     await page.goto(`${BASE}/?shot=${i}`, { waitUntil: 'networkidle2' });
     await settle(3500);
     const file = join(outDir, `shot${String(i).padStart(2, '0')}.png`);

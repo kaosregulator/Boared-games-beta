@@ -17,7 +17,7 @@ import {
   WOOD_CHAIR,
 } from './videoRoom';
 import { woodTexture } from './procTextures';
-import { ArtSlab, Cutout, Solid, paintedMaterial, type Crops } from './roomCrops';
+import { ArtSlab, Cutout, PaintedCone, Solid, paintedMaterial, type Crops } from './roomCrops';
 
 /* ------------------------------ west desk --------------------------------- */
 
@@ -59,7 +59,7 @@ export function WestDesk({ crops }: { crops: Crops }) {
       </mesh>
 
       {/* lava lamp */}
-      <Cutout map={crops.lava_west} width={0.14} height={0.3} position={[-0.22, top, -0.14]} emissive={1.1} />
+      <PaintedCone map={crops.lava_west} region={[0.37, 0.27, 0.69, 0.65]} radiusTop={0.024} radiusBottom={0.05} height={0.25} position={[-0.22, top, -0.14]} emissive={0.95} />
       <pointLight position={[-0.23, top + 0.14, -0.05]} color="#ff7a52" intensity={1.0} distance={1.6} decay={2} />
       {/* alarm clock */}
       <ArtSlab map={crops.alarm_clock} size={[0.15, 0.08, 0.06]} position={[-0.15, top + 0.04, 0.12]} color="#121216" emissive={1.1} />
@@ -69,7 +69,7 @@ export function WestDesk({ crops }: { crops: Crops }) {
       {/* books */}
       <ArtSlab map={crops.books_west} size={[0.16, 0.13, 0.14]} position={[0.15, top + 0.065, -0.1]} rotation={[0, 0.12, 0]} color="#3a2a26" emissive={0.5} />
       {/* desk lamp */}
-      <Cutout map={crops.desk_lamp_ref} width={0.24} height={0.27} position={[0.26, top, -0.16]} rotation={-0.2} emissive={0.95} cross={false} />
+      <Cutout map={crops.desk_lamp_ref} width={0.24} height={0.27} position={[0.26, top, -0.16]} rotation={-0.2} emissive={0.95} />
       <pointLight position={[0.2, top + 0.22, -0.02]} color="#ffd59e" intensity={1.5} distance={2.3} decay={2} />
     </group>
   );
@@ -111,7 +111,7 @@ export function OfficeChair() {
       </mesh>
       <mesh position={[0, seat + 0.045, 0.02]}>
         <boxGeometry args={[0.4, 0.02, 0.38]} />
-        <Solid color="#2a3350" rough={1} />
+        <Solid color="#1a2033" rough={1} />
       </mesh>
       {/* back rest */}
       <mesh position={[0, seat + 0.33, -0.2]} rotation={[-0.1, 0, 0]} castShadow>
@@ -120,7 +120,7 @@ export function OfficeChair() {
       </mesh>
       <mesh position={[0, seat + 0.33, -0.16]} rotation={[-0.1, 0, 0]}>
         <boxGeometry args={[0.36, 0.4, 0.02]} />
-        <Solid color="#2a3350" rough={1} />
+        <Solid color="#1a2033" rough={1} />
       </mesh>
       {/* armrests */}
       {[-1, 1].map(s => (
