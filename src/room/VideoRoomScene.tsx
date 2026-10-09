@@ -300,13 +300,13 @@ function ToyWallShelf({ crops }: { crops: Crops }) {
       </mesh>
       <mesh position={[0, 0.12, -0.085]}>
         <planeGeometry args={[TOY_SHELF.width, 0.24]} />
-        {paintedMaterial(crops.toyshelf, 0.6)}
+        {paintedMaterial(crops.toyshelf_full, 0.6)}
       </mesh>
     </group>
   );
 }
 
-function NeonSaturn() {
+function NeonSaturn({ crops }: { crops: Crops }) {
   const ref = useRef<THREE.Group>(null);
   useFrame(({ clock }) => {
     if (ref.current) {
@@ -316,15 +316,19 @@ function NeonSaturn() {
   });
   return (
     <group ref={ref} position={[SATURN.x, SATURN.y, NORTH_Z + 0.05]}>
+      <mesh position={[0, 0, 0.01]}>
+        <planeGeometry args={[0.36, 0.22]} />
+        {paintedMaterial(crops.saturn_neon, 1.2, true)}
+      </mesh>
       <mesh>
-        <torusGeometry args={[0.1, 0.012, 10, 36]} />
+        <torusGeometry args={[0.08, 0.01, 10, 36]} />
         <meshBasicMaterial color={PALETTE.neonPink} />
       </mesh>
       <mesh rotation={[Math.PI / 2 - 0.35, 0, 0]}>
-        <torusGeometry args={[0.16, 0.009, 8, 40]} />
+        <torusGeometry args={[0.13, 0.007, 8, 40]} />
         <meshBasicMaterial color="#ff8ef2" />
       </mesh>
-      <pointLight color={PALETTE.neonPink} intensity={0.8} distance={1.5} decay={2} />
+      <pointLight color={PALETTE.neonPink} intensity={0.7} distance={1.4} decay={2} />
     </group>
   );
 }
@@ -624,7 +628,7 @@ function Nightstand({ crops }: { crops: Crops }) {
       </mesh>
       <mesh position={[0, NIGHTSTAND.top / 2, NIGHTSTAND.depth / 2 + 0.005]}>
         <planeGeometry args={[NIGHTSTAND.width, NIGHTSTAND.top]} />
-        {paintedMaterial(crops.nightstand_west, 0.52)}
+        {paintedMaterial(crops.nightstand_full, 0.52)}
       </mesh>
       <mesh position={[0, NIGHTSTAND.top + 0.01, 0]}>
         <boxGeometry args={[NIGHTSTAND.width + 0.03, 0.02, NIGHTSTAND.depth + 0.03]} />
@@ -767,18 +771,19 @@ function Boombox({ crops, tapeOn, hovered }: { crops: Crops; tapeOn: boolean; ho
     hint: tapeOn ? 'Stop the tape' : 'Press play on the tape',
   };
   return (
-    <group position={[BOOMBOX.x, 0.13, BOOMBOX.z]} userData={{ interactable: target }}>
-      <mesh castShadow>
-        <boxGeometry args={[0.42, 0.26, 0.15]} />
-        <Solid color="#23232a" rough={0.7} />
+    <group position={[BOOMBOX.x, 0.02, BOOMBOX.z]} rotation={[0, -0.35, 0]} userData={{ interactable: target }}>
+      {/* the painting's silver twin-speaker unit, stood as a cut-out on a shallow box */}
+      <mesh position={[0, 0.1, -0.02]} castShadow>
+        <boxGeometry args={[0.52, 0.2, 0.18]} />
+        <Solid color="#2a2a30" rough={0.55} />
       </mesh>
-      <mesh position={[0, 0, 0.078]}>
-        <planeGeometry args={[0.42, 0.26]} />
-        {paintedMaterial(crops.boombox, hovered ? 0.95 : 0.62)}
+      <mesh position={[0, 0.14, 0.08]}>
+        <planeGeometry args={[0.58, 0.28]} />
+        {paintedMaterial(crops.boombox_full, hovered ? 1.0 : 0.7, true)}
       </mesh>
       {tapeOn &&
-        [-0.13, 0.13].map(x => (
-          <pointLight key={x} position={[x, 0, 0.2]} color="#ff7ad8" intensity={1.1} distance={1.1} decay={2} />
+        [-0.16, 0.16].map(x => (
+          <pointLight key={x} position={[x, 0.16, 0.22]} color="#ff7ad8" intensity={1.1} distance={1.1} decay={2} />
         ))}
     </group>
   );
@@ -877,7 +882,7 @@ export function VideoRoomScene({ hoveredId, pulledGameId, tapeOn, lampsWarm }: V
       <DresserDressing crops={crops} />
       <CrtTelevision crops={crops} hovered={hoveredId === 'crt-tv'} />
       <ToyWallShelf crops={crops} />
-      <NeonSaturn />
+      <NeonSaturn crops={crops} />
       <LavaLamp crops={crops} warm={lampsWarm} hovered={hoveredId === 'lava-lamp'} />
       <BedroomDoor crops={crops} hovered={hoveredId === 'door'} />
       <GameShelfUnit crops={crops} hoveredId={hoveredId} pulledId={pulledGameId} />

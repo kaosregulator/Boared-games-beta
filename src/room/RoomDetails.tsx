@@ -176,19 +176,19 @@ export function WoodChair() {
   );
 }
 
-/** "RAD" skateboard leaning deck-out against the desk. */
+/** "RAD" skateboard leaning deck-out against the foot of the bed, as in the clip. */
 export function Skateboard({ crops }: { crops: Crops }) {
   return (
-    <group position={[WEST_DESK.x - WEST_DESK.width / 2 - 0.05, 0.03, WEST_DESK.z + 0.1]} rotation={[-0.3, 0.1, 0]}>
-      <mesh position={[0, 0.39, 0]}>
+    <group position={[BED.x + BED.width / 2 + 0.06, 0.02, BED.z + BED.length / 2 - 0.15]} rotation={[0.15, -0.4, -0.05]}>
+      <mesh position={[0, 0.39, 0]} castShadow>
         <boxGeometry args={[0.2, 0.78, 0.014]} />
-        <Solid color="#3a2a30" />
+        <Solid color="#2a3a5a" />
       </mesh>
       <mesh position={[0, 0.39, 0.0085]}>
         <planeGeometry args={[0.19, 0.76]} />
-        {paintedMaterial(crops.skateboard_ref, 0.6, true)}
+        {paintedMaterial(crops.skateboard, 0.55, true)}
       </mesh>
-      {[0.18, 0.6].map(y => (
+      {[0.16, 0.62].map(y => (
         <group key={y} position={[0, y, -0.03]}>
           <mesh>
             <boxGeometry args={[0.16, 0.03, 0.04]} />
@@ -197,7 +197,7 @@ export function Skateboard({ crops }: { crops: Crops }) {
           {[-1, 1].map(s => (
             <mesh key={s} position={[s * 0.085, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
               <cylinderGeometry args={[0.026, 0.026, 0.03, 12]} />
-              <Solid color="#e0b03a" rough={0.5} />
+              <Solid color="#e07a2a" rough={0.5} />
             </mesh>
           ))}
         </group>

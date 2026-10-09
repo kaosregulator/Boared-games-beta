@@ -14,6 +14,7 @@ export const CROPS = [
   'poster_spacejam',
   'frames_west',
   'toyshelf',
+  'toyshelf_full',
   'dresser',
   'door',
   'ufo_poster',
@@ -24,7 +25,9 @@ export const CROPS = [
   'bed_quilt',
   'bed_pillow',
   'nightstand_west',
+  'nightstand_full',
   'boombox',
+  'boombox_full',
   'crt_play',
   'spine_monopoly',
   'spine_battleship',
@@ -56,6 +59,7 @@ export const CROPS = [
   'teddy_nightstand',
   'mug',
   'skateboard_ref',
+  'skateboard',
   'office_chair',
   // bed
   'pillow_smiley',
@@ -65,6 +69,7 @@ export const CROPS = [
   'gameboy',
   // dresser top and shelf top
   'teddy_green',
+  'saturn_neon',
   'helmet',
   'smiley_plush',
   'rubiks',

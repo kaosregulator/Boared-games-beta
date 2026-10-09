@@ -46,9 +46,9 @@ export function floorTexture() {
     const plank = 512 / 6;
     for (let i = 0; i < 6; i += 1) {
       const shade = 0.78 + Math.random() * 0.4;
-      const r = Math.round(0x30 * shade);
-      const g = Math.round(0x20 * shade);
-      const b = Math.round(0x1d * shade);
+      const r = Math.round(0x3c * shade);
+      const g = Math.round(0x27 * shade);
+      const b = Math.round(0x21 * shade);
       ctx.fillStyle = `rgb(${r},${g},${b})`;
       ctx.fillRect(0, i * plank, 512, plank - 2);
       // grain streaks along the plank
