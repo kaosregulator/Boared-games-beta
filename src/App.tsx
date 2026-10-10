@@ -26,7 +26,7 @@ type HubMode = 'landing' | 'room' | 'classic' | 'blockout' | 'painted';
 function initialHubMode(): HubMode {
   if (typeof window === 'undefined') return 'landing';
   const params = new URLSearchParams(window.location.search);
-  if (params.has('tour') || params.has('shot') || params.has('room')) return 'room';
+  if (params.has('tour') || params.has('shot') || params.has('room') || params.has('card') || params.has('menu')) return 'room';
   return 'landing';
 }
 

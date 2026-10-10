@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
+import React, { useEffect, useRef } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import {
   EAST_X,
@@ -17,6 +17,18 @@ import { ceilingTexture, floorTexture, nightSkyTexture, rugTexture, wallTexture 
 import type { HoverTarget } from './Interactable';
 import { RoomModel } from './RoomModel';
 import { LAYOUT, SHELF_ROW_Y } from './roomLayout';
+import { ANCHORS, type Anchor } from './anchors';
+import { DynamicModel } from './UserProps';
+import { MOODS, type RoomMood } from './moods';
+import type { SavedPlacement } from './userPlacements';
+
+function MoodFog({ color }: { color: string }) {
+  const { scene } = useThree();
+  useEffect(() => {
+    scene.fog = new THREE.Fog(color, 8, 22);
+  }, [scene, color]);
+  return null;
+}
 
 function Solid({ color, rough = 0.85 }: { color: string; rough?: number }) {
   return <meshStandardMaterial color={color} roughness={rough} metalness={0.05} />;
@@ -173,22 +185,44 @@ function PlacedModel({
   );
 }
 
+export interface LiveProp {
+  placement: SavedPlacement;
+  url: string;
+}
+
 export interface RealRoomSceneProps {
   hoveredId: string | null;
   pulledGameId: string | null;
   tapeOn: boolean;
   lampsWarm: boolean;
+  mood?: RoomMood;
+  placed?: LiveProp[];
+  /** While the studio is placing, show snap pads and a ghost. */
+  showAnchors?: boolean;
+  ghost?: { url: string; anchor: Anchor; height: number; lift: number; shadow: boolean } | null;
+  onPickAnchor?: (anchor: Anchor) => void;
 }
 
 /**
  * Bedroom built only from the Tripo GLBs. Walls and lights are the room;
  * nothing else is invented geometry.
  */
-export function RealRoomScene({ hoveredId, pulledGameId, tapeOn }: RealRoomSceneProps) {
+export function RealRoomScene({
+  hoveredId,
+  pulledGameId,
+  tapeOn,
+  mood = 'warm-night',
+  placed = [],
+  showAnchors = false,
+  ghost = null,
+  onPickAnchor,
+}: RealRoomSceneProps) {
+  const lights = MOODS[mood];
   return (
     <group>
-      <ambientLight intensity={0.34} color="#ffe4d0" />
-      <hemisphereLight args={['#c2b0dc', '#3a2418', 0.42]} />
+      <MoodFog color={lights.fog} />
+      <ambientLight intensity={lights.ambient} color={lights.ambColor} />
+      <hemisphereLight args={[lights.hemiSky, lights.hemiGround, lights.hemi]} />
       <Shell />
       <NightBehindWindow />
 
@@ -198,8 +232,8 @@ export function RealRoomScene({ hoveredId, pulledGameId, tapeOn }: RealRoomScene
       />
       <pointLight
         position={[LAYOUT.window.x, LAYOUT.window.y + 0.4, LAYOUT.window.z + 0.6]}
-        color="#9eb0ff"
-        intensity={1.3}
+        color={lights.windowC}
+        intensity={lights.windowI}
         distance={3.2}
         decay={2}
       />
@@ -272,8 +306,49 @@ export function RealRoomScene({ hoveredId, pulledGameId, tapeOn }: RealRoomScene
       </mesh>
 
       {/* One ceiling light. No loose props. */}
-      <pointLight position={[0.1, 2.35, 0.2]} color="#ffd7b0" intensity={2.4} distance={7} decay={2} />
-      <pointLight position={[-1.4, 1.8, -0.4]} color="#e7b08a" intensity={0.55} distance={3.5} decay={2} />
+      <pointLight position={[0.1, 2.35, 0.2]} color={lights.ceil} intensity={lights.ceilI} distance={7} decay={2} />
+      <pointLight position={[-1.4, 1.8, -0.4]} color="#e7b08a" intensity={mood === 'afternoon' ? 0.35 : 0.55} distance={3.5} decay={2} />
+
+      {placed.map(item => (
+        <DynamicModel
+          key={item.placement.id}
+          url={item.url}
+          position={[
+            item.placement.position[0],
+            item.placement.position[1] + item.placement.lift,
+            item.placement.position[2],
+          ]}
+          rotY={item.placement.rotY}
+          height={item.placement.height}
+          shadow={item.placement.shadow}
+        />
+      ))}
+
+      {showAnchors &&
+        ANCHORS.map(anchor => (
+          <mesh
+            key={anchor.id}
+            position={anchor.position}
+            rotation={anchor.kind === 'wall' ? [0, anchor.rotY, 0] : [-Math.PI / 2, 0, 0]}
+            onClick={event => {
+              event.stopPropagation();
+              onPickAnchor?.(anchor);
+            }}
+          >
+            <circleGeometry args={[anchor.kind === 'floor' ? 0.16 : 0.1, 20]} />
+            <meshBasicMaterial color="#ffd59a" transparent opacity={0.85} depthWrite={false} />
+          </mesh>
+        ))}
+
+      {ghost && (
+        <DynamicModel
+          url={ghost.url}
+          position={[ghost.anchor.position[0], ghost.anchor.position[1] + ghost.lift, ghost.anchor.position[2]]}
+          rotY={ghost.anchor.rotY}
+          height={ghost.height}
+          shadow={ghost.shadow}
+        />
+      )}
     </group>
   );
 }

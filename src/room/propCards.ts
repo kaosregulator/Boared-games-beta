@@ -17,13 +17,13 @@ export const PROP_CARDS: Record<string, PropCard> = {
     id: 'gameboy',
     title: 'Game Boy',
     era: '1989 · Nintendo',
-    image: '/models/gameboy.glb',
+    image: '/cards/gameboy.jpg',
     blurb:
       'The gray brick that left the living room. Four AA batteries, a green LCD, and Tetris in every backpack.',
     facts: [
-      'Launched in Japan in 1989, then North America in 1990.',
-      'Over 118 million Game Boy family units sold worldwide.',
-      'Tetris bundled with the NA launch pack made it a phenomenon.',
+      'Gunpei Yokoi’s team shipped the original DMG-01 in Japan on 21 April 1989.',
+      'North America got it in July 1989, bundled with Tetris.',
+      'The dot-matrix screen and link cable defined handheld play for a decade.',
     ],
   },
   boombox: {
@@ -63,24 +63,27 @@ export const PROP_CARDS: Record<string, PropCard> = {
   },
   cards: {
     id: 'cards',
-    title: 'Trading Cards',
-    era: 'Binder culture',
-    image: '/models/cards.glb',
-    blurb: 'Holofoils, commons, and the smell of fresh pack plastic on the rug.',
+    title: 'Pokémon Cards',
+    era: '1996 · Creatures / Wizards',
+    image: '',
+    blurb:
+      'A stack on the floor. Base Set holos, lunch-table trades, and sleeves that never quite fit the binder.',
     facts: [
-      'Trading-card crazes peaked in school lunchrooms through the 90s.',
-      'Holofoil rares were the flex before digital collections existed.',
+      'The Pokémon Trading Card Game launched in Japan in October 1996.',
+      'The English Base Set arrived in January 1999, with Charizard as the chase holo.',
+      'Official card art stays off these menus — that artwork is still copyrighted. The stack in the room is your mesh.',
     ],
   },
   'vhs-stack': {
     id: 'vhs-stack',
-    title: 'VHS Stack',
-    era: 'Magnetic memories',
-    image: '/models/vhs_stack.glb',
-    blurb: 'Handwritten spines, rental stickers, and “be kind, rewind.”',
+    title: 'VHS',
+    era: '1976 · JVC',
+    image: '/cards/vhs.jpg',
+    blurb: 'The first home tape most families owned. Handwritten spines, rental stickers, and “be kind, rewind.”',
     facts: [
-      'Blockbuster and mom-and-pop shops ran on these bricks of tape.',
-      'Tracking lines meant you were one twist of the dial from a clean picture.',
+      'JVC introduced VHS in Japan in 1976. The first recorder was the HR-3300.',
+      'It won the format war against Sony Betamax through longer tapes and cheaper decks.',
+      'A standard cassette holds about 2 hours at SP, or 6 at EP — tracking lines included.',
     ],
   },
 };

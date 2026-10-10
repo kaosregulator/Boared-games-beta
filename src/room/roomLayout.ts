@@ -50,8 +50,8 @@ const N = {
 const bedSize = fit(N.bed, 'y', 0.95);
 const shelfSize = fit(N.shelf, 'y', 2.02);
 const dresserSize = fit(N.dresser, 'y', 0.84);
-const crtSize = fit(N.crt, 'x', 0.56);
-const toySize = fit(N.toyshelf, 'x', 0.36);
+const crtSize = fit(N.crt, 'x', 0.62);
+const toySize = fit(N.toyshelf, 'y', 1.35);
 const deskSize = fit(N.desk, 'y', 0.75);
 const nightSize = fit(N.nightstand, 'y', 0.58);
 const windowSize = fit(N.window, 'y', 1.15);
@@ -59,7 +59,7 @@ const boomSize = fit(N.boombox, 'x', 0.42);
 const gbSize = fit(N.gameboy, 'y', 0.15);
 const vhsSize = fit(N.vhs_stack, 'y', 0.22);
 const looseSize = fit(N.vhs_loose, 'x', 0.34);
-const cardSize = fit(N.cards, 'x', 0.2);
+const cardSize = fit(N.cards, 'x', 0.18);
 
 /** After +90° Y, local Z becomes world X and local X becomes world Z. */
 const bedIntoRoom = bedSize.sz;
@@ -107,24 +107,24 @@ export const LAYOUT = {
   },
   crt: {
     id: 'crt',
-    // Fully on the dresser top, left of centre. Depth is less than the dresser.
-    x: -0.24,
+    // Centered on the dresser. 0.62m wide is a real bedroom CRT; nothing else shares the top.
+    x: -0.05,
     y: 0.84,
     z: NORTH_Z + dresserSize.sz / 2 + 0.05,
     rotY: 0,
     axis: 'x' as const,
-    meters: 0.56,
+    meters: 0.62,
     ...crtSize,
   },
   toyshelf: {
     id: 'toyshelf',
-    // Sits on the dresser, right of the TV — not floating on the wall.
-    x: 0.26,
-    y: 0.84,
-    z: NORTH_Z + dresserSize.sz / 2 + 0.02,
-    rotY: 0,
-    axis: 'x' as const,
-    meters: 0.36,
+    // Big floor shelf. The name is what sits on it, not its size.
+    x: EAST_X - toySize.sz / 2 - 0.06,
+    y: 0,
+    z: -0.35,
+    rotY: -Math.PI / 2,
+    axis: 'y' as const,
+    meters: 1.35,
     ...toySize,
   },
   shelf: {
@@ -142,7 +142,7 @@ export const LAYOUT = {
     // East wall, chair facing into the room.
     x: EAST_X - deskSize.sz / 2 - 0.08,
     y: 0,
-    z: 0.45,
+    z: 1.55,
     rotY: -Math.PI / 2,
     axis: 'y' as const,
     meters: 0.75,
@@ -190,12 +190,13 @@ export const LAYOUT = {
   },
   cards: {
     id: 'cards',
-    x: -2.05,
+    // A real handful of cards on the nightstand, not a floor mat.
+    x: WEST_X + 0.42,
     y: 0.58,
-    z: -1.22,
-    rotY: 0.3,
+    z: -1.12,
+    rotY: 0.4,
     axis: 'x' as const,
-    meters: 0.2,
+    meters: 0.18,
     ...cardSize,
   },
 } satisfies Record<string, Placed>;
@@ -213,6 +214,7 @@ export const ROOM_COLLIDERS = [
   footprint(LAYOUT.dresser, false),
   footprint(LAYOUT.shelf, false),
   footprint(LAYOUT.desk, true),
+  footprint(LAYOUT.toyshelf, true),
 ];
 
 /** Game-box rows up the real shelf, helmet stays above the top row. */

@@ -1,6 +1,7 @@
 import React from 'react';
 import type { GameMetadata } from '../types';
 import type { PropCard } from './propCards';
+import { GAME_PHOTOS, PROP_PHOTOS } from './gamePhotos';
 import { BookOpen, Users, Wifi, WifiOff, X, Sparkles } from 'lucide-react';
 
 /** Board games that already have a real in-room engine vs coming-soon shells. */
@@ -50,7 +51,7 @@ export type MemoryFlashCardProps = GameCardProps | PropCardProps;
 export function MemoryFlashCard(props: MemoryFlashCardProps) {
   return (
     <div
-      className="pointer-events-auto w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-white/25 bg-[#1a1020]/55 shadow-[0_20px_60px_rgba(0,0,0,0.55)] backdrop-blur-xl text-white overflow-hidden"
+      className="pointer-events-auto w-[min(22rem,calc(100vw-2rem))] rounded-3xl border border-white/35 bg-white/10 shadow-[0_24px_70px_rgba(0,0,0,0.35)] backdrop-blur-2xl text-white overflow-hidden"
       onClick={e => e.stopPropagation()}
     >
       <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 border-b border-white/10 bg-white/5">
@@ -75,25 +76,28 @@ export function MemoryFlashCard(props: MemoryFlashCardProps) {
   );
 }
 
+function PhotoFrame({ src, alt, credit, fallback }: { src?: string; alt: string; credit?: string; fallback: string }) {
+  return (
+    <div className="rounded-xl border border-white/25 bg-black/20 overflow-hidden">
+      {src ? (
+        <img src={src} alt={alt} className="h-36 w-full object-cover" />
+      ) : (
+        <div className="h-24 flex items-center justify-center px-4 text-center">
+          <p className="font-display text-2xl text-white">{fallback}</p>
+        </div>
+      )}
+      {credit && <p className="px-2 py-1 text-[9px] leading-snug text-white/55 bg-black/25">{credit}</p>}
+    </div>
+  );
+}
+
 function GameBody({ game, onPlay, onRules }: GameCardProps) {
   const mode = gameMode(game.id);
   const online = mode === 'Online ready';
+  const photo = GAME_PHOTOS[game.id];
   return (
     <div className="p-3.5 flex flex-col gap-3">
-      <div
-        className="h-28 rounded-xl border border-white/15 flex items-center justify-center relative overflow-hidden"
-        style={{ background: `linear-gradient(145deg, ${game.boxAccent.includes('amber') ? '#4a2818' : '#1e2a4a'}, #120a14)` }}
-      >
-        {game.coverImage ? (
-          <img src={game.coverImage} alt="" className="absolute inset-0 w-full h-full object-cover opacity-90" />
-        ) : (
-          <div className="text-center px-3">
-            <p className="font-display text-2xl tracking-wide text-white drop-shadow">{game.title}</p>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-white/60 mt-1">{game.badge}</p>
-          </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-      </div>
+      <PhotoFrame src={photo?.src ?? game.coverImage} alt={game.title} credit={photo?.credit} fallback={game.title} />
 
       <div>
         <h3 className="font-display text-xl text-white leading-tight">{game.title}</h3>
@@ -130,7 +134,7 @@ function GameBody({ game, onPlay, onRules }: GameCardProps) {
           onClick={onPlay}
           className="flex-1 rounded-xl bg-gradient-to-r from-fuchsia-600 to-amber-500 px-3 py-2.5 font-display text-sm text-white shadow hover:brightness-110"
         >
-          Pull & play
+          Play
         </button>
         <button
           type="button"
@@ -145,14 +149,11 @@ function GameBody({ game, onPlay, onRules }: GameCardProps) {
 }
 
 function PropBody({ prop, onAction, actionLabel }: PropCardProps) {
+  const photo = PROP_PHOTOS[prop.id];
   return (
     <div className="p-3.5 flex flex-col gap-3">
-      <div className="h-24 rounded-xl border border-white/15 bg-gradient-to-br from-[#3a2438] to-[#120a14] flex items-center justify-center px-4">
-        <div className="text-center">
-          <p className="font-display text-2xl text-white">{prop.title}</p>
-          <p className="text-[10px] uppercase tracking-[0.2em] text-amber-200/80 mt-1">{prop.era}</p>
-        </div>
-      </div>
+      <PhotoFrame src={photo?.src || prop.image || undefined} alt={prop.title} credit={photo?.credit} fallback={prop.title} />
+      <p className="text-[10px] uppercase tracking-[0.2em] text-amber-200/80">{prop.era}</p>
       <p className="text-sm text-white/85 leading-relaxed">{prop.blurb}</p>
       <ul className="text-xs text-white/70 space-y-1.5">
         {prop.facts.map(f => (

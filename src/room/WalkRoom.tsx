@@ -1,15 +1,19 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { GameId, GameMetadata } from '../types';
 import { sound } from '../utils/audio';
-import { RealRoomScene } from './RealRoomScene';
+import { RealRoomScene, type LiveProp } from './RealRoomScene';
 import { WalkController } from './WalkController';
 import { ReachRaycaster, type Aimed } from './ReachRaycaster';
 import { TourCamera } from './TourCamera';
 import { DESK_SLOTS, SHELF_SLOTS, SHELF_SLOTS_LOWER } from './videoRoom';
 import { MemoryFlashCard } from './MemoryFlashCard';
 import { propCardFor } from './propCards';
+import { RoomStudio } from './RoomStudio';
+import { ANCHORS, anchorById, type Anchor } from './anchors';
+import { deletePlacement, loadPlacements, savePlacement, type SavedPlacement } from './userPlacements';
+import type { RoomMood } from './moods';
 
 /**
  * `?tour=1` runs a hands-off dolly through the room and `?shot=N` parks the
@@ -17,13 +21,34 @@ import { propCardFor } from './propCards';
  * and reviewed without a mouse.
  */
 function readCameraOverride() {
-  if (typeof window === 'undefined') return { tour: false, shot: undefined as number | undefined };
+  if (typeof window === 'undefined') {
+    return { tour: false, shot: undefined as number | undefined, card: null as string | null, menu: false };
+  }
   const params = new URLSearchParams(window.location.search);
   const shotRaw = params.get('shot');
   return {
     tour: params.has('tour'),
     shot: shotRaw === null ? undefined : Number.parseInt(shotRaw, 10) || 0,
+    card: params.get('card'),
+    menu: params.has('menu'),
   };
+}
+
+const DEMO_POSE: Record<string, { at: [number, number, number]; look: [number, number, number] }> = {
+  vhs: { at: [0.15, 1.15, -0.3], look: [0.45, 0.2, -1.28] },
+  gameboy: { at: [-0.85, 1.25, 0.9], look: [-1.55, 0.55, 0.15] },
+  cards: { at: [-1.35, 1.2, -0.35], look: [-2.15, 0.7, -1.15] },
+  monopoly: { at: [1.25, 1.35, -1.05], look: [1.72, 1.15, -2.15] },
+  toyshelf: { at: [0.4, 1.45, 0.35], look: [2.05, 0.75, -0.35] },
+};
+
+function DemoPose({ at, look }: { at: [number, number, number]; look: [number, number, number] }) {
+  const { camera } = useThree();
+  useEffect(() => {
+    camera.position.set(at[0], at[1], at[2]);
+    camera.lookAt(look[0], look[1], look[2]);
+  }, [camera, at, look]);
+  return null;
 }
 
 interface WalkRoomProps {
@@ -44,7 +69,18 @@ export function WalkRoom({
   onOpenRulesForGame,
 }: WalkRoomProps) {
   const override = useMemo(readCameraOverride, []);
-  const scripted = override.tour || override.shot !== undefined;
+  const scripted = override.tour || override.shot !== undefined || Boolean(override.card);
+  const [menuOpen, setMenuOpen] = useState(override.menu);
+  const [mood, setMood] = useState<RoomMood>('warm-night');
+  const [musicOn, setMusicOn] = useState(true);
+  const [placed, setPlaced] = useState<LiveProp[]>([]);
+  const [anchorId, setAnchorId] = useState(ANCHORS[0].id);
+  const [placeHeight, setPlaceHeight] = useState(0.45);
+  const [placeLift, setPlaceLift] = useState(0);
+  const [placeShadow, setPlaceShadow] = useState(true);
+  const [placeName, setPlaceName] = useState('');
+  const placeBytes = useRef<ArrayBuffer | null>(null);
+  const placeUrl = useRef<string | null>(null);
   const [locked, setLocked] = useState(false);
   const [tourLabel, setTourLabel] = useState<string | null>(null);
   const [aimed, setAimed] = useState<Aimed | null>(null);
@@ -72,6 +108,101 @@ export function WalkRoom({
     },
     [],
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    loadPlacements()
+      .then(rows => {
+        if (!cancelled) setPlaced(rows);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const setMusic = useCallback((on: boolean) => {
+    setMusicOn(on);
+    if (on) sound.startNostalgia();
+    else sound.stopNostalgia();
+  }, []);
+
+  const openMenu = useCallback(() => {
+    document.exitPointerLock?.();
+    setMenuOpen(true);
+  }, []);
+
+  const onUpload = useCallback((file: File) => {
+    if (!file.name.toLowerCase().endsWith('.glb')) {
+      flash('Upload a .glb — same type as the Drive meshes');
+      return;
+    }
+    file.arrayBuffer().then(bytes => {
+      if (placeUrl.current) URL.revokeObjectURL(placeUrl.current);
+      placeBytes.current = bytes;
+      placeUrl.current = URL.createObjectURL(new Blob([bytes], { type: 'model/gltf-binary' }));
+      setPlaceName(file.name.replace(/\.glb$/i, ''));
+      setPlaceHeight(0.45);
+      setPlaceLift(0);
+      setAnchorId('floor-center');
+      flash('Pick an anchor, set the size, then press Enter');
+    });
+  }, [flash]);
+
+  const commitPlace = useCallback(() => {
+    const bytes = placeBytes.current;
+    const anchor = anchorById(anchorId);
+    if (!bytes || !anchor || !placeName) return;
+    const placement: SavedPlacement = {
+      id: crypto.randomUUID(),
+      name: placeName,
+      position: anchor.position,
+      rotY: anchor.rotY,
+      height: placeHeight,
+      lift: placeLift,
+      shadow: placeShadow,
+      anchorId: anchor.id,
+    };
+    const url = placeUrl.current ?? URL.createObjectURL(new Blob([bytes], { type: 'model/gltf-binary' }));
+    savePlacement(placement, bytes)
+      .then(() => {
+        setPlaced(prev => [...prev, { placement, url }]);
+        placeBytes.current = null;
+        placeUrl.current = null;
+        setPlaceName('');
+        flash(`${placement.name} stays in the room`);
+      })
+      .catch(() => flash('Could not save that mesh'));
+  }, [anchorId, flash, placeHeight, placeLift, placeName, placeShadow]);
+
+  useEffect(() => {
+    if (!placeName) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        commitPlace();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [commitPlace, placeName]);
+
+  const removePlaced = useCallback((id: string) => {
+    deletePlacement(id).catch(() => {});
+    setPlaced(prev => prev.filter(item => item.placement.id !== id));
+  }, []);
+
+  const ghost = useMemo(() => {
+    const anchor = anchorById(anchorId);
+    if (!placeName || !placeUrl.current || !anchor) return null;
+    return {
+      url: placeUrl.current,
+      anchor,
+      height: placeHeight,
+      lift: placeLift,
+      shadow: placeShadow,
+    };
+  }, [anchorId, placeHeight, placeLift, placeName, placeShadow]);
 
   // Auto-open the glass card when aiming at a game or memory prop in reach
   useEffect(() => {
@@ -166,7 +297,14 @@ export function WalkRoom({
   const aimedGame =
     aimed?.kind === 'game' && aimed.gameId ? byId.get(aimed.gameId as GameId) ?? null : null;
   const aimedProp = aimed ? propCardFor(aimed.id) : null;
-  const showCard = locked && cardOpen && aimed?.inReach && (aimedGame || aimedProp);
+  const demoCardId = override.card;
+  const demoPropId =
+    demoCardId === 'vhs' ? 'vhs-stack' : demoCardId === 'gameboy' || demoCardId === 'cards' ? demoCardId : null;
+  const demoGame = demoCardId && !demoPropId ? byId.get(demoCardId as GameId) ?? null : null;
+  const demoProp = demoPropId ? propCardFor(demoPropId) : null;
+  const cardGame = demoGame ?? aimedGame;
+  const cardProp = demoProp ?? aimedProp;
+  const showCard = Boolean(demoGame || demoProp) || (locked && cardOpen && aimed?.inReach && (aimedGame || aimedProp));
 
   const shelfTitles = SHELF_SLOTS.map(s => s.title).join(' · ');
 
@@ -189,9 +327,16 @@ export function WalkRoom({
             pulledGameId={pulledGameId}
             tapeOn={tapeOn}
             lampsWarm={lampsWarm}
+            mood={mood}
+            placed={placed}
+            showAnchors={menuOpen && Boolean(placeName)}
+            ghost={ghost}
+            onPickAnchor={(anchor: Anchor) => setAnchorId(anchor.id)}
           />
         </Suspense>
-        {scripted ? (
+        {override.card && DEMO_POSE[override.card] ? (
+          <DemoPose at={DEMO_POSE[override.card].at} look={DEMO_POSE[override.card].look} />
+        ) : scripted ? (
           <TourCamera staticIndex={override.shot} onWaypoint={label => setTourLabel(label)} />
         ) : (
           <>
@@ -222,31 +367,67 @@ export function WalkRoom({
       )}
 
       {/* Glass flash card — games + nostalgia props */}
+      <button
+        type="button"
+        onClick={openMenu}
+        className="absolute left-4 top-4 z-40 rounded-xl border border-white/20 bg-black/50 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.18em] text-amber-100 backdrop-blur-xl hover:bg-black/70"
+      >
+        Menu
+      </button>
+      <RoomStudio
+        open={menuOpen}
+        mood={mood}
+        music={musicOn}
+        placing={Boolean(placeName)}
+        placeName={placeName}
+        anchorId={anchorId}
+        height={placeHeight}
+        lift={placeLift}
+        shadow={placeShadow}
+        saved={placed.map(item => ({ id: item.placement.id, name: item.placement.name }))}
+        onClose={() => setMenuOpen(false)}
+        onMood={setMood}
+        onMusic={setMusic}
+        onFile={onUpload}
+        onAnchor={setAnchorId}
+        onHeight={setPlaceHeight}
+        onLift={setPlaceLift}
+        onShadow={setPlaceShadow}
+        onCommit={commitPlace}
+        onCancelPlace={() => {
+          placeBytes.current = null;
+          if (placeUrl.current) URL.revokeObjectURL(placeUrl.current);
+          placeUrl.current = null;
+          setPlaceName('');
+        }}
+        onDelete={removePlaced}
+      />
+
       {showCard && (
         <div className="absolute right-4 top-1/2 -translate-y-1/2 z-30 sm:right-8">
-          {aimedGame ? (
+          {cardGame ? (
             <MemoryFlashCard
               kind="game"
-              game={aimedGame}
-              onPlay={() => playGame(aimedGame)}
+              game={cardGame}
+              onPlay={() => playGame(cardGame)}
               onRules={() => {
                 document.exitPointerLock?.();
-                onOpenRulesForGame?.(aimedGame);
+                onOpenRulesForGame?.(cardGame);
               }}
               onClose={() => setCardOpen(false)}
             />
-          ) : aimedProp ? (
+          ) : cardProp ? (
             <MemoryFlashCard
               kind="prop"
-              prop={aimedProp}
+              prop={cardProp}
               onClose={() => setCardOpen(false)}
               onAction={
-                aimedProp.id === 'boombox'
+                cardProp.id === 'boombox'
                   ? () => {
                       setTapeOn(on => !on);
                       flash(tapeOn ? 'Tape stopped' : 'Tape rolling');
                     }
-                  : aimedProp.id === 'crt-tv'
+                  : cardProp.id === 'crt-tv'
                     ? () => {
                         document.exitPointerLock?.();
                         onOpenClassicShelf();
@@ -254,11 +435,11 @@ export function WalkRoom({
                     : undefined
               }
               actionLabel={
-                aimedProp.id === 'boombox'
+                cardProp.id === 'boombox'
                   ? tapeOn
                     ? 'Stop the tape'
                     : 'Press play'
-                  : aimedProp.id === 'crt-tv'
+                  : cardProp.id === 'crt-tv'
                     ? 'Open flat game list'
                     : undefined
               }
@@ -299,7 +480,7 @@ export function WalkRoom({
         </div>
       )}
 
-      {!locked && !scripted && (
+      {!locked && !scripted && !menuOpen && (
         <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-[#140c14]/80 via-[#1a0f18]/70 to-[#140c14]/90 backdrop-blur-[2px] px-6">
           <div className="max-w-xl w-full rounded-3xl border border-white/15 bg-black/65 p-7 text-center shadow-2xl">
             <p className="text-[10px] uppercase tracking-[0.35em] text-amber-200/90 font-bold">Game Room</p>
@@ -312,6 +493,9 @@ export function WalkRoom({
             <button
               id="enter-room"
               type="button"
+              onClick={() => {
+                if (musicOn) sound.startNostalgia();
+              }}
               className="mt-6 w-full rounded-2xl bg-gradient-to-r from-fuchsia-600 to-amber-500 px-6 py-3.5 font-display text-lg text-white shadow-lg hover:brightness-110 active:scale-[0.99] transition"
             >
               Step into the room
