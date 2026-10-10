@@ -24,9 +24,9 @@ export const TOUR: Waypoint[] = [
   { at: [-0.35, PLAYER.height, 0.45], look: [0.05, 1.25, -2.45], travel: 2.6, hold: 1.6, label: 'CRT and posters' },
   { at: [-1.2, PLAYER.height, 0.15], look: [-2.2, 0.85, -1.0], travel: 2.2, hold: 1.6, label: 'Bed and quilt' },
   { at: [0.55, PLAYER.height, -0.35], look: [1.85, 1.35, -2.35], travel: 2.4, hold: 1.4, label: 'Turning to the shelf' },
-  // Face the shelf front — look at the game-box face, not the side wall
-  { at: [1.35, PLAYER.height, -1.05], look: [1.95, 1.25, -2.35], travel: 2.2, hold: 1.8, label: 'At the shelf' },
-  { at: [1.55, 1.35, -1.55], look: [1.95, 1.35, -2.35], travel: 1.8, hold: 2.2, label: 'Reaching the boxes' },
+  // Face the shelf front square-on (SHELF ≈ x=1.95, z=-2.3)
+  { at: [1.55, 1.4, -1.15], look: [1.95, 1.2, -2.3], travel: 2.2, hold: 1.8, label: 'At the shelf' },
+  { at: [1.7, 1.35, -1.55], look: [1.95, 1.35, -2.3], travel: 1.8, hold: 2.2, label: 'Reaching the boxes' },
   { at: [1.55, PLAYER.height, -0.55], look: [2.35, 1.0, -1.15], travel: 2.0, hold: 1.4, label: 'Computer desk' },
   { at: [0.25, PLAYER.height, 0.95], look: [0.9, 1.15, -2.4], travel: 2.4, hold: 2.0, label: 'Back to idle' },
 ];

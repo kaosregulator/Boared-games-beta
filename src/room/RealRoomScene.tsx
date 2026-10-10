@@ -69,7 +69,6 @@ const POSTER_NAMES = [
   'poster_spacejam',
   'frames_west',
   'ufo_poster',
-  'shelf_full',
   'coat',
 ] as const;
 
@@ -220,7 +219,6 @@ function ShelfHit({
 }
 
 function InteractiveShelf({ hoveredId, pulledId }: { hoveredId: string | null; pulledId: string | null }) {
-  const posters = usePosters();
   const rows = [...SHELF_SLOTS, ...SHELF_SLOTS_LOWER];
   const bulbs = useMemo(() => {
     const colors = ['#ff5f6d', '#ffd166', '#6be5a0', '#6aa8ff', '#e07bff'];
@@ -233,26 +231,21 @@ function InteractiveShelf({ hoveredId, pulledId }: { hoveredId: string | null; p
   useFrame(({ clock }) => {
     if (!lights.current) return;
     const t = clock.elapsedTime;
-    lights.current.children.forEach((c, i) => {
-      ((c as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = 0.5 + Math.sin(t * 1.6 + i) * 0.35;
+    let i = 0;
+    lights.current.traverse(obj => {
+      const mesh = obj as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      const mat = mesh.material as THREE.MeshBasicMaterial;
+      if (!mat || !('opacity' in mat)) return;
+      mat.opacity = 0.55 + Math.sin(t * 1.6 + i) * 0.35;
+      i += 1;
     });
   });
 
-  // High-res painting face for the game-box rows (helmet/ornaments stay on the Tripo mesh).
-  const faceH = 1.05;
-  const faceY = 0.95;
-  const faceW = SHELF.width - 0.1;
-
   return (
     <group position={[SHELF.x, 0, SHELF.z]}>
-      {/* Real Drive shelf mesh — depth, helmet, ornaments, wood */}
-      <RoomModel id="shelf" position={[0, 0, -0.02]} fitHeight={SHELF.height} fitWidth={SHELF.width} tintAmount={0.01} />
-
-      {/* Crisp board-game spines from the source painting, seated in the mesh face */}
-      <mesh position={[0, faceY, SHELF.depth / 2 + 0.01]}>
-        <planeGeometry args={[faceW, faceH]} />
-        {painted(posters.shelf_full, 0.62)}
-      </mesh>
+      {/* Real Drive shelf — Monopoly/Battleship/Sorry/Clue/Life/Yahtzee are baked into this mesh */}
+      <RoomModel id="shelf" position={[0, 0, 0]} fitHeight={SHELF.height} fitWidth={SHELF.width} tintAmount={0} />
 
       {rows.map(slot => (
         <ShelfHit
@@ -264,28 +257,26 @@ function InteractiveShelf({ hoveredId, pulledId }: { hoveredId: string | null; p
         />
       ))}
 
-      {/* Extra smiley glow (mesh already has one; this boosts the room light) */}
-      <pointLight position={[0.1, SHELF.height + 0.08, 0.25]} color="#ffdf6e" intensity={1.35} distance={2.0} decay={2} />
+      <pointLight position={[0.08, SHELF.height + 0.06, 0.28]} color="#ffdf6e" intensity={1.5} distance={2.2} decay={2} />
 
-      {/* String lights on both stiles */}
+      {/* String lights hugging the mesh stiles */}
       <group ref={lights}>
         {bulbs.map((b, i) => (
           <group key={i}>
-            <mesh position={[-SHELF.width / 2 + 0.03, b.y, 0.22]}>
-              <sphereGeometry args={[0.013, 8, 8]} />
+            <mesh position={[-SHELF.width / 2 + 0.05, b.y, 0.2]}>
+              <sphereGeometry args={[0.012, 8, 8]} />
               <meshBasicMaterial color={b.color} transparent opacity={0.9} />
             </mesh>
-            <mesh position={[SHELF.width / 2 - 0.03, b.y, 0.22]}>
-              <sphereGeometry args={[0.013, 8, 8]} />
+            <mesh position={[SHELF.width / 2 - 0.05, b.y, 0.2]}>
+              <sphereGeometry args={[0.012, 8, 8]} />
               <meshBasicMaterial color={b.color} transparent opacity={0.9} />
             </mesh>
           </group>
         ))}
       </group>
-      <pointLight position={[0, SHELF.height * 0.55, 0.35]} color="#ffb0c8" intensity={0.4} distance={2.4} decay={2} />
+      <pointLight position={[0, SHELF.height * 0.55, 0.4]} color="#ffb0c8" intensity={0.35} distance={2.2} decay={2} />
 
-      {/* Baseball bat leaning */}
-      <mesh position={[-SHELF.width / 2 - 0.1, 0.55, 0.2]} rotation={[0, 0, 0.2]}>
+      <mesh position={[-SHELF.width / 2 - 0.08, 0.55, 0.18]} rotation={[0, 0, 0.18]}>
         <cylinderGeometry args={[0.018, 0.028, 1.05, 10]} />
         <Solid color="#8a6238" rough={0.7} />
       </mesh>
