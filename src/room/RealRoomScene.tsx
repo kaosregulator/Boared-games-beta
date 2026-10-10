@@ -1,11 +1,12 @@
 import React, { useMemo, useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useLoader } from '@react-three/fiber';
 import * as THREE from 'three';
 import {
   BED,
   BOOMBOX,
   CORNER_DESK,
   CRT,
+  DECALS,
   DESK_SLOTS,
   DOOR,
   DRESSER,
@@ -23,18 +24,23 @@ import {
   SHELF_SLOTS,
   SHELF_SLOTS_LOWER,
   SOUTH_Z,
+  TOY_SHELF,
   WALL,
   WEST_X,
+  WINDOW_NORTH,
   type ShelfSlot,
 } from './videoRoom';
 import {
+  blindsTexture,
   ceilingTexture,
+  crtScreenTexture,
   floorTexture,
+  nightSkyTexture,
   rugTexture,
   wallTexture,
   woodTexture,
 } from './procTextures';
-import { BOX_FACE, lidTexture, spineStripTexture } from './realBoardArt';
+import { BOX_FACE, lidTexture } from './realBoardArt';
 import type { HoverTarget } from './Interactable';
 import { RoomModel } from './RoomModel';
 
@@ -55,9 +61,65 @@ function painted(map: THREE.Texture, emissive = 0.5) {
   );
 }
 
-function boxSkin(slot: ShelfSlot) {
-  const face = BOX_FACE[slot.id];
-  return { face: face?.face ?? slot.color, ink: face?.ink ?? '#ffffff' };
+/* -------------------------------- posters --------------------------------- */
+
+const POSTER_NAMES = [
+  'poster_sharks',
+  'poster_rundmc',
+  'poster_spacejam',
+  'frames_west',
+  'ufo_poster',
+] as const;
+
+type PosterName = (typeof POSTER_NAMES)[number];
+
+function usePosters() {
+  const urls = useMemo(() => POSTER_NAMES.map(n => `/room/${n}.png`), []);
+  const loaded = useLoader(THREE.TextureLoader, urls);
+  return useMemo(() => {
+    const out = {} as Record<PosterName, THREE.Texture>;
+    POSTER_NAMES.forEach((name, i) => {
+      const tex = loaded[i];
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 8;
+      out[name] = tex;
+    });
+    return out;
+  }, [loaded]);
+}
+
+function WallDecals() {
+  const posters = usePosters();
+  return (
+    <group>
+      {DECALS.map(d => {
+        const tex = posters[d.texture as PosterName];
+        if (!tex) return null;
+        const pos: [number, number, number] =
+          d.wall === 'north'
+            ? [d.along, d.y, NORTH_Z + 0.015]
+            : d.wall === 'south'
+              ? [d.along, d.y, SOUTH_Z - 0.015]
+              : d.wall === 'west'
+                ? [WEST_X + 0.015, d.y, d.along]
+                : [EAST_X - 0.015, d.y, d.along];
+        const rot: [number, number, number] =
+          d.wall === 'north'
+            ? [0, 0, 0]
+            : d.wall === 'south'
+              ? [0, Math.PI, 0]
+              : d.wall === 'west'
+                ? [0, Math.PI / 2, 0]
+                : [0, -Math.PI / 2, 0];
+        return (
+          <mesh key={d.id} position={pos} rotation={rot}>
+            <planeGeometry args={[d.width, d.height]} />
+            {painted(tex, 0.52)}
+          </mesh>
+        );
+      })}
+    </group>
+  );
 }
 
 /* --------------------------------- shell ---------------------------------- */
@@ -76,7 +138,7 @@ function Shell() {
         <planeGeometry args={[WALL.halfWidth * 2, WALL.halfDepth * 2]} />
         <meshStandardMaterial map={ceilingTexture()} roughness={0.9} />
       </mesh>
-      <mesh position={[0, WALL.height / 2, NORTH_Z]}>{/* N */}
+      <mesh position={[0, WALL.height / 2, NORTH_Z]}>
         <planeGeometry args={[WALL.halfWidth * 2, WALL.height]} />
         {wallMat}
       </mesh>
@@ -102,9 +164,14 @@ function Shell() {
   );
 }
 
-/* ------------------------------ shelf games ------------------------------- */
+/* -------------------- shelf: real mesh + invisible hits ------------------- */
 
-function ShelfBox({
+/**
+ * The Tripo shelf GLB already has Monopoly / Battleship / Sorry / Clue / Life /
+ * Yahtzee baked into the mesh. We never draw fake boxes on top — only invisible
+ * hit volumes so the player can aim, get a glass card, and pull a title.
+ */
+function ShelfHit({
   slot,
   y,
   hovered,
@@ -116,10 +183,8 @@ function ShelfBox({
   pulled: boolean;
 }) {
   const group = useRef<THREE.Group>(null);
-  const boxWidth = SHELF.width - 0.12;
-  const boxDepth = 0.28;
-  const skin = boxSkin(slot);
-  const spine = spineStripTexture(slot.id, slot.title, skin.face, skin.ink);
+  const boxWidth = SHELF.width - 0.18;
+  const boxDepth = 0.32;
   const target: HoverTarget = {
     id: `game:${slot.id}`,
     kind: 'game',
@@ -130,24 +195,22 @@ function ShelfBox({
 
   useFrame((_, delta) => {
     if (!group.current) return;
-    const want = pulled ? 0.28 : hovered ? 0.08 : 0;
-    group.current.position.z += (want - group.current.position.z) * Math.min(1, delta * 9);
+    const want = pulled ? 0.1 : hovered ? 0.04 : 0;
+    group.current.position.z += (want - group.current.position.z) * Math.min(1, delta * 10);
   });
 
   return (
-    <group ref={group} position={[0, y + slot.boxHeight / 2 + 0.02, 0.12]} userData={{ interactable: target }}>
-      <mesh castShadow>
-        <boxGeometry args={[boxWidth, slot.boxHeight, boxDepth]} />
-        <meshStandardMaterial color={skin.face} roughness={0.9} />
+    <group ref={group} position={[0, y + slot.boxHeight / 2 + 0.02, 0.14]} userData={{ interactable: target }}>
+      {/* Invisible collider — ray hits this, not a homemade box */}
+      <mesh>
+        <boxGeometry args={[boxWidth, slot.boxHeight + 0.02, boxDepth]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
-      <mesh position={[0, 0, boxDepth / 2 + 0.003]}>
-        <planeGeometry args={[boxWidth, slot.boxHeight]} />
-        {painted(spine, hovered ? 0.95 : 0.55)}
-      </mesh>
-      {hovered && (
-        <mesh position={[0, 0, boxDepth / 2 + 0.014]}>
-          <planeGeometry args={[boxWidth + 0.04, slot.boxHeight + 0.04]} />
-          <meshBasicMaterial color={slot.accent} transparent opacity={0.28} />
+      {/* Soft see-through rim when aimed */}
+      {(hovered || pulled) && (
+        <mesh position={[0, 0, boxDepth / 2 + 0.01]}>
+          <planeGeometry args={[boxWidth + 0.02, slot.boxHeight + 0.02]} />
+          <meshBasicMaterial color={slot.accent} transparent opacity={pulled ? 0.45 : 0.28} depthWrite={false} />
         </mesh>
       )}
     </group>
@@ -158,8 +221,8 @@ function InteractiveShelf({ hoveredId, pulledId }: { hoveredId: string | null; p
   const rows = [...SHELF_SLOTS, ...SHELF_SLOTS_LOWER];
   const bulbs = useMemo(() => {
     const colors = ['#ff5f6d', '#ffd166', '#6be5a0', '#6aa8ff', '#e07bff'];
-    return Array.from({ length: 14 }, (_, i) => ({
-      y: (i / 13) * SHELF.height,
+    return Array.from({ length: 16 }, (_, i) => ({
+      y: 0.12 + (i / 15) * (SHELF.height - 0.2),
       color: colors[i % colors.length],
     }));
   }, []);
@@ -168,16 +231,17 @@ function InteractiveShelf({ hoveredId, pulledId }: { hoveredId: string | null; p
     if (!lights.current) return;
     const t = clock.elapsedTime;
     lights.current.children.forEach((c, i) => {
-      ((c as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = 0.5 + Math.sin(t * 1.5 + i) * 0.4;
+      ((c as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = 0.45 + Math.sin(t * 1.6 + i) * 0.4;
     });
   });
 
   return (
     <group position={[SHELF.x, 0, SHELF.z]}>
-      {/* Real Tripo shelf as the visual carcass */}
-      <RoomModel id="shelf" position={[0, 0, -0.06]} rotation={[0, 0, 0]} fitHeight={2.05} fitWidth={0.95} />
+      {/* Real Drive shelf — games are already in the mesh */}
+      <RoomModel id="shelf" position={[0, 0, 0]} fitHeight={SHELF.height} fitWidth={SHELF.width} tintAmount={0.02} />
+
       {rows.map(slot => (
-        <ShelfBox
+        <ShelfHit
           key={slot.id}
           slot={slot}
           y={SHELF.rowY[slot.row] ?? 0.1}
@@ -185,20 +249,30 @@ function InteractiveShelf({ hoveredId, pulledId }: { hoveredId: string | null; p
           pulled={pulledId === slot.id}
         />
       ))}
-      {/* smiley glow on top */}
-      <mesh position={[0.18, SHELF.height + 0.12, 0.05]}>
-        <sphereGeometry args={[0.09, 16, 16]} />
-        <meshStandardMaterial color="#ffd93d" emissive="#ffd93d" emissiveIntensity={0.9} />
+
+      {/* Smiley lamp on top (reference) */}
+      <mesh position={[0.22, SHELF.height + 0.1, 0.08]}>
+        <sphereGeometry args={[0.1, 20, 18]} />
+        <meshStandardMaterial color="#ffd93d" emissive="#ffd93d" emissiveIntensity={1.1} />
       </mesh>
-      <pointLight position={[0.18, SHELF.height + 0.12, 0.2]} color="#ffdf6e" intensity={0.85} distance={1.6} decay={2} />
+      <pointLight position={[0.22, SHELF.height + 0.12, 0.22]} color="#ffdf6e" intensity={1.05} distance={1.8} decay={2} />
+
+      {/* String lights down the left stile */}
       <group ref={lights}>
         {bulbs.map((b, i) => (
-          <mesh key={i} position={[-SHELF.width / 2 - 0.02, b.y, 0.2]}>
-            <sphereGeometry args={[0.012, 8, 8]} />
+          <mesh key={i} position={[-SHELF.width / 2 + 0.04, b.y, 0.22]}>
+            <sphereGeometry args={[0.014, 8, 8]} />
             <meshBasicMaterial color={b.color} transparent opacity={0.85} />
           </mesh>
         ))}
       </group>
+      <pointLight position={[-SHELF.width / 2, SHELF.height * 0.55, 0.3]} color="#ffb0c8" intensity={0.55} distance={2.2} decay={2} />
+
+      {/* Baseball bat leaning (reference) */}
+      <mesh position={[-SHELF.width / 2 - 0.08, 0.55, 0.18]} rotation={[0, 0, 0.18]}>
+        <cylinderGeometry args={[0.018, 0.028, 1.05, 10]} />
+        <Solid color="#8a6238" rough={0.7} />
+      </mesh>
     </group>
   );
 }
@@ -220,20 +294,37 @@ function NeonSaturn() {
         <torusGeometry args={[0.16, 0.009, 8, 40]} />
         <meshBasicMaterial color="#ff8ef2" />
       </mesh>
-      <pointLight color={PALETTE.neonPink} intensity={0.9} distance={1.6} decay={2} />
+      <pointLight color={PALETTE.neonPink} intensity={1.15} distance={1.8} decay={2} />
     </group>
   );
 }
 
-function LavaLamp({ warm, hovered }: { warm: boolean; hovered: boolean }) {
+function LavaLamp({
+  position,
+  warm,
+  hovered,
+  id = 'lava-lamp',
+}: {
+  position: [number, number, number];
+  warm: boolean;
+  hovered: boolean;
+  id?: string;
+}) {
+  const blob = useRef<THREE.Mesh>(null);
+  useFrame(({ clock }) => {
+    if (!blob.current) return;
+    const t = clock.elapsedTime;
+    blob.current.position.y = 0.12 + Math.sin(t * 1.2) * 0.04;
+    blob.current.scale.setScalar(0.9 + Math.sin(t * 0.8) * 0.12);
+  });
   const target: HoverTarget = {
-    id: 'lava-lamp',
+    id,
     kind: 'prop',
     label: 'Lava lamp',
     hint: warm ? 'Cool the glow' : 'Warm the glow',
   };
   return (
-    <group position={[DRESSER.x + 0.42, DRESSER.height + 0.02, DRESSER.z + 0.08]} userData={{ interactable: target }}>
+    <group position={position} userData={{ interactable: target }}>
       <mesh position={[0, 0.02, 0]}>
         <cylinderGeometry args={[0.04, 0.055, 0.04, 18]} />
         <Solid color="#23232b" rough={0.5} />
@@ -243,18 +334,35 @@ function LavaLamp({ warm, hovered }: { warm: boolean; hovered: boolean }) {
         <meshStandardMaterial
           color={warm ? '#e04a1c' : '#d92a62'}
           emissive={warm ? '#ff6a28' : '#ff3f7c'}
-          emissiveIntensity={hovered ? 1.0 : 0.7}
+          emissiveIntensity={hovered ? 1.15 : 0.8}
           transparent
-          opacity={0.75}
+          opacity={0.78}
           side={THREE.DoubleSide}
         />
       </mesh>
-      <pointLight position={[0, 0.2, 0.1]} color={warm ? '#ff8f4a' : '#ff5c8a'} intensity={warm ? 1.5 : 1.1} distance={2.2} decay={2} />
+      <mesh ref={blob} position={[0, 0.12, 0]}>
+        <sphereGeometry args={[0.028, 12, 12]} />
+        <meshStandardMaterial
+          color={warm ? '#ff8a3a' : '#ff5a9a'}
+          emissive={warm ? '#ff8a3a' : '#ff5a9a'}
+          emissiveIntensity={1.4}
+          transparent
+          opacity={0.9}
+        />
+      </mesh>
+      <pointLight
+        position={[0, 0.2, 0.1]}
+        color={warm ? '#ff8f4a' : '#ff5c8a'}
+        intensity={warm ? 1.7 : 1.25}
+        distance={2.4}
+        decay={2}
+      />
     </group>
   );
 }
 
 function Door({ hovered }: { hovered: boolean }) {
+  const posters = usePosters();
   const target: HoverTarget = {
     id: 'door',
     kind: 'prop',
@@ -267,11 +375,11 @@ function Door({ hovered }: { hovered: boolean }) {
         <boxGeometry args={[DOOR.width, DOOR.height, 0.08]} />
         <Solid color={hovered ? '#5a3a2e' : '#3a241c'} />
       </mesh>
-      {/* UFO poster */}
-      <mesh position={[-0.12, 1.55, 0.05]}>
-        <planeGeometry args={[0.32, 0.48]} />
-        <meshStandardMaterial color="#1a1a22" emissive="#3a4a6a" emissiveIntensity={0.35} />
+      <mesh position={[-0.1, 1.55, 0.05]}>
+        <planeGeometry args={[0.34, 0.5]} />
+        {painted(posters.ufo_poster, 0.55)}
       </mesh>
+      {/* Coat hook + jacket silhouette */}
       <mesh position={[0.22, 1.35, 0.06]}>
         <boxGeometry args={[0.28, 0.9, 0.04]} />
         <Solid color="#1e3a5c" rough={0.95} />
@@ -312,20 +420,21 @@ function CeilingFan() {
         return (
           <mesh key={i} position={[Math.cos(a) * 0.1, -0.24, Math.sin(a) * 0.1]}>
             <sphereGeometry args={[0.07, 14, 14]} />
-            <meshStandardMaterial color="#ffe8c0" emissive="#ffd59b" emissiveIntensity={1.3} />
+            <meshStandardMaterial color="#ffe8c0" emissive="#ffd59b" emissiveIntensity={1.35} />
           </mesh>
         );
       })}
-      <pointLight position={[0, -0.3, 0]} color="#ffd9a8" intensity={3.2} distance={6} decay={2} />
+      <pointLight position={[0, -0.3, 0]} color="#ffd9a8" intensity={3.4} distance={6.5} decay={2} />
     </group>
   );
 }
 
 function DeskGames({ hoveredId }: { hoveredId: string | null }) {
   return (
-    <group position={[EAST_DESK.x, EAST_DESK.top, EAST_DESK.z + 0.45]}>
+    <group position={[EAST_DESK.x - 0.05, EAST_DESK.top, EAST_DESK.z + 0.35]}>
       {DESK_SLOTS.map((slot, i) => {
-        const skin = boxSkin(slot);
+        const face = BOX_FACE[slot.id];
+        const skin = { face: face?.face ?? slot.color, ink: face?.ink ?? '#ffffff' };
         const target: HoverTarget = {
           id: `game:${slot.id}`,
           kind: 'game',
@@ -337,16 +446,83 @@ function DeskGames({ hoveredId }: { hoveredId: string | null }) {
         return (
           <group key={slot.id} position={[0, 0.04 + i * slot.boxHeight, 0]} userData={{ interactable: target }}>
             <mesh castShadow>
-              <boxGeometry args={[0.32, slot.boxHeight, 0.24]} />
+              <boxGeometry args={[0.3, slot.boxHeight, 0.22]} />
               <meshStandardMaterial color={skin.face} roughness={0.9} />
             </mesh>
             <mesh position={[0, slot.boxHeight / 2 + 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[0.32, 0.24]} />
+              <planeGeometry args={[0.3, 0.22]} />
               {painted(lidTexture(slot.id, slot.title, skin.face, skin.ink), hovered ? 0.7 : 0.45)}
             </mesh>
           </group>
         );
       })}
+    </group>
+  );
+}
+
+function NightSkyWindow() {
+  const sky = nightSkyTexture();
+  const blinds = blindsTexture();
+  const { x, y, width, height } = WINDOW_NORTH;
+  return (
+    <group position={[x, y, NORTH_Z]}>
+      {/* Soft night glow behind / around the real window mesh */}
+      <mesh position={[0, 0, -0.02]}>
+        <planeGeometry args={[width * 1.15, height * 1.1]} />
+        <meshBasicMaterial map={sky} />
+      </mesh>
+      <mesh position={[0, 0.04, 0.02]}>
+        <planeGeometry args={[width * 0.95, height * 0.75]} />
+        <meshStandardMaterial map={blinds} transparent opacity={0.35} emissive="#ffd9c0" emissiveIntensity={0.08} />
+      </mesh>
+      <pointLight position={[0, 0.1, 0.45]} color="#9aa6ff" intensity={1.2} distance={2.8} decay={2} />
+    </group>
+  );
+}
+
+function DeskLamp({ position }: { position: [number, number, number] }) {
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.02, 0]}>
+        <cylinderGeometry args={[0.04, 0.05, 0.03, 12]} />
+        <Solid color="#3a3028" />
+      </mesh>
+      <mesh position={[0, 0.12, 0]} rotation={[0.15, 0, 0.2]}>
+        <cylinderGeometry args={[0.012, 0.012, 0.22, 8]} />
+        <Solid color="#5a4a38" rough={0.5} />
+      </mesh>
+      <mesh position={[0.06, 0.22, 0.04]} rotation={[0.6, 0, 0]}>
+        <coneGeometry args={[0.07, 0.1, 16, 1, true]} />
+        <meshStandardMaterial color="#c4a882" emissive="#ffc489" emissiveIntensity={0.55} side={THREE.DoubleSide} />
+      </mesh>
+      <pointLight position={[0.08, 0.18, 0.12]} color="#ffc489" intensity={1.4} distance={2.2} decay={2} />
+    </group>
+  );
+}
+
+function FloorClutter() {
+  return (
+    <group>
+      {/* RC truck silhouette */}
+      <mesh position={[-0.15, 0.05, -0.55]} rotation={[0, 0.6, 0]} castShadow>
+        <boxGeometry args={[0.22, 0.08, 0.14]} />
+        <Solid color="#1a6b3a" />
+      </mesh>
+      <mesh position={[-0.15, 0.1, -0.55]} rotation={[0, 0.6, 0]}>
+        <boxGeometry args={[0.14, 0.05, 0.1]} />
+        <Solid color="#c41e3a" />
+      </mesh>
+      {/* Toy cars */}
+      {[
+        [0.35, -0.85, 0.9, '#d4541a'],
+        [0.55, -0.7, -0.4, '#2a5cff'],
+        [0.1, -1.15, 0.2, '#e8c84a'],
+      ].map(([x, z, rot, color], i) => (
+        <mesh key={i} position={[x as number, 0.025, z as number]} rotation={[0, rot as number, 0]} castShadow>
+          <boxGeometry args={[0.1, 0.04, 0.06]} />
+          <Solid color={color as string} />
+        </mesh>
+      ))}
     </group>
   );
 }
@@ -361,93 +537,162 @@ export interface RealRoomSceneProps {
 }
 
 /**
- * Walkable bedroom rebuilt around real Tripo GLB furniture (compressed for web)
- * instead of photo cut-outs. Shelf game boxes stay interactive for play.
+ * Walkable bedroom built from every Drive Tripo mesh. The shelf keeps its baked
+ * board-game boxes — interaction uses invisible hit volumes, not fake geometry.
  */
 export function RealRoomScene({ hoveredId, pulledGameId, tapeOn, lampsWarm }: RealRoomSceneProps) {
+  const crtScreen = crtScreenTexture('PLAY');
+
   return (
     <group>
-      <ambientLight intensity={0.22} color="#ffd2bd" />
-      <hemisphereLight args={['#c4b0e0', '#2a150f', 0.28]} />
+      <ambientLight intensity={0.18} color="#ffd2bd" />
+      <hemisphereLight args={['#b8a0d8', '#2a150f', 0.32]} />
       <Shell />
+      <WallDecals />
 
-      {/* Window — real model set into the north wall */}
-      <RoomModel id="window" position={[-1.75, 1.05, NORTH_Z + 0.08]} fitWidth={0.85} fitHeight={1.15} />
-      <pointLight position={[-1.75, 1.55, NORTH_Z + 0.5]} color="#9aa6ff" intensity={1.05} distance={2.6} decay={2} />
+      {/* Window — night sky + real Tripo window frame */}
+      <NightSkyWindow />
+      <RoomModel
+        id="window"
+        position={[WINDOW_NORTH.x, 0.35, NORTH_Z + 0.06]}
+        fitWidth={WINDOW_NORTH.width * 1.05}
+        fitHeight={WINDOW_NORTH.height * 0.95}
+        tintAmount={0.03}
+      />
 
-      {/* Bed + nightstand (west) */}
+      {/* Bed + nightstand (west) — full quilt mesh */}
       <RoomModel
         id="bed"
         position={[BED.x, 0, BED.z]}
         rotation={[0, Math.PI / 2, 0]}
         fitWidth={BED.length}
+        fitHeight={BED.top + 0.35}
         interactable={{ id: 'bed', kind: 'prop', label: 'Bed', hint: 'Open memory card' }}
         hovered={hoveredId === 'bed'}
+        tintAmount={0.03}
       />
       <RoomModel id="nightstand" position={[NIGHTSTAND.x, 0, NIGHTSTAND.z]} fitHeight={0.62} fitWidth={0.42} />
+      <LavaLamp
+        position={[NIGHTSTAND.x + 0.02, NIGHTSTAND.top, NIGHTSTAND.z + 0.05]}
+        warm={lampsWarm}
+        hovered={hoveredId === 'lava-lamp'}
+      />
+      {/* Alarm clock glow */}
+      <mesh position={[NIGHTSTAND.x - 0.1, NIGHTSTAND.top + 0.04, NIGHTSTAND.z + 0.08]}>
+        <boxGeometry args={[0.1, 0.05, 0.06]} />
+        <Solid color="#1a1a1e" rough={0.4} />
+      </mesh>
+      <mesh position={[NIGHTSTAND.x - 0.1, NIGHTSTAND.top + 0.05, NIGHTSTAND.z + 0.115]}>
+        <planeGeometry args={[0.08, 0.03]} />
+        <meshBasicMaterial color="#ff3030" />
+      </mesh>
       <RoomModel
         id="gameboy"
-        position={[BED.x + 0.15, BED.top + 0.02, BED.z + 0.35]}
-        rotation={[0, 0.4, 0]}
-        fitWidth={0.14}
+        position={[BED.x + 0.12, BED.top + 0.04, BED.z + 0.4]}
+        rotation={[0, 0.45, 0]}
+        fitWidth={0.16}
         interactable={{ id: 'gameboy', kind: 'prop', label: 'Game Boy', hint: 'Open memory card' }}
         hovered={hoveredId === 'gameboy'}
+        tintAmount={0.02}
       />
 
-      {/* West desk under the posters */}
-      <RoomModel id="desk" position={[CORNER_DESK.x + 0.2, 0, CORNER_DESK.z + 0.1]} fitWidth={0.95} fitHeight={0.78} />
+      {/* West corner desk under posters */}
+      <RoomModel
+        id="desk"
+        position={[CORNER_DESK.x + 0.15, 0, CORNER_DESK.z + 0.12]}
+        fitWidth={0.95}
+        fitHeight={0.76}
+        tintAmount={0.05}
+      />
+      <DeskLamp position={[CORNER_DESK.x + 0.25, CORNER_DESK.top, CORNER_DESK.z + 0.1]} />
 
-      {/* Dresser + CRT + lava + neon */}
-      <RoomModel id="dresser" position={[DRESSER.x, 0, DRESSER.z]} fitWidth={DRESSER.width} fitHeight={DRESSER.height} />
+      {/* Dresser + CRT — hero of the north wall */}
+      <RoomModel
+        id="dresser"
+        position={[DRESSER.x, 0, DRESSER.z]}
+        fitWidth={DRESSER.width}
+        fitHeight={DRESSER.height}
+        tintAmount={0.05}
+      />
       <RoomModel
         id="crt"
         position={[CRT.x, DRESSER.height, DRESSER.z + 0.02]}
-        fitWidth={CRT.width * 1.05}
+        fitWidth={CRT.width * 1.08}
         interactable={{ id: 'crt-tv', kind: 'prop', label: 'CRT television', hint: 'Open memory · flat list' }}
         hovered={hoveredId === 'crt-tv'}
+        tintAmount={0.02}
       />
-      <RoomModel id="toyshelf" position={[CRT.x + 0.15, DRESSER.height + CRT.height + 0.35, NORTH_Z + 0.12]} fitWidth={0.85} />
-      <LavaLamp warm={lampsWarm} hovered={hoveredId === 'lava-lamp'} />
-      <NeonSaturn />
+      {/* Soft PLAY glow on the screen face */}
+      <mesh position={[CRT.x, DRESSER.height + CRT.height * 0.52, DRESSER.z + CRT.depth / 2 + 0.02]}>
+        <planeGeometry args={[CRT.width * 0.72, CRT.height * 0.55]} />
+        <meshBasicMaterial map={crtScreen} transparent opacity={0.85} />
+      </mesh>
+      <pointLight position={[CRT.x, DRESSER.height + 0.35, DRESSER.z + 0.5]} color="#6ec8ff" intensity={0.55} distance={1.8} decay={2} />
 
+      {/* Toy shelf on the wall above the dresser (reference) */}
+      <RoomModel
+        id="toyshelf"
+        position={[TOY_SHELF.x, TOY_SHELF.y - 0.15, NORTH_Z + 0.1]}
+        fitWidth={TOY_SHELF.width * 0.95}
+        tintAmount={0.04}
+      />
+
+      <LavaLamp
+        position={[DRESSER.x + DRESSER.width * 0.38, DRESSER.height + 0.02, DRESSER.z + 0.1]}
+        warm={lampsWarm}
+        hovered={hoveredId === 'lava-lamp'}
+      />
+      <NeonSaturn />
       <Door hovered={hoveredId === 'door'} />
 
-      {/* Boombox + tapes on the floor */}
+      {/* Boombox + VHS on the floor by the dresser */}
       <RoomModel
         id="boombox"
-        position={[BOOMBOX.x, 0, BOOMBOX.z + 0.15]}
-        rotation={[0, -0.35, 0]}
-        fitWidth={0.48}
+        position={[BOOMBOX.x, 0, BOOMBOX.z + 0.2]}
+        rotation={[0, -0.4, 0]}
+        fitWidth={0.5}
         interactable={{ id: 'boombox', kind: 'prop', label: 'Boombox', hint: tapeOn ? 'Stop tape · card' : 'Play tape · card' }}
         hovered={hoveredId === 'boombox'}
+        tintAmount={0.02}
       />
-      {tapeOn && <pointLight position={[BOOMBOX.x, 0.2, BOOMBOX.z + 0.3]} color="#ff7ad8" intensity={1.1} distance={1.2} decay={2} />}
+      {tapeOn && (
+        <pointLight position={[BOOMBOX.x, 0.22, BOOMBOX.z + 0.35]} color="#ff7ad8" intensity={1.25} distance={1.4} decay={2} />
+      )}
       <RoomModel
         id="vhs_stack"
-        position={[BOOMBOX.x - 0.35, 0, BOOMBOX.z + 0.35]}
-        rotation={[0, 0.5, 0]}
-        fitWidth={0.28}
+        position={[BOOMBOX.x - 0.38, 0, BOOMBOX.z + 0.42]}
+        rotation={[0, 0.55, 0]}
+        fitWidth={0.3}
         interactable={{ id: 'vhs-stack', kind: 'prop', label: 'VHS stack', hint: 'Open memory card' }}
         hovered={hoveredId === 'vhs-stack'}
       />
-      <RoomModel id="vhs_loose" position={[0.55, 0, -1.55]} rotation={[0, -0.8, 0]} fitWidth={0.35} />
+      <RoomModel id="vhs_loose" position={[0.6, 0, -1.45]} rotation={[0, -0.85, 0]} fitWidth={0.36} />
+      <RoomModel id="vhs_loose" position={[0.85, 0, -1.25]} rotation={[0, 0.4, 0]} fitWidth={0.28} scale={0.85} />
 
-      {/* Game shelf — hero interaction */}
+      {/* Game shelf — real mesh only */}
       <InteractiveShelf hoveredId={hoveredId} pulledId={pulledGameId} />
 
-      {/* East computer desk + card games */}
-      <RoomModel id="desk" position={[EAST_DESK.x, 0, EAST_DESK.z]} rotation={[0, -Math.PI / 2, 0]} fitWidth={1.4} fitHeight={0.78} />
+      {/* East computer desk */}
+      <RoomModel
+        id="desk"
+        position={[EAST_DESK.x, 0, EAST_DESK.z]}
+        rotation={[0, -Math.PI / 2, 0]}
+        fitWidth={1.45}
+        fitHeight={0.78}
+        tintAmount={0.05}
+      />
       <DeskGames hoveredId={hoveredId} />
       <RoomModel
         id="cards"
-        position={[0.2, 0.01, -1.35]}
-        rotation={[0, 0.6, 0]}
-        fitWidth={0.35}
+        position={[RUG.x - 0.15, 0.01, RUG.z + 0.15]}
+        rotation={[0, 0.7, 0]}
+        fitWidth={0.38}
         interactable={{ id: 'cards', kind: 'prop', label: 'Trading cards', hint: 'Open memory card' }}
         hovered={hoveredId === 'cards'}
+        tintAmount={0.02}
       />
 
-      {/* Play table in front of shelf */}
+      {/* Low play table in front of shelf */}
       <group position={[PLAY_TABLE.x, 0, PLAY_TABLE.z]}>
         <mesh position={[0, PLAY_TABLE.top, 0]} castShadow receiveShadow>
           <boxGeometry args={[PLAY_TABLE.width, PLAY_TABLE.thickness, PLAY_TABLE.depth]} />
@@ -460,9 +705,14 @@ export function RealRoomScene({ hoveredId, pulledGameId, tapeOn, lampsWarm }: Re
         <meshStandardMaterial map={rugTexture()} transparent roughness={0.98} />
       </mesh>
 
+      <FloorClutter />
       <CeilingFan />
-      <pointLight position={[0, 1.75, 1.3]} color="#b48ce0" intensity={0.55} distance={5} decay={2} />
-      <pointLight position={[-1.3, 1.3, -1.5]} color="#e09a6e" intensity={0.55} distance={3.6} decay={2} />
+
+      {/* Atmosphere fills matching the painting */}
+      <pointLight position={[0, 1.8, 1.2]} color="#b48ce0" intensity={0.65} distance={5.5} decay={2} />
+      <pointLight position={[-1.4, 1.25, -1.4]} color="#e09a6e" intensity={0.7} distance={3.8} decay={2} />
+      <pointLight position={[1.8, 1.5, -1.8]} color="#ff9eb8" intensity={0.45} distance={3.2} decay={2} />
+      <pointLight position={[DRESSER.x, 2.2, DRESSER.z + 1.2]} color="#ffd4b0" intensity={0.85} distance={4.5} decay={2} />
     </group>
   );
 }
