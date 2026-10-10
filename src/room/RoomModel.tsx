@@ -18,7 +18,7 @@ export type ModelId =
   | 'toyshelf'
   | 'cards';
 
-const MODEL_URL: Record<ModelId, string> = {
+export const MODEL_URL: Record<ModelId, string> = {
   bed: '/models/bed.glb',
   shelf: '/models/shelf.glb',
   crt: '/models/crt.glb',
@@ -56,9 +56,15 @@ interface RoomModelProps {
   /** World position of the model's floor contact centre. */
   position: [number, number, number];
   rotation?: [number, number, number];
-  /** Target real-world size on the longest horizontal axis (meters). */
+  /**
+   * Scale uniformly so this model-space axis equals `meters`.
+   * Only one axis — fitting width and height together was squashing meshes.
+   */
+  axis?: 'x' | 'y' | 'z';
+  meters?: number;
+  /** @deprecated use axis + meters */
   fitWidth?: number;
-  /** Target real-world height (meters). */
+  /** @deprecated use axis + meters */
   fitHeight?: number;
   fitDepth?: number;
   /** Uniform scale multiplier after fitting. */
@@ -78,6 +84,8 @@ export function RoomModel({
   id,
   position,
   rotation = [0, 0, 0],
+  axis,
+  meters,
   fitWidth,
   fitHeight,
   fitDepth,
@@ -110,7 +118,10 @@ export function RoomModel({
     box.getCenter(center);
     let s = scale;
     if (size.x > 1e-4 && size.y > 1e-4 && size.z > 1e-4) {
-      if (fitWidth && fitHeight) {
+      if (meters && axis) {
+        const len = axis === 'x' ? size.x : axis === 'y' ? size.y : size.z;
+        s = scale * (meters / len);
+      } else if (fitWidth && fitHeight) {
         s = scale * Math.min(fitWidth / Math.max(size.x, size.z), fitHeight / size.y);
       } else if (fitWidth) {
         s *= fitWidth / Math.max(size.x, size.z);
@@ -125,7 +136,7 @@ export function RoomModel({
       // Centre XZ on the pivot; park the floor (bbox.min.y) at y=0
       offset: new THREE.Vector3(-center.x * s, -box.min.y * s, -center.z * s),
     };
-  }, [root, fitWidth, fitHeight, fitDepth, scale]);
+  }, [root, axis, meters, fitWidth, fitHeight, fitDepth, scale]);
 
   return (
     <group position={position} rotation={rotation} userData={interactable ? { interactable } : undefined}>

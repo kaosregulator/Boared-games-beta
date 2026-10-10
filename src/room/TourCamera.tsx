@@ -20,15 +20,14 @@ export interface Waypoint {
  * for deterministic screenshots while checking the art.
  */
 export const TOUR: Waypoint[] = [
-  { at: [0.0, PLAYER.height, 1.85], look: [0.15, 1.2, -2.4], travel: 0, hold: 2.0, label: 'Doorway view' },
-  { at: [-0.35, PLAYER.height, 0.45], look: [0.05, 1.25, -2.45], travel: 2.6, hold: 1.6, label: 'CRT and posters' },
-  { at: [-1.2, PLAYER.height, 0.15], look: [-2.2, 0.85, -1.0], travel: 2.2, hold: 1.6, label: 'Bed and quilt' },
-  { at: [0.55, PLAYER.height, -0.35], look: [1.85, 1.35, -2.35], travel: 2.4, hold: 1.4, label: 'Turning to the shelf' },
-  // Face the shelf front square-on (SHELF ≈ x=1.95, z=-2.3)
-  { at: [1.55, 1.4, -1.15], look: [1.95, 1.2, -2.3], travel: 2.2, hold: 1.8, label: 'At the shelf' },
-  { at: [1.7, 1.35, -1.55], look: [1.95, 1.35, -2.3], travel: 1.8, hold: 2.2, label: 'Reaching the boxes' },
-  { at: [1.55, PLAYER.height, -0.55], look: [2.35, 1.0, -1.15], travel: 2.0, hold: 1.4, label: 'Computer desk' },
-  { at: [0.25, PLAYER.height, 0.95], look: [0.9, 1.15, -2.4], travel: 2.4, hold: 2.0, label: 'Back to idle' },
+  { at: [0.15, PLAYER.height, 1.65], look: [0.2, 1.05, -2.2], travel: 0, hold: 2.0, label: 'Doorway view' },
+  { at: [-0.15, 1.45, -0.55], look: [-0.05, 1.15, -2.2], travel: 2.6, hold: 1.6, label: 'Dresser and TV' },
+  { at: [-0.55, 1.45, 0.7], look: [-1.85, 0.7, -0.15], travel: 2.2, hold: 1.6, label: 'Bed and quilt' },
+  { at: [0.7, 1.5, -0.4], look: [1.72, 1.2, -2.15], travel: 2.4, hold: 1.4, label: 'Turning to the shelf' },
+  { at: [1.35, 1.4, -1.05], look: [1.72, 1.15, -2.15], travel: 2.2, hold: 1.8, label: 'At the shelf' },
+  { at: [1.55, 1.25, -1.35], look: [1.72, 1.2, -2.15], travel: 1.8, hold: 2.2, label: 'Reaching the boxes' },
+  { at: [1.15, PLAYER.height, 0.9], look: [2.15, 0.8, 0.45], travel: 2.0, hold: 1.4, label: 'Desk' },
+  { at: [0.2, PLAYER.height, 1.2], look: [0.3, 1.05, -2.2], travel: 2.4, hold: 2.0, label: 'Back to idle' },
 ];
 
 const EASE = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);

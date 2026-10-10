@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { PointerLockControls } from '@react-three/drei';
 import * as THREE from 'three';
-import { COLLIDERS, PLAYER, WALL } from './videoRoom';
+import { PLAYER, WALL } from './videoRoom';
+import { ROOM_COLLIDERS as COLLIDERS } from './roomLayout';
 
 const FORWARD = new THREE.Vector3();
 const RIGHT = new THREE.Vector3();

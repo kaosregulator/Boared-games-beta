@@ -40,8 +40,8 @@ export const PLAYER = {
   crouchSpeed: 1.05,
   accel: 13,
   reach: 2.3,
-  spawn: [0.0, 1.58, 1.85] as [number, number, number],
-  spawnLook: [1.4, 1.3, -2.2] as [number, number, number],
+  spawn: [0.15, 1.58, 1.65] as [number, number, number],
+  spawnLook: [0.2, 1.05, -2.2] as [number, number, number],
 };
 
 export const DRESSER = { x: pxX(509), z: NORTH_Z + 0.275, width: pxW(218), height: 0.78, depth: 0.55 };
