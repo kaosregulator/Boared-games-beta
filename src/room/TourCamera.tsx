@@ -20,14 +20,15 @@ export interface Waypoint {
  * for deterministic screenshots while checking the art.
  */
 export const TOUR: Waypoint[] = [
-  { at: [0.0, PLAYER.height, 1.85], look: [0.1, 1.25, -2.4], travel: 0, hold: 2.0, label: 'Doorway view' },
-  { at: [-0.5, PLAYER.height, 0.55], look: [-0.3, 1.3, -2.45], travel: 2.6, hold: 1.6, label: 'CRT and posters' },
-  { at: [-1.35, PLAYER.height, 0.2], look: [-2.5, 0.9, -1.1], travel: 2.2, hold: 1.6, label: 'Bed and quilt' },
-  { at: [0.4, PLAYER.height, -0.6], look: [2.3, 1.3, -2.3], travel: 2.4, hold: 1.4, label: 'Turning to the shelf' },
-  { at: [1.55, PLAYER.height, -0.95], look: [2.1, 1.5, -2.4], travel: 2.2, hold: 1.8, label: 'At the shelf' },
-  { at: [2.0, PLAYER.height, -1.5], look: [2.1, 1.62, -2.4], travel: 1.8, hold: 2.2, label: 'Reaching the boxes' },
-  { at: [1.3, PLAYER.height, -0.4], look: [2.45, 1.1, -1.2], travel: 2.0, hold: 1.4, label: 'Computer desk' },
-  { at: [0.3, PLAYER.height, 0.9], look: [1.1, 1.1, -2.4], travel: 2.4, hold: 2.0, label: 'Back to idle' },
+  { at: [0.0, PLAYER.height, 1.85], look: [0.15, 1.2, -2.4], travel: 0, hold: 2.0, label: 'Doorway view' },
+  { at: [-0.35, PLAYER.height, 0.45], look: [0.05, 1.25, -2.45], travel: 2.6, hold: 1.6, label: 'CRT and posters' },
+  { at: [-1.2, PLAYER.height, 0.15], look: [-2.2, 0.85, -1.0], travel: 2.2, hold: 1.6, label: 'Bed and quilt' },
+  { at: [0.55, PLAYER.height, -0.35], look: [1.85, 1.35, -2.35], travel: 2.4, hold: 1.4, label: 'Turning to the shelf' },
+  // Face the shelf front — look at the game-box face, not the side wall
+  { at: [1.35, PLAYER.height, -1.05], look: [1.95, 1.25, -2.35], travel: 2.2, hold: 1.8, label: 'At the shelf' },
+  { at: [1.55, 1.35, -1.55], look: [1.95, 1.35, -2.35], travel: 1.8, hold: 2.2, label: 'Reaching the boxes' },
+  { at: [1.55, PLAYER.height, -0.55], look: [2.35, 1.0, -1.15], travel: 2.0, hold: 1.4, label: 'Computer desk' },
+  { at: [0.25, PLAYER.height, 0.95], look: [0.9, 1.15, -2.4], travel: 2.4, hold: 2.0, label: 'Back to idle' },
 ];
 
 const EASE = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
