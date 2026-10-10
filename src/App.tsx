@@ -128,6 +128,7 @@ export default function App() {
         onSelectGame={handleSelectGame}
         onOpenClassicShelf={() => setHubMode('classic')}
         onOpenLanding={() => setHubMode('landing')}
+        onOpenRulesForGame={game => setShowRulesForGame(game)}
       />
     );
   }

@@ -3,11 +3,13 @@ import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
 import { GameId, GameMetadata } from '../types';
 import { sound } from '../utils/audio';
-import { VideoRoomScene } from './VideoRoomScene';
+import { RealRoomScene } from './RealRoomScene';
 import { WalkController } from './WalkController';
 import { ReachRaycaster, type Aimed } from './ReachRaycaster';
 import { TourCamera } from './TourCamera';
 import { DESK_SLOTS, SHELF_SLOTS, SHELF_SLOTS_LOWER } from './videoRoom';
+import { MemoryFlashCard } from './MemoryFlashCard';
+import { propCardFor } from './propCards';
 
 /**
  * `?tour=1` runs a hands-off dolly through the room and `?shot=N` parks the
@@ -29,11 +31,18 @@ interface WalkRoomProps {
   onSelectGame: (game: GameMetadata) => void;
   onOpenClassicShelf: () => void;
   onOpenLanding: () => void;
+  onOpenRulesForGame?: (game: GameMetadata) => void;
 }
 
 const ALL_SLOTS = [...SHELF_SLOTS, ...SHELF_SLOTS_LOWER, ...DESK_SLOTS];
 
-export function WalkRoom({ games, onSelectGame, onOpenClassicShelf, onOpenLanding }: WalkRoomProps) {
+export function WalkRoom({
+  games,
+  onSelectGame,
+  onOpenClassicShelf,
+  onOpenLanding,
+  onOpenRulesForGame,
+}: WalkRoomProps) {
   const override = useMemo(readCameraOverride, []);
   const scripted = override.tour || override.shot !== undefined;
   const [locked, setLocked] = useState(false);
@@ -43,6 +52,7 @@ export function WalkRoom({ games, onSelectGame, onOpenClassicShelf, onOpenLandin
   const [tapeOn, setTapeOn] = useState(false);
   const [lampsWarm, setLampsWarm] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [cardOpen, setCardOpen] = useState(false);
   const toastTimer = useRef<number | null>(null);
   const heavyStep = useRef(false);
   const pullTimer = useRef<number | null>(null);
@@ -63,33 +73,69 @@ export function WalkRoom({ games, onSelectGame, onOpenClassicShelf, onOpenLandin
     [],
   );
 
+  // Auto-open the glass card when aiming at a game or memory prop in reach
+  useEffect(() => {
+    if (!aimed?.inReach) {
+      setCardOpen(false);
+      return;
+    }
+    if (aimed.kind === 'game' || propCardFor(aimed.id)) setCardOpen(true);
+    else setCardOpen(false);
+  }, [aimed]);
+
   const onStep = useCallback(() => {
     heavyStep.current = !heavyStep.current;
     sound.playFootstep(heavyStep.current);
   }, []);
+
+  const playGame = useCallback(
+    (game: GameMetadata) => {
+      if (pulledGameId) return;
+      setPulledGameId(game.id);
+      setCardOpen(false);
+      sound.playShelfSlide();
+      flash(`Pulling ${game.title} off the shelf`);
+      pullTimer.current = window.setTimeout(() => {
+        sound.playCardboardLid();
+        document.exitPointerLock?.();
+        onSelectGame(game);
+      }, 620);
+    },
+    [flash, onSelectGame, pulledGameId],
+  );
 
   const handleSelect = useCallback(
     (target: Aimed) => {
       if (target.kind === 'game' && target.gameId) {
         const game = byId.get(target.gameId as GameId);
         if (!game) return;
-        if (pulledGameId) return;
-        setPulledGameId(target.gameId as GameId);
-        sound.playShelfSlide();
-        flash(`Pulling ${game.title} off the shelf`);
-        pullTimer.current = window.setTimeout(() => {
-          sound.playCardboardLid();
-          onSelectGame(game);
-        }, 620);
+        // First E opens / confirms the card; second E (or Play button) pulls
+        if (!cardOpen) {
+          setCardOpen(true);
+          sound.playButtonClick();
+          return;
+        }
+        playGame(game);
         return;
       }
 
       switch (target.id) {
         case 'crt-tv':
+          if (!cardOpen) {
+            setCardOpen(true);
+            sound.playButtonClick();
+            break;
+          }
           sound.playButtonClick();
+          document.exitPointerLock?.();
           onOpenClassicShelf();
           break;
         case 'boombox':
+          if (!cardOpen) {
+            setCardOpen(true);
+            sound.playButtonClick();
+            break;
+          }
           sound.playButtonClick();
           setTapeOn(on => !on);
           flash(tapeOn ? 'Tape stopped' : 'Tape rolling');
@@ -103,40 +149,42 @@ export function WalkRoom({ games, onSelectGame, onOpenClassicShelf, onOpenLandin
           sound.playMoveClack();
           flash('Locked. Pack 02 is behind this door.');
           break;
-        case 'east-tv':
-          sound.playButtonClick();
-          flash('Season standings: you are 3rd this week');
-          break;
+        case 'gameboy':
         case 'bed':
+        case 'vhs-stack':
+        case 'cards':
+          setCardOpen(true);
           sound.playButtonClick();
-          flash('Trivia night lives on the quilt');
           break;
         default:
           break;
       }
     },
-    [byId, flash, lampsWarm, onOpenClassicShelf, onSelectGame, pulledGameId, tapeOn],
+    [byId, cardOpen, flash, lampsWarm, onOpenClassicShelf, playGame, tapeOn],
   );
 
-  const aimLabel = aimed?.label ?? null;
-  const aimHint = aimed?.inReach ? aimed.hint : aimed ? 'Walk closer' : null;
+  const aimedGame =
+    aimed?.kind === 'game' && aimed.gameId ? byId.get(aimed.gameId as GameId) ?? null : null;
+  const aimedProp = aimed ? propCardFor(aimed.id) : null;
+  const showCard = locked && cardOpen && aimed?.inReach && (aimedGame || aimedProp);
+
   const shelfTitles = SHELF_SLOTS.map(s => s.title).join(' · ');
 
   return (
     <div className="relative w-full h-[100dvh] overflow-hidden bg-[#140c14] select-none">
       <Canvas
         shadows
-        dpr={[1, 1.9]}
+        dpr={[1, 1.75]}
         camera={{ fov: 72, near: 0.05, far: 60 }}
         gl={{ antialias: true, powerPreference: 'high-performance' }}
         onCreated={({ gl, scene }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping;
-          gl.toneMappingExposure = 1.0;
-          scene.fog = new THREE.Fog('#160d15', 7, 20);
+          gl.toneMappingExposure = 1.05;
+          scene.fog = new THREE.Fog('#1a1218', 8, 22);
         }}
       >
         <Suspense fallback={null}>
-          <VideoRoomScene
+          <RealRoomScene
             hoveredId={aimed?.inReach ? aimed.id : null}
             pulledGameId={pulledGameId}
             tapeOn={tapeOn}
@@ -159,7 +207,6 @@ export function WalkRoom({ games, onSelectGame, onOpenClassicShelf, onOpenLandin
         </div>
       )}
 
-      {/* crosshair */}
       {locked && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div
@@ -174,15 +221,58 @@ export function WalkRoom({ games, onSelectGame, onOpenClassicShelf, onOpenLandin
         </div>
       )}
 
-      {/* look-at label */}
-      {locked && aimLabel && (
+      {/* Glass flash card — games + nostalgia props */}
+      {showCard && (
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 z-30 sm:right-8">
+          {aimedGame ? (
+            <MemoryFlashCard
+              kind="game"
+              game={aimedGame}
+              onPlay={() => playGame(aimedGame)}
+              onRules={() => {
+                document.exitPointerLock?.();
+                onOpenRulesForGame?.(aimedGame);
+              }}
+              onClose={() => setCardOpen(false)}
+            />
+          ) : aimedProp ? (
+            <MemoryFlashCard
+              kind="prop"
+              prop={aimedProp}
+              onClose={() => setCardOpen(false)}
+              onAction={
+                aimedProp.id === 'boombox'
+                  ? () => {
+                      setTapeOn(on => !on);
+                      flash(tapeOn ? 'Tape stopped' : 'Tape rolling');
+                    }
+                  : aimedProp.id === 'crt-tv'
+                    ? () => {
+                        document.exitPointerLock?.();
+                        onOpenClassicShelf();
+                      }
+                    : undefined
+              }
+              actionLabel={
+                aimedProp.id === 'boombox'
+                  ? tapeOn
+                    ? 'Stop the tape'
+                    : 'Press play'
+                  : aimedProp.id === 'crt-tv'
+                    ? 'Open flat game list'
+                    : undefined
+              }
+            />
+          ) : null}
+        </div>
+      )}
+
+      {locked && aimed && !showCard && (
         <div className="pointer-events-none absolute left-1/2 top-[56%] -translate-x-1/2 text-center">
-          <p className="font-display text-xl text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">{aimLabel}</p>
-          {aimHint && (
-            <p className="text-[11px] uppercase tracking-[0.22em] text-amber-200/90 font-bold mt-1">
-              {aimed?.inReach ? `[E] ${aimHint}` : aimHint}
-            </p>
-          )}
+          <p className="font-display text-xl text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">{aimed.label}</p>
+          <p className="text-[11px] uppercase tracking-[0.22em] text-amber-200/90 font-bold mt-1">
+            {aimed.inReach ? `[E] ${aimed.hint ?? 'Inspect'}` : 'Walk closer'}
+          </p>
         </div>
       )}
 
@@ -192,7 +282,6 @@ export function WalkRoom({ games, onSelectGame, onOpenClassicShelf, onOpenLandin
         </div>
       )}
 
-      {/* controls strip */}
       {locked && (
         <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-wrap items-center justify-center gap-2 text-[10px] uppercase tracking-[0.2em] font-bold text-white/70">
           {[
@@ -200,7 +289,7 @@ export function WalkRoom({ games, onSelectGame, onOpenClassicShelf, onOpenLandin
             ['Shift', 'run'],
             ['C', 'crouch'],
             ['Mouse', 'look'],
-            ['E', 'use'],
+            ['E', 'inspect / play'],
             ['Esc', 'release'],
           ].map(([key, what]) => (
             <span key={key} className="rounded-lg bg-black/55 border border-white/10 px-2.5 py-1">
@@ -210,15 +299,14 @@ export function WalkRoom({ games, onSelectGame, onOpenClassicShelf, onOpenLandin
         </div>
       )}
 
-      {/* entry overlay */}
       {!locked && !scripted && (
         <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-[#140c14]/80 via-[#1a0f18]/70 to-[#140c14]/90 backdrop-blur-[2px] px-6">
-          <div className="max-w-xl w-full rounded-3xl border border-fuchsia-400/25 bg-black/65 p-7 text-center shadow-2xl">
-            <p className="text-[10px] uppercase tracking-[0.35em] text-fuchsia-300 font-bold">Game Room · Beta</p>
+          <div className="max-w-xl w-full rounded-3xl border border-white/15 bg-black/65 p-7 text-center shadow-2xl">
+            <p className="text-[10px] uppercase tracking-[0.35em] text-amber-200/90 font-bold">Game Room</p>
             <h1 className="font-display text-4xl sm:text-5xl text-white mt-2">Walk the bedroom</h1>
             <p className="text-sm text-slate-300 mt-3 leading-relaxed">
-              Free-roam first person. Walk to the shelf, aim at a box and press <span className="text-amber-200 font-bold">E</span> to
-              pull it down. The board unfolds on the table in front of you.
+              Free-roam first person — web, not VR. Aim at the shelf for a glass game card, or check
+              nostalgia props like the Game Boy for a quick history flash.
             </p>
             <p className="text-[11px] text-slate-400 mt-3">On the shelf: {shelfTitles}</p>
             <button

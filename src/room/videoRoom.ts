@@ -177,19 +177,21 @@ export interface RoomProp {
 
 /** Non-game things the player can look at and interact with. */
 export const ROOM_PROPS: RoomProp[] = [
-  { id: 'crt-tv', label: 'CRT television', hint: 'Open the flat game list', position: [CRT.x, DRESSER.height + CRT.height / 2, NORTH_Z + 0.34], radius: 0.42 },
-  { id: 'boombox', label: 'Boombox', hint: 'Flip the room tape', position: [BOOMBOX.x, 0.14, BOOMBOX.z], radius: 0.26 },
+  { id: 'crt-tv', label: 'CRT television', hint: 'Memory card · flat game list', position: [CRT.x, DRESSER.height + CRT.height / 2, NORTH_Z + 0.34], radius: 0.42 },
+  { id: 'boombox', label: 'Boombox', hint: 'Memory card · flip the tape', position: [BOOMBOX.x, 0.14, BOOMBOX.z], radius: 0.26 },
   { id: 'lava-lamp', label: 'Lava lamp', hint: 'Warm the room light up', position: [LAVA.x, LAVA.y, NORTH_Z + 0.3], radius: 0.2 },
   { id: 'door', label: 'Bedroom door', hint: 'Locked in this build', position: [DOOR.x, 1.0, NORTH_Z + 0.05], radius: 0.5 },
-  { id: 'east-tv', label: 'Spare TV', hint: 'Season standings', position: [EAST_TV.x, EAST_TV.top + 0.26, EAST_TV.z], radius: 0.36 },
-  { id: 'bed', label: 'Bed', hint: 'Trivia night is on the quilt', position: [BED.x, BED.top, BED.z], radius: 0.7 },
+  { id: 'bed', label: 'Bed', hint: 'Open memory card', position: [BED.x, BED.top, BED.z], radius: 0.7 },
+  { id: 'gameboy', label: 'Game Boy', hint: 'Open memory card', position: [BED.x + 0.15, BED.top + 0.08, BED.z + 0.35], radius: 0.22 },
+  { id: 'vhs-stack', label: 'VHS stack', hint: 'Open memory card', position: [BOOMBOX.x - 0.35, 0.1, BOOMBOX.z + 0.35], radius: 0.22 },
+  { id: 'cards', label: 'Trading cards', hint: 'Open memory card', position: [0.2, 0.05, -1.35], radius: 0.22 },
 ];
 
 export const PALETTE = {
-  floor: '#30201d',
-  floorDark: '#1f1312',
-  wall: '#382739',
-  wallWarm: '#40293c',
+  floor: '#3a2620',
+  floorDark: '#271814',
+  wall: '#6e5a68',
+  wallWarm: '#7a6874',
   ceiling: '#2a1a19',
   wood: '#4d3024',
   trim: '#3a2219',
