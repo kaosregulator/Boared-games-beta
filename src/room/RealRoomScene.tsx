@@ -17,7 +17,7 @@ import { useTexture } from '@react-three/drei';
 import { ceilingTexture, floorTexture, rugTexture, wallTexture } from './procTextures';
 import type { HoverTarget } from './Interactable';
 import { RoomModel } from './RoomModel';
-import { LAYOUT, SHELF_ROW_Y } from './roomLayout';
+import { LAYOUT, SHELF_ROW_Y, WALL_SHELF } from './roomLayout';
 import { ANCHORS, type Anchor } from './anchors';
 import { DynamicModel } from './UserProps';
 import { MOODS, type RoomMood } from './moods';
@@ -214,6 +214,24 @@ function BulbFlicker({
   return <pointLight ref={light} position={position} color={color} intensity={base} distance={1.05} decay={2} />;
 }
 
+function MountedShelf() {
+  const s = WALL_SHELF;
+  return (
+    <group position={[s.x, s.y + s.h / 2, s.z]}>
+      <mesh castShadow receiveShadow>
+        <boxGeometry args={[s.w, s.h, s.d]} />
+        <meshStandardMaterial color="#8d5c36" roughness={0.74} />
+      </mesh>
+      {[-1, 1].map(side => (
+        <mesh key={side} position={[side * (s.w * 0.36), -0.07, s.d * 0.08]} castShadow>
+          <boxGeometry args={[0.09, 0.1, s.d * 0.55]} />
+          <meshStandardMaterial color="#6b4328" roughness={0.8} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 function CeilingDome() {
   return (
     <group position={[0.05, WALL.height - 0.02, 0.15]}>
@@ -239,7 +257,6 @@ function WallArt() {
       tex.needsUpdate = true;
     });
   }, [maps]);
-  const gapX = (LAYOUT.shelf.x + LAYOUT.shelf.sx / 2 + (LAYOUT.dresser.x - LAYOUT.dresser.sx / 2)) / 2;
   const posters: {
     key: string;
     map: THREE.Texture;
@@ -251,7 +268,7 @@ function WallArt() {
     {
       key: 'pokemon',
       map: maps.pokemon,
-      position: [gapX, 1.72, NORTH_Z + 0.025],
+      position: [(LAYOUT.window.x + LAYOUT.window.sx / 2 + LAYOUT.dresser.x - LAYOUT.dresser.sx / 2) / 2, 1.7, NORTH_Z + 0.02],
       rotation: [0, 0, 0],
       w: 0.32,
       h: 0.46,
@@ -259,8 +276,8 @@ function WallArt() {
     {
       key: 'mummy',
       map: maps.mummy,
-      position: [LAYOUT.dresser.x, 2.28, NORTH_Z + 0.025],
-      rotation: [0, 0, 0],
+      position: [WEST_X + 0.02, 1.72, LAYOUT.bed.z + 0.55],
+      rotation: [0, Math.PI / 2, 0],
       w: 0.3,
       h: 0.44,
     },
@@ -420,6 +437,7 @@ export function RealRoomScene({
       <NightCity />
       <WindowGlare />
       <WallArt />
+      <MountedShelf />
       <CeilingDome />
 
       <PlacedModel id="window" hoveredId={hoveredId} />

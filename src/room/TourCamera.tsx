@@ -21,7 +21,7 @@ export interface Waypoint {
  * for deterministic screenshots while checking the art.
  */
 export const TOUR: Waypoint[] = [
-  { at: [0.05, PLAYER.height, 1.82], look: [-0.15, 1.12, -2.35], travel: 0, hold: 2.0, label: 'Doorway view' },
+  { at: [0.02, PLAYER.height, 1.32], look: [-0.05, 1.02, -2.15], travel: 0, hold: 2.0, label: 'Doorway view' },
   { at: [-0.15, 1.48, -0.45], look: [LAYOUT.dresser.x, 1.15, LAYOUT.dresser.z], travel: 2.6, hold: 1.6, label: 'Dresser and TV' },
   { at: [LAYOUT.bed.x + 1.15, 1.4, LAYOUT.bed.z + 0.85], look: [LAYOUT.bed.x, 0.65, LAYOUT.bed.z], travel: 2.2, hold: 1.6, label: 'Bed and quilt' },
   { at: [LAYOUT.shelf.x + 1.15, 1.45, LAYOUT.shelf.z + 1.45], look: [LAYOUT.shelf.x, 1.15, LAYOUT.shelf.z], travel: 2.4, hold: 1.6, label: 'Turning to the shelf' },
