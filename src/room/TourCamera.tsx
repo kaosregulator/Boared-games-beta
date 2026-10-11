@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import { LAYOUT } from './roomLayout';
 import { PLAYER } from './videoRoom';
 
 export interface Waypoint {
@@ -20,14 +21,14 @@ export interface Waypoint {
  * for deterministic screenshots while checking the art.
  */
 export const TOUR: Waypoint[] = [
-  { at: [0.15, PLAYER.height, 1.65], look: [0.2, 1.05, -2.2], travel: 0, hold: 2.0, label: 'Doorway view' },
-  { at: [-0.15, 1.45, -0.55], look: [-0.05, 1.15, -2.2], travel: 2.6, hold: 1.6, label: 'Dresser and TV' },
-  { at: [-0.55, 1.45, 0.7], look: [-1.85, 0.7, -0.15], travel: 2.2, hold: 1.6, label: 'Bed and quilt' },
-  { at: [0.7, 1.5, -0.4], look: [1.72, 1.2, -2.15], travel: 2.4, hold: 1.4, label: 'Turning to the shelf' },
-  { at: [1.35, 1.4, -1.05], look: [1.72, 1.15, -2.15], travel: 2.2, hold: 1.8, label: 'At the shelf' },
-  { at: [1.55, 1.25, -1.35], look: [1.72, 1.2, -2.15], travel: 1.8, hold: 2.2, label: 'Reaching the boxes' },
-  { at: [1.15, PLAYER.height, 0.9], look: [2.15, 0.8, 0.45], travel: 2.0, hold: 1.4, label: 'Desk' },
-  { at: [0.2, PLAYER.height, 1.2], look: [0.3, 1.05, -2.2], travel: 2.4, hold: 2.0, label: 'Back to idle' },
+  { at: [0.05, PLAYER.height, 1.82], look: [-0.15, 1.12, -2.35], travel: 0, hold: 2.0, label: 'Doorway view' },
+  { at: [-0.15, 1.48, -0.45], look: [LAYOUT.dresser.x, 1.15, LAYOUT.dresser.z], travel: 2.6, hold: 1.6, label: 'Dresser and TV' },
+  { at: [LAYOUT.bed.x + 1.15, 1.4, LAYOUT.bed.z + 0.85], look: [LAYOUT.bed.x, 0.65, LAYOUT.bed.z], travel: 2.2, hold: 1.6, label: 'Bed and quilt' },
+  { at: [LAYOUT.shelf.x + 1.15, 1.45, LAYOUT.shelf.z + 1.45], look: [LAYOUT.shelf.x, 1.15, LAYOUT.shelf.z], travel: 2.4, hold: 1.6, label: 'Turning to the shelf' },
+  { at: [LAYOUT.shelf.x + 0.85, 1.35, LAYOUT.shelf.z + 1.05], look: [LAYOUT.shelf.x, 1.1, LAYOUT.shelf.z], travel: 2.0, hold: 1.8, label: 'At the shelf' },
+  { at: [LAYOUT.window.x - 0.85, 1.45, LAYOUT.window.z + 1.35], look: [LAYOUT.window.x, 1.55, LAYOUT.nightstand.z], travel: 2.2, hold: 1.6, label: 'Window corner' },
+  { at: [LAYOUT.toyshelf.x - 1.35, 1.35, LAYOUT.toyshelf.z + 0.2], look: [LAYOUT.toyshelf.x, 0.85, LAYOUT.toyshelf.z], travel: 2.0, hold: 1.4, label: 'Toy shelf' },
+  { at: [0.15, PLAYER.height, 1.45], look: [-0.1, 1.05, -2.3], travel: 2.4, hold: 2.0, label: 'Back to idle' },
 ];
 
 const EASE = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);

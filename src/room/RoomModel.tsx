@@ -16,7 +16,25 @@ export type ModelId =
   | 'vhs_stack'
   | 'vhs_loose'
   | 'toyshelf'
-  | 'cards';
+  | 'cards'
+  | 'door'
+  | 'backpack'
+  | 'hotpockets'
+  | 'nes'
+  | 'rubik'
+  | 'armor'
+  | 'army'
+  | 'gushers'
+  | 'teddy'
+  | 'jordans'
+  | 'car'
+  | 'books'
+  | 'clutterdesk'
+  | 'board'
+  | 'battleship'
+  | 'clue'
+  | 'life'
+  | 'yahtzee';
 
 export const MODEL_URL: Record<ModelId, string> = {
   bed: '/models/bed.glb',
@@ -32,6 +50,24 @@ export const MODEL_URL: Record<ModelId, string> = {
   vhs_loose: '/models/vhs_loose.glb',
   toyshelf: '/models/toyshelf.glb',
   cards: '/models/cards.glb',
+  door: '/models/door.glb',
+  backpack: '/models/backpack.glb',
+  hotpockets: '/models/hotpockets.glb',
+  nes: '/models/nes.glb',
+  rubik: '/models/rubik.glb',
+  armor: '/models/armor.glb',
+  army: '/models/army.glb',
+  gushers: '/models/gushers.glb',
+  teddy: '/models/teddy.glb',
+  jordans: '/models/jordans.glb',
+  car: '/models/car.glb',
+  books: '/models/books.glb',
+  clutterdesk: '/models/clutterdesk.glb',
+  board: '/models/board.glb',
+  battleship: '/models/battleship.glb',
+  clue: '/models/clue.glb',
+  life: '/models/life.glb',
+  yahtzee: '/models/yahtzee.glb',
 };
 
 /** Light warm cast so Tripo albedo stays readable (game logos, quilt, wood). */
@@ -153,6 +189,21 @@ export function RoomModel({
   );
 }
 
-(['bed', 'shelf', 'crt', 'dresser', 'desk', 'nightstand', 'boombox', 'window', 'gameboy'] as ModelId[]).forEach(id => {
+(
+  [
+    'bed',
+    'shelf',
+    'crt',
+    'dresser',
+    'desk',
+    'nightstand',
+    'boombox',
+    'window',
+    'gameboy',
+    'door',
+    'backpack',
+    'toyshelf',
+  ] as ModelId[]
+).forEach(id => {
   useGLTF.preload(MODEL_URL[id]);
 });

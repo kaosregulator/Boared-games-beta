@@ -19,9 +19,9 @@ const shelfTop = LAYOUT.shelf.sy;
 /** Snap points on the room that already works. New uploads land on these. */
 export const ANCHORS: Anchor[] = [
   { id: 'floor-center', label: 'Rug', position: [0.2, 0, 0.15], rotY: 0, kind: 'floor' },
-  { id: 'floor-bed', label: 'Floor by the bed', position: [-1.05, 0, 0.85], rotY: 0.4, kind: 'floor' },
-  { id: 'floor-tv', label: 'Floor by the TV', position: [0.55, 0, -1.15], rotY: -0.3, kind: 'floor' },
-  { id: 'floor-shelf', label: 'Floor by the shelf', position: [1.15, 0, -1.15], rotY: 0, kind: 'floor' },
+  { id: 'floor-bed', label: 'Floor by the bed', position: [LAYOUT.bed.x + 0.9, 0, LAYOUT.bed.z + 0.7], rotY: 0.4, kind: 'floor' },
+  { id: 'floor-tv', label: 'Floor by the TV', position: [LAYOUT.dresser.x + 0.2, 0, LAYOUT.dresser.z + 0.9], rotY: -0.3, kind: 'floor' },
+  { id: 'floor-shelf', label: 'Floor by the shelf', position: [LAYOUT.shelf.x + 0.2, 0, LAYOUT.shelf.z + 0.9], rotY: 0, kind: 'floor' },
   {
     id: 'dresser-top',
     label: 'On the dresser',
@@ -67,7 +67,7 @@ export const ANCHORS: Anchor[] = [
   {
     id: 'wall-north',
     label: 'North wall (poster height)',
-    position: [-0.9, 1.55, NORTH_Z + 0.04],
+    position: [LAYOUT.dresser.x - 0.7, 1.7, NORTH_Z + 0.04],
     rotY: 0,
     kind: 'wall',
   },

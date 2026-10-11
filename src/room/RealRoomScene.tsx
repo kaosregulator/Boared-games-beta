@@ -13,7 +13,8 @@ import {
   WEST_X,
   type ShelfSlot,
 } from './videoRoom';
-import { ceilingTexture, floorTexture, nightSkyTexture, rugTexture, wallTexture } from './procTextures';
+import { useTexture } from '@react-three/drei';
+import { ceilingTexture, floorTexture, rugTexture, wallTexture } from './procTextures';
 import type { HoverTarget } from './Interactable';
 import { RoomModel } from './RoomModel';
 import { LAYOUT, SHELF_ROW_Y } from './roomLayout';
@@ -67,28 +68,234 @@ function Shell() {
         <planeGeometry args={[WALL.halfDepth * 2, WALL.height]} />
         {wallMat}
       </mesh>
-      {/* Baseboards — they meet the floor, they don't float */}
-      {[
-        [0, 0.04, NORTH_Z + 0.02, WALL.halfWidth * 2, 0.08, 0.04],
-        [0, 0.04, SOUTH_Z - 0.02, WALL.halfWidth * 2, 0.08, 0.04],
-      ].map((b, i) => (
-        <mesh key={i} position={[b[0], b[1], b[2]]}>
-          <boxGeometry args={[b[3], b[4], b[5]]} />
-          <Solid color={PALETTE.trim} />
-        </mesh>
-      ))}
+      {/* Baseboards — gapped so the door meets the floor */}
+      <Baseboards />
     </group>
   );
 }
 
-function NightBehindWindow() {
-  const sky = nightSkyTexture();
+function Baseboards() {
+  const door = LAYOUT.door;
+  const west = -WALL.halfWidth;
+  const east = WALL.halfWidth;
+  const gapL = door.x - door.sx / 2 - 0.06;
+  const gapR = door.x + door.sx / 2 + 0.06;
+  const leftW = Math.max(0.2, gapL - west);
+  const rightW = Math.max(0.2, east - gapR);
+  const bars: [number, number, number, number][] = [
+    [(west + gapL) / 2, NORTH_Z + 0.02, leftW, 0.04],
+    [(gapR + east) / 2, NORTH_Z + 0.02, rightW, 0.04],
+    [0, SOUTH_Z - 0.02, WALL.halfWidth * 2, 0.04],
+  ];
+  return (
+    <>
+      {bars.map((b, i) => (
+        <mesh key={i} position={[b[0], 0.04, b[1]]}>
+          <boxGeometry args={[b[2], 0.08, b[3]]} />
+          <Solid color={PALETTE.trim} />
+        </mesh>
+      ))}
+    </>
+  );
+}
+
+/** Houses and a few interior lights, seen through the window. */
+function paintNightCity(ctx: CanvasRenderingContext2D, time: number) {
+  const g = ctx.createLinearGradient(0, 0, 0, 512);
+  g.addColorStop(0, '#14122e');
+  g.addColorStop(0.45, '#3a2a58');
+  g.addColorStop(0.72, '#6a4060');
+  g.addColorStop(1, '#1a1020');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 512, 512);
+  for (let i = 0; i < 70; i += 1) {
+    const sx = (i * 97) % 512;
+    const sy = (i * 53) % 220;
+    ctx.fillStyle = `rgba(255,255,255,${0.25 + ((i * 17) % 10) / 20})`;
+    ctx.fillRect(sx, sy, 1.5, 1.5);
+  }
+  const houses = [
+    { x: 18, w: 78, h: 150 },
+    { x: 108, w: 96, h: 210 },
+    { x: 214, w: 70, h: 130 },
+    { x: 300, w: 110, h: 240 },
+    { x: 420, w: 74, h: 170 },
+  ];
+  houses.forEach((house, hi) => {
+    ctx.fillStyle = '#120e1c';
+    ctx.fillRect(house.x, 512 - house.h, house.w, house.h);
+    const cols = house.w > 90 ? 3 : 2;
+    const rows = 4;
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < cols; col += 1) {
+        const wx = house.x + 12 + col * ((house.w - 20) / cols);
+        const wy = 512 - house.h + 22 + row * 36;
+        const phase = Math.sin(time * (1.4 + hi * 0.35) + row * 2.1 + col + hi);
+        const lit = (hi + row + col) % 3 !== 0 || phase > 0.2;
+        const flicker = lit ? 0.55 + phase * 0.2 : 0.05;
+        ctx.fillStyle = `rgba(255, ${190 + hi * 8}, 120, ${Math.max(0.04, flicker)})`;
+        ctx.fillRect(wx, wy, 8, 12);
+      }
+    }
+  });
+}
+
+function NightCity() {
+  const tex = useRef<THREE.CanvasTexture | null>(null);
+  if (!tex.current) {
+    const c = document.createElement('canvas');
+    c.width = 512;
+    c.height = 512;
+    const ctx = c.getContext('2d');
+    if (ctx) paintNightCity(ctx, 0);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    tex.current = t;
+  }
+  useFrame(({ clock }) => {
+    const t = tex.current;
+    const c = t?.image as HTMLCanvasElement | undefined;
+    const ctx = c?.getContext('2d');
+    if (!t || !ctx) return;
+    paintNightCity(ctx, clock.elapsedTime);
+    t.needsUpdate = true;
+  });
   const w = LAYOUT.window;
   return (
-    <mesh position={[w.x, w.y + w.sy * 0.48, NORTH_Z - 0.04]}>
-      <planeGeometry args={[w.sx * 0.82, w.sy * 0.78]} />
-      <meshBasicMaterial map={sky} />
+    <mesh position={[w.x, w.y + w.sy * 0.46, NORTH_Z - 0.05]}>
+      <planeGeometry args={[w.sx * 0.78, w.sy * 0.72]} />
+      <meshBasicMaterial map={tex.current ?? undefined} />
     </mesh>
+  );
+}
+
+function WindowGlare() {
+  const mat = useRef<THREE.MeshBasicMaterial>(null);
+  useFrame(({ clock }) => {
+    if (!mat.current) return;
+    mat.current.opacity = 0.035 + Math.sin(clock.elapsedTime * 0.65) * 0.012;
+  });
+  const w = LAYOUT.window;
+  return (
+    <mesh position={[w.x - w.sx * 0.12, w.y + w.sy * 0.58, w.z + w.sz * 0.62]}>
+      <planeGeometry args={[w.sx * 0.22, w.sy * 0.06]} />
+      <meshBasicMaterial
+        ref={mat}
+        color="#e7f0ff"
+        transparent
+        opacity={0.045}
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+      />
+    </mesh>
+  );
+}
+
+function BulbFlicker({
+  position,
+  color,
+  base,
+  seed,
+}: {
+  position: [number, number, number];
+  color: string;
+  base: number;
+  seed: number;
+}) {
+  const light = useRef<THREE.PointLight>(null);
+  useFrame(({ clock }) => {
+    const bulb = light.current;
+    if (!bulb) return;
+    const t = clock.elapsedTime;
+    const twinkle = Math.sin(t * (8 + seed) + seed * 4) * 0.08;
+    const dip = Math.sin(t * 29 + seed * 9) > 0.97 ? -0.28 : 0;
+    bulb.intensity = Math.max(0.04, base + twinkle + dip);
+  });
+  return <pointLight ref={light} position={position} color={color} intensity={base} distance={1.05} decay={2} />;
+}
+
+function CeilingDome() {
+  return (
+    <group position={[0.05, WALL.height - 0.02, 0.15]}>
+      <mesh rotation={[Math.PI, 0, 0]}>
+        <sphereGeometry args={[0.22, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <meshStandardMaterial color="#fff1dc" emissive="#ffd7a4" emissiveIntensity={0.85} roughness={0.4} />
+      </mesh>
+      <pointLight position={[0, -0.18, 0]} color="#ffe2c2" intensity={2.1} distance={8.5} decay={2} />
+    </group>
+  );
+}
+
+function WallArt() {
+  const maps = useTexture({
+    pokemon: '/room/posters/pokemon.webp',
+    giant: '/room/posters/iron-giant.jpg',
+    babe: '/room/posters/babe.webp',
+    mummy: '/room/posters/mummy.jpg',
+  });
+  useEffect(() => {
+    Object.values(maps).forEach(tex => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.needsUpdate = true;
+    });
+  }, [maps]);
+  const gapX = (LAYOUT.shelf.x + LAYOUT.shelf.sx / 2 + (LAYOUT.dresser.x - LAYOUT.dresser.sx / 2)) / 2;
+  const posters: {
+    key: string;
+    map: THREE.Texture;
+    position: [number, number, number];
+    rotation: [number, number, number];
+    w: number;
+    h: number;
+  }[] = [
+    {
+      key: 'pokemon',
+      map: maps.pokemon,
+      position: [gapX, 1.72, NORTH_Z + 0.025],
+      rotation: [0, 0, 0],
+      w: 0.32,
+      h: 0.46,
+    },
+    {
+      key: 'mummy',
+      map: maps.mummy,
+      position: [LAYOUT.dresser.x, 2.28, NORTH_Z + 0.025],
+      rotation: [0, 0, 0],
+      w: 0.3,
+      h: 0.44,
+    },
+    {
+      key: 'giant',
+      map: maps.giant,
+      position: [WEST_X + 0.025, 1.88, LAYOUT.bed.z - 0.35],
+      rotation: [0, Math.PI / 2, 0],
+      w: 0.3,
+      h: 0.44,
+    },
+    {
+      key: 'babe',
+      map: maps.babe,
+      position: [EAST_X - 0.025, 1.82, 1.05],
+      rotation: [0, -Math.PI / 2, 0],
+      w: 0.32,
+      h: 0.46,
+    },
+  ];
+  return (
+    <>
+      {posters.map(p => (
+        <group key={p.key} position={p.position} rotation={p.rotation}>
+          <mesh position={[0, 0, -0.01]}>
+            <boxGeometry args={[p.w + 0.04, p.h + 0.04, 0.018]} />
+            <meshStandardMaterial color="#4a342c" roughness={0.72} />
+          </mesh>
+          <mesh position={[0, 0, 0.002]}>
+            <planeGeometry args={[p.w, p.h]} />
+            <meshStandardMaterial map={p.map} roughness={0.62} />
+          </mesh>
+        </group>
+      ))}
+    </>
   );
 }
 
@@ -157,23 +364,9 @@ function PlacedModel({
   interactable?: HoverTarget;
 }) {
   const p = LAYOUT[id];
-  const modelId = id as
-    | 'bed'
-    | 'shelf'
-    | 'crt'
-    | 'dresser'
-    | 'desk'
-    | 'nightstand'
-    | 'boombox'
-    | 'window'
-    | 'gameboy'
-    | 'vhs_stack'
-    | 'vhs_loose'
-    | 'toyshelf'
-    | 'cards';
   return (
     <RoomModel
-      id={modelId}
+      id={id}
       position={[p.x, p.y, p.z]}
       rotation={[0, p.rotY, 0]}
       axis={p.axis}
@@ -224,17 +417,17 @@ export function RealRoomScene({
       <ambientLight intensity={lights.ambient} color={lights.ambColor} />
       <hemisphereLight args={[lights.hemiSky, lights.hemiGround, lights.hemi]} />
       <Shell />
-      <NightBehindWindow />
+      <NightCity />
+      <WindowGlare />
+      <WallArt />
+      <CeilingDome />
 
-      <PlacedModel
-        id="window"
-        hoveredId={hoveredId}
-      />
+      <PlacedModel id="window" hoveredId={hoveredId} />
       <pointLight
-        position={[LAYOUT.window.x, LAYOUT.window.y + 0.4, LAYOUT.window.z + 0.6]}
+        position={[LAYOUT.window.x, LAYOUT.window.y + 0.35, LAYOUT.window.z + 0.7]}
         color={lights.windowC}
         intensity={lights.windowI}
-        distance={3.2}
+        distance={3.6}
         decay={2}
       />
 
@@ -243,7 +436,22 @@ export function RealRoomScene({
         hoveredId={hoveredId}
         interactable={{ id: 'bed', kind: 'prop', label: 'Bed', hint: 'Open memory card' }}
       />
+      <PlacedModel
+        id="backpack"
+        hoveredId={hoveredId}
+        interactable={{ id: 'backpack', kind: 'prop', label: 'Backpack', hint: 'Open memory card' }}
+      />
+      <PlacedModel
+        id="teddy"
+        hoveredId={hoveredId}
+        interactable={{ id: 'teddy', kind: 'prop', label: 'Teddy bear', hint: 'Open memory card' }}
+      />
       <PlacedModel id="nightstand" hoveredId={hoveredId} />
+      <PlacedModel
+        id="gushers"
+        hoveredId={hoveredId}
+        interactable={{ id: 'gushers', kind: 'prop', label: 'Fruit snacks', hint: 'Open memory card' }}
+      />
       <PlacedModel
         id="cards"
         hoveredId={hoveredId}
@@ -261,7 +469,27 @@ export function RealRoomScene({
         hoveredId={hoveredId}
         interactable={{ id: 'crt-tv', kind: 'prop', label: 'CRT television', hint: 'Open memory · flat list' }}
       />
+      <PlacedModel
+        id="door"
+        hoveredId={hoveredId}
+        interactable={{ id: 'door', kind: 'prop', label: 'Bedroom door', hint: 'Open memory card' }}
+      />
       <PlacedModel id="toyshelf" hoveredId={hoveredId} />
+      <PlacedModel
+        id="nes"
+        hoveredId={hoveredId}
+        interactable={{ id: 'nes', kind: 'prop', label: 'NES', hint: 'Open memory card' }}
+      />
+      <PlacedModel
+        id="armor"
+        hoveredId={hoveredId}
+        interactable={{ id: 'armor', kind: 'prop', label: 'Mini figure', hint: 'Open memory card' }}
+      />
+      <PlacedModel
+        id="rubik"
+        hoveredId={hoveredId}
+        interactable={{ id: 'rubik', kind: 'prop', label: "Rubik's cube", hint: 'Open memory card' }}
+      />
       <pointLight
         position={[LAYOUT.dresser.x, LAYOUT.dresser.sy + 0.35, LAYOUT.dresser.z + 0.55]}
         color="#7ec8ff"
@@ -271,8 +499,65 @@ export function RealRoomScene({
       />
 
       <GameShelf hoveredId={hoveredId} pulledId={pulledGameId} />
+      <BulbFlicker position={[LAYOUT.shelf.x + 0.55, 1.85, LAYOUT.shelf.z + 0.28]} color="#ffd27a" base={0.42} seed={1.2} />
+      <BulbFlicker position={[LAYOUT.shelf.x + 0.58, 1.35, LAYOUT.shelf.z + 0.3]} color="#ffb45a" base={0.34} seed={2.4} />
+      <BulbFlicker position={[LAYOUT.shelf.x + 0.52, 0.85, LAYOUT.shelf.z + 0.26]} color="#ffe08a" base={0.3} seed={3.1} />
+      <BulbFlicker position={[LAYOUT.shelf.x - 0.5, 1.7, LAYOUT.shelf.z + 0.24]} color="#ffcc77" base={0.28} seed={4.2} />
 
       <PlacedModel id="desk" hoveredId={hoveredId} />
+      <PlacedModel
+        id="clue"
+        hoveredId={hoveredId}
+        interactable={{ id: 'box-clue', kind: 'game', gameId: 'clue', label: 'Clue', hint: 'Inspect · play' }}
+      />
+      <PlacedModel
+        id="army"
+        hoveredId={hoveredId}
+        interactable={{ id: 'army', kind: 'prop', label: 'Army men', hint: 'Open memory card' }}
+      />
+      <PlacedModel id="clutterdesk" hoveredId={hoveredId} />
+      <PlacedModel id="books" hoveredId={hoveredId} />
+      <PlacedModel
+        id="board"
+        hoveredId={hoveredId}
+        interactable={{ id: 'box-monopoly', kind: 'game', gameId: 'monopoly', label: 'Monopoly', hint: 'Inspect · play' }}
+      />
+      <PlacedModel
+        id="battleship"
+        hoveredId={hoveredId}
+        interactable={{
+          id: 'box-battleship',
+          kind: 'game',
+          gameId: 'battleship',
+          label: 'Battleship',
+          hint: 'Inspect · play',
+        }}
+      />
+      <PlacedModel
+        id="life"
+        hoveredId={hoveredId}
+        interactable={{ id: 'box-life', kind: 'game', gameId: 'life', label: 'The Game of Life', hint: 'Inspect · play' }}
+      />
+      <PlacedModel
+        id="yahtzee"
+        hoveredId={hoveredId}
+        interactable={{ id: 'box-yahtzee', kind: 'game', gameId: 'yahtzee', label: 'Yahtzee', hint: 'Inspect · play' }}
+      />
+      <PlacedModel
+        id="hotpockets"
+        hoveredId={hoveredId}
+        interactable={{ id: 'hotpockets', kind: 'prop', label: 'Hot pockets', hint: 'Open memory card' }}
+      />
+      <PlacedModel
+        id="jordans"
+        hoveredId={hoveredId}
+        interactable={{ id: 'jordans', kind: 'prop', label: 'High-tops', hint: 'Open memory card' }}
+      />
+      <PlacedModel
+        id="car"
+        hoveredId={hoveredId}
+        interactable={{ id: 'car', kind: 'prop', label: 'Toy car', hint: 'Open memory card' }}
+      />
 
       <PlacedModel
         id="boombox"
@@ -300,14 +585,13 @@ export function RealRoomScene({
       />
       <PlacedModel id="vhs_loose" hoveredId={hoveredId} />
 
-      <mesh position={[0.15, 0.004, -0.35]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <circleGeometry args={[1.05, 48]} />
+      <mesh position={[0.15, 0.004, -0.15]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <circleGeometry args={[1.28, 48]} />
         <meshStandardMaterial map={rugTexture()} transparent roughness={1} />
       </mesh>
 
-      {/* One ceiling light. No loose props. */}
-      <pointLight position={[0.1, 2.35, 0.2]} color={lights.ceil} intensity={lights.ceilI} distance={7} decay={2} />
-      <pointLight position={[-1.4, 1.8, -0.4]} color="#e7b08a" intensity={mood === 'afternoon' ? 0.35 : 0.55} distance={3.5} decay={2} />
+      <pointLight position={[0.1, WALL.height - 0.45, 0.2]} color={lights.ceil} intensity={lights.ceilI * 0.45} distance={8} decay={2} />
+      <pointLight position={[-1.6, 1.9, -0.2]} color="#e7b08a" intensity={mood === 'afternoon' ? 0.35 : 0.5} distance={4} decay={2} />
 
       {placed.map(item => (
         <DynamicModel

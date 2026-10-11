@@ -13,9 +13,9 @@ import { GameId } from '../types';
  */
 
 export const WALL = {
-  halfWidth: 2.6,
-  halfDepth: 2.5,
-  height: 2.6,
+  halfWidth: 3.1,
+  halfDepth: 2.8,
+  height: 3.02,
 };
 
 export const NORTH_Z = -WALL.halfDepth;
@@ -40,8 +40,8 @@ export const PLAYER = {
   crouchSpeed: 1.05,
   accel: 13,
   reach: 2.3,
-  spawn: [0.15, 1.58, 1.65] as [number, number, number],
-  spawnLook: [0.2, 1.05, -2.2] as [number, number, number],
+  spawn: [0.05, 1.58, 1.82] as [number, number, number],
+  spawnLook: [-0.15, 1.12, -2.35] as [number, number, number],
 };
 
 export const DRESSER = { x: pxX(509), z: NORTH_Z + 0.275, width: pxW(218), height: 0.78, depth: 0.55 };

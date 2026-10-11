@@ -7,6 +7,7 @@ import { RealRoomScene, type LiveProp } from './RealRoomScene';
 import { WalkController } from './WalkController';
 import { ReachRaycaster, type Aimed } from './ReachRaycaster';
 import { TourCamera } from './TourCamera';
+import { LAYOUT } from './roomLayout';
 import { DESK_SLOTS, SHELF_SLOTS, SHELF_SLOTS_LOWER } from './videoRoom';
 import { MemoryFlashCard } from './MemoryFlashCard';
 import { propCardFor } from './propCards';
@@ -35,11 +36,13 @@ function readCameraOverride() {
 }
 
 const DEMO_POSE: Record<string, { at: [number, number, number]; look: [number, number, number] }> = {
-  vhs: { at: [0.15, 1.15, -0.3], look: [0.45, 0.2, -1.28] },
-  gameboy: { at: [-0.85, 1.25, 0.9], look: [-1.55, 0.55, 0.15] },
-  cards: { at: [-1.35, 1.2, -0.35], look: [-2.15, 0.7, -1.15] },
-  monopoly: { at: [1.25, 1.35, -1.05], look: [1.72, 1.15, -2.15] },
-  toyshelf: { at: [0.4, 1.45, 0.35], look: [2.05, 0.75, -0.35] },
+  vhs: { at: [LAYOUT.vhs_stack.x, 1.15, LAYOUT.vhs_stack.z + 0.9], look: [LAYOUT.vhs_stack.x, 0.2, LAYOUT.vhs_stack.z] },
+  gameboy: { at: [LAYOUT.gameboy.x + 0.7, 1.2, LAYOUT.gameboy.z + 0.55], look: [LAYOUT.gameboy.x, 0.55, LAYOUT.gameboy.z] },
+  cards: { at: [LAYOUT.cards.x + 0.15, 1.15, LAYOUT.cards.z + 0.85], look: [LAYOUT.cards.x, 0.08, LAYOUT.cards.z] },
+  monopoly: { at: [LAYOUT.shelf.x + 0.9, 1.4, LAYOUT.shelf.z + 1.15], look: [LAYOUT.shelf.x, 1.15, LAYOUT.shelf.z] },
+  toyshelf: { at: [LAYOUT.toyshelf.x - 1.45, 1.4, LAYOUT.toyshelf.z], look: [LAYOUT.toyshelf.x, 0.8, LAYOUT.toyshelf.z] },
+  window: { at: [LAYOUT.window.x - 0.7, 1.5, LAYOUT.window.z + 1.4], look: [LAYOUT.window.x, 1.6, LAYOUT.window.z] },
+  bed: { at: [LAYOUT.bed.x + 1.2, 1.35, LAYOUT.bed.z + 0.4], look: [LAYOUT.bed.x, 0.6, LAYOUT.bed.z] },
 };
 
 function DemoPose({ at, look }: { at: [number, number, number]; look: [number, number, number] }) {
