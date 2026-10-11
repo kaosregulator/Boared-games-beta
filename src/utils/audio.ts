@@ -7,6 +7,9 @@ class SoundEngine {
   private ctx: AudioContext | null = null;
   private muted: boolean = false;
   private volume: number = 0.5;
+  private nostalgiaOn = false;
+  private nostalgiaTimer: number | null = null;
+  private nostalgiaBar = 0;
 
   private initCtx() {
     if (!this.ctx && typeof window !== 'undefined') {
@@ -1246,6 +1249,84 @@ class SoundEngine {
       }
       cursor += note.dur + 0.02;
     });
+  }
+
+  /**
+   * Original slow bedroom loop — warm pads, not a copied track.
+   * Feels like a tape left on in the next room.
+   */
+  public startNostalgia() {
+    this.nostalgiaOn = true;
+    this.initCtx();
+    if (!this.ctx || this.nostalgiaTimer !== null) return;
+    const tick = () => {
+      if (!this.nostalgiaOn) return;
+      this.playNostalgiaBar();
+      this.nostalgiaTimer = window.setTimeout(tick, 3400);
+    };
+    tick();
+  }
+
+  public stopNostalgia() {
+    this.nostalgiaOn = false;
+    if (this.nostalgiaTimer !== null) {
+      window.clearTimeout(this.nostalgiaTimer);
+      this.nostalgiaTimer = null;
+    }
+  }
+
+  public nostalgiaPlaying() {
+    return this.nostalgiaOn;
+  }
+
+  private playNostalgiaBar() {
+    if (this.muted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const chords = [
+      [220.0, 261.63, 329.63],
+      [174.61, 220.0, 261.63],
+      [196.0, 246.94, 293.66],
+      [130.81, 164.81, 196.0],
+    ];
+    const chord = chords[this.nostalgiaBar % chords.length];
+    const lead = [329.63, 392.0, 349.23, 329.63][this.nostalgiaBar % 4];
+    this.nostalgiaBar += 1;
+
+    const master = this.ctx.createGain();
+    master.gain.setValueAtTime(0.22 * this.volume, t);
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(900, t);
+    filter.connect(master);
+    master.connect(this.ctx.destination);
+
+    chord.forEach((freq, i) => {
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+      osc.type = i === 0 ? 'sine' : 'triangle';
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.linearRampToValueAtTime(0.09, t + 0.6);
+      gain.gain.linearRampToValueAtTime(0.0001, t + 3.2);
+      osc.connect(gain);
+      gain.connect(filter);
+      osc.start(t);
+      osc.stop(t + 3.3);
+    });
+
+    const leadOsc = this.ctx.createOscillator();
+    const leadGain = this.ctx.createGain();
+    leadOsc.type = 'sine';
+    leadOsc.frequency.setValueAtTime(lead, t + 0.4);
+    leadGain.gain.setValueAtTime(0.0001, t);
+    leadGain.gain.linearRampToValueAtTime(0.05, t + 1.1);
+    leadGain.gain.linearRampToValueAtTime(0.0001, t + 2.8);
+    leadOsc.connect(leadGain);
+    leadGain.connect(filter);
+    leadOsc.start(t + 0.35);
+    leadOsc.stop(t + 3.0);
   }
 }
 
