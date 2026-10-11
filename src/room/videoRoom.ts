@@ -13,9 +13,9 @@ import { GameId } from '../types';
  */
 
 export const WALL = {
-  halfWidth: 2.6,
-  halfDepth: 2.5,
-  height: 2.6,
+  halfWidth: 3.1,
+  halfDepth: 2.8,
+  height: 3.02,
 };
 
 export const NORTH_Z = -WALL.halfDepth;
@@ -40,8 +40,8 @@ export const PLAYER = {
   crouchSpeed: 1.05,
   accel: 13,
   reach: 2.3,
-  spawn: [0.0, 1.58, 1.85] as [number, number, number],
-  spawnLook: [1.4, 1.3, -2.2] as [number, number, number],
+  spawn: [0.05, 1.58, 1.82] as [number, number, number],
+  spawnLook: [-0.15, 1.12, -2.35] as [number, number, number],
 };
 
 export const DRESSER = { x: pxX(509), z: NORTH_Z + 0.275, width: pxW(218), height: 0.78, depth: 0.55 };
@@ -177,19 +177,21 @@ export interface RoomProp {
 
 /** Non-game things the player can look at and interact with. */
 export const ROOM_PROPS: RoomProp[] = [
-  { id: 'crt-tv', label: 'CRT television', hint: 'Open the flat game list', position: [CRT.x, DRESSER.height + CRT.height / 2, NORTH_Z + 0.34], radius: 0.42 },
-  { id: 'boombox', label: 'Boombox', hint: 'Flip the room tape', position: [BOOMBOX.x, 0.14, BOOMBOX.z], radius: 0.26 },
+  { id: 'crt-tv', label: 'CRT television', hint: 'Memory card · flat game list', position: [CRT.x, DRESSER.height + CRT.height / 2, NORTH_Z + 0.34], radius: 0.42 },
+  { id: 'boombox', label: 'Boombox', hint: 'Memory card · flip the tape', position: [BOOMBOX.x, 0.14, BOOMBOX.z], radius: 0.26 },
   { id: 'lava-lamp', label: 'Lava lamp', hint: 'Warm the room light up', position: [LAVA.x, LAVA.y, NORTH_Z + 0.3], radius: 0.2 },
   { id: 'door', label: 'Bedroom door', hint: 'Locked in this build', position: [DOOR.x, 1.0, NORTH_Z + 0.05], radius: 0.5 },
-  { id: 'east-tv', label: 'Spare TV', hint: 'Season standings', position: [EAST_TV.x, EAST_TV.top + 0.26, EAST_TV.z], radius: 0.36 },
-  { id: 'bed', label: 'Bed', hint: 'Trivia night is on the quilt', position: [BED.x, BED.top, BED.z], radius: 0.7 },
+  { id: 'bed', label: 'Bed', hint: 'Open memory card', position: [BED.x, BED.top, BED.z], radius: 0.7 },
+  { id: 'gameboy', label: 'Game Boy', hint: 'Open memory card', position: [BED.x + 0.15, BED.top + 0.08, BED.z + 0.35], radius: 0.22 },
+  { id: 'vhs-stack', label: 'VHS stack', hint: 'Open memory card', position: [BOOMBOX.x - 0.35, 0.1, BOOMBOX.z + 0.35], radius: 0.22 },
+  { id: 'cards', label: 'Trading cards', hint: 'Open memory card', position: [0.2, 0.05, -1.35], radius: 0.22 },
 ];
 
 export const PALETTE = {
-  floor: '#30201d',
-  floorDark: '#1f1312',
-  wall: '#382739',
-  wallWarm: '#40293c',
+  floor: '#3a2620',
+  floorDark: '#271814',
+  wall: '#5c4a5e',
+  wallWarm: '#6a5868',
   ceiling: '#2a1a19',
   wood: '#4d3024',
   trim: '#3a2219',
