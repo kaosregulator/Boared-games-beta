@@ -6,7 +6,7 @@ import { sound } from '../utils/audio';
 import { RealRoomScene, type LiveProp } from './RealRoomScene';
 import { WalkController } from './WalkController';
 import { ReachRaycaster, type Aimed } from './ReachRaycaster';
-import { TourCamera } from './TourCamera';
+import { CaptureClock, TourCamera } from './TourCamera';
 import { LAYOUT } from './roomLayout';
 import { DESK_SLOTS, SHELF_SLOTS, SHELF_SLOTS_LOWER } from './videoRoom';
 import { MemoryFlashCard } from './MemoryFlashCard';
@@ -23,7 +23,7 @@ import type { RoomMood } from './moods';
  */
 function readCameraOverride() {
   if (typeof window === 'undefined') {
-    return { tour: false, shot: undefined as number | undefined, card: null as string | null, menu: false };
+    return { tour: false, shot: undefined as number | undefined, card: null as string | null, menu: false, capture: false };
   }
   const params = new URLSearchParams(window.location.search);
   const shotRaw = params.get('shot');
@@ -32,6 +32,7 @@ function readCameraOverride() {
     shot: shotRaw === null ? undefined : Number.parseInt(shotRaw, 10) || 0,
     card: params.get('card'),
     menu: params.has('menu'),
+    capture: params.has('capture'),
   };
 }
 
@@ -72,7 +73,7 @@ export function WalkRoom({
   onOpenRulesForGame,
 }: WalkRoomProps) {
   const override = useMemo(readCameraOverride, []);
-  const scripted = override.tour || override.shot !== undefined || Boolean(override.card);
+  const scripted = override.tour || override.shot !== undefined || Boolean(override.card) || override.capture;
   const [menuOpen, setMenuOpen] = useState(override.menu);
   const [mood, setMood] = useState<RoomMood>('warm-night');
   const [musicOn, setMusicOn] = useState(true);
@@ -315,7 +316,8 @@ export function WalkRoom({
     <div className="relative w-full h-[100dvh] overflow-hidden bg-[#140c14] select-none">
       <Canvas
         shadows
-        dpr={[1, 1.75]}
+        frameloop={override.capture ? 'demand' : 'always'}
+        dpr={override.capture ? 1 : [1, 1.75]}
         camera={{ fov: 72, near: 0.05, far: 60 }}
         gl={{ antialias: true, powerPreference: 'high-performance' }}
         onCreated={({ gl, scene }) => {
@@ -337,6 +339,7 @@ export function WalkRoom({
             onPickAnchor={(anchor: Anchor) => setAnchorId(anchor.id)}
           />
         </Suspense>
+        {override.capture && <CaptureClock />}
         {override.card && DEMO_POSE[override.card] ? (
           <DemoPose at={DEMO_POSE[override.card].at} look={DEMO_POSE[override.card].look} />
         ) : scripted ? (

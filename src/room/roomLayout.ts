@@ -1,4 +1,4 @@
-import { EAST_X, NORTH_Z, WEST_X } from './videoRoom';
+import { EAST_X, NORTH_Z, SOUTH_Z, WEST_X } from './videoRoom';
 
 /**
  * Real-world placement for the Tripo meshes.
@@ -7,8 +7,10 @@ import { EAST_X, NORTH_Z, WEST_X } from './videoRoom';
  * other two follow. Scaling width and height independently is what squashed
  * the bed and shrank the shelf. Sizes below are the fitted bounding boxes.
  *
- * North wall, west to east: game shelf, dresser + TV, door, window.
- * The nightstand sits in the north-east corner under that window.
+ * North wall, west to east: window, nightstand under it, bed along the
+ * west wall, dresser with the CRT, door, tall game shelf. A short wood
+ * shelf stays above the television. The teddy diorama is the other
+ * floating shelf, enlarged on the south wall behind the player.
  */
 
 export interface Placed {
@@ -72,33 +74,33 @@ const bedSize = fit(N.bed, 'y', 0.95);
 const shelfSize = fit(N.shelf, 'y', 2.05);
 const dresserSize = fit(N.dresser, 'y', 0.84);
 const crtSize = fit(N.crt, 'x', 0.62);
-const toySize = fit(N.toyshelf, 'y', 1.22);
+const toySize = fit(N.toyshelf, 'y', 1.32);
 const deskSize = fit(N.desk, 'y', 0.75);
-const nightSize = fit(N.nightstand, 'y', 0.58);
+const nightSize = fit(N.nightstand, 'y', 0.9);
 const windowSize = fit(N.window, 'y', 1.12);
-const boomSize = fit(N.boombox, 'x', 0.46);
+const boomSize = fit(N.boombox, 'x', 0.52);
 const gbSize = fit(N.gameboy, 'y', 0.16);
-const vhsSize = fit(N.vhs_stack, 'y', 0.24);
-const looseSize = fit(N.vhs_loose, 'x', 0.36);
-const cardSize = fit(N.cards, 'x', 0.4);
+const vhsSize = fit(N.vhs_stack, 'y', 0.27);
+const looseSize = fit(N.vhs_loose, 'x', 0.38);
+const cardSize = fit(N.cards, 'x', 0.46);
 const doorSize = fit(N.door, 'y', 2.2);
-const packSize = fit(N.backpack, 'y', 0.38);
+const packSize = fit(N.backpack, 'y', 0.46);
 const pocketSize = fit(N.hotpockets, 'x', 0.3);
 const nesSize = fit(N.nes, 'x', 0.36);
-const rubikSize = fit(N.rubik, 'y', 0.13);
-const figureSize = fit(N.armor, 'y', 0.18);
-const armySize = fit(N.army, 'x', 0.2);
-const gusherSize = fit(N.gushers, 'y', 0.18);
-const teddySize = fit(N.teddy, 'x', 0.28);
-const shoeSize = fit(N.jordans, 'x', 0.46);
-const carSize = fit(N.car, 'x', 0.26);
-const bookSize = fit(N.books, 'y', 0.22);
+const rubikSize = fit(N.rubik, 'y', 0.14);
+const figureSize = fit(N.armor, 'y', 0.22);
+const armySize = fit(N.army, 'x', 0.72);
+const gusherSize = fit(N.gushers, 'y', 0.16);
+const teddySize = fit(N.teddy, 'x', 1.5);
+const shoeSize = fit(N.jordans, 'x', 0.5);
+const carSize = fit(N.car, 'x', 0.32);
+const bookSize = fit(N.books, 'y', 0.26);
 const clutterSize = fit(N.clutterdesk, 'y', 0.74);
-const boardSize = fit(N.board, 'x', 0.38);
-const shipSize = fit(N.battleship, 'x', 0.34);
-const clueSize = fit(N.clue, 'x', 0.32);
-const lifeSize = fit(N.life, 'x', 0.36);
-const yahtzeeSize = fit(N.yahtzee, 'x', 0.34);
+const boardSize = fit(N.board, 'x', 0.44);
+const shipSize = fit(N.battleship, 'x', 0.4);
+const clueSize = fit(N.clue, 'x', 0.36);
+const lifeSize = fit(N.life, 'x', 0.4);
+const yahtzeeSize = fit(N.yahtzee, 'x', 0.38);
 
 /** Push the frame into the plaster so the visible wood meets the wall. */
 const flushNorth = (sz: number) => NORTH_Z + sz * 0.18;
@@ -112,8 +114,8 @@ const windowX = WEST_X + windowSize.sx / 2 + 0.08;
 const windowY = 0.96;
 const windowZ = flushNorth(windowSize.sz);
 
-const nightX = windowX - windowSize.sx * 0.12;
-const nightZ = flushNorth(nightSize.sz) + 0.06;
+const nightX = windowX;
+const nightZ = NORTH_Z + nightSize.sz / 2 - 0.015;
 
 const shelfX = EAST_X - shelfSize.sx / 2 - 0.05;
 const shelfZ = flushNorth(shelfSize.sz);
@@ -133,16 +135,17 @@ const deskZ = 1.7;
 const clutterX = WEST_X + clutterSize.sz / 2 + 0.06;
 const clutterZ = 1.2;
 
-/** Short shelf mounted on the wall above the television. */
+/** Wood shelf above the television. This one stays on the north wall. */
 export const WALL_SHELF = {
-  x: dresserX + 0.05,
-  y: 1.96,
-  z: NORTH_Z + 0.15,
-  w: 1.42,
-  d: 0.3,
-  h: 0.05,
+  x: dresserX + 0.02,
+  y: 1.94,
+  z: NORTH_Z + 0.18,
+  w: 1.68,
+  d: 0.36,
+  h: 0.055,
 };
 const shelfTopY = WALL_SHELF.y + WALL_SHELF.h;
+const dresserRight = dresserX + dresserSize.sx / 2;
 
 export const LAYOUT = {
   bed: {
@@ -162,7 +165,7 @@ export const LAYOUT = {
     z: nightZ,
     rotY: 0,
     axis: 'y' as const,
-    meters: 0.58,
+    meters: 0.9,
     ...nightSize,
   },
   window: {
@@ -212,7 +215,7 @@ export const LAYOUT = {
     z: toyZ,
     rotY: -Math.PI / 2,
     axis: 'y' as const,
-    meters: 1.22,
+    meters: 1.32,
     ...toySize,
   },
   shelf: {
@@ -247,32 +250,32 @@ export const LAYOUT = {
   },
   boombox: {
     id: 'boombox',
-    x: dresserX + 0.72,
+    x: -0.45,
     y: 0,
-    z: dresserZ + dresserSize.sz / 2 + 0.42,
+    z: -1.35,
     rotY: -0.25,
     axis: 'x' as const,
-    meters: 0.46,
+    meters: 0.52,
     ...boomSize,
   },
   vhs_stack: {
     id: 'vhs_stack',
-    x: dresserX + 0.15,
+    x: -1.2,
     y: 0,
-    z: dresserZ + dresserSize.sz / 2 + 0.58,
+    z: -1.7,
     rotY: 0.2,
     axis: 'y' as const,
-    meters: 0.24,
+    meters: 0.27,
     ...vhsSize,
   },
   vhs_loose: {
     id: 'vhs_loose',
-    x: dresserX + 0.95,
+    x: 0.42,
     y: 0,
-    z: dresserZ + dresserSize.sz / 2 + 0.7,
+    z: -1.48,
     rotY: 0.45,
     axis: 'x' as const,
-    meters: 0.36,
+    meters: 0.38,
     ...looseSize,
   },
   gameboy: {
@@ -292,17 +295,17 @@ export const LAYOUT = {
     z: bedZ - 0.22,
     rotY: -0.35,
     axis: 'y' as const,
-    meters: 0.38,
+    meters: 0.46,
     ...packSize,
   },
   teddy: {
     id: 'teddy',
-    x: WALL_SHELF.x - 0.22,
-    y: shelfTopY,
-    z: WALL_SHELF.z,
-    rotY: 0.2,
+    x: -0.15,
+    y: 1.18,
+    z: SOUTH_Z - teddySize.sz / 2 + 0.02,
+    rotY: Math.PI,
     axis: 'x' as const,
-    meters: 0.28,
+    meters: 1.5,
     ...teddySize,
   },
   cards: {
@@ -312,7 +315,7 @@ export const LAYOUT = {
     z: 0.72,
     rotY: 0.35,
     axis: 'x' as const,
-    meters: 0.4,
+    meters: 0.46,
     ...cardSize,
   },
   hotpockets: {
@@ -327,12 +330,12 @@ export const LAYOUT = {
   },
   jordans: {
     id: 'jordans',
-    x: doorX + 0.15,
+    x: 1.12,
     y: 0,
-    z: doorZ + doorSize.sz / 2 + 0.7,
+    z: -1.38,
     rotY: 0.8,
     axis: 'x' as const,
-    meters: 0.46,
+    meters: 0.5,
     ...shoeSize,
   },
   car: {
@@ -342,12 +345,12 @@ export const LAYOUT = {
     z: 0.15,
     rotY: 0.7,
     axis: 'x' as const,
-    meters: 0.26,
+    meters: 0.32,
     ...carSize,
   },
   nes: {
     id: 'nes',
-    x: WALL_SHELF.x + 0.52,
+    x: WALL_SHELF.x + 0.54,
     y: shelfTopY,
     z: WALL_SHELF.z + 0.02,
     rotY: 0.15,
@@ -357,52 +360,52 @@ export const LAYOUT = {
   },
   armor: {
     id: 'armor',
-    x: WALL_SHELF.x + 0.05,
+    x: WALL_SHELF.x - 0.16,
     y: shelfTopY,
     z: WALL_SHELF.z,
-    rotY: -0.3,
+    rotY: -0.2,
     axis: 'y' as const,
-    meters: 0.18,
+    meters: 0.22,
     ...figureSize,
   },
   rubik: {
     id: 'rubik',
-    x: WALL_SHELF.x + 0.16,
+    x: WALL_SHELF.x + 0.1,
     y: shelfTopY,
-    z: WALL_SHELF.z - 0.02,
-    rotY: 0.4,
+    z: WALL_SHELF.z - 0.01,
+    rotY: 0.45,
     axis: 'y' as const,
-    meters: 0.13,
+    meters: 0.14,
     ...rubikSize,
   },
   army: {
     id: 'army',
-    x: deskX - 0.18,
-    y: 0.75,
-    z: deskZ - 0.22,
-    rotY: -0.5,
+    x: 1.05,
+    y: 0,
+    z: SOUTH_Z - armySize.sz / 2 - 0.35,
+    rotY: Math.PI - 0.2,
     axis: 'x' as const,
-    meters: 0.2,
+    meters: 0.72,
     ...armySize,
   },
   gushers: {
     id: 'gushers',
-    x: nightX,
-    y: 0.46,
-    z: nightZ,
-    rotY: 0.2,
+    x: dresserRight - gusherSize.sx / 2 - 0.03,
+    y: 0.84,
+    z: dresserZ + crtSize.sz / 2 + gusherSize.sz / 2 + 0.015,
+    rotY: -0.35,
     axis: 'y' as const,
-    meters: 0.18,
+    meters: 0.16,
     ...gusherSize,
   },
   books: {
     id: 'books',
-    x: WALL_SHELF.x - 0.52,
+    x: WALL_SHELF.x - 0.56,
     y: shelfTopY,
     z: WALL_SHELF.z,
     rotY: 0.1,
     axis: 'y' as const,
-    meters: 0.22,
+    meters: 0.26,
     ...bookSize,
   },
   board: {
@@ -412,7 +415,7 @@ export const LAYOUT = {
     z: shelfZ + shelfSize.sz / 2 + 0.38,
     rotY: 0.1,
     axis: 'x' as const,
-    meters: 0.38,
+    meters: 0.44,
     ...boardSize,
   },
   battleship: {
@@ -422,7 +425,7 @@ export const LAYOUT = {
     z: toyZ - 0.35,
     rotY: -Math.PI / 2,
     axis: 'x' as const,
-    meters: 0.34,
+    meters: 0.4,
     ...shipSize,
   },
   clue: {
@@ -432,27 +435,27 @@ export const LAYOUT = {
     z: deskZ + 0.28,
     rotY: -Math.PI / 2,
     axis: 'x' as const,
-    meters: 0.32,
+    meters: 0.36,
     ...clueSize,
   },
   life: {
     id: 'life',
-    x: doorX - 0.55,
+    x: 0.12,
     y: 0,
-    z: doorZ + doorSize.sz / 2 + 0.55,
+    z: -1.98,
     rotY: 0.15,
     axis: 'x' as const,
-    meters: 0.36,
+    meters: 0.4,
     ...lifeSize,
   },
   yahtzee: {
     id: 'yahtzee',
-    x: dresserX + 1.05,
+    x: -1.05,
     y: 0,
-    z: dresserZ + dresserSize.sz / 2 + 0.85,
+    z: -1.12,
     rotY: -0.15,
     axis: 'x' as const,
-    meters: 0.34,
+    meters: 0.38,
     ...yahtzeeSize,
   },
 } satisfies Record<string, Placed>;
@@ -473,6 +476,8 @@ export const ROOM_COLLIDERS = [
   footprint(LAYOUT.toyshelf, true),
   footprint(LAYOUT.door, false),
   footprint(LAYOUT.clutterdesk, true),
+  footprint(LAYOUT.teddy, false),
+  footprint(LAYOUT.army, false),
 ];
 
 /** Game-box rows up the real shelf, helmet stays above the top row. */

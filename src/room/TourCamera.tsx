@@ -26,12 +26,30 @@ export const TOUR: Waypoint[] = [
   { at: [LAYOUT.bed.x + 1.15, 1.4, LAYOUT.bed.z + 0.85], look: [LAYOUT.bed.x, 0.65, LAYOUT.bed.z], travel: 2.2, hold: 1.6, label: 'Bed and quilt' },
   { at: [LAYOUT.shelf.x + 1.15, 1.45, LAYOUT.shelf.z + 1.45], look: [LAYOUT.shelf.x, 1.15, LAYOUT.shelf.z], travel: 2.4, hold: 1.6, label: 'Turning to the shelf' },
   { at: [LAYOUT.shelf.x + 0.85, 1.35, LAYOUT.shelf.z + 1.05], look: [LAYOUT.shelf.x, 1.1, LAYOUT.shelf.z], travel: 2.0, hold: 1.8, label: 'At the shelf' },
-  { at: [LAYOUT.window.x - 0.85, 1.45, LAYOUT.window.z + 1.35], look: [LAYOUT.window.x, 1.55, LAYOUT.nightstand.z], travel: 2.2, hold: 1.6, label: 'Window corner' },
-  { at: [LAYOUT.toyshelf.x - 1.35, 1.35, LAYOUT.toyshelf.z + 0.2], look: [LAYOUT.toyshelf.x, 0.85, LAYOUT.toyshelf.z], travel: 2.0, hold: 1.4, label: 'Toy shelf' },
-  { at: [0.15, PLAYER.height, 1.45], look: [-0.1, 1.05, -2.3], travel: 2.4, hold: 2.0, label: 'Back to idle' },
+  { at: [LAYOUT.window.x + 1.15, 1.28, LAYOUT.window.z + 1.65], look: [LAYOUT.nightstand.x, 0.72, LAYOUT.nightstand.z], travel: 2.2, hold: 1.8, label: 'Window corner' },
+  { at: [LAYOUT.toyshelf.x - 1.45, 1.35, LAYOUT.toyshelf.z + 0.15], look: [LAYOUT.toyshelf.x, 0.85, LAYOUT.toyshelf.z], travel: 2.0, hold: 1.2, label: 'Toy shelf' },
+  { at: [-0.2, 1.46, -0.05], look: [0.4, 0.95, LAYOUT.teddy.z], travel: 2.4, hold: 2.6, label: 'South wall' },
+  { at: [0.15, PLAYER.height, 1.2], look: [-0.1, 1.05, -2.2], travel: 2.2, hold: 1.6, label: 'Back to idle' },
 ];
 
 const EASE = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+
+/** Steps the tour from a capture script. The canvas is in demand mode, so nothing renders until this asks. */
+export function CaptureClock() {
+  const invalidate = useThree(state => state.invalidate);
+  useEffect(() => {
+    const renderAt = (time: number) => {
+      (window as unknown as { __tourTime?: number }).__tourTime = time;
+      invalidate();
+    };
+    (window as unknown as { __renderTour?: (time: number) => void }).__renderTour = renderAt;
+    renderAt(0);
+    return () => {
+      delete (window as unknown as { __renderTour?: (time: number) => void }).__renderTour;
+    };
+  }, [invalidate]);
+  return null;
+}
 
 const POS = new THREE.Vector3();
 const LOOK = new THREE.Vector3();

@@ -214,8 +214,12 @@ function BulbFlicker({
   return <pointLight ref={light} position={position} color={color} intensity={base} distance={1.05} decay={2} />;
 }
 
-function MountedShelf() {
-  const s = WALL_SHELF;
+function MountedShelf({
+  shelf,
+}: {
+  shelf: { x: number; y: number; z: number; w: number; d: number; h: number };
+}) {
+  const s = shelf;
   return (
     <group position={[s.x, s.y + s.h / 2, s.z]}>
       <mesh castShadow receiveShadow>
@@ -224,7 +228,7 @@ function MountedShelf() {
       </mesh>
       {[-1, 1].map(side => (
         <mesh key={side} position={[side * (s.w * 0.36), -0.07, s.d * 0.08]} castShadow>
-          <boxGeometry args={[0.09, 0.1, s.d * 0.55]} />
+          <boxGeometry args={[0.1, 0.12, s.d * 0.55]} />
           <meshStandardMaterial color="#6b4328" roughness={0.8} />
         </mesh>
       ))}
@@ -437,7 +441,21 @@ export function RealRoomScene({
       <NightCity />
       <WindowGlare />
       <WallArt />
-      <MountedShelf />
+      <MountedShelf shelf={WALL_SHELF} />
+      <pointLight
+        position={[LAYOUT.teddy.x + 0.2, 2.05, LAYOUT.teddy.z - 1.35]}
+        color="#ffd0a8"
+        intensity={2.3}
+        distance={6.8}
+        decay={2}
+      />
+      <pointLight
+        position={[LAYOUT.army.x, 0.9, LAYOUT.army.z - 0.7]}
+        color="#ffc090"
+        intensity={0.7}
+        distance={3.4}
+        decay={2}
+      />
       <CeilingDome />
 
       <PlacedModel id="window" hoveredId={hoveredId} />
