@@ -21,13 +21,13 @@ export interface MoodLights {
 
 export const MOODS: Record<RoomMood, MoodLights> = {
   'warm-night': {
-    ambient: 0.34,
+    ambient: 0.55,
     ambColor: '#ffe4d0',
     hemiSky: '#c2b0dc',
     hemiGround: '#3a2418',
-    hemi: 0.42,
+    hemi: 0.65,
     ceil: '#ffd7b0',
-    ceilI: 2.4,
+    ceilI: 2.8,
     windowC: '#9eb0ff',
     windowI: 1.3,
     fog: '#1a1218',

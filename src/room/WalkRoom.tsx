@@ -317,16 +317,29 @@ export function WalkRoom({
       <Canvas
         shadows
         frameloop={override.capture ? 'demand' : 'always'}
-        dpr={override.capture ? 1 : [1, 1.75]}
+        dpr={override.capture ? 1 : [1, 1.25]}
         camera={{ fov: 72, near: 0.05, far: 60 }}
         gl={{ antialias: true, powerPreference: 'high-performance' }}
         onCreated={({ gl, scene }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping;
-          gl.toneMappingExposure = 1.05;
-          scene.fog = new THREE.Fog('#1a1218', 8, 22);
+          gl.toneMappingExposure = 1.15;
+          scene.fog = new THREE.Fog('#1a1218', 12, 35);
         }}
       >
-        <Suspense fallback={null}>
+        <Suspense fallback={
+          <group>
+            <ambientLight intensity={0.6} />
+            <pointLight position={[0, 2, 0]} intensity={1.5} color="#ffd7b0" />
+            <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+              <planeGeometry args={[6, 5.1]} />
+              <meshStandardMaterial color="#3a2219" roughness={0.8} />
+            </mesh>
+            <mesh position={[0, 1.38, -2.52]}>
+              <planeGeometry args={[6, 2.76]} />
+              <meshStandardMaterial color="#5c4a5e" roughness={0.9} />
+            </mesh>
+          </group>
+        }>
           <RealRoomScene
             hoveredId={aimed?.inReach ? aimed.id : null}
             pulledGameId={pulledGameId}
@@ -502,7 +515,7 @@ export function WalkRoom({
               onClick={() => {
                 if (musicOn) sound.startNostalgia();
               }}
-              className="mt-6 w-full rounded-2xl bg-gradient-to-r from-fuchsia-600 to-amber-500 px-6 py-3.5 font-display text-lg text-white shadow-lg hover:brightness-110 active:scale-[0.99] transition"
+              className="mt-6 w-full rounded-2xl bg-gradient-to-r from-fuchsia-600 to-amber-500 px-6 py-3.5 font-display text-lg text-white shadow-lg hover:brightness-110 active:scale-[0.99] transition cursor-pointer"
             >
               Step into the room
             </button>
