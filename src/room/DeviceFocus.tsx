@@ -99,10 +99,12 @@ function FocusRig({ device }: { device: DeviceId | null }) {
 
   // Hold the close-up every frame. The walk controller also writes the camera
   // on mount, and a one-shot lookAt loses that race.
+  // Priority must stay 0. A positive priority tells fiber to skip its own
+  // gl.render, which leaves the canvas blank for the whole room.
   useFrame(() => {
     if (!device) return;
     applyPose(camera as THREE.PerspectiveCamera, device);
-  }, 1);
+  });
 
   return null;
 }
