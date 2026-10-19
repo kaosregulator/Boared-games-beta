@@ -14,6 +14,8 @@ interface WalkControllerProps {
   enabled: boolean;
   /** True once the player has stepped in. Movement does not require pointer lock. */
   engaged: boolean;
+  /** When a table game is open, clicks belong to the board, not pointer lock. */
+  capturePointer?: boolean;
   onLockChange?: (locked: boolean) => void;
   /** Fires when the player's footfall lands, for step audio. */
   onStep?: () => void;
@@ -27,7 +29,7 @@ interface WalkControllerProps {
  * pushing out along whichever axis has the smaller overlap so you slide along
  * the bed and the dresser instead of sticking to them.
  */
-export function WalkController({ enabled, engaged, onLockChange, onStep }: WalkControllerProps) {
+export function WalkController({ enabled, engaged, capturePointer = true, onLockChange, onStep }: WalkControllerProps) {
   const { camera, gl } = useThree();
   const keys = useRef<Record<string, boolean>>({});
   const controls = useRef<any>(null);
@@ -40,6 +42,8 @@ export function WalkController({ enabled, engaged, onLockChange, onStep }: WalkC
   engagedRef.current = engaged;
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
+  const captureRef = useRef(capturePointer);
+  captureRef.current = capturePointer;
 
   useEffect(() => {
     camera.position.set(...PLAYER.spawn);
@@ -51,7 +55,12 @@ export function WalkController({ enabled, engaged, onLockChange, onStep }: WalkC
       'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyC',
       'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space',
     ]);
+    const typing = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      return Boolean(el?.closest('input, textarea, select, [data-ui="studio"], [data-ui="table"]'));
+    };
     const down = (e: KeyboardEvent) => {
+      if (typing(e)) return;
       keys.current[e.code] = true;
       if (blocked.has(e.code)) e.preventDefault();
     };
@@ -97,7 +106,7 @@ export function WalkController({ enabled, engaged, onLockChange, onStep }: WalkC
       camera.quaternion.setFromEuler(LOOK);
     };
     const click = () => {
-      if (!enabledRef.current || !engagedRef.current || controls.current?.isLocked) return;
+      if (!captureRef.current || !enabledRef.current || !engagedRef.current || controls.current?.isLocked) return;
       controls.current?.lock();
     };
     canvas.addEventListener('pointerdown', down);

@@ -68,6 +68,8 @@ const N = {
   clue: [0.979, 0.974, 0.364] as [number, number, number],
   life: [0.981, 0.802, 0.348] as [number, number, number],
   yahtzee: [0.98, 0.846, 0.478] as [number, number, number],
+  beanbag: [0.98, 0.376, 0.978] as [number, number, number],
+  crate: [0.98, 0.959, 0.646] as [number, number, number],
 };
 
 const bedSize = fit(N.bed, 'y', 0.95);
@@ -101,6 +103,8 @@ const shipSize = fit(N.battleship, 'x', 0.4);
 const clueSize = fit(N.clue, 'x', 0.36);
 const lifeSize = fit(N.life, 'x', 0.4);
 const yahtzeeSize = fit(N.yahtzee, 'x', 0.38);
+const beanSize = fit(N.beanbag, 'x', 1.38);
+const crateSize = fit(N.crate, 'x', 1.08);
 
 /** Push the frame into the plaster so the visible wood meets the wall. */
 const flushNorth = (sz: number) => NORTH_Z + sz * 0.18;
@@ -458,6 +462,26 @@ export const LAYOUT = {
     meters: 0.38,
     ...yahtzeeSize,
   },
+  beanbag: {
+    id: 'beanbag',
+    x: -0.15,
+    y: 0,
+    z: SOUTH_Z - beanSize.sz / 2 - 0.06,
+    rotY: Math.PI,
+    axis: 'x' as const,
+    meters: 1.38,
+    ...beanSize,
+  },
+  crate: {
+    id: 'crate',
+    x: EAST_X - crateSize.sz / 2 - 0.05,
+    y: 0,
+    z: -1.42,
+    rotY: Math.PI / 2,
+    axis: 'x' as const,
+    meters: 1.08,
+    ...crateSize,
+  },
 } satisfies Record<string, Placed>;
 
 /**
@@ -481,6 +505,15 @@ function footprint(p: Placed, quarterTurns: boolean) {
   return { x: p.x, z: p.z, hx, hz, top: p.y + p.sy };
 }
 
+/** Card table the 3D games are played on. It stays put; only the match changes. */
+export const PLAY_TABLE = {
+  x: -0.82,
+  z: 0.18,
+  w: 1.14,
+  d: 0.74,
+  h: 0.62,
+};
+
 export const ROOM_COLLIDERS = [
   footprint(LAYOUT.bed, true),
   footprint(LAYOUT.nightstand, false),
@@ -492,6 +525,9 @@ export const ROOM_COLLIDERS = [
   footprint(LAYOUT.clutterdesk, true),
   footprint(LAYOUT.teddy, false),
   footprint(LAYOUT.army, false),
+  footprint(LAYOUT.beanbag, false),
+  footprint(LAYOUT.crate, true),
+  { x: PLAY_TABLE.x, z: PLAY_TABLE.z, hx: PLAY_TABLE.w / 2, hz: PLAY_TABLE.d / 2, top: PLAY_TABLE.h },
 ];
 
 /** Game-box rows up the real shelf, helmet stays above the top row. */

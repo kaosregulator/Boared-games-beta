@@ -22,6 +22,7 @@ import {
   type DeviceManifest,
 } from './devices';
 import { RoomStudio } from './RoomStudio';
+import { TableHudOverlay, type TableGameId } from './table/TablePlay';
 import { ANCHORS, anchorById, type Anchor } from './anchors';
 import { deletePlacement, loadPlacements, savePlacement, type SavedPlacement } from './userPlacements';
 import type { RoomMood } from './moods';
@@ -84,6 +85,13 @@ interface WalkRoomProps {
 
 const ALL_SLOTS = [...SHELF_SLOTS, ...SHELF_SLOTS_LOWER, ...DESK_SLOTS];
 
+function tableFromQuery(): TableGameId | null {
+  if (typeof window === 'undefined') return null;
+  const id = new URLSearchParams(window.location.search).get('game');
+  if (id === 'monopoly' || id === 'connect4' || id === 'battleship') return id;
+  return null;
+}
+
 export function WalkRoom({
   games,
   onSelectGame,
@@ -94,6 +102,9 @@ export function WalkRoom({
   const [menuOpen, setMenuOpen] = useState(override.menu);
   const [mood, setMood] = useState<RoomMood>('warm-night');
   const [musicOn, setMusicOn] = useState(true);
+  const [musicVolume, setMusicVolume] = useState(() => sound.getMusicVolume());
+  const queryTable = useMemo(tableFromQuery, []);
+  const [tableGame, setTableGame] = useState<TableGameId | null>(queryTable);
   const [placed, setPlaced] = useState<LiveProp[]>([]);
   const [anchorId, setAnchorId] = useState(ANCHORS[0].id);
   const [placeHeight, setPlaceHeight] = useState(0.45);
@@ -103,7 +114,7 @@ export function WalkRoom({
   const placeBytes = useRef<ArrayBuffer | null>(null);
   const placeUrl = useRef<string | null>(null);
   const [locked, setLocked] = useState(false);
-  const [engaged, setEngaged] = useState(scripted || Boolean(override.device));
+  const [engaged, setEngaged] = useState(scripted || Boolean(override.device) || Boolean(queryTable));
   const [tourLabel, setTourLabel] = useState<string | null>(null);
   const [aimed, setAimed] = useState<Aimed | null>(null);
   const [pulledGameId, setPulledGameId] = useState<GameId | null>(null);
@@ -276,18 +287,30 @@ export function WalkRoom({
   const playGame = useCallback(
     (game: GameMetadata) => {
       if (pulledGameId) return;
+      const onTable = game.id === 'monopoly' || game.id === 'connect4' || game.id === 'battleship';
       setPulledGameId(game.id);
       setCardOpen(false);
       sound.playShelfSlide();
-      flash(`Pulling ${game.title} off the shelf`);
+      flash(onTable ? `Setting ${game.title} on the table` : `Pulling ${game.title} off the shelf`);
       pullTimer.current = window.setTimeout(() => {
         sound.playCardboardLid();
         document.exitPointerLock?.();
+        setPulledGameId(null);
+        if (game.id === 'monopoly' || game.id === 'connect4' || game.id === 'battleship') {
+          setTableGame(game.id);
+          return;
+        }
         onSelectGame(game);
       }, 620);
     },
     [flash, onSelectGame, pulledGameId],
   );
+
+  useEffect(() => {
+    if (!musicOn) return;
+    sound.setMusicVolume(musicVolume);
+    if (!sound.nostalgiaPlaying()) sound.startNostalgia();
+  }, [musicOn, musicVolume]);
 
   const runFlash = useCallback((apply: () => void) => {
     flashTimers.current.forEach(id => window.clearTimeout(id));
@@ -458,7 +481,11 @@ export function WalkRoom({
   const cardProp = demoProp ?? aimedProp;
   const showCard = Boolean(demoGame || demoProp) || (engaged && cardOpen && aimed?.inReach && (aimedGame || aimedProp));
 
-  const shelfTitles = games.map(game => game.title).join(' · ');
+  const floorBoxes = new Set(['monopoly', 'battleship', 'clue', 'life', 'yahtzee']);
+  const shelfTitles = games
+    .filter(game => !floorBoxes.has(game.id))
+    .map(game => game.title)
+    .join(' · ');
 
   return (
     <div className="relative w-full h-[100dvh] overflow-hidden bg-[#140c14] select-none">
@@ -486,6 +513,8 @@ export function WalkRoom({
           showAnchors={menuOpen && Boolean(placeName)}
           ghost={ghost}
           onPickAnchor={(anchor: Anchor) => setAnchorId(anchor.id)}
+          tableGame={tableGame}
+          onLeaveTable={() => setTableGame(null)}
         />
         <DeviceFocus
           device={scripted ? null : device}
@@ -509,13 +538,19 @@ export function WalkRoom({
             <WalkController
               enabled={!pulledGameId && !device}
               engaged={engaged}
+              capturePointer={!tableGame}
               onLockChange={setLocked}
               onStep={onStep}
             />
-            <ReachRaycaster enabled={engaged && !pulledGameId && !device} onAim={setAimed} onSelect={handleSelect} />
+            <ReachRaycaster
+              enabled={engaged && !pulledGameId && !device && !tableGame}
+              onAim={setAimed}
+              onSelect={handleSelect}
+            />
           </>
         )}
       </Canvas>
+      {tableGame && <TableHudOverlay />}
 
       {scripted && tourLabel && (
         <div className="pointer-events-none absolute left-6 bottom-6 rounded-xl bg-black/60 border border-white/15 px-3 py-1.5 text-[11px] uppercase tracking-[0.22em] font-bold text-amber-200">
@@ -549,6 +584,7 @@ export function WalkRoom({
         open={menuOpen}
         mood={mood}
         music={musicOn}
+        musicVolume={musicVolume}
         placing={Boolean(placeName)}
         placeName={placeName}
         anchorId={anchorId}
@@ -559,6 +595,11 @@ export function WalkRoom({
         onClose={() => setMenuOpen(false)}
         onMood={setMood}
         onMusic={setMusic}
+        onMusicVolume={value => {
+          setMusicVolume(value);
+          sound.setMusicVolume(value);
+          if (musicOn && !sound.nostalgiaPlaying()) sound.startNostalgia();
+        }}
         onFile={onUpload}
         onAnchor={setAnchorId}
         onHeight={setPlaceHeight}
@@ -664,8 +705,8 @@ export function WalkRoom({
             <p className="text-[10px] uppercase tracking-[0.35em] text-amber-200/90 font-bold">Game Room</p>
             <h1 className="font-display text-4xl sm:text-5xl text-white mt-2">Walk the bedroom</h1>
             <p className="text-sm text-slate-300 mt-3 leading-relaxed">
-              This room is the menu. Walk up to the shelf and pull a box to play. WASD moves you.
-              Click and drag to look around if the mouse is not captured.
+              This room is the menu. Walk up to a box, or the crate shelf, and play it here.
+              WASD moves you. Click and drag to look around if the mouse is not captured.
             </p>
             <p className="text-[11px] text-slate-400 mt-3">On the shelf: {shelfTitles}</p>
             <button

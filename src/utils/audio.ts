@@ -7,9 +7,13 @@ class SoundEngine {
   private ctx: AudioContext | null = null;
   private muted: boolean = false;
   private volume: number = 0.5;
+  /** Bedroom tape, separate from effect clicks so the slider can be loud. */
+  private musicVolume = 0.92;
   private nostalgiaOn = false;
   private nostalgiaTimer: number | null = null;
-  private nostalgiaBar = 0;
+  private bedAudio: HTMLAudioElement | null = null;
+  private bedFade: number | null = null;
+  private bedUnlock: (() => void) | null = null;
 
   private initCtx() {
     if (!this.ctx && typeof window !== 'undefined') {
@@ -33,6 +37,53 @@ class SoundEngine {
 
   public setVolume(vol: number) {
     this.volume = Math.max(0, Math.min(1, vol));
+  }
+
+  public getMusicVolume() {
+    return this.musicVolume;
+  }
+
+  public setMusicVolume(vol: number) {
+    this.musicVolume = Math.max(0, Math.min(1, vol));
+    if (!this.nostalgiaOn || !this.bedAudio) return;
+    // The slider should answer immediately. Fades are for the tape starting and stopping.
+    if (this.bedFade !== null) {
+      window.clearInterval(this.bedFade);
+      this.bedFade = null;
+    }
+    this.bedAudio.volume = this.muted ? 0 : this.musicVolume;
+  }
+
+  private ensureBed() {
+    if (this.bedAudio) return this.bedAudio;
+    const audio = new Audio('/room/bedroom.mp3');
+    audio.loop = true;
+    audio.preload = 'auto';
+    audio.volume = 0;
+    audio.setAttribute('data-bedroom-music', 'true');
+    if (typeof document !== 'undefined') document.body.appendChild(audio);
+    this.bedAudio = audio;
+    return audio;
+  }
+
+  /** Ease the tape in or out. A new fade replaces one already running. */
+  private fadeBed(to: number, done?: () => void) {
+    const audio = this.bedAudio;
+    if (!audio) return;
+    if (this.bedFade !== null) window.clearInterval(this.bedFade);
+    const from = audio.volume;
+    const steps = 16;
+    let i = 0;
+    this.bedFade = window.setInterval(() => {
+      i += 1;
+      audio.volume = from + (to - from) * (i / steps);
+      if (i >= steps) {
+        if (this.bedFade !== null) window.clearInterval(this.bedFade);
+        this.bedFade = null;
+        audio.volume = Math.max(0, Math.min(1, to));
+        done?.();
+      }
+    }, 80);
   }
 
   /** Soft footfall on bedroom floorboards; alternates weight per step. */
@@ -1252,19 +1303,36 @@ class SoundEngine {
   }
 
   /**
-   * Original slow bedroom loop — warm pads, not a copied track.
-   * Feels like a tape left on in the next room.
+   * Bedroom tape. Loops, fades in when you arrive, fades out for the radio.
    */
   public startNostalgia() {
     this.nostalgiaOn = true;
-    this.initCtx();
-    if (!this.ctx || this.nostalgiaTimer !== null) return;
-    const tick = () => {
-      if (!this.nostalgiaOn) return;
-      this.playNostalgiaBar();
-      this.nostalgiaTimer = window.setTimeout(tick, 3400);
-    };
-    tick();
+    if (this.nostalgiaTimer !== null) {
+      window.clearTimeout(this.nostalgiaTimer);
+      this.nostalgiaTimer = null;
+    }
+    const audio = this.ensureBed();
+    const target = this.muted ? 0 : this.musicVolume;
+    if (audio.paused) {
+      audio.volume = 0;
+      void audio.play().catch(() => {
+        // Browsers hold the tape until the first gesture. Any click or key resumes it.
+        if (this.bedUnlock) return;
+        const resume = () => {
+          this.bedUnlock = null;
+          window.removeEventListener('pointerdown', resume);
+          window.removeEventListener('keydown', resume);
+          if (!this.nostalgiaOn || !this.bedAudio) return;
+          void this.bedAudio.play().then(() => {
+            if (this.nostalgiaOn) this.fadeBed(this.muted ? 0 : this.musicVolume);
+          }).catch(() => {});
+        };
+        this.bedUnlock = resume;
+        window.addEventListener('pointerdown', resume);
+        window.addEventListener('keydown', resume);
+      });
+    }
+    this.fadeBed(target);
   }
 
   public stopNostalgia() {
@@ -1273,60 +1341,14 @@ class SoundEngine {
       window.clearTimeout(this.nostalgiaTimer);
       this.nostalgiaTimer = null;
     }
+    if (!this.bedAudio) return;
+    this.fadeBed(0, () => {
+      if (!this.nostalgiaOn) this.bedAudio?.pause();
+    });
   }
 
   public nostalgiaPlaying() {
     return this.nostalgiaOn;
-  }
-
-  private playNostalgiaBar() {
-    if (this.muted) return;
-    this.initCtx();
-    if (!this.ctx) return;
-    const t = this.ctx.currentTime;
-    const chords = [
-      [220.0, 261.63, 329.63],
-      [174.61, 220.0, 261.63],
-      [196.0, 246.94, 293.66],
-      [130.81, 164.81, 196.0],
-    ];
-    const chord = chords[this.nostalgiaBar % chords.length];
-    const lead = [329.63, 392.0, 349.23, 329.63][this.nostalgiaBar % 4];
-    this.nostalgiaBar += 1;
-
-    const master = this.ctx.createGain();
-    master.gain.setValueAtTime(0.22 * this.volume, t);
-    const filter = this.ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(900, t);
-    filter.connect(master);
-    master.connect(this.ctx.destination);
-
-    chord.forEach((freq, i) => {
-      const osc = this.ctx!.createOscillator();
-      const gain = this.ctx!.createGain();
-      osc.type = i === 0 ? 'sine' : 'triangle';
-      osc.frequency.setValueAtTime(freq, t);
-      gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.linearRampToValueAtTime(0.09, t + 0.6);
-      gain.gain.linearRampToValueAtTime(0.0001, t + 3.2);
-      osc.connect(gain);
-      gain.connect(filter);
-      osc.start(t);
-      osc.stop(t + 3.3);
-    });
-
-    const leadOsc = this.ctx.createOscillator();
-    const leadGain = this.ctx.createGain();
-    leadOsc.type = 'sine';
-    leadOsc.frequency.setValueAtTime(lead, t + 0.4);
-    leadGain.gain.setValueAtTime(0.0001, t);
-    leadGain.gain.linearRampToValueAtTime(0.05, t + 1.1);
-    leadGain.gain.linearRampToValueAtTime(0.0001, t + 2.8);
-    leadOsc.connect(leadGain);
-    leadGain.connect(filter);
-    leadOsc.start(t + 0.35);
-    leadOsc.stop(t + 3.0);
   }
 }
 

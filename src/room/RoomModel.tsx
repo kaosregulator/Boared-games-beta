@@ -34,7 +34,9 @@ export type ModelId =
   | 'battleship'
   | 'clue'
   | 'life'
-  | 'yahtzee';
+  | 'yahtzee'
+  | 'beanbag'
+  | 'crate';
 
 export const MODEL_URL: Record<ModelId, string> = {
   bed: '/models/bed.glb',
@@ -68,6 +70,8 @@ export const MODEL_URL: Record<ModelId, string> = {
   clue: '/models/clue.glb',
   life: '/models/life.glb',
   yahtzee: '/models/yahtzee.glb',
+  beanbag: '/models/beanbag.glb',
+  crate: '/models/crate.glb',
 };
 
 /**
@@ -93,6 +97,8 @@ function finishMaterials(root: THREE.Object3D, tint: THREE.Color, amount: number
       mat.roughness = 0.86;
       mat.roughnessMap = null;
       mat.envMapIntensity = 0.15;
+      const physical = mat as THREE.MeshPhysicalMaterial;
+      if (physical.transmission) physical.transmission = 0;
       mat.needsUpdate = true;
     });
   });

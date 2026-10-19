@@ -9,11 +9,14 @@ import { InRoomTable } from './components/InRoomTable';
 import { WalkRoom } from './room/WalkRoom';
 import { RulesModal } from './components/RulesModal';
 
-/** `?game=<id>` opens a title on the table for capture scripts. Players enter through the room. */
+/** Monopoly, Connect Four, and Battleship stay inside the room. Never the old board. */
+const IN_ROOM_TABLE = new Set<GameId>(['monopoly', 'connect4', 'battleship']);
+
+/** `?game=<id>` opens a title for capture scripts. The three table games stay in the room. */
 function initialGame(): GameMetadata | null {
   if (typeof window === 'undefined') return null;
   const id = new URLSearchParams(window.location.search).get('game');
-  if (!id) return null;
+  if (!id || IN_ROOM_TABLE.has(id as GameId)) return null;
   return GAME_CATALOG.find(g => g.id === id) ?? null;
 }
 
@@ -30,6 +33,7 @@ export default function App() {
   const [userProfile, setUserProfile] = useState<UserProfile>(INITIAL_USER_PROFILE);
 
   const handleSelectGame = (game: GameMetadata) => {
+    if (IN_ROOM_TABLE.has(game.id)) return;
     setActiveGame(game);
     setIsUnboxing(true);
   };
