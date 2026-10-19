@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { Suspense, useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import {
@@ -6,8 +6,6 @@ import {
   NORTH_Z,
   PALETTE,
   ROOM_PROPS,
-  SHELF_SLOTS,
-  SHELF_SLOTS_LOWER,
   SOUTH_Z,
   WALL,
   WEST_X,
@@ -16,8 +14,9 @@ import {
 import { useTexture } from '@react-three/drei';
 import { ceilingTexture, floorTexture, rugTexture, wallTexture } from './procTextures';
 import type { HoverTarget } from './Interactable';
-import { RoomModel } from './RoomModel';
-import { LAYOUT, SHELF_ROW_Y, WALL_SHELF } from './roomLayout';
+import { SafeRoomModel } from './RoomModel';
+import type { GameMetadata } from '../types';
+import { LAYOUT, WALL_SHELF } from './roomLayout';
 import { ANCHORS, type Anchor } from './anchors';
 import { DynamicModel } from './UserProps';
 import { MOODS, type RoomMood } from './moods';
@@ -152,7 +151,11 @@ function NightCity() {
     t.colorSpace = THREE.SRGBColorSpace;
     tex.current = t;
   }
-  useFrame(({ clock }) => {
+  const redraw = useRef(0);
+  useFrame(({ clock }, delta) => {
+    redraw.current += delta;
+    if (redraw.current < 0.45) return;
+    redraw.current = 0;
     const t = tex.current;
     const c = t?.image as HTMLCanvasElement | undefined;
     const ctx = c?.getContext('2d');
@@ -324,7 +327,93 @@ function WallArt() {
  * Invisible hit on a shelf row so aiming still opens the glass card.
  * The boxes themselves are the Tripo shelf mesh — nothing is drawn here.
  */
-function ShelfHit({ slot, y, hovered, pulled }: { slot: ShelfSlot; y: number; hovered: boolean; pulled: boolean }) {
+const SPINE_COLOR: Record<string, { color: string; accent: string }> = {
+  monopoly: { color: '#c0282d', accent: '#f7e9c9' },
+  battleship: { color: '#17365d', accent: '#8fd3ff' },
+  pawnrush: { color: '#c4262c', accent: '#ffe08a' },
+  clue: { color: '#13120f', accent: '#e8dcae' },
+  life: { color: '#e4d6ad', accent: '#2f7bb5' },
+  yahtzee: { color: '#b81f28', accent: '#f6ead0' },
+  chess: { color: '#2b2622', accent: '#d8cfc2' },
+  connect4: { color: '#1d4fa3', accent: '#ffd23f' },
+  checkers: { color: '#8c1c1c', accent: '#f0d9a7' },
+  poker: { color: '#1f5134', accent: '#ffd98a' },
+  blackjack: { color: '#14402a', accent: '#9ff0b8' },
+  gofish: { color: '#1b5f7a', accent: '#bdf0ff' },
+  liarsdice: { color: '#6d4414', accent: '#f5d985' },
+  trivia: { color: '#3d2a6e', accent: '#e6d4ff' },
+  casino: { color: '#0e3b32', accent: '#d4ffe8' },
+};
+
+/** Painted shelf order, then whatever else is in the catalog. */
+const SHELF_ORDER = [
+  'monopoly',
+  'battleship',
+  'pawnrush',
+  'clue',
+  'life',
+  'yahtzee',
+  'chess',
+  'connect4',
+  'checkers',
+  'poker',
+  'blackjack',
+  'gofish',
+  'liarsdice',
+  'trivia',
+  'casino',
+];
+
+const spineTextures = new Map<string, THREE.CanvasTexture>();
+
+function spineTexture(title: string, color: string, accent: string) {
+  const key = `${title}:${color}`;
+  const cached = spineTextures.get(key);
+  if (cached) return cached;
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    const blank = new THREE.CanvasTexture(canvas);
+    spineTextures.set(key, blank);
+    return blank;
+  }
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, 512, 128);
+  ctx.fillStyle = accent;
+  ctx.fillRect(16, 10, 480, 8);
+  ctx.fillRect(16, 110, 480, 8);
+  ctx.fillStyle = accent;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  let size = 54;
+  ctx.font = `700 ${size}px sans-serif`;
+  while (ctx.measureText(title).width > 470 && size > 22) {
+    size -= 2;
+    ctx.font = `700 ${size}px sans-serif`;
+  }
+  ctx.fillText(title, 256, 68);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  spineTextures.set(key, tex);
+  return tex;
+}
+
+function ShelfBox({
+  slot,
+  position,
+  size,
+  hovered,
+  pulled,
+}: {
+  slot: ShelfSlot;
+  position: [number, number, number];
+  size: [number, number, number];
+  hovered: boolean;
+  pulled: boolean;
+}) {
   const group = useRef<THREE.Group>(null);
   const target: HoverTarget = {
     id: `game:${slot.id}`,
@@ -333,44 +422,84 @@ function ShelfHit({ slot, y, hovered, pulled }: { slot: ShelfSlot; y: number; ho
     label: slot.title,
     hint: 'Inspect · pull to play',
   };
+  const map = useMemo(() => spineTexture(slot.title, slot.color, slot.accent), [slot.title, slot.color, slot.accent]);
   useFrame((_, delta) => {
     if (!group.current) return;
-    const want = pulled ? 0.06 : hovered ? 0.03 : 0;
-    group.current.position.z += (want - group.current.position.z) * Math.min(1, delta * 10);
+    const want = pulled ? 0.08 : hovered ? 0.04 : 0;
+    group.current.position.z += (position[2] + want - group.current.position.z) * Math.min(1, delta * 10);
   });
-  const { shelf } = LAYOUT;
   return (
-    <group ref={group} position={[0, y, shelf.sz * 0.35]} userData={{ interactable: target }}>
-      <mesh>
-        <boxGeometry args={[shelf.sx * 0.72, 0.16, shelf.sz * 0.55]} />
-        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+    <group ref={group} position={position} userData={{ interactable: target }}>
+      <mesh castShadow={false} receiveShadow={false}>
+        <boxGeometry args={size} />
+        <meshStandardMaterial color={slot.color} roughness={0.7} metalness={0} />
       </mesh>
-      {(hovered || pulled) && (
-        <mesh position={[0, 0, shelf.sz * 0.2]}>
-          <planeGeometry args={[shelf.sx * 0.7, 0.16]} />
-          <meshBasicMaterial color={slot.accent} transparent opacity={0.28} depthWrite={false} />
-        </mesh>
-      )}
+      <mesh position={[0, 0, size[2] / 2 + 0.004]}>
+        <planeGeometry args={[size[0] * 0.9, size[1] * 0.9]} />
+        <meshBasicMaterial map={map} />
+      </mesh>
     </group>
   );
 }
 
-function GameShelf({ hoveredId, pulledId }: { hoveredId: string | null; pulledId: string | null }) {
+function GameShelf({
+  hoveredId,
+  pulledId,
+  games,
+}: {
+  hoveredId: string | null;
+  pulledId: string | null;
+  games: GameMetadata[];
+}) {
   const { shelf } = LAYOUT;
-  const rows = [...SHELF_SLOTS, ...SHELF_SLOTS_LOWER];
+  const slots = useMemo(() => {
+    const byId = new Map(games.map(game => [game.id, game]));
+    const ordered = [
+      ...SHELF_ORDER.filter(id => byId.has(id as GameMetadata['id'])).map(id => byId.get(id as GameMetadata['id'])!),
+      ...games.filter(game => !SHELF_ORDER.includes(game.id)),
+    ];
+    return ordered.map(game => {
+      const paint = SPINE_COLOR[game.id] ?? { color: '#5c3d2e', accent: '#f6ead0' };
+      return {
+        id: game.id,
+        spine: null,
+        title: game.title,
+        row: 0,
+        boxHeight: 0.16,
+        color: paint.color,
+        accent: paint.accent,
+      } satisfies ShelfSlot;
+    });
+  }, [games]);
+  const columns = 2;
+  const rows = Math.max(1, Math.ceil(slots.length / columns));
+  const colW = (shelf.sx * 0.9) / columns;
+  const rowH = (shelf.sy * 0.88) / rows;
+  const faceZ = shelf.sz * 0.5 + 0.06;
   return (
     <group position={[shelf.x, 0, shelf.z]}>
-      <RoomModel id="shelf" position={[0, 0, 0]} axis="y" meters={shelf.meters} tintAmount={0} />
-      {rows.map(slot => (
-        <ShelfHit
-          key={slot.id}
-          slot={slot}
-          y={SHELF_ROW_Y[slot.row] ?? 0.4}
-          hovered={hoveredId === `game:${slot.id}`}
-          pulled={pulledId === slot.id}
-        />
-      ))}
-      <pointLight position={[0, shelf.sy * 0.92, 0.35]} color="#ffdf6e" intensity={1.1} distance={2.4} decay={2} />
+      <SafeRoomModel id="shelf" position={[0, 0, 0]} axis="y" meters={shelf.meters} tintAmount={0} />
+      {slots.map((slot, index) => {
+        const column = Math.floor(index / rows);
+        const row = index % rows;
+        const width = Math.max(0.12, colW * 0.86);
+        const height = Math.max(0.1, rowH * 0.78);
+        return (
+          <ShelfBox
+            key={slot.id}
+            slot={slot}
+            position={[
+              -shelf.sx * 0.45 + colW * (column + 0.5),
+              shelf.sy * 0.94 - rowH * (row + 0.5),
+              faceZ,
+            ]}
+            size={[width, height, 0.08]}
+            hovered={hoveredId === `game:${slot.id}`}
+            pulled={pulledId === slot.id}
+          />
+        );
+      })}
+      <pointLight position={[0, shelf.sy * 0.92, 0.55]} color="#ffdf6e" intensity={1.6} distance={3.2} decay={2} />
     </group>
   );
 }
@@ -386,7 +515,7 @@ function PlacedModel({
 }) {
   const p = LAYOUT[id];
   return (
-    <RoomModel
+    <SafeRoomModel
       id={id}
       position={[p.x, p.y, p.z]}
       rotation={[0, p.rotY, 0]}
@@ -415,6 +544,7 @@ export interface RealRoomSceneProps {
   showAnchors?: boolean;
   ghost?: { url: string; anchor: Anchor; height: number; lift: number; shadow: boolean } | null;
   onPickAnchor?: (anchor: Anchor) => void;
+  games: GameMetadata[];
 }
 
 /**
@@ -430,6 +560,7 @@ export function RealRoomScene({
   showAnchors = false,
   ghost = null,
   onPickAnchor,
+  games,
 }: RealRoomSceneProps) {
   const lights = MOODS[mood];
   return (
@@ -440,7 +571,9 @@ export function RealRoomScene({
       <Shell />
       <NightCity />
       <WindowGlare />
-      <WallArt />
+      <Suspense fallback={null}>
+        <WallArt />
+      </Suspense>
       <MountedShelf shelf={WALL_SHELF} />
       <pointLight
         position={[LAYOUT.teddy.x + 0.2, 2.05, LAYOUT.teddy.z - 1.35]}
@@ -534,7 +667,7 @@ export function RealRoomScene({
         decay={2}
       />
 
-      <GameShelf hoveredId={hoveredId} pulledId={pulledGameId} />
+      <GameShelf hoveredId={hoveredId} pulledId={pulledGameId} games={games} />
       <BulbFlicker position={[LAYOUT.shelf.x + 0.55, 1.85, LAYOUT.shelf.z + 0.28]} color="#ffd27a" base={0.42} seed={1.2} />
       <BulbFlicker position={[LAYOUT.shelf.x + 0.58, 1.35, LAYOUT.shelf.z + 0.3]} color="#ffb45a" base={0.34} seed={2.4} />
       <BulbFlicker position={[LAYOUT.shelf.x + 0.52, 0.85, LAYOUT.shelf.z + 0.26]} color="#ffe08a" base={0.3} seed={3.1} />
@@ -630,18 +763,19 @@ export function RealRoomScene({
       <pointLight position={[-1.6, 1.9, -0.2]} color="#e7b08a" intensity={mood === 'afternoon' ? 0.35 : 0.5} distance={4} decay={2} />
 
       {placed.map(item => (
-        <DynamicModel
-          key={item.placement.id}
-          url={item.url}
-          position={[
-            item.placement.position[0],
-            item.placement.position[1] + item.placement.lift,
-            item.placement.position[2],
-          ]}
-          rotY={item.placement.rotY}
-          height={item.placement.height}
-          shadow={item.placement.shadow}
-        />
+        <Suspense key={item.placement.id} fallback={null}>
+          <DynamicModel
+            url={item.url}
+            position={[
+              item.placement.position[0],
+              item.placement.position[1] + item.placement.lift,
+              item.placement.position[2],
+            ]}
+            rotY={item.placement.rotY}
+            height={item.placement.height}
+            shadow={false}
+          />
+        </Suspense>
       ))}
 
       {showAnchors &&
@@ -661,13 +795,15 @@ export function RealRoomScene({
         ))}
 
       {ghost && (
-        <DynamicModel
-          url={ghost.url}
-          position={[ghost.anchor.position[0], ghost.anchor.position[1] + ghost.lift, ghost.anchor.position[2]]}
-          rotY={ghost.anchor.rotY}
-          height={ghost.height}
-          shadow={ghost.shadow}
-        />
+        <Suspense fallback={null}>
+          <DynamicModel
+            url={ghost.url}
+            position={[ghost.anchor.position[0], ghost.anchor.position[1] + ghost.lift, ghost.anchor.position[2]]}
+            rotY={ghost.anchor.rotY}
+            height={ghost.height}
+            shadow={false}
+          />
+        </Suspense>
       )}
     </group>
   );

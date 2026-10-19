@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { GameId, GameMetadata } from '../types';
@@ -58,8 +58,6 @@ function DemoPose({ at, look }: { at: [number, number, number]; look: [number, n
 interface WalkRoomProps {
   games: GameMetadata[];
   onSelectGame: (game: GameMetadata) => void;
-  onOpenClassicShelf: () => void;
-  onOpenLanding: () => void;
   onOpenRulesForGame?: (game: GameMetadata) => void;
 }
 
@@ -68,8 +66,6 @@ const ALL_SLOTS = [...SHELF_SLOTS, ...SHELF_SLOTS_LOWER, ...DESK_SLOTS];
 export function WalkRoom({
   games,
   onSelectGame,
-  onOpenClassicShelf,
-  onOpenLanding,
   onOpenRulesForGame,
 }: WalkRoomProps) {
   const override = useMemo(readCameraOverride, []);
@@ -86,6 +82,7 @@ export function WalkRoom({
   const placeBytes = useRef<ArrayBuffer | null>(null);
   const placeUrl = useRef<string | null>(null);
   const [locked, setLocked] = useState(false);
+  const [engaged, setEngaged] = useState(scripted);
   const [tourLabel, setTourLabel] = useState<string | null>(null);
   const [aimed, setAimed] = useState<Aimed | null>(null);
   const [pulledGameId, setPulledGameId] = useState<GameId | null>(null);
@@ -256,14 +253,8 @@ export function WalkRoom({
 
       switch (target.id) {
         case 'crt-tv':
-          if (!cardOpen) {
-            setCardOpen(true);
-            sound.playButtonClick();
-            break;
-          }
+          setCardOpen(true);
           sound.playButtonClick();
-          document.exitPointerLock?.();
-          onOpenClassicShelf();
           break;
         case 'boombox':
           if (!cardOpen) {
@@ -295,7 +286,7 @@ export function WalkRoom({
           break;
       }
     },
-    [byId, cardOpen, flash, lampsWarm, onOpenClassicShelf, playGame, tapeOn],
+    [byId, cardOpen, flash, lampsWarm, playGame, tapeOn],
   );
 
   const aimedGame =
@@ -308,37 +299,37 @@ export function WalkRoom({
   const demoProp = demoPropId ? propCardFor(demoPropId) : null;
   const cardGame = demoGame ?? aimedGame;
   const cardProp = demoProp ?? aimedProp;
-  const showCard = Boolean(demoGame || demoProp) || (locked && cardOpen && aimed?.inReach && (aimedGame || aimedProp));
+  const showCard = Boolean(demoGame || demoProp) || (engaged && cardOpen && aimed?.inReach && (aimedGame || aimedProp));
 
-  const shelfTitles = SHELF_SLOTS.map(s => s.title).join(' · ');
+  const shelfTitles = games.map(game => game.title).join(' · ');
 
   return (
     <div className="relative w-full h-[100dvh] overflow-hidden bg-[#140c14] select-none">
       <Canvas
-        shadows
         frameloop={override.capture ? 'demand' : 'always'}
-        dpr={override.capture ? 1 : [1, 1.75]}
-        camera={{ fov: 72, near: 0.05, far: 60 }}
-        gl={{ antialias: true, powerPreference: 'high-performance' }}
+        dpr={override.capture ? 1 : [1, 1.5]}
+        camera={{ fov: 72, near: 0.08, far: 40, position: [0.02, 1.58, 1.32] }}
+        gl={{ antialias: true, powerPreference: 'high-performance', alpha: false }}
         onCreated={({ gl, scene }) => {
+          gl.setClearColor('#2a2030', 1);
           gl.toneMapping = THREE.ACESFilmicToneMapping;
-          gl.toneMappingExposure = 1.05;
-          scene.fog = new THREE.Fog('#1a1218', 8, 22);
+          gl.toneMappingExposure = 1.15;
+          scene.fog = new THREE.Fog('#2a2030', 10, 20);
         }}
       >
-        <Suspense fallback={null}>
-          <RealRoomScene
-            hoveredId={aimed?.inReach ? aimed.id : null}
-            pulledGameId={pulledGameId}
-            tapeOn={tapeOn}
-            lampsWarm={lampsWarm}
-            mood={mood}
-            placed={placed}
-            showAnchors={menuOpen && Boolean(placeName)}
-            ghost={ghost}
-            onPickAnchor={(anchor: Anchor) => setAnchorId(anchor.id)}
-          />
-        </Suspense>
+        <color attach="background" args={['#2a2030']} />
+        <RealRoomScene
+          games={games}
+          hoveredId={aimed?.inReach ? aimed.id : null}
+          pulledGameId={pulledGameId}
+          tapeOn={tapeOn}
+          lampsWarm={lampsWarm}
+          mood={mood}
+          placed={placed}
+          showAnchors={menuOpen && Boolean(placeName)}
+          ghost={ghost}
+          onPickAnchor={(anchor: Anchor) => setAnchorId(anchor.id)}
+        />
         {override.capture && <CaptureClock />}
         {override.card && DEMO_POSE[override.card] ? (
           <DemoPose at={DEMO_POSE[override.card].at} look={DEMO_POSE[override.card].look} />
@@ -346,8 +337,13 @@ export function WalkRoom({
           <TourCamera staticIndex={override.shot} onWaypoint={label => setTourLabel(label)} />
         ) : (
           <>
-            <WalkController enabled={!pulledGameId} onLockChange={setLocked} onStep={onStep} />
-            <ReachRaycaster enabled={locked && !pulledGameId} onAim={setAimed} onSelect={handleSelect} />
+            <WalkController
+              enabled={!pulledGameId}
+              engaged={engaged}
+              onLockChange={setLocked}
+              onStep={onStep}
+            />
+            <ReachRaycaster enabled={engaged && !pulledGameId} onAim={setAimed} onSelect={handleSelect} />
           </>
         )}
       </Canvas>
@@ -358,7 +354,7 @@ export function WalkRoom({
         </div>
       )}
 
-      {locked && (
+      {engaged && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div
             className={`rounded-full border transition-all duration-150 ${
@@ -433,28 +429,17 @@ export function WalkRoom({
                       setTapeOn(on => !on);
                       flash(tapeOn ? 'Tape stopped' : 'Tape rolling');
                     }
-                  : cardProp.id === 'crt-tv'
-                    ? () => {
-                        document.exitPointerLock?.();
-                        onOpenClassicShelf();
-                      }
-                    : undefined
+                  : undefined
               }
               actionLabel={
-                cardProp.id === 'boombox'
-                  ? tapeOn
-                    ? 'Stop the tape'
-                    : 'Press play'
-                  : cardProp.id === 'crt-tv'
-                    ? 'Open flat game list'
-                    : undefined
+                cardProp.id === 'boombox' ? (tapeOn ? 'Stop the tape' : 'Press play') : undefined
               }
             />
           ) : null}
         </div>
       )}
 
-      {locked && aimed && !showCard && (
+      {engaged && aimed && !showCard && (
         <div className="pointer-events-none absolute left-1/2 top-[56%] -translate-x-1/2 text-center">
           <p className="font-display text-xl text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">{aimed.label}</p>
           <p className="text-[11px] uppercase tracking-[0.22em] text-amber-200/90 font-bold mt-1">
@@ -469,15 +454,15 @@ export function WalkRoom({
         </div>
       )}
 
-      {locked && (
+      {engaged && (
         <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-wrap items-center justify-center gap-2 text-[10px] uppercase tracking-[0.2em] font-bold text-white/70">
           {[
             ['W A S D', 'walk'],
             ['Shift', 'run'],
             ['C', 'crouch'],
-            ['Mouse', 'look'],
-            ['E', 'inspect / play'],
-            ['Esc', 'release'],
+            [locked ? 'Mouse' : 'Drag / arrows', 'look'],
+            ['E', 'pull a game'],
+            ['Esc', 'release mouse'],
           ].map(([key, what]) => (
             <span key={key} className="rounded-lg bg-black/55 border border-white/10 px-2.5 py-1">
               <span className="text-amber-200">{key}</span> {what}
@@ -486,42 +471,27 @@ export function WalkRoom({
         </div>
       )}
 
-      {!locked && !scripted && !menuOpen && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-[#140c14]/80 via-[#1a0f18]/70 to-[#140c14]/90 backdrop-blur-[2px] px-6">
-          <div className="max-w-xl w-full rounded-3xl border border-white/15 bg-black/65 p-7 text-center shadow-2xl">
+      {!engaged && !scripted && !menuOpen && (
+        <div className="absolute inset-x-0 bottom-0 z-20 flex justify-center p-4 sm:p-8 pointer-events-none">
+          <div className="pointer-events-auto max-w-xl w-full rounded-3xl border border-white/15 bg-black/75 p-6 text-center shadow-2xl backdrop-blur-md">
             <p className="text-[10px] uppercase tracking-[0.35em] text-amber-200/90 font-bold">Game Room</p>
             <h1 className="font-display text-4xl sm:text-5xl text-white mt-2">Walk the bedroom</h1>
             <p className="text-sm text-slate-300 mt-3 leading-relaxed">
-              Free-roam first person — web, not VR. Aim at the shelf for a glass game card, or check
-              nostalgia props like the Game Boy for a quick history flash.
+              This room is the menu. Walk up to the shelf and pull a box to play. WASD moves you.
+              Click and drag to look around if the mouse is not captured.
             </p>
             <p className="text-[11px] text-slate-400 mt-3">On the shelf: {shelfTitles}</p>
             <button
               id="enter-room"
               type="button"
               onClick={() => {
+                setEngaged(true);
                 if (musicOn) sound.startNostalgia();
               }}
               className="mt-6 w-full rounded-2xl bg-gradient-to-r from-fuchsia-600 to-amber-500 px-6 py-3.5 font-display text-lg text-white shadow-lg hover:brightness-110 active:scale-[0.99] transition"
             >
               Step into the room
             </button>
-            <div className="mt-4 flex items-center justify-center gap-2">
-              <button
-                type="button"
-                onClick={onOpenClassicShelf}
-                className="text-[11px] uppercase tracking-[0.18em] font-bold text-slate-300 hover:text-white rounded-xl border border-white/15 px-3 py-1.5"
-              >
-                Flat game list
-              </button>
-              <button
-                type="button"
-                onClick={onOpenLanding}
-                className="text-[11px] uppercase tracking-[0.18em] font-bold text-slate-300 hover:text-white rounded-xl border border-white/15 px-3 py-1.5"
-              >
-                Back to demo page
-              </button>
-            </div>
           </div>
         </div>
       )}

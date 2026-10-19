@@ -12,18 +12,28 @@ interface DynamicModelProps {
 }
 
 /** A user-uploaded GLB, fitted by height and sat on `position`. */
-export function DynamicModel({ url, position, rotY, height, shadow = true }: DynamicModelProps) {
+export function DynamicModel({ url, position, rotY, height }: DynamicModelProps) {
   const { scene } = useGLTF(url);
   const root = useMemo(() => {
     const clone = scene.clone(true);
     clone.traverse(obj => {
       const mesh = obj as THREE.Mesh;
       if (!mesh.isMesh) return;
-      mesh.castShadow = shadow;
-      mesh.receiveShadow = true;
+      mesh.castShadow = false;
+      mesh.receiveShadow = false;
+      mesh.raycast = () => {};
+      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      mats.forEach(material => {
+        const mat = material as THREE.MeshStandardMaterial;
+        if (!mat || !('metalness' in mat)) return;
+        mat.metalness = 0;
+        mat.metalnessMap = null;
+        mat.roughness = 0.86;
+        mat.needsUpdate = true;
+      });
     });
     return clone;
-  }, [scene, shadow]);
+  }, [scene]);
 
   const { fitScale, offset } = useMemo(() => {
     const box = new THREE.Box3().setFromObject(root);
