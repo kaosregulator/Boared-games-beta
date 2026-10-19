@@ -17,6 +17,7 @@ import {
   DEVICE_FROM_PROP,
   FALLBACK_DEVICES,
   loadDeviceManifest,
+  streamMirrors,
   type DeviceId,
   type DeviceManifest,
 } from './devices';
@@ -32,16 +33,27 @@ import type { RoomMood } from './moods';
  */
 function readCameraOverride() {
   if (typeof window === 'undefined') {
-    return { tour: false, shot: undefined as number | undefined, card: null as string | null, menu: false, capture: false };
+    return {
+      tour: false,
+      shot: undefined as number | undefined,
+      card: null as string | null,
+      menu: false,
+      capture: false,
+      device: null as DeviceId | null,
+    };
   }
   const params = new URLSearchParams(window.location.search);
   const shotRaw = params.get('shot');
+  const deviceRaw = params.get('device');
+  const device: DeviceId | null =
+    deviceRaw === 'crt' || deviceRaw === 'nes' || deviceRaw === 'boombox' ? deviceRaw : null;
   return {
     tour: params.has('tour'),
     shot: shotRaw === null ? undefined : Number.parseInt(shotRaw, 10) || 0,
     card: params.get('card'),
     menu: params.has('menu'),
     capture: params.has('capture'),
+    device,
   };
 }
 
@@ -91,7 +103,7 @@ export function WalkRoom({
   const placeBytes = useRef<ArrayBuffer | null>(null);
   const placeUrl = useRef<string | null>(null);
   const [locked, setLocked] = useState(false);
-  const [engaged, setEngaged] = useState(scripted);
+  const [engaged, setEngaged] = useState(scripted || Boolean(override.device));
   const [tourLabel, setTourLabel] = useState<string | null>(null);
   const [aimed, setAimed] = useState<Aimed | null>(null);
   const [pulledGameId, setPulledGameId] = useState<GameId | null>(null);
@@ -99,7 +111,7 @@ export function WalkRoom({
   const [lampsWarm, setLampsWarm] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [cardOpen, setCardOpen] = useState(false);
-  const [device, setDevice] = useState<DeviceId | null>(null);
+  const [device, setDevice] = useState<DeviceId | null>(override.device);
   const [flashPhase, setFlashPhase] = useState<'idle' | 'cover' | 'reveal'>('idle');
   const [manifest, setManifest] = useState<DeviceManifest>(FALLBACK_DEVICES);
   const [tvIndex, setTvIndex] = useState(0);
@@ -110,6 +122,8 @@ export function WalkRoom({
   const toastTimer = useRef<number | null>(null);
   const flashTimers = useRef<number[]>([]);
   const radioAudio = useRef<HTMLAudioElement | null>(null);
+  const radioToken = useRef(0);
+  const [radioVolume, setRadioVolume] = useState(0.7);
   const blockSelect = useRef(false);
   const heavyStep = useRef(false);
   const pullTimer = useRef<number | null>(null);
@@ -130,6 +144,7 @@ export function WalkRoom({
       if (radioAudio.current) {
         radioAudio.current.pause();
         radioAudio.current.src = '';
+        radioAudio.current.remove();
       }
     },
     [],
@@ -312,39 +327,67 @@ export function WalkRoom({
       setStationIndex(index);
       setRadioError(null);
       if (!station) return;
-      let audio = radioAudio.current;
-      if (!audio) {
-        audio = new Audio();
-        audio.crossOrigin = 'anonymous';
-        audio.volume = 0.7;
+      const existing = radioAudio.current;
+      const audio = existing ?? document.createElement('audio');
+      if (!existing) {
+        audio.preload = 'none';
+        audio.setAttribute('playsinline', 'true');
+        document.body.appendChild(audio);
         radioAudio.current = audio;
       }
+      audio.volume = radioVolume;
+      const token = ++radioToken.current;
       if (!play) {
         audio.pause();
+        audio.removeAttribute('src');
+        audio.load();
         setRadioOn(false);
         setTapeOn(false);
         if (musicOn && engaged) sound.startNostalgia();
         return;
       }
       sound.stopNostalgia();
-      if (audio.dataset.station !== station.id) {
-        audio.src = station.url;
-        audio.dataset.station = station.id;
-      }
-      audio
-        .play()
-        .then(() => {
-          setRadioOn(true);
-          setTapeOn(true);
-        })
-        .catch(() => {
+      const urls = streamMirrors(station.url);
+      const attempt = (i: number) => {
+        if (token !== radioToken.current) return;
+        if (i >= urls.length) {
           setRadioOn(false);
           setTapeOn(false);
           setRadioError('That station did not answer. Try another.');
-        });
+          return;
+        }
+        let settled = false;
+        const fail = () => {
+          if (settled || token !== radioToken.current) return;
+          settled = true;
+          audio.removeEventListener('error', fail);
+          audio.removeEventListener('playing', ok);
+          attempt(i + 1);
+        };
+        const ok = () => {
+          if (settled || token !== radioToken.current) return;
+          settled = true;
+          audio.removeEventListener('error', fail);
+          audio.removeEventListener('playing', ok);
+          setRadioOn(true);
+          setTapeOn(true);
+          setRadioError(null);
+        };
+        audio.addEventListener('error', fail);
+        audio.addEventListener('playing', ok);
+        audio.src = urls[i];
+        void audio.play().catch(() => fail());
+      };
+      attempt(0);
     },
-    [engaged, manifest.radio, musicOn],
+    [engaged, manifest.radio, musicOn, radioVolume],
   );
+
+  const cycleRadioVolume = useCallback(() => {
+    const next = radioVolume < 0.45 ? 0.7 : radioVolume < 0.85 ? 1 : 0.35;
+    setRadioVolume(next);
+    if (radioAudio.current) radioAudio.current.volume = next;
+  }, [radioVolume]);
 
   useEffect(() => {
     if (!device) return;
@@ -450,6 +493,11 @@ export function WalkRoom({
           stationLabel={manifest.radio[stationIndex]?.freq ?? 'RADIO'}
           radioOn={radioOn}
           nesOn={nesOn}
+          stations={manifest.radio}
+          stationIndex={stationIndex}
+          radioVolume={radioVolume}
+          onTune={tuneRadio}
+          onVolume={cycleRadioVolume}
         />
         {override.capture && <CaptureClock />}
         {override.card && DEMO_POSE[override.card] ? (
@@ -601,10 +649,7 @@ export function WalkRoom({
           manifest={manifest}
           tvIndex={tvIndex}
           onTv={setTvIndex}
-          stationIndex={stationIndex}
-          radioOn={radioOn}
           radioError={radioError}
-          onTune={tuneRadio}
           nesOn={nesOn}
           onNesPower={() => setNesOn(on => !on)}
           onBack={exitDevice}

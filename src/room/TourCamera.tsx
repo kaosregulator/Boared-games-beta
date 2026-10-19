@@ -28,7 +28,7 @@ export const TOUR: Waypoint[] = [
   { at: [LAYOUT.shelf.x + 0.85, 1.35, LAYOUT.shelf.z + 1.05], look: [LAYOUT.shelf.x, 1.1, LAYOUT.shelf.z], travel: 2.0, hold: 1.8, label: 'At the shelf' },
   { at: [LAYOUT.window.x + 1.15, 1.28, LAYOUT.window.z + 1.65], look: [LAYOUT.nightstand.x, 0.72, LAYOUT.nightstand.z], travel: 2.2, hold: 1.8, label: 'Window corner' },
   { at: [LAYOUT.toyshelf.x - 1.45, 1.35, LAYOUT.toyshelf.z + 0.15], look: [LAYOUT.toyshelf.x, 0.85, LAYOUT.toyshelf.z], travel: 2.0, hold: 1.2, label: 'Toy shelf' },
-  { at: [-0.2, 1.46, -0.05], look: [0.4, 0.95, LAYOUT.teddy.z], travel: 2.4, hold: 2.6, label: 'South wall' },
+  { at: [0.15, 1.58, -0.85], look: [-0.1, 1.25, 2.4], travel: 2.4, hold: 2.6, label: 'South wall' },
   { at: [0.15, PLAYER.height, 1.2], look: [-0.1, 1.05, -2.2], travel: 2.2, hold: 1.6, label: 'Back to idle' },
 ];
 

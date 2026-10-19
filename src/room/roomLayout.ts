@@ -74,7 +74,7 @@ const bedSize = fit(N.bed, 'y', 0.95);
 const shelfSize = fit(N.shelf, 'y', 2.05);
 const dresserSize = fit(N.dresser, 'y', 0.84);
 const crtSize = fit(N.crt, 'x', 0.62);
-const toySize = fit(N.toyshelf, 'y', 1.72);
+const toySize = fit(N.toyshelf, 'y', 1.32);
 const deskSize = fit(N.desk, 'y', 1.05);
 const nightSize = fit(N.nightstand, 'y', 0.9);
 const windowSize = fit(N.window, 'y', 1.12);
@@ -127,10 +127,10 @@ const doorX = 0.58;
 const doorZ = flushNorth(doorSize.sz);
 
 const toyX = EAST_X - toySize.sz / 2 - 0.05;
-const toyZ = -0.55;
+const toyZ = 0.05;
 
 const deskX = EAST_X - deskSize.sz / 2 - 0.06;
-const deskZ = 1.68;
+const deskZ = 1.88;
 
 const clutterX = WEST_X + clutterSize.sz / 2 + 0.06;
 const clutterZ = 1.45;
@@ -215,7 +215,7 @@ export const LAYOUT = {
     z: toyZ,
     rotY: -Math.PI / 2,
     axis: 'y' as const,
-    meters: 1.72,
+    meters: 1.32,
     ...toySize,
   },
   shelf: {
@@ -301,7 +301,7 @@ export const LAYOUT = {
   teddy: {
     id: 'teddy',
     x: -0.15,
-    y: 1.18,
+    y: 2.22,
     z: SOUTH_Z - teddySize.sz / 2 + 0.02,
     rotY: Math.PI,
     axis: 'x' as const,
@@ -461,19 +461,17 @@ export const LAYOUT = {
 } satisfies Record<string, Placed>;
 
 /**
- * Second window, centred under the teddy wall shelf on the south wall.
- * Bottom sits just above the floor so the frame clears the shelf above it.
- * Not a walking collider — it is flush with the plaster.
+ * Same window as the north wall, same sill height, centred under the
+ * teddy shelf. The shelf is raised above the head of the frame.
  */
-const southWindowSize = fit(N.window, 'y', 0.95);
 export const SOUTH_WINDOW = {
   x: -0.15,
-  y: 0.08,
-  z: SOUTH_Z - southWindowSize.sz * 0.22,
+  y: 0.96,
+  z: SOUTH_Z - windowSize.sz * 0.22,
   rotY: Math.PI,
   axis: 'y' as const,
-  meters: 0.95,
-  ...southWindowSize,
+  meters: 1.12,
+  ...windowSize,
 };
 
 /** Half-extents on the floor after rotation, for walking collision. */
