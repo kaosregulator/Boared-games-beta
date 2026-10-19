@@ -12,6 +12,8 @@ const LOOK = new THREE.Euler(0, 0, 0, 'YXZ');
 
 interface WalkControllerProps {
   enabled: boolean;
+  /** True once the player has stepped in. Movement does not require pointer lock. */
+  engaged: boolean;
   onLockChange?: (locked: boolean) => void;
   /** Fires when the player's footfall lands, for step audio. */
   onStep?: () => void;
@@ -25,14 +27,17 @@ interface WalkControllerProps {
  * pushing out along whichever axis has the smaller overlap so you slide along
  * the bed and the dresser instead of sticking to them.
  */
-export function WalkController({ enabled, onLockChange, onStep }: WalkControllerProps) {
-  const { camera } = useThree();
+export function WalkController({ enabled, engaged, onLockChange, onStep }: WalkControllerProps) {
+  const { camera, gl } = useThree();
   const keys = useRef<Record<string, boolean>>({});
   const controls = useRef<any>(null);
   const velocity = useRef(new THREE.Vector3());
   const bobPhase = useRef(0);
   const stepArmed = useRef(false);
   const eyeHeight = useRef(PLAYER.height);
+  const dragging = useRef(false);
+  const engagedRef = useRef(engaged);
+  engagedRef.current = engaged;
 
   useEffect(() => {
     camera.position.set(...PLAYER.spawn);
@@ -72,6 +77,39 @@ export function WalkController({ enabled, onLockChange, onStep }: WalkController
     };
   }, [onLockChange]);
 
+  useEffect(() => {
+    const canvas = gl.domElement;
+    const down = (event: PointerEvent) => {
+      if (event.button !== 0 || !engagedRef.current) return;
+      dragging.current = true;
+    };
+    const up = () => {
+      dragging.current = false;
+    };
+    const move = (event: PointerEvent) => {
+      if (!engagedRef.current || controls.current?.isLocked || !dragging.current) return;
+      LOOK.setFromQuaternion(camera.quaternion, 'YXZ');
+      LOOK.y -= event.movementX * 0.0022;
+      LOOK.x = THREE.MathUtils.clamp(LOOK.x - event.movementY * 0.0022, -1.15, 1.15);
+      LOOK.z = 0;
+      camera.quaternion.setFromEuler(LOOK);
+    };
+    const click = () => {
+      if (!engagedRef.current || controls.current?.isLocked) return;
+      controls.current?.lock();
+    };
+    canvas.addEventListener('pointerdown', down);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointermove', move);
+    canvas.addEventListener('click', click);
+    return () => {
+      canvas.removeEventListener('pointerdown', down);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointermove', move);
+      canvas.removeEventListener('click', click);
+    };
+  }, [camera, gl]);
+
   const resolve = useCallback((x: number, z: number, eye: number) => {
     const r = PLAYER.radius;
     let px = THREE.MathUtils.clamp(x, -WALL.halfWidth + r, WALL.halfWidth - r);
@@ -99,7 +137,7 @@ export function WalkController({ enabled, onLockChange, onStep }: WalkController
 
   useFrame((_, rawDelta) => {
     const delta = Math.min(rawDelta, 0.05);
-    if (!enabled || !controls.current?.isLocked) {
+    if (!enabled || !engagedRef.current) {
       velocity.current.multiplyScalar(0.8);
       return;
     }
@@ -117,10 +155,10 @@ export function WalkController({ enabled, onLockChange, onStep }: WalkController
     RIGHT.crossVectors(FORWARD, camera.up).normalize();
 
     WISH.set(0, 0, 0);
-    if (keys.current.KeyW || keys.current.ArrowUp) WISH.add(FORWARD);
-    if (keys.current.KeyS || keys.current.ArrowDown) WISH.sub(FORWARD);
-    if (keys.current.KeyD || keys.current.ArrowRight) WISH.add(RIGHT);
-    if (keys.current.KeyA || keys.current.ArrowLeft) WISH.sub(RIGHT);
+    if (keys.current.KeyW) WISH.add(FORWARD);
+    if (keys.current.KeyS) WISH.sub(FORWARD);
+    if (keys.current.KeyD) WISH.add(RIGHT);
+    if (keys.current.KeyA) WISH.sub(RIGHT);
     if (WISH.lengthSq() > 0) WISH.normalize().multiplyScalar(speed);
 
     velocity.current.x += (WISH.x - velocity.current.x) * Math.min(1, delta * PLAYER.accel);
@@ -152,6 +190,10 @@ export function WalkController({ enabled, onLockChange, onStep }: WalkController
     }
 
     LOOK.setFromQuaternion(camera.quaternion, 'YXZ');
+    if (keys.current.ArrowLeft) LOOK.y += 1.6 * delta;
+    if (keys.current.ArrowRight) LOOK.y -= 1.6 * delta;
+    if (keys.current.ArrowUp) LOOK.x += 1.2 * delta;
+    if (keys.current.ArrowDown) LOOK.x -= 1.2 * delta;
     LOOK.x = THREE.MathUtils.clamp(LOOK.x, -1.15, 1.15);
     LOOK.z = 0;
     camera.quaternion.setFromEuler(LOOK);
