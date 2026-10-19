@@ -11,6 +11,15 @@ import { LAYOUT } from './roomLayout';
 import { DESK_SLOTS, SHELF_SLOTS, SHELF_SLOTS_LOWER } from './videoRoom';
 import { MemoryFlashCard } from './MemoryFlashCard';
 import { propCardFor } from './propCards';
+import { DeviceFocus } from './DeviceFocus';
+import { DeviceOverlay } from './DeviceOverlay';
+import {
+  DEVICE_FROM_PROP,
+  FALLBACK_DEVICES,
+  loadDeviceManifest,
+  type DeviceId,
+  type DeviceManifest,
+} from './devices';
 import { RoomStudio } from './RoomStudio';
 import { ANCHORS, anchorById, type Anchor } from './anchors';
 import { deletePlacement, loadPlacements, savePlacement, type SavedPlacement } from './userPlacements';
@@ -90,7 +99,18 @@ export function WalkRoom({
   const [lampsWarm, setLampsWarm] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [cardOpen, setCardOpen] = useState(false);
+  const [device, setDevice] = useState<DeviceId | null>(null);
+  const [flashPhase, setFlashPhase] = useState<'idle' | 'cover' | 'reveal'>('idle');
+  const [manifest, setManifest] = useState<DeviceManifest>(FALLBACK_DEVICES);
+  const [tvIndex, setTvIndex] = useState(0);
+  const [stationIndex, setStationIndex] = useState(0);
+  const [radioOn, setRadioOn] = useState(false);
+  const [radioError, setRadioError] = useState<string | null>(null);
+  const [nesOn, setNesOn] = useState(false);
   const toastTimer = useRef<number | null>(null);
+  const flashTimers = useRef<number[]>([]);
+  const radioAudio = useRef<HTMLAudioElement | null>(null);
+  const blockSelect = useRef(false);
   const heavyStep = useRef(false);
   const pullTimer = useRef<number | null>(null);
 
@@ -106,9 +126,26 @@ export function WalkRoom({
     () => () => {
       if (toastTimer.current) window.clearTimeout(toastTimer.current);
       if (pullTimer.current) window.clearTimeout(pullTimer.current);
+      flashTimers.current.forEach(id => window.clearTimeout(id));
+      if (radioAudio.current) {
+        radioAudio.current.pause();
+        radioAudio.current.src = '';
+      }
     },
     [],
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    loadDeviceManifest().then(next => {
+      if (!cancelled) setManifest(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  blockSelect.current = flashPhase !== 'idle' || device !== null;
 
   useEffect(() => {
     let cancelled = false;
@@ -207,13 +244,14 @@ export function WalkRoom({
 
   // Auto-open the glass card when aiming at a game or memory prop in reach
   useEffect(() => {
+    if (device || flashPhase !== 'idle') return;
     if (!aimed?.inReach) {
       setCardOpen(false);
       return;
     }
     if (aimed.kind === 'game' || propCardFor(aimed.id)) setCardOpen(true);
     else setCardOpen(false);
-  }, [aimed]);
+  }, [aimed, device, flashPhase]);
 
   const onStep = useCallback(() => {
     heavyStep.current = !heavyStep.current;
@@ -236,8 +274,92 @@ export function WalkRoom({
     [flash, onSelectGame, pulledGameId],
   );
 
+  const runFlash = useCallback((apply: () => void) => {
+    flashTimers.current.forEach(id => window.clearTimeout(id));
+    flashTimers.current = [];
+    setFlashPhase('cover');
+    flashTimers.current.push(
+      window.setTimeout(() => {
+        apply();
+        setFlashPhase('reveal');
+        flashTimers.current.push(window.setTimeout(() => setFlashPhase('idle'), 300));
+      }, 150),
+    );
+  }, []);
+
+  const enterDevice = useCallback(
+    (id: DeviceId) => {
+      document.exitPointerLock?.();
+      setCardOpen(false);
+      if (id === 'boombox') sound.stopNostalgia();
+      sound.playButtonClick();
+      runFlash(() => setDevice(id));
+    },
+    [runFlash],
+  );
+
+  const exitDevice = useCallback(() => {
+    document.exitPointerLock?.();
+    runFlash(() => {
+      setDevice(null);
+      if (musicOn && !radioOn) sound.startNostalgia();
+    });
+  }, [musicOn, radioOn, runFlash]);
+
+  const tuneRadio = useCallback(
+    (index: number, play: boolean) => {
+      const station = manifest.radio[index];
+      setStationIndex(index);
+      setRadioError(null);
+      if (!station) return;
+      let audio = radioAudio.current;
+      if (!audio) {
+        audio = new Audio();
+        audio.crossOrigin = 'anonymous';
+        audio.volume = 0.7;
+        radioAudio.current = audio;
+      }
+      if (!play) {
+        audio.pause();
+        setRadioOn(false);
+        setTapeOn(false);
+        if (musicOn && engaged) sound.startNostalgia();
+        return;
+      }
+      sound.stopNostalgia();
+      if (audio.dataset.station !== station.id) {
+        audio.src = station.url;
+        audio.dataset.station = station.id;
+      }
+      audio
+        .play()
+        .then(() => {
+          setRadioOn(true);
+          setTapeOn(true);
+        })
+        .catch(() => {
+          setRadioOn(false);
+          setTapeOn(false);
+          setRadioError('That station did not answer. Try another.');
+        });
+    },
+    [engaged, manifest.radio, musicOn],
+  );
+
+  useEffect(() => {
+    if (!device) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      exitDevice();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [device, exitDevice]);
+
   const handleSelect = useCallback(
     (target: Aimed) => {
+      if (blockSelect.current) return;
       if (target.kind === 'game' && target.gameId) {
         const game = byId.get(target.gameId as GameId);
         if (!game) return;
@@ -251,21 +373,13 @@ export function WalkRoom({
         return;
       }
 
+      const leaned = DEVICE_FROM_PROP[target.id];
+      if (leaned) {
+        enterDevice(leaned);
+        return;
+      }
+
       switch (target.id) {
-        case 'crt-tv':
-          setCardOpen(true);
-          sound.playButtonClick();
-          break;
-        case 'boombox':
-          if (!cardOpen) {
-            setCardOpen(true);
-            sound.playButtonClick();
-            break;
-          }
-          sound.playButtonClick();
-          setTapeOn(on => !on);
-          flash(tapeOn ? 'Tape stopped' : 'Tape rolling');
-          break;
         case 'lava-lamp':
           sound.playButtonClick();
           setLampsWarm(w => !w);
@@ -286,7 +400,7 @@ export function WalkRoom({
           break;
       }
     },
-    [byId, cardOpen, flash, lampsWarm, playGame, tapeOn],
+    [byId, cardOpen, enterDevice, flash, lampsWarm, playGame],
   );
 
   const aimedGame =
@@ -330,6 +444,13 @@ export function WalkRoom({
           ghost={ghost}
           onPickAnchor={(anchor: Anchor) => setAnchorId(anchor.id)}
         />
+        <DeviceFocus
+          device={scripted ? null : device}
+          channel={manifest.tv[tvIndex] ?? null}
+          stationLabel={manifest.radio[stationIndex]?.freq ?? 'RADIO'}
+          radioOn={radioOn}
+          nesOn={nesOn}
+        />
         {override.capture && <CaptureClock />}
         {override.card && DEMO_POSE[override.card] ? (
           <DemoPose at={DEMO_POSE[override.card].at} look={DEMO_POSE[override.card].look} />
@@ -338,12 +459,12 @@ export function WalkRoom({
         ) : (
           <>
             <WalkController
-              enabled={!pulledGameId}
+              enabled={!pulledGameId && !device}
               engaged={engaged}
               onLockChange={setLocked}
               onStep={onStep}
             />
-            <ReachRaycaster enabled={engaged && !pulledGameId} onAim={setAimed} onSelect={handleSelect} />
+            <ReachRaycaster enabled={engaged && !pulledGameId && !device} onAim={setAimed} onSelect={handleSelect} />
           </>
         )}
       </Canvas>
@@ -354,7 +475,7 @@ export function WalkRoom({
         </div>
       )}
 
-      {engaged && (
+      {engaged && !device && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div
             className={`rounded-full border transition-all duration-150 ${
@@ -405,7 +526,7 @@ export function WalkRoom({
         onDelete={removePlaced}
       />
 
-      {showCard && (
+      {showCard && !device && (
         <div className="absolute right-4 top-1/2 -translate-y-1/2 z-30 sm:right-8">
           {cardGame ? (
             <MemoryFlashCard
@@ -424,22 +545,25 @@ export function WalkRoom({
               prop={cardProp}
               onClose={() => setCardOpen(false)}
               onAction={
-                cardProp.id === 'boombox'
-                  ? () => {
-                      setTapeOn(on => !on);
-                      flash(tapeOn ? 'Tape stopped' : 'Tape rolling');
-                    }
+                DEVICE_FROM_PROP[cardProp.id]
+                  ? () => enterDevice(DEVICE_FROM_PROP[cardProp.id])
                   : undefined
               }
               actionLabel={
-                cardProp.id === 'boombox' ? (tapeOn ? 'Stop the tape' : 'Press play') : undefined
+                cardProp.id === 'crt-tv'
+                  ? 'Turn it on'
+                  : cardProp.id === 'nes'
+                    ? 'Power on'
+                    : cardProp.id === 'boombox'
+                      ? 'Tune in'
+                      : undefined
               }
             />
           ) : null}
         </div>
       )}
 
-      {engaged && aimed && !showCard && (
+      {engaged && !device && aimed && !showCard && (
         <div className="pointer-events-none absolute left-1/2 top-[56%] -translate-x-1/2 text-center">
           <p className="font-display text-xl text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">{aimed.label}</p>
           <p className="text-[11px] uppercase tracking-[0.22em] text-amber-200/90 font-bold mt-1">
@@ -454,7 +578,7 @@ export function WalkRoom({
         </div>
       )}
 
-      {engaged && (
+      {engaged && !device && (
         <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-wrap items-center justify-center gap-2 text-[10px] uppercase tracking-[0.2em] font-bold text-white/70">
           {[
             ['W A S D', 'walk'],
@@ -470,6 +594,24 @@ export function WalkRoom({
           ))}
         </div>
       )}
+
+      {device && flashPhase !== 'cover' && (
+        <DeviceOverlay
+          device={device}
+          manifest={manifest}
+          tvIndex={tvIndex}
+          onTv={setTvIndex}
+          stationIndex={stationIndex}
+          radioOn={radioOn}
+          radioError={radioError}
+          onTune={tuneRadio}
+          nesOn={nesOn}
+          onNesPower={() => setNesOn(on => !on)}
+          onBack={exitDevice}
+        />
+      )}
+
+      {flashPhase !== 'idle' && <div className={`device-flash ${flashPhase}`} />}
 
       {!engaged && !scripted && !menuOpen && (
         <div className="absolute inset-x-0 bottom-0 z-20 flex justify-center p-4 sm:p-8 pointer-events-none">

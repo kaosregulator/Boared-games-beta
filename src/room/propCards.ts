@@ -35,7 +35,7 @@ export const PROP_CARDS: Record<string, PropCard> = {
     facts: [
       'Peak street culture icon of the late 70s through mid-80s.',
       'Dual cassette decks meant you could record radio or mix tapes.',
-      'Press play in this room to flip the ambient tape.',
+      'Lean in and the dial tunes a real station. SomaFM streams the sound.',
     ],
   },
   'crt-tv': {
@@ -47,7 +47,7 @@ export const PROP_CARDS: Record<string, PropCard> = {
     facts: [
       'CRTs ruled bedrooms until flat panels took over in the mid-2000s.',
       'The glowing PLAY graphic is the VCR’s pause between tapes.',
-      'Games are on the shelf — walk over and pull a box.',
+      'Lean in to turn the set on. Drop a tape in public/room/devices.json when you have one.',
     ],
   },
   bed: {
@@ -102,7 +102,7 @@ export const PROP_CARDS: Record<string, PropCard> = {
     blurb: 'The gray box that put the arcade on the carpet. Blow the cartridge, press Power, wait for the blink.',
     facts: [
       'The Nintendo Entertainment System launched in the US in October 1985.',
-      'The front-loader (NES-001) and its blinking red light defined a generation of after-school play.',
+      'Lean in and press Power. A tiny original game is waiting on the screen — not a dumped ROM.',
     ],
   },
   rubik: {
