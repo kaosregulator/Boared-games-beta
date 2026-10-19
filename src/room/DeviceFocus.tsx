@@ -1,8 +1,8 @@
-import React, { useLayoutEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { SafeRoomModel } from './RoomModel';
-import { nesPad, type DeviceId, type TvChannel } from './devices';
+import { nesPad, type DeviceId, type RadioStation, type TvChannel } from './devices';
 
 /** Parked above the bedroom so the walk camera can cut here without seeing the room. */
 const STUDIO_Y = 48;
@@ -13,7 +13,7 @@ const POSE: Record<
 > = {
   crt: { meters: 0.46, axis: 'x', fov: 26, at: [0, 0.26, 0.62], look: [0, 0.2, 0] },
   nes: { meters: 0.3, axis: 'x', fov: 34, at: [0, 0.34, 0.92], look: [0, 0.16, 0] },
-  boombox: { meters: 0.38, axis: 'x', fov: 28, at: [0, 0.2, 0.55], look: [0, 0.12, 0] },
+  boombox: { meters: 0.38, axis: 'x', fov: 32, at: [0, 0.15, 0.72], look: [0, 0.12, 0] },
 };
 
 interface DeviceFocusProps {
@@ -22,21 +22,58 @@ interface DeviceFocusProps {
   stationLabel: string;
   radioOn: boolean;
   nesOn: boolean;
+  stations: RadioStation[];
+  stationIndex: number;
+  radioVolume: number;
+  onTune: (index: number, play: boolean) => void;
+  onVolume: () => void;
 }
 
 /**
  * Smaller clone of the CRT, NES, or boombox, plus a close camera.
  * The meshes in the bedroom are left alone.
  */
-export function DeviceFocus({ device, channel, stationLabel, radioOn, nesOn }: DeviceFocusProps) {
+export function DeviceFocus({
+  device,
+  channel,
+  stationLabel,
+  radioOn,
+  nesOn,
+  stations,
+  stationIndex,
+  radioVolume,
+  onTune,
+  onVolume,
+}: DeviceFocusProps) {
   return (
     <>
       <FocusRig device={device} />
       {device && (
-        <Studio device={device} channel={channel} stationLabel={stationLabel} radioOn={radioOn} nesOn={nesOn} />
+        <Studio
+          device={device}
+          channel={channel}
+          stationLabel={stationLabel}
+          radioOn={radioOn}
+          nesOn={nesOn}
+          stations={stations}
+          stationIndex={stationIndex}
+          radioVolume={radioVolume}
+          onTune={onTune}
+          onVolume={onVolume}
+        />
       )}
     </>
   );
+}
+
+function applyPose(cam: THREE.PerspectiveCamera, device: DeviceId) {
+  const pose = POSE[device];
+  cam.position.set(pose.at[0], STUDIO_Y + pose.at[1], pose.at[2]);
+  cam.lookAt(pose.look[0], STUDIO_Y + pose.look[1], pose.look[2]);
+  if (cam.fov !== pose.fov) {
+    cam.fov = pose.fov;
+    cam.updateProjectionMatrix();
+  }
 }
 
 function FocusRig({ device }: { device: DeviceId | null }) {
@@ -49,11 +86,7 @@ function FocusRig({ device }: { device: DeviceId | null }) {
       if (!saved.current) {
         saved.current = { pos: cam.position.clone(), quat: cam.quaternion.clone(), fov: cam.fov };
       }
-      const pose = POSE[device];
-      cam.position.set(pose.at[0], STUDIO_Y + pose.at[1], pose.at[2]);
-      cam.lookAt(pose.look[0], STUDIO_Y + pose.look[1], pose.look[2]);
-      cam.fov = pose.fov;
-      cam.updateProjectionMatrix();
+      applyPose(cam, device);
       return;
     }
     if (!saved.current) return;
@@ -64,6 +97,13 @@ function FocusRig({ device }: { device: DeviceId | null }) {
     saved.current = null;
   }, [camera, device]);
 
+  // Hold the close-up every frame. The walk controller also writes the camera
+  // on mount, and a one-shot lookAt loses that race.
+  useFrame(() => {
+    if (!device) return;
+    applyPose(camera as THREE.PerspectiveCamera, device);
+  }, 1);
+
   return null;
 }
 
@@ -73,12 +113,22 @@ function Studio({
   stationLabel,
   radioOn,
   nesOn,
+  stations,
+  stationIndex,
+  radioVolume,
+  onTune,
+  onVolume,
 }: {
   device: DeviceId;
   channel: TvChannel | null;
   stationLabel: string;
   radioOn: boolean;
   nesOn: boolean;
+  stations: RadioStation[];
+  stationIndex: number;
+  radioVolume: number;
+  onTune: (index: number, play: boolean) => void;
+  onVolume: () => void;
 }) {
   const pose = POSE[device];
   return (
@@ -99,7 +149,19 @@ function Studio({
       />
       {device === 'crt' && channel && <CrtScreen channel={channel} />}
       {device === 'nes' && <NesScreen on={nesOn} />}
-      {device === 'boombox' && <RadioScreen label={stationLabel} on={radioOn} />}
+      {device === 'boombox' && (
+        <>
+          <RadioScreen label={stationLabel} on={radioOn} />
+          <RadioDeck
+            stations={stations}
+            stationIndex={stationIndex}
+            radioOn={radioOn}
+            radioVolume={radioVolume}
+            onTune={onTune}
+            onVolume={onVolume}
+          />
+        </>
+      )}
     </group>
   );
 }
@@ -330,9 +392,147 @@ function RadioScreen({ label, on }: { label: string; on: boolean }) {
   });
 
   return (
-    <mesh position={[0, 0.2, 0.102]}>
-      <planeGeometry args={[0.07, 0.026]} />
-      <meshBasicMaterial map={surface.texture} toneMapped={false} />
+    <mesh position={[0, 0.155, 0.11]}>
+      <planeGeometry args={[0.052, 0.015]} />
+      <meshBasicMaterial map={surface.texture} toneMapped={false} transparent opacity={0.92} />
     </mesh>
+  );
+}
+
+const PROJECT = new THREE.Vector3();
+
+/** A tiny button glued to a point on the close-up mesh. DOM, not a three object. */
+function RadioHotspot({
+  position,
+  label,
+  active,
+  onClick,
+}: {
+  position: [number, number, number];
+  label: string;
+  active?: boolean;
+  onClick: () => void;
+}) {
+  const { camera, gl } = useThree();
+  const button = useRef<HTMLButtonElement | null>(null);
+  const click = useRef(onClick);
+  click.current = onClick;
+  const spot = useRef(position);
+  spot.current = position;
+
+  useEffect(() => {
+    const host = gl.domElement.parentElement;
+    if (!host) return;
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.dataset.ui = 'radio';
+    el.style.position = 'absolute';
+    el.style.left = '0';
+    el.style.top = '0';
+    el.style.zIndex = '50';
+    el.addEventListener('click', event => {
+      event.stopPropagation();
+      click.current();
+    });
+    host.appendChild(el);
+    button.current = el;
+    return () => {
+      el.remove();
+      button.current = null;
+    };
+  }, [gl]);
+
+  useEffect(() => {
+    const el = button.current;
+    if (!el) return;
+    el.textContent = label;
+    el.className = `pointer-events-auto absolute left-0 top-0 z-50 rounded-md border px-1.5 py-1 text-[9px] font-bold uppercase leading-none tracking-wide shadow-md ${
+      active
+        ? 'border-amber-100 bg-amber-300 text-black'
+        : 'border-white/40 bg-black/75 text-white hover:bg-black/90'
+    }`;
+  }, [label, active]);
+
+  useFrame(() => {
+    const el = button.current;
+    if (!el) return;
+    const [x, y, z] = spot.current;
+    PROJECT.set(x, STUDIO_Y + y, z);
+    PROJECT.project(camera);
+    const width = gl.domElement.clientWidth;
+    const height = gl.domElement.clientHeight;
+    const sx = (PROJECT.x * 0.5 + 0.5) * width;
+    const sy = (-PROJECT.y * 0.5 + 0.5) * height;
+    el.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -50%)`;
+    el.style.visibility = PROJECT.z < 1 ? 'visible' : 'hidden';
+  });
+
+  return null;
+}
+
+/**
+ * Mini controls sitting on the boombox face: volume knob, power switch,
+ * the cassette-key row as station presets, and the tuning knob.
+ */
+function RadioDeck({
+  stations,
+  stationIndex,
+  radioOn,
+  radioVolume,
+  onTune,
+  onVolume,
+}: {
+  stations: RadioStation[];
+  stationIndex: number;
+  radioOn: boolean;
+  radioVolume: number;
+  onTune: (index: number, play: boolean) => void;
+  onVolume: () => void;
+}) {
+  const meters = POSE.boombox.meters;
+  const scale = meters / 0.98;
+  const sx = 0.98 * scale;
+  const sy = 0.661 * scale;
+  const sz = 0.477 * scale;
+  const z = sz * 0.5 + 0.01;
+  const spot = (across: number, up: number): [number, number, number] => [
+    across * sx * 0.5,
+    up * sy,
+    z,
+  ];
+  const presets = stations.slice(0, 4);
+  // Fitted local space: across -1..1 is the width, up 0..1 is the height
+  // including the antennas. Knobs sit under the handle; presets sit on the
+  // cassette-key row.
+  const presetX = [-0.16, -0.05, 0.06, 0.17];
+
+  return (
+    <group>
+      <RadioHotspot
+        position={spot(-0.72, 0.6)}
+        label={radioVolume >= 0.95 ? 'VOL+' : radioVolume <= 0.4 ? 'VOL-' : 'VOL'}
+        onClick={onVolume}
+      />
+      <RadioHotspot
+        position={spot(-0.5, 0.585)}
+        label={radioOn ? 'ON' : 'PWR'}
+        active={radioOn}
+        onClick={() => onTune(stationIndex, !radioOn)}
+      />
+      {presets.map((station, index) => (
+        <RadioHotspot
+          key={station.id}
+          position={spot(presetX[index] ?? 0, 0.22)}
+          label={station.freq}
+          active={radioOn && index === stationIndex}
+          onClick={() => onTune(index, true)}
+        />
+      ))}
+      <RadioHotspot
+        position={spot(0.71, 0.6)}
+        label="TUNE"
+        onClick={() => onTune((stationIndex + 1) % Math.max(stations.length, 1), true)}
+      />
+    </group>
   );
 }

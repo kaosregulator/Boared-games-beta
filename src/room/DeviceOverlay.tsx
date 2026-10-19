@@ -1,15 +1,12 @@
 import React, { useEffect } from 'react';
-import { nesPad, youtubeId, type DeviceId, type DeviceManifest, type RadioStation, type TvChannel } from './devices';
+import { nesPad, youtubeId, type DeviceId, type DeviceManifest, type TvChannel } from './devices';
 
 interface DeviceOverlayProps {
   device: DeviceId;
   manifest: DeviceManifest;
   tvIndex: number;
   onTv: (index: number) => void;
-  stationIndex: number;
-  radioOn: boolean;
   radioError: string | null;
-  onTune: (index: number, play: boolean) => void;
   nesOn: boolean;
   onNesPower: () => void;
   onBack: () => void;
@@ -27,16 +24,12 @@ export function DeviceOverlay({
   manifest,
   tvIndex,
   onTv,
-  stationIndex,
-  radioOn,
   radioError,
-  onTune,
   nesOn,
   onNesPower,
   onBack,
 }: DeviceOverlayProps) {
   const channel: TvChannel | undefined = manifest.tv[tvIndex];
-  const station: RadioStation | undefined = manifest.radio[stationIndex];
   const embed = channel?.kind === 'youtube' && channel.url ? youtubeId(channel.url) : null;
 
   useEffect(() => {
@@ -63,6 +56,25 @@ export function DeviceOverlay({
     };
   }, [device, nesOn]);
 
+  if (device === 'boombox') {
+    return (
+      <div data-ui="device" className="pointer-events-none absolute inset-0 z-40">
+        <button
+          type="button"
+          onClick={onBack}
+          className="pointer-events-auto absolute right-4 top-4 rounded-xl border border-white/20 bg-black/60 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-white hover:bg-black/80"
+        >
+          Step back
+        </button>
+        {radioError && (
+          <p className="pointer-events-none absolute left-1/2 top-16 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-xs text-rose-200">
+            {radioError}
+          </p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div data-ui="device" className="absolute inset-0 z-40 pointer-events-none">
       {embed && (
@@ -85,7 +97,6 @@ export function DeviceOverlay({
               <p className="font-display text-2xl leading-none mt-1">
                 {device === 'crt' && (channel?.name ?? 'No signal')}
                 {device === 'nes' && (nesOn ? 'Power on' : 'Power off')}
-                {device === 'boombox' && (radioOn && station ? station.freq : '— — —')}
               </p>
             </div>
             <button
@@ -116,41 +127,6 @@ export function DeviceOverlay({
               <p className="w-full text-[11px] text-white/50 mt-1">
                 Add a tape in public/room/devices.json — kind video or youtube.
               </p>
-            </div>
-          )}
-
-          {device === 'boombox' && (
-            <div className="mt-3">
-              <div className="flex flex-wrap gap-2">
-                {manifest.radio.map((row, index) => (
-                  <button
-                    key={row.id}
-                    type="button"
-                    onClick={() => onTune(index, true)}
-                    className={`rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] border ${
-                      index === stationIndex && radioOn
-                        ? 'border-fuchsia-300 bg-fuchsia-400/20 text-fuchsia-100'
-                        : 'border-white/15 bg-black/40 text-white/80 hover:bg-white/10'
-                    }`}
-                  >
-                    {row.freq} {row.name}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-3 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => onTune(stationIndex, !radioOn)}
-                  className="rounded-xl bg-gradient-to-r from-fuchsia-600 to-amber-500 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em]"
-                >
-                  {radioOn ? 'Stop' : 'Start radio'}
-                </button>
-                {station && radioOn && (
-                  <span className="text-sm text-amber-100">{station.name}</span>
-                )}
-              </div>
-              {radioError && <p className="mt-2 text-xs text-rose-300">{radioError}</p>}
-              <p className="mt-2 text-[11px] text-white/50">{manifest.credit}</p>
             </div>
           )}
 

@@ -576,7 +576,7 @@ export function RealRoomScene({
       </Suspense>
       <MountedShelf shelf={WALL_SHELF} />
       <pointLight
-        position={[LAYOUT.teddy.x + 0.2, 2.05, LAYOUT.teddy.z - 1.35]}
+        position={[LAYOUT.teddy.x + 0.2, LAYOUT.teddy.y + 0.35, LAYOUT.teddy.z - 1.35]}
         color="#ffd0a8"
         intensity={2.3}
         distance={6.8}

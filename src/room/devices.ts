@@ -94,6 +94,15 @@ export async function loadDeviceManifest(): Promise<DeviceManifest> {
   }
 }
 
+/** SomaFM publishes the same mount on several Icecast hosts. Try each if one refuses. */
+export function streamMirrors(url: string): string[] {
+  const match = url.match(/^https:\/\/ice\d+\.somafm\.com\/(.+)$/);
+  if (!match) return [url];
+  const file = match[1];
+  const urls = ['ice1', 'ice2', 'ice4', 'ice6'].map(host => `https://${host}.somafm.com/${file}`);
+  return urls.includes(url) ? urls : [url, ...urls];
+}
+
 export function youtubeId(url: string): string | null {
   if (/^[\w-]{11}$/.test(url)) return url;
   const match = url.match(/(?:v=|youtu\.be\/|embed\/)([\w-]{11})/);

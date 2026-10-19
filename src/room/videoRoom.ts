@@ -12,10 +12,15 @@ import { GameId } from '../types';
  * textures.
  */
 
+/**
+ * Shell on a 0.25m grid. Furniture keeps its own size; the room grows
+ * around it instead of stretching every mesh to fit.
+ * 6.00m wide, 5.50m deep, 3.25m tall.
+ */
 export const WALL = {
-  halfWidth: 2.98,
-  halfDepth: 2.52,
-  height: 2.76,
+  halfWidth: 3,
+  halfDepth: 2.75,
+  height: 3.25,
 };
 
 export const NORTH_Z = -WALL.halfDepth;
