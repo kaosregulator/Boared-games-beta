@@ -6,6 +6,7 @@ interface RoomStudioProps {
   open: boolean;
   mood: RoomMood;
   music: boolean;
+  musicVolume: number;
   placing: boolean;
   placeName: string;
   anchorId: string;
@@ -16,6 +17,7 @@ interface RoomStudioProps {
   onClose: () => void;
   onMood: (mood: RoomMood) => void;
   onMusic: (on: boolean) => void;
+  onMusicVolume: (volume: number) => void;
   onFile: (file: File) => void;
   onAnchor: (id: string) => void;
   onHeight: (n: number) => void;
@@ -54,8 +56,21 @@ export function RoomStudio(props: RoomStudioProps) {
         </label>
 
         <label className="flex items-center justify-between gap-3 rounded-xl bg-black/30 border border-white/10 px-3 py-2">
-          <span>Nostalgia music</span>
+          <span>Bedroom music</span>
           <input type="checkbox" checked={props.music} onChange={e => props.onMusic(e.target.checked)} />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-[10px] uppercase tracking-[0.18em] text-white/50 font-bold">
+            Volume {Math.round(props.musicVolume * 100)}
+          </span>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={props.musicVolume}
+            onChange={e => props.onMusicVolume(Number(e.target.value))}
+          />
         </label>
 
         <label className="flex flex-col gap-1">

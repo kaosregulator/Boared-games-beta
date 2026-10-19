@@ -17,6 +17,7 @@ import type { HoverTarget } from './Interactable';
 import { SafeRoomModel } from './RoomModel';
 import type { GameMetadata } from '../types';
 import { LAYOUT, SOUTH_WINDOW, WALL_SHELF } from './roomLayout';
+import { PlayTable, type TableGameId } from './table/TablePlay';
 import { ANCHORS, type Anchor } from './anchors';
 import { DynamicModel } from './UserProps';
 import { MOODS, type RoomMood } from './moods';
@@ -167,6 +168,105 @@ function NightCity() {
   return (
     <mesh position={[w.x, w.y + w.sy * 0.46, NORTH_Z - 0.05]}>
       <planeGeometry args={[w.sx * 0.78, w.sy * 0.72]} />
+      <meshBasicMaterial map={tex.current ?? undefined} />
+    </mesh>
+  );
+}
+
+/** Trees and small houses outside the south window. */
+function paintSouthYard(ctx: CanvasRenderingContext2D, time: number) {
+  const sky = ctx.createLinearGradient(0, 0, 0, 512);
+  sky.addColorStop(0, '#1a2048');
+  sky.addColorStop(0.42, '#6a4a78');
+  sky.addColorStop(0.7, '#c47a62');
+  sky.addColorStop(1, '#2a3a28');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, 512, 512);
+  for (let i = 0; i < 40; i += 1) {
+    ctx.fillStyle = `rgba(255,255,255,${0.35 + ((i * 13) % 8) / 20})`;
+    ctx.fillRect((i * 89) % 512, (i * 41) % 180, 1.6, 1.6);
+  }
+  const houses = [
+    { x: 36, w: 70, h: 90 },
+    { x: 130, w: 88, h: 130 },
+    { x: 250, w: 64, h: 100 },
+    { x: 340, w: 96, h: 150 },
+    { x: 450, w: 48, h: 80 },
+  ];
+  houses.forEach((house, hi) => {
+    ctx.fillStyle = hi % 2 === 0 ? '#2a241c' : '#3a2c28';
+    ctx.fillRect(house.x, 360 - house.h, house.w, house.h);
+    ctx.fillStyle = '#5a3030';
+    ctx.beginPath();
+    ctx.moveTo(house.x - 6, 360 - house.h);
+    ctx.lineTo(house.x + house.w / 2, 360 - house.h - 28);
+    ctx.lineTo(house.x + house.w + 6, 360 - house.h);
+    ctx.fill();
+    for (let row = 0; row < 3; row += 1) {
+      for (let col = 0; col < 2; col += 1) {
+        const phase = Math.sin(time * 1.6 + hi + row + col);
+        ctx.fillStyle = phase > -0.2 ? '#ffd27a' : '#3a3020';
+        ctx.fillRect(house.x + 12 + col * (house.w * 0.4), 360 - house.h + 18 + row * 28, 10, 14);
+      }
+    }
+  });
+  ctx.fillStyle = '#1a3a22';
+  ctx.fillRect(0, 360, 512, 152);
+  const trees = [28, 96, 168, 230, 300, 370, 440, 490];
+  trees.forEach((x, i) => {
+    const h = 90 + (i % 3) * 28;
+    ctx.fillStyle = '#3a2a18';
+    ctx.fillRect(x - 4, 360 - h * 0.35, 8, h * 0.4);
+    ctx.fillStyle = i % 2 === 0 ? '#1e5a32' : '#246b3a';
+    ctx.beginPath();
+    ctx.moveTo(x, 360 - h);
+    ctx.lineTo(x - 34 - (i % 3) * 6, 368);
+    ctx.lineTo(x + 34 + (i % 3) * 6, 368);
+    ctx.fill();
+    ctx.fillStyle = '#2f8a48';
+    ctx.beginPath();
+    ctx.moveTo(x, 348 - h);
+    ctx.lineTo(x - 22, 360 - h * 0.45);
+    ctx.lineTo(x + 22, 360 - h * 0.45);
+    ctx.fill();
+  });
+}
+
+function SouthYard() {
+  const tex = useRef<THREE.CanvasTexture | null>(null);
+  if (!tex.current) {
+    const c = document.createElement('canvas');
+    c.width = 512;
+    c.height = 512;
+    const ctx = c.getContext('2d');
+    if (ctx) paintSouthYard(ctx, 0);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    tex.current = t;
+  }
+  const redraw = useRef(0);
+  useFrame(({ clock }, delta) => {
+    redraw.current += delta;
+    if (redraw.current < 0.5) return;
+    redraw.current = 0;
+    const t = tex.current;
+    const c = t?.image as HTMLCanvasElement | undefined;
+    const ctx = c?.getContext('2d');
+    if (!t || !ctx) return;
+    paintSouthYard(ctx, clock.elapsedTime);
+    t.needsUpdate = true;
+  });
+  // Sit in the opening, in front of the closed blinds, so the yard is what you see.
+  return (
+    <mesh
+      position={[
+        SOUTH_WINDOW.x,
+        SOUTH_WINDOW.y + SOUTH_WINDOW.sy * 0.44,
+        SOUTH_WINDOW.z - SOUTH_WINDOW.sz * 0.28,
+      ]}
+      rotation={[0, Math.PI, 0]}
+    >
+      <planeGeometry args={[SOUTH_WINDOW.sx * 0.78, SOUTH_WINDOW.sy * 0.58]} />
       <meshBasicMaterial map={tex.current ?? undefined} />
     </mesh>
   );
@@ -345,14 +445,15 @@ const SPINE_COLOR: Record<string, { color: string; accent: string }> = {
   casino: { color: '#0e3b32', accent: '#d4ffe8' },
 };
 
-/** Painted shelf order, then whatever else is in the catalog. */
+/**
+ * These already have a box you can walk up to and play. They stay off every
+ * shelf so the lit bookcase behind them can show its bulbs.
+ */
+const FLOOR_BOX_GAMES = new Set(['monopoly', 'battleship', 'clue', 'life', 'yahtzee']);
+
+/** Games that still need a box, in the order they sit on the crate shelf. */
 const SHELF_ORDER = [
-  'monopoly',
-  'battleship',
   'pawnrush',
-  'clue',
-  'life',
-  'yahtzee',
   'chess',
   'connect4',
   'checkers',
@@ -425,7 +526,8 @@ function ShelfBox({
   const map = useMemo(() => spineTexture(slot.title, slot.color, slot.accent), [slot.title, slot.color, slot.accent]);
   useFrame((_, delta) => {
     if (!group.current) return;
-    const want = pulled ? 0.08 : hovered ? 0.04 : 0;
+    // Local -Z faces the room, so a pull slides the box toward the player.
+    const want = pulled ? -0.07 : hovered ? -0.03 : 0;
     group.current.position.z += (position[2] + want - group.current.position.z) * Math.min(1, delta * 10);
   });
   return (
@@ -434,7 +536,7 @@ function ShelfBox({
         <boxGeometry args={size} />
         <meshStandardMaterial color={slot.color} roughness={0.7} metalness={0} />
       </mesh>
-      <mesh position={[0, 0, size[2] / 2 + 0.004]}>
+      <mesh position={[0, 0, -(size[2] / 2 + 0.004)]} rotation={[0, Math.PI, 0]}>
         <planeGeometry args={[size[0] * 0.9, size[1] * 0.9]} />
         <meshBasicMaterial map={map} />
       </mesh>
@@ -442,7 +544,39 @@ function ShelfBox({
   );
 }
 
-function GameShelf({
+function shelfSlots(games: GameMetadata[]) {
+  const byId = new Map(games.map(game => [game.id, game]));
+  const ordered = [
+    ...SHELF_ORDER.filter(id => byId.has(id as GameMetadata['id'])).map(id => byId.get(id as GameMetadata['id'])!),
+    ...games.filter(game => !FLOOR_BOX_GAMES.has(game.id) && !SHELF_ORDER.includes(game.id)),
+  ];
+  return ordered.map(game => {
+    const paint = SPINE_COLOR[game.id] ?? { color: '#5c3d2e', accent: '#f6ead0' };
+    return {
+      id: game.id,
+      spine: null,
+      title: game.title,
+      row: 0,
+      boxHeight: 0.16,
+      color: paint.color,
+      accent: paint.accent,
+    } satisfies ShelfSlot;
+  });
+}
+
+/** The original bookcase stays empty so the string lights around it stay visible. */
+function GameShelf() {
+  const { shelf } = LAYOUT;
+  return (
+    <group position={[shelf.x, 0, shelf.z]}>
+      <SafeRoomModel id="shelf" position={[0, 0, 0]} axis="y" meters={shelf.meters} tintAmount={0} />
+      <pointLight position={[0, shelf.sy * 0.92, 0.55]} color="#ffdf6e" intensity={1.6} distance={3.2} decay={2} />
+    </group>
+  );
+}
+
+/** Games without a floor box, on the crate the player brought in. */
+function CrateShelf({
   hoveredId,
   pulledId,
   games,
@@ -451,55 +585,29 @@ function GameShelf({
   pulledId: string | null;
   games: GameMetadata[];
 }) {
-  const { shelf } = LAYOUT;
-  const slots = useMemo(() => {
-    const byId = new Map(games.map(game => [game.id, game]));
-    const ordered = [
-      ...SHELF_ORDER.filter(id => byId.has(id as GameMetadata['id'])).map(id => byId.get(id as GameMetadata['id'])!),
-      ...games.filter(game => !SHELF_ORDER.includes(game.id)),
-    ];
-    return ordered.map(game => {
-      const paint = SPINE_COLOR[game.id] ?? { color: '#5c3d2e', accent: '#f6ead0' };
-      return {
-        id: game.id,
-        spine: null,
-        title: game.title,
-        row: 0,
-        boxHeight: 0.16,
-        color: paint.color,
-        accent: paint.accent,
-      } satisfies ShelfSlot;
-    });
-  }, [games]);
-  const columns = 2;
-  const rows = Math.max(1, Math.ceil(slots.length / columns));
-  const colW = (shelf.sx * 0.9) / columns;
-  const rowH = (shelf.sy * 0.88) / rows;
-  const faceZ = shelf.sz * 0.5 + 0.06;
+  const crate = LAYOUT.crate;
+  const slots = useMemo(() => shelfSlots(games), [games]);
+  const height = 0.14;
+  const width = Math.min(0.1, (crate.sx * 0.9) / Math.max(slots.length, 1));
+  const depth = 0.05;
   return (
-    <group position={[shelf.x, 0, shelf.z]}>
-      <SafeRoomModel id="shelf" position={[0, 0, 0]} axis="y" meters={shelf.meters} tintAmount={0} />
-      {slots.map((slot, index) => {
-        const column = Math.floor(index / rows);
-        const row = index % rows;
-        const width = Math.max(0.12, colW * 0.86);
-        const height = Math.max(0.1, rowH * 0.78);
-        return (
-          <ShelfBox
-            key={slot.id}
-            slot={slot}
-            position={[
-              -shelf.sx * 0.45 + colW * (column + 0.5),
-              shelf.sy * 0.94 - rowH * (row + 0.5),
-              faceZ,
-            ]}
-            size={[width, height, 0.08]}
-            hovered={hoveredId === `game:${slot.id}`}
-            pulled={pulledId === slot.id}
-          />
-        );
-      })}
-      <pointLight position={[0, shelf.sy * 0.92, 0.55]} color="#ffdf6e" intensity={1.6} distance={3.2} decay={2} />
+    <group position={[crate.x, 0, crate.z]} rotation={[0, crate.rotY, 0]}>
+      <SafeRoomModel id="crate" position={[0, 0, 0]} axis="x" meters={crate.meters} tintAmount={0} />
+      {slots.map((slot, index) => (
+        <ShelfBox
+          key={slot.id}
+          slot={slot}
+          position={[
+            (index - (slots.length - 1) / 2) * (width + 0.008),
+            crate.sy + height / 2,
+            -crate.sz * 0.22,
+          ]}
+          size={[width, height, depth]}
+          hovered={hoveredId === `game:${slot.id}`}
+          pulled={pulledId === slot.id}
+        />
+      ))}
+      <pointLight position={[0, crate.sy + 0.35, -0.35]} color="#ffd9a0" intensity={0.85} distance={2.4} decay={2} />
     </group>
   );
 }
@@ -545,6 +653,8 @@ export interface RealRoomSceneProps {
   ghost?: { url: string; anchor: Anchor; height: number; lift: number; shadow: boolean } | null;
   onPickAnchor?: (anchor: Anchor) => void;
   games: GameMetadata[];
+  tableGame?: TableGameId | null;
+  onLeaveTable?: () => void;
 }
 
 /**
@@ -561,6 +671,8 @@ export function RealRoomScene({
   ghost = null,
   onPickAnchor,
   games,
+  tableGame = null,
+  onLeaveTable,
 }: RealRoomSceneProps) {
   const lights = MOODS[mood];
   return (
@@ -608,13 +720,7 @@ export function RealRoomScene({
         meters={SOUTH_WINDOW.meters}
         tintAmount={0}
       />
-      <mesh
-        position={[SOUTH_WINDOW.x, SOUTH_WINDOW.y + SOUTH_WINDOW.sy * 0.48, SOUTH_Z - 0.04]}
-        rotation={[0, Math.PI, 0]}
-      >
-        <planeGeometry args={[SOUTH_WINDOW.sx * 0.7, SOUTH_WINDOW.sy * 0.58]} />
-        <meshBasicMaterial color="#1a2744" />
-      </mesh>
+      <SouthYard />
       <pointLight
         position={[SOUTH_WINDOW.x, SOUTH_WINDOW.y + SOUTH_WINDOW.sy * 0.4, SOUTH_WINDOW.z - 0.55]}
         color="#9eb6d8"
@@ -690,7 +796,10 @@ export function RealRoomScene({
         decay={2}
       />
 
-      <GameShelf hoveredId={hoveredId} pulledId={pulledGameId} games={games} />
+      <GameShelf />
+      <CrateShelf hoveredId={hoveredId} pulledId={pulledGameId} games={games} />
+      <PlacedModel id="beanbag" hoveredId={hoveredId} />
+      <PlayTable game={tableGame} onLeave={onLeaveTable ?? (() => {})} />
       <BulbFlicker position={[LAYOUT.shelf.x + 0.55, 1.85, LAYOUT.shelf.z + 0.28]} color="#ffd27a" base={0.42} seed={1.2} />
       <BulbFlicker position={[LAYOUT.shelf.x + 0.58, 1.35, LAYOUT.shelf.z + 0.3]} color="#ffb45a" base={0.34} seed={2.4} />
       <BulbFlicker position={[LAYOUT.shelf.x + 0.52, 0.85, LAYOUT.shelf.z + 0.26]} color="#ffe08a" base={0.3} seed={3.1} />
