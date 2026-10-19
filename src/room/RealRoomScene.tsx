@@ -16,7 +16,7 @@ import { ceilingTexture, floorTexture, rugTexture, wallTexture } from './procTex
 import type { HoverTarget } from './Interactable';
 import { SafeRoomModel } from './RoomModel';
 import type { GameMetadata } from '../types';
-import { LAYOUT, WALL_SHELF } from './roomLayout';
+import { LAYOUT, SOUTH_WINDOW, WALL_SHELF } from './roomLayout';
 import { ANCHORS, type Anchor } from './anchors';
 import { DynamicModel } from './UserProps';
 import { MOODS, type RoomMood } from './moods';
@@ -599,6 +599,29 @@ export function RealRoomScene({
         distance={3.6}
         decay={2}
       />
+      {/* Same window mesh, cloned under the south wall shelf. */}
+      <SafeRoomModel
+        id="window"
+        position={[SOUTH_WINDOW.x, SOUTH_WINDOW.y, SOUTH_WINDOW.z]}
+        rotation={[0, SOUTH_WINDOW.rotY, 0]}
+        axis={SOUTH_WINDOW.axis}
+        meters={SOUTH_WINDOW.meters}
+        tintAmount={0}
+      />
+      <mesh
+        position={[SOUTH_WINDOW.x, SOUTH_WINDOW.y + SOUTH_WINDOW.sy * 0.48, SOUTH_Z - 0.04]}
+        rotation={[0, Math.PI, 0]}
+      >
+        <planeGeometry args={[SOUTH_WINDOW.sx * 0.7, SOUTH_WINDOW.sy * 0.58]} />
+        <meshBasicMaterial color="#1a2744" />
+      </mesh>
+      <pointLight
+        position={[SOUTH_WINDOW.x, SOUTH_WINDOW.y + SOUTH_WINDOW.sy * 0.4, SOUTH_WINDOW.z - 0.55]}
+        color="#9eb6d8"
+        intensity={0.55}
+        distance={2.4}
+        decay={2}
+      />
 
       <PlacedModel
         id="bed"
@@ -636,7 +659,7 @@ export function RealRoomScene({
       <PlacedModel
         id="crt"
         hoveredId={hoveredId}
-        interactable={{ id: 'crt-tv', kind: 'prop', label: 'CRT television', hint: 'Open memory · flat list' }}
+        interactable={{ id: 'crt-tv', kind: 'prop', label: 'CRT television', hint: 'Lean in' }}
       />
       <PlacedModel
         id="door"
@@ -647,7 +670,7 @@ export function RealRoomScene({
       <PlacedModel
         id="nes"
         hoveredId={hoveredId}
-        interactable={{ id: 'nes', kind: 'prop', label: 'NES', hint: 'Open memory card' }}
+        interactable={{ id: 'nes', kind: 'prop', label: 'NES', hint: 'Lean in' }}
       />
       <PlacedModel
         id="armor"
@@ -735,7 +758,7 @@ export function RealRoomScene({
           id: 'boombox',
           kind: 'prop',
           label: 'Boombox',
-          hint: tapeOn ? 'Stop tape · card' : 'Play tape · card',
+          hint: tapeOn ? 'Radio on · lean in' : 'Lean in',
         }}
       />
       {tapeOn && (

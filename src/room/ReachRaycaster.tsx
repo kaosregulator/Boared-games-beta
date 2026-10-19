@@ -38,8 +38,10 @@ export function ReachRaycaster({ enabled, onAim, onSelect }: ReachRaycasterProps
   const lastKey = useRef<string | null>(null);
 
   useEffect(() => {
-    const click = () => {
+    const click = (event: MouseEvent) => {
       if (!enabled) return;
+      const el = event.target as HTMLElement | null;
+      if (el?.closest('button, a, input, select, textarea, [data-ui]')) return;
       const aimed = current.current;
       if (aimed?.inReach) onSelect(aimed);
     };

@@ -38,6 +38,8 @@ export function WalkController({ enabled, engaged, onLockChange, onStep }: WalkC
   const dragging = useRef(false);
   const engagedRef = useRef(engaged);
   engagedRef.current = engaged;
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
 
   useEffect(() => {
     camera.position.set(...PLAYER.spawn);
@@ -80,14 +82,14 @@ export function WalkController({ enabled, engaged, onLockChange, onStep }: WalkC
   useEffect(() => {
     const canvas = gl.domElement;
     const down = (event: PointerEvent) => {
-      if (event.button !== 0 || !engagedRef.current) return;
+      if (event.button !== 0 || !enabledRef.current || !engagedRef.current) return;
       dragging.current = true;
     };
     const up = () => {
       dragging.current = false;
     };
     const move = (event: PointerEvent) => {
-      if (!engagedRef.current || controls.current?.isLocked || !dragging.current) return;
+      if (!enabledRef.current || !engagedRef.current || controls.current?.isLocked || !dragging.current) return;
       LOOK.setFromQuaternion(camera.quaternion, 'YXZ');
       LOOK.y -= event.movementX * 0.0022;
       LOOK.x = THREE.MathUtils.clamp(LOOK.x - event.movementY * 0.0022, -1.15, 1.15);
@@ -95,7 +97,7 @@ export function WalkController({ enabled, engaged, onLockChange, onStep }: WalkC
       camera.quaternion.setFromEuler(LOOK);
     };
     const click = () => {
-      if (!engagedRef.current || controls.current?.isLocked) return;
+      if (!enabledRef.current || !engagedRef.current || controls.current?.isLocked) return;
       controls.current?.lock();
     };
     canvas.addEventListener('pointerdown', down);
@@ -138,6 +140,7 @@ export function WalkController({ enabled, engaged, onLockChange, onStep }: WalkC
   useFrame((_, rawDelta) => {
     const delta = Math.min(rawDelta, 0.05);
     if (!enabled || !engagedRef.current) {
+      dragging.current = false;
       velocity.current.multiplyScalar(0.8);
       return;
     }

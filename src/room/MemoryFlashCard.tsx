@@ -51,6 +51,7 @@ export type MemoryFlashCardProps = GameCardProps | PropCardProps;
 export function MemoryFlashCard(props: MemoryFlashCardProps) {
   return (
     <div
+      data-ui="card"
       className="pointer-events-auto w-[min(22rem,calc(100vw-2rem))] rounded-3xl border border-white/35 bg-white/10 shadow-[0_24px_70px_rgba(0,0,0,0.35)] backdrop-blur-2xl text-white overflow-hidden"
       onClick={e => e.stopPropagation()}
     >
