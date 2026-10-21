@@ -47,7 +47,7 @@ export const PROP_CARDS: Record<string, PropCard> = {
     facts: [
       'CRTs ruled bedrooms until flat panels took over in the mid-2000s.',
       'The glowing PLAY graphic is the VCR’s pause between tapes.',
-      'Lean in to turn the set on. Drop a tape in public/room/devices.json when you have one.',
+      'Lean in to turn it on: SNICK on channel 2, a cartoon on every channel after, or the NES.',
     ],
   },
   bed: {

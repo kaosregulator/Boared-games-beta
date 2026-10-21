@@ -13,16 +13,17 @@ import { MemoryFlashCard } from './MemoryFlashCard';
 import { propCardFor } from './propCards';
 import { DeviceFocus } from './DeviceFocus';
 import { DeviceOverlay } from './DeviceOverlay';
-import {
-  DEVICE_FROM_PROP,
-  FALLBACK_DEVICES,
-  loadDeviceManifest,
-  streamMirrors,
-  type DeviceId,
-  type DeviceManifest,
-} from './devices';
+import { TvGlass } from '../tv/TvSet';
+import { IntroCard } from './IntroCard';
+import { neonGames } from './NeonGameWall';
+import { GameBoySeat } from '../devices/GameBoySeat';
+import { GameBoyGlass } from '../devices/GameBoyGlass';
+import { DEVICE_FROM_PROP, type DeviceId } from './devices';
+import { radio, useRadio } from '../radio/radioEngine';
 import { RoomStudio } from './RoomStudio';
-import { TableHudOverlay, type TableGameId } from './table/TablePlay';
+import { TABLE_GAMES, TableHudOverlay, type TableSession } from './table/TablePlay';
+import { walkRig } from './WalkController';
+import { TABLE_SEAT } from './roomLayout';
 import { ANCHORS, anchorById, type Anchor } from './anchors';
 import { deletePlacement, loadPlacements, savePlacement, type SavedPlacement } from './userPlacements';
 import type { RoomMood } from './moods';
@@ -32,15 +33,25 @@ import type { RoomMood } from './moods';
  * camera on tour waypoint N. Both skip pointer lock so the room can be captured
  * and reviewed without a mouse.
  */
+/** `?cam=x,y,z,lx,ly,lz` parks the camera anywhere, for capture scripts. */
+function parseCam(raw: string | null) {
+  if (!raw) return null;
+  const n = raw.split(',').map(Number);
+  if (n.length !== 6 || n.some(v => !Number.isFinite(v))) return null;
+  return { at: [n[0], n[1], n[2]] as [number, number, number], look: [n[3], n[4], n[5]] as [number, number, number] };
+}
+
 function readCameraOverride() {
   if (typeof window === 'undefined') {
     return {
       tour: false,
       shot: undefined as number | undefined,
       card: null as string | null,
+      cam: null as { at: [number, number, number]; look: [number, number, number] } | null,
       menu: false,
       capture: false,
       device: null as DeviceId | null,
+      seat: false,
     };
   }
   const params = new URLSearchParams(window.location.search);
@@ -52,9 +63,11 @@ function readCameraOverride() {
     tour: params.has('tour'),
     shot: shotRaw === null ? undefined : Number.parseInt(shotRaw, 10) || 0,
     card: params.get('card'),
+    cam: parseCam(params.get('cam')),
     menu: params.has('menu'),
     capture: params.has('capture'),
     device,
+    seat: params.get('seat') === 'gameboy',
   };
 }
 
@@ -79,32 +92,45 @@ function DemoPose({ at, look }: { at: [number, number, number]; look: [number, n
 
 interface WalkRoomProps {
   games: GameMetadata[];
-  onSelectGame: (game: GameMetadata) => void;
+  /** A game's own 2D board, shown over the room once its box is open on the table. */
+  overlayGame: GameMetadata | null;
+  onOpenBoard: (game: GameMetadata) => void;
   onOpenRulesForGame?: (game: GameMetadata) => void;
 }
 
 const ALL_SLOTS = [...SHELF_SLOTS, ...SHELF_SLOTS_LOWER, ...DESK_SLOTS];
 
-function tableFromQuery(): TableGameId | null {
+/**
+ * `?game=monopoly|connect4|battleship`, or `?play=<any game id>`, starts at
+ * the table with the box unfolding, for capture scripts.
+ */
+function tableFromQuery(games: GameMetadata[]): GameMetadata | null {
   if (typeof window === 'undefined') return null;
-  const id = new URLSearchParams(window.location.search).get('game');
-  if (id === 'monopoly' || id === 'connect4' || id === 'battleship') return id;
-  return null;
+  const params = new URLSearchParams(window.location.search);
+  const game = params.get('game');
+  const id = params.get('play') ?? (game && TABLE_GAMES.has(game) ? game : null);
+  if (!id) return null;
+  return games.find(g => g.id === id) ?? null;
 }
 
 export function WalkRoom({
   games,
-  onSelectGame,
+  overlayGame,
+  onOpenBoard,
   onOpenRulesForGame,
 }: WalkRoomProps) {
   const override = useMemo(readCameraOverride, []);
-  const scripted = override.tour || override.shot !== undefined || Boolean(override.card) || override.capture;
+  const scripted =
+    override.tour || override.shot !== undefined || Boolean(override.card) || override.capture || Boolean(override.cam);
   const [menuOpen, setMenuOpen] = useState(override.menu);
   const [mood, setMood] = useState<RoomMood>('warm-night');
   const [musicOn, setMusicOn] = useState(true);
   const [musicVolume, setMusicVolume] = useState(() => sound.getMusicVolume());
-  const queryTable = useMemo(tableFromQuery, []);
-  const [tableGame, setTableGame] = useState<TableGameId | null>(queryTable);
+  const queryTable = useMemo(() => tableFromQuery(games), [games]);
+  const [session, setSession] = useState<TableSession | null>(null);
+  const sessionKey = useRef(0);
+  const [crouched, setCrouched] = useState(false);
+  const tableGame = session !== null;
   const [placed, setPlaced] = useState<LiveProp[]>([]);
   const [anchorId, setAnchorId] = useState(ANCHORS[0].id);
   const [placeHeight, setPlaceHeight] = useState(0.45);
@@ -114,27 +140,21 @@ export function WalkRoom({
   const placeBytes = useRef<ArrayBuffer | null>(null);
   const placeUrl = useRef<string | null>(null);
   const [locked, setLocked] = useState(false);
-  const [engaged, setEngaged] = useState(scripted || Boolean(override.device) || Boolean(queryTable));
+  const [engaged, setEngaged] = useState(scripted || Boolean(override.device) || override.seat || Boolean(queryTable));
   const [tourLabel, setTourLabel] = useState<string | null>(null);
   const [aimed, setAimed] = useState<Aimed | null>(null);
   const [pulledGameId, setPulledGameId] = useState<GameId | null>(null);
-  const [tapeOn, setTapeOn] = useState(false);
   const [lampsWarm, setLampsWarm] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [cardOpen, setCardOpen] = useState(false);
   const [device, setDevice] = useState<DeviceId | null>(override.device);
+  const [seated, setSeated] = useState(override.seat);
   const [flashPhase, setFlashPhase] = useState<'idle' | 'cover' | 'reveal'>('idle');
-  const [manifest, setManifest] = useState<DeviceManifest>(FALLBACK_DEVICES);
-  const [tvIndex, setTvIndex] = useState(0);
-  const [stationIndex, setStationIndex] = useState(0);
-  const [radioOn, setRadioOn] = useState(false);
-  const [radioError, setRadioError] = useState<string | null>(null);
-  const [nesOn, setNesOn] = useState(false);
+  const radioState = useRadio();
+  const tapeOn = radioState.power;
+  const radioError = radioState.error;
   const toastTimer = useRef<number | null>(null);
   const flashTimers = useRef<number[]>([]);
-  const radioAudio = useRef<HTMLAudioElement | null>(null);
-  const radioToken = useRef(0);
-  const [radioVolume, setRadioVolume] = useState(0.7);
   const blockSelect = useRef(false);
   const heavyStep = useRef(false);
   const pullTimer = useRef<number | null>(null);
@@ -152,26 +172,18 @@ export function WalkRoom({
       if (toastTimer.current) window.clearTimeout(toastTimer.current);
       if (pullTimer.current) window.clearTimeout(pullTimer.current);
       flashTimers.current.forEach(id => window.clearTimeout(id));
-      if (radioAudio.current) {
-        radioAudio.current.pause();
-        radioAudio.current.src = '';
-        radioAudio.current.remove();
-      }
     },
     [],
   );
 
+  // The stereo and the room's background music never play over each other.
   useEffect(() => {
-    let cancelled = false;
-    loadDeviceManifest().then(next => {
-      if (!cancelled) setManifest(next);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    if (radioState.power) sound.stopNostalgia();
+    else if (musicOn && engaged && !device) sound.startNostalgia();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [radioState.power]);
 
-  blockSelect.current = flashPhase !== 'idle' || device !== null;
+  blockSelect.current = flashPhase !== 'idle' || device !== null || seated;
 
   useEffect(() => {
     let cancelled = false;
@@ -284,27 +296,72 @@ export function WalkRoom({
     sound.playFootstep(heavyStep.current);
   }, []);
 
+  /**
+   * Every game starts the same way: the card table spawns on the rug, you are
+   * set down crouched at its edge, and the box unfolds in front of you.
+   */
+  const startTable = useCallback((game: GameMetadata) => {
+    document.exitPointerLock?.();
+    setCardOpen(false);
+    sessionKey.current += 1;
+    walkRig.tableActive = true;
+    walkRig.setCrouch(true);
+    walkRig.teleport = { at: TABLE_SEAT.at, look: TABLE_SEAT.look };
+    setSession({ game, phase: 'unfold', key: sessionKey.current });
+  }, []);
+
   const playGame = useCallback(
     (game: GameMetadata) => {
-      if (pulledGameId) return;
-      const onTable = game.id === 'monopoly' || game.id === 'connect4' || game.id === 'battleship';
+      if (pulledGameId || session) return;
       setPulledGameId(game.id);
       setCardOpen(false);
       sound.playShelfSlide();
-      flash(onTable ? `Setting ${game.title} on the table` : `Pulling ${game.title} off the shelf`);
+      flash(`Taking ${game.title} to the table`);
       pullTimer.current = window.setTimeout(() => {
-        sound.playCardboardLid();
-        document.exitPointerLock?.();
         setPulledGameId(null);
-        if (game.id === 'monopoly' || game.id === 'connect4' || game.id === 'battleship') {
-          setTableGame(game.id);
-          return;
-        }
-        onSelectGame(game);
+        startTable(game);
       }, 620);
     },
-    [flash, onSelectGame, pulledGameId],
+    [flash, pulledGameId, session, startTable],
   );
+
+  const onUnfolded = useCallback(() => {
+    setSession(cur => (cur ? { ...cur, phase: 'play' } : cur));
+    if (session && !TABLE_GAMES.has(session.game.id)) onOpenBoard(session.game);
+  }, [onOpenBoard, session]);
+
+  const packUp = useCallback(() => {
+    setSession(cur => (cur && cur.phase !== 'pack' ? { ...cur, phase: 'pack' } : cur));
+  }, []);
+
+  const onPacked = useCallback(() => {
+    setSession(null);
+    walkRig.tableActive = false;
+    walkRig.setCrouch(false);
+  }, []);
+
+  // Closing a 2D board packs its box back up on the table.
+  const hadOverlay = useRef(false);
+  useEffect(() => {
+    if (overlayGame) hadOverlay.current = true;
+    else if (hadOverlay.current) {
+      hadOverlay.current = false;
+      packUp();
+    }
+  }, [overlayGame, packUp]);
+
+  useEffect(() => {
+    const fn = (on: boolean) => setCrouched(on);
+    walkRig.listeners.add(fn);
+    return () => {
+      walkRig.listeners.delete(fn);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (queryTable) startTable(queryTable);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!musicOn) return;
@@ -336,81 +393,40 @@ export function WalkRoom({
     [runFlash],
   );
 
+  const sitDown = useCallback(() => {
+    document.exitPointerLock?.();
+    setCardOpen(false);
+    sound.stopNostalgia();
+    sound.playButtonClick();
+    runFlash(() => setSeated(true));
+  }, [runFlash]);
+
+  const standUp = useCallback(() => {
+    runFlash(() => {
+      setSeated(false);
+      if (musicOn && !radio.state.power) sound.startNostalgia();
+    });
+  }, [musicOn, runFlash]);
+
+  useEffect(() => {
+    if (!seated) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      standUp();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [seated, standUp]);
+
   const exitDevice = useCallback(() => {
     document.exitPointerLock?.();
     runFlash(() => {
       setDevice(null);
-      if (musicOn && !radioOn) sound.startNostalgia();
+      if (musicOn && !radio.state.power) sound.startNostalgia();
     });
-  }, [musicOn, radioOn, runFlash]);
+  }, [musicOn, runFlash]);
 
-  const tuneRadio = useCallback(
-    (index: number, play: boolean) => {
-      const station = manifest.radio[index];
-      setStationIndex(index);
-      setRadioError(null);
-      if (!station) return;
-      const existing = radioAudio.current;
-      const audio = existing ?? document.createElement('audio');
-      if (!existing) {
-        audio.preload = 'none';
-        audio.setAttribute('playsinline', 'true');
-        document.body.appendChild(audio);
-        radioAudio.current = audio;
-      }
-      audio.volume = radioVolume;
-      const token = ++radioToken.current;
-      if (!play) {
-        audio.pause();
-        audio.removeAttribute('src');
-        audio.load();
-        setRadioOn(false);
-        setTapeOn(false);
-        if (musicOn && engaged) sound.startNostalgia();
-        return;
-      }
-      sound.stopNostalgia();
-      const urls = streamMirrors(station.url);
-      const attempt = (i: number) => {
-        if (token !== radioToken.current) return;
-        if (i >= urls.length) {
-          setRadioOn(false);
-          setTapeOn(false);
-          setRadioError('That station did not answer. Try another.');
-          return;
-        }
-        let settled = false;
-        const fail = () => {
-          if (settled || token !== radioToken.current) return;
-          settled = true;
-          audio.removeEventListener('error', fail);
-          audio.removeEventListener('playing', ok);
-          attempt(i + 1);
-        };
-        const ok = () => {
-          if (settled || token !== radioToken.current) return;
-          settled = true;
-          audio.removeEventListener('error', fail);
-          audio.removeEventListener('playing', ok);
-          setRadioOn(true);
-          setTapeOn(true);
-          setRadioError(null);
-        };
-        audio.addEventListener('error', fail);
-        audio.addEventListener('playing', ok);
-        audio.src = urls[i];
-        void audio.play().catch(() => fail());
-      };
-      attempt(0);
-    },
-    [engaged, manifest.radio, musicOn, radioVolume],
-  );
-
-  const cycleRadioVolume = useCallback(() => {
-    const next = radioVolume < 0.45 ? 0.7 : radioVolume < 0.85 ? 1 : 0.35;
-    setRadioVolume(next);
-    if (radioAudio.current) radioAudio.current.volume = next;
-  }, [radioVolume]);
 
   useEffect(() => {
     if (!device) return;
@@ -456,6 +472,8 @@ export function WalkRoom({
           flash('Locked. Pack 02 is behind this door.');
           break;
         case 'gameboy':
+          sitDown();
+          break;
         case 'bed':
         case 'vhs-stack':
         case 'cards':
@@ -466,7 +484,7 @@ export function WalkRoom({
           break;
       }
     },
-    [byId, cardOpen, enterDevice, flash, lampsWarm, playGame],
+    [byId, cardOpen, enterDevice, flash, lampsWarm, playGame, sitDown],
   );
 
   const aimedGame =
@@ -481,11 +499,6 @@ export function WalkRoom({
   const cardProp = demoProp ?? aimedProp;
   const showCard = Boolean(demoGame || demoProp) || (engaged && cardOpen && aimed?.inReach && (aimedGame || aimedProp));
 
-  const floorBoxes = new Set(['monopoly', 'battleship', 'clue', 'life', 'yahtzee']);
-  const shelfTitles = games
-    .filter(game => !floorBoxes.has(game.id))
-    .map(game => game.title)
-    .join(' · ');
 
   return (
     <div className="relative w-full h-[100dvh] overflow-hidden bg-[#140c14] select-none">
@@ -513,44 +526,69 @@ export function WalkRoom({
           showAnchors={menuOpen && Boolean(placeName)}
           ghost={ghost}
           onPickAnchor={(anchor: Anchor) => setAnchorId(anchor.id)}
-          tableGame={tableGame}
-          onLeaveTable={() => setTableGame(null)}
+          session={session}
+          onUnfolded={onUnfolded}
+          onPacked={onPacked}
+          onLeaveTable={packUp}
+          hideGameboy={seated}
         />
-        <DeviceFocus
-          device={scripted ? null : device}
-          channel={manifest.tv[tvIndex] ?? null}
-          stationLabel={manifest.radio[stationIndex]?.freq ?? 'RADIO'}
-          radioOn={radioOn}
-          nesOn={nesOn}
-          stations={manifest.radio}
-          stationIndex={stationIndex}
-          radioVolume={radioVolume}
-          onTune={tuneRadio}
-          onVolume={cycleRadioVolume}
-        />
+        <DeviceFocus device={scripted ? null : device} />
+        {seated && <GameBoySeat />}
         {override.capture && <CaptureClock />}
-        {override.card && DEMO_POSE[override.card] ? (
+        {override.cam ? (
+          <DemoPose at={override.cam.at} look={override.cam.look} />
+        ) : override.card && DEMO_POSE[override.card] ? (
           <DemoPose at={DEMO_POSE[override.card].at} look={DEMO_POSE[override.card].look} />
         ) : scripted ? (
           <TourCamera staticIndex={override.shot} onWaypoint={label => setTourLabel(label)} />
         ) : (
           <>
             <WalkController
-              enabled={!pulledGameId && !device}
+              enabled={!pulledGameId && !device && !seated && session?.phase !== 'unfold' && !overlayGame}
               engaged={engaged}
               capturePointer={!tableGame}
               onLockChange={setLocked}
               onStep={onStep}
             />
             <ReachRaycaster
-              enabled={engaged && !pulledGameId && !device && !tableGame}
+              enabled={engaged && !pulledGameId && !device && !seated && !tableGame && !overlayGame}
               onAim={setAimed}
               onSelect={handleSelect}
             />
           </>
         )}
       </Canvas>
-      {tableGame && <TableHudOverlay />}
+      {seated && <GameBoyGlass />}
+      {seated && (
+        <div data-ui="device" className="pointer-events-none absolute inset-0 z-40">
+          <button
+            type="button"
+            onClick={standUp}
+            className="pointer-events-auto absolute right-4 top-4 rounded-xl border border-white/20 bg-black/60 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-white hover:bg-black/80"
+          >
+            Stand up
+          </button>
+          <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/75">
+            Arrows · Z = A · X = B · Enter = Start · V = Select · or press the Game Boy's buttons · Esc stands up
+          </p>
+        </div>
+      )}
+      {(device === 'crt' || device === 'nes') && !scripted && <TvGlass initialMode={device === 'nes' ? 'gaming' : 'menu'} />}
+      {session && session.phase === 'play' && TABLE_GAMES.has(session.game.id) && (
+        <TableHudOverlay
+          crouched={crouched}
+          onStand={() => walkRig.setCrouch(false)}
+          onCrouch={() => {
+            walkRig.setCrouch(true);
+            walkRig.teleport = { at: TABLE_SEAT.at, look: TABLE_SEAT.look };
+          }}
+        />
+      )}
+      {session?.phase === 'unfold' && (
+        <p className="pointer-events-none absolute left-1/2 top-6 z-30 -translate-x-1/2 rounded-full bg-black/60 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-amber-100">
+          Opening {session.game.title}…
+        </p>
+      )}
 
       {scripted && tourLabel && (
         <div className="pointer-events-none absolute left-6 bottom-6 rounded-xl bg-black/60 border border-white/15 px-3 py-1.5 text-[11px] uppercase tracking-[0.22em] font-bold text-amber-200">
@@ -558,7 +596,7 @@ export function WalkRoom({
         </div>
       )}
 
-      {engaged && !device && (
+      {engaged && !device && !seated && !overlayGame && !session && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div
             className={`rounded-full border transition-all duration-150 ${
@@ -573,6 +611,7 @@ export function WalkRoom({
       )}
 
       {/* Glass flash card — games + nostalgia props */}
+      {!overlayGame && (
       <button
         type="button"
         onClick={openMenu}
@@ -580,6 +619,7 @@ export function WalkRoom({
       >
         Menu
       </button>
+      )}
       <RoomStudio
         open={menuOpen}
         mood={mood}
@@ -634,9 +674,11 @@ export function WalkRoom({
               prop={cardProp}
               onClose={() => setCardOpen(false)}
               onAction={
-                DEVICE_FROM_PROP[cardProp.id]
-                  ? () => enterDevice(DEVICE_FROM_PROP[cardProp.id])
-                  : undefined
+                cardProp.id === 'gameboy'
+                  ? sitDown
+                  : DEVICE_FROM_PROP[cardProp.id]
+                    ? () => enterDevice(DEVICE_FROM_PROP[cardProp.id])
+                    : undefined
               }
               actionLabel={
                 cardProp.id === 'crt-tv'
@@ -645,7 +687,9 @@ export function WalkRoom({
                     ? 'Power on'
                     : cardProp.id === 'boombox'
                       ? 'Tune in'
-                      : undefined
+                      : cardProp.id === 'gameboy'
+                        ? 'Sit down & play'
+                        : undefined
               }
             />
           ) : null}
@@ -667,7 +711,7 @@ export function WalkRoom({
         </div>
       )}
 
-      {engaged && !device && (
+      {engaged && !device && !seated && (
         <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-wrap items-center justify-center gap-2 text-[10px] uppercase tracking-[0.2em] font-bold text-white/70">
           {[
             ['W A S D', 'walk'],
@@ -687,41 +731,21 @@ export function WalkRoom({
       {device && flashPhase !== 'cover' && (
         <DeviceOverlay
           device={device}
-          manifest={manifest}
-          tvIndex={tvIndex}
-          onTv={setTvIndex}
           radioError={radioError}
-          nesOn={nesOn}
-          onNesPower={() => setNesOn(on => !on)}
           onBack={exitDevice}
         />
       )}
 
       {flashPhase !== 'idle' && <div className={`device-flash ${flashPhase}`} />}
 
-      {!engaged && !scripted && !menuOpen && (
-        <div className="absolute inset-x-0 bottom-0 z-20 flex justify-center p-4 sm:p-8 pointer-events-none">
-          <div className="pointer-events-auto max-w-xl w-full rounded-3xl border border-white/15 bg-black/75 p-6 text-center shadow-2xl backdrop-blur-md">
-            <p className="text-[10px] uppercase tracking-[0.35em] text-amber-200/90 font-bold">Game Room</p>
-            <h1 className="font-display text-4xl sm:text-5xl text-white mt-2">Walk the bedroom</h1>
-            <p className="text-sm text-slate-300 mt-3 leading-relaxed">
-              This room is the menu. Walk up to a box, or the crate shelf, and play it here.
-              WASD moves you. Click and drag to look around if the mouse is not captured.
-            </p>
-            <p className="text-[11px] text-slate-400 mt-3">On the shelf: {shelfTitles}</p>
-            <button
-              id="enter-room"
-              type="button"
-              onClick={() => {
-                setEngaged(true);
-                if (musicOn) sound.startNostalgia();
-              }}
-              className="mt-6 w-full rounded-2xl bg-gradient-to-r from-fuchsia-600 to-amber-500 px-6 py-3.5 font-display text-lg text-white shadow-lg hover:brightness-110 active:scale-[0.99] transition"
-            >
-              Step into the room
-            </button>
-          </div>
-        </div>
+      {!engaged && !scripted && !menuOpen && !overlayGame && (
+        <IntroCard
+          wallTitles={neonGames(games).map(game => game.title)}
+          onEnter={() => {
+            setEngaged(true);
+            if (musicOn) sound.startNostalgia();
+          }}
+        />
       )}
     </div>
   );

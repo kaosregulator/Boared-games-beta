@@ -3,7 +3,24 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { PointerLockControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { PLAYER, WALL } from './videoRoom';
-import { ROOM_COLLIDERS as COLLIDERS } from './roomLayout';
+import { ROOM_COLLIDERS, TABLE_COLLIDER } from './roomLayout';
+
+/**
+ * Outside control of the walking body: the table session sets the player
+ * down crouched at the table, and the crouch stays latched until they stand.
+ */
+export const walkRig = {
+  teleport: null as null | { at: [number, number, number]; look: [number, number, number] },
+  crouchLock: false,
+  /** The spawned card table blocks walking only while it exists. */
+  tableActive: false,
+  listeners: new Set<(crouched: boolean) => void>(),
+  setCrouch(on: boolean) {
+    if (walkRig.crouchLock === on) return;
+    walkRig.crouchLock = on;
+    walkRig.listeners.forEach(fn => fn(on));
+  },
+};
 
 const FORWARD = new THREE.Vector3();
 const RIGHT = new THREE.Vector3();
@@ -61,6 +78,12 @@ export function WalkController({ enabled, engaged, capturePointer = true, onLock
     };
     const down = (e: KeyboardEvent) => {
       if (typing(e)) return;
+      // Space or C gets up from the crouch the table put you in.
+      if (walkRig.crouchLock && (e.code === 'Space' || e.code === 'KeyC') && !e.repeat) {
+        walkRig.setCrouch(false);
+        e.preventDefault();
+        return;
+      }
       keys.current[e.code] = true;
       if (blocked.has(e.code)) e.preventDefault();
     };
@@ -126,7 +149,8 @@ export function WalkController({ enabled, engaged, capturePointer = true, onLock
     let px = THREE.MathUtils.clamp(x, -WALL.halfWidth + r, WALL.halfWidth - r);
     let pz = THREE.MathUtils.clamp(z, -WALL.halfDepth + r, WALL.halfDepth - r);
 
-    for (const box of COLLIDERS) {
+    const colliders = walkRig.tableActive ? [...ROOM_COLLIDERS, TABLE_COLLIDER] : ROOM_COLLIDERS;
+    for (const box of colliders) {
       // Anything shorter than the player's knees is walked over, not into.
       if (box.top < 0.22) continue;
       // Desk tops and shelves above head height never block the floor.
@@ -148,13 +172,21 @@ export function WalkController({ enabled, engaged, capturePointer = true, onLock
 
   useFrame((_, rawDelta) => {
     const delta = Math.min(rawDelta, 0.05);
+    const jump = walkRig.teleport;
+    if (jump) {
+      walkRig.teleport = null;
+      velocity.current.set(0, 0, 0);
+      eyeHeight.current = walkRig.crouchLock ? PLAYER.crouchHeight : PLAYER.height;
+      camera.position.set(jump.at[0], eyeHeight.current, jump.at[2]);
+      camera.lookAt(jump.look[0], jump.look[1], jump.look[2]);
+    }
     if (!enabled || !engagedRef.current) {
       dragging.current = false;
       velocity.current.multiplyScalar(0.8);
       return;
     }
 
-    const crouching = keys.current.ControlLeft || keys.current.ControlRight || keys.current.KeyC;
+    const crouching = keys.current.ControlLeft || keys.current.ControlRight || keys.current.KeyC || walkRig.crouchLock;
     const sprinting = (keys.current.ShiftLeft || keys.current.ShiftRight) && !crouching;
     const targetEye = crouching ? PLAYER.crouchHeight : PLAYER.height;
     eyeHeight.current += (targetEye - eyeHeight.current) * Math.min(1, delta * 9);
@@ -211,5 +243,8 @@ export function WalkController({ enabled, engaged, capturePointer = true, onLock
     camera.quaternion.setFromEuler(LOOK);
   });
 
-  return <PointerLockControls ref={controls} selector="#enter-room" />;
+  // drei's controls aim every click at the screen centre while enabled, which
+  // is right for walking with a crosshair and wrong for clicking a board, a
+  // TV button, or a disc. Only switch them on while actually walking.
+  return <PointerLockControls ref={controls} selector="#enter-room" enabled={enabled && capturePointer} />;
 }

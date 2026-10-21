@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { RoomBackdrop } from '../room/RoomBackdrop';
 import { GameMetadata } from '../types';
 
 export function InRoomTable({
@@ -12,11 +11,9 @@ export function InRoomTable({
   children: ReactNode;
 }) {
   return (
-    <div className="fixed inset-0 z-40 bg-black text-white">
-      <div className="absolute inset-0">
-        <RoomBackdrop />
-      </div>
-      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/30 to-black/60" />
+    // See-through: the live room, with the unfolded box on the card table, stays behind the board.
+    <div className="fixed inset-0 z-40 text-white">
+      <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/35 to-black/70" />
       <div className="relative z-10 h-full flex flex-col">
         <header className="flex items-center justify-between gap-3 px-4 py-3">
           <div>
@@ -28,7 +25,7 @@ export function InRoomTable({
             onClick={onPackUp}
             className="rounded-2xl bg-amber-400 text-black px-4 py-2 text-xs font-black uppercase tracking-wider"
           >
-            Pack up & return
+            Pack up
           </button>
         </header>
         <div className="flex-1 overflow-auto px-3 pb-6">

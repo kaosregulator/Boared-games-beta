@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cartridge</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #000;
+        overflow: hidden;
+      }
+      #game {
+        width: 100%;
+        height: 100%;
+      }
+      /* The room draws its own console buttons; keep the emulator chrome out of the picture. */
+      .ejs_menu_bar,
+      .ejs_virtualGamepad_parent,
+      .ejs_context_menu {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game"></div>
+    <script>
+      // EmulatorJS (GPL-3.0, https://emulatorjs.org) served from /emu/data, no CDN.
+      // ?rom=/roms/tetris.nes&core=nes|gb&name=Tetris
+      const params = new URLSearchParams(location.search);
+      const rom = params.get('rom') || '';
+      const core = params.get('core') === 'gb' ? 'gb' : 'nes';
+      if (!rom.startsWith('/roms/') && !rom.startsWith('blob:')) throw new Error('Cartridges load from /roms only');
+
+      window.EJS_player = '#game';
+      window.EJS_core = core;
+      window.EJS_gameUrl = rom;
+      window.EJS_gameName = params.get('name') || 'Cartridge';
+      window.EJS_pathtodata = '/emu/data/';
+      window.EJS_DEBUG_XX = true;
+      window.EJS_startOnLoaded = true;
+      window.EJS_language = 'en-US';
+      window.EJS_disableAutoLang = false;
+      window.EJS_disableDatabases = true;
+      window.EJS_backgroundColor = '#000';
+      window.EJS_color = '#d63a3a';
+      window.EJS_volume = Number(params.get('volume') || 0.7);
+      window.EJS_threads = false;
+      // Original pea-green DMG screen rather than grey.
+      if (core === 'gb') {
+        window.EJS_defaultOptions = { gambatte_gb_colorization: 'internal', gambatte_gb_internal_palette: 'GB - DMG' };
+      }
+      window.EJS_Buttons = {
+        playPause: false,
+        restart: false,
+        mute: false,
+        settings: false,
+        fullscreen: false,
+        saveState: false,
+        loadState: false,
+        screenRecord: false,
+        gamepad: false,
+        cheat: false,
+        volume: false,
+        saveSavFiles: false,
+        loadSavFiles: false,
+        quickSave: false,
+        quickLoad: false,
+        screenshot: false,
+        cacheManager: false,
+        exitEmulation: false,
+      };
+
+      const tell = type => parent.postMessage({ source: 'cartridge', type }, location.origin);
+      window.EJS_ready = () => tell('ready');
+      window.EJS_onGameStart = () => {
+        tell('start');
+        document.querySelector('canvas')?.focus();
+      };
+
+      // Buttons pressed on the 3D console arrive here. Index is the libretro pad slot.
+      window.addEventListener('message', event => {
+        if (event.origin !== location.origin) return;
+        const msg = event.data;
+        const emu = window.EJS_emulator;
+        if (!msg || msg.source !== 'room' || !emu || !emu.gameManager) return;
+        if (msg.type === 'input') emu.gameManager.simulateInput(0, msg.index, msg.value ? 1 : 0);
+        if (msg.type === 'volume') emu.setVolume(Math.max(0, Math.min(1, Number(msg.value) || 0)));
+        if (msg.type === 'pause') msg.value ? emu.pause() : emu.play();
+        if (msg.type === 'focus') document.querySelector('canvas')?.focus();
+      });
+      document.addEventListener('pointerdown', () => document.querySelector('canvas')?.focus());
+    </script>
+    <script src="/emu/data/loader.js"></script>
+  </body>
+</html>

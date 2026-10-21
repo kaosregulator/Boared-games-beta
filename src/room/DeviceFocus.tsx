@@ -2,7 +2,10 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { SafeRoomModel } from './RoomModel';
-import { nesPad, type DeviceId, type RadioStation, type TvChannel } from './devices';
+import type { DeviceId } from './devices';
+import { TvSet } from '../tv/TvSet';
+import { radio, useRadio, type RadioSnapshot } from '../radio/radioEngine';
+import { FM_MAX, FM_MIN, STATIONS } from '../radio/stations';
 
 /** Parked above the bedroom so the walk camera can cut here without seeing the room. */
 const STUDIO_Y = 48;
@@ -11,57 +14,21 @@ const POSE: Record<
   DeviceId,
   { meters: number; axis: 'x' | 'y' | 'z'; fov: number; at: [number, number, number]; look: [number, number, number] }
 > = {
-  crt: { meters: 0.46, axis: 'x', fov: 26, at: [0, 0.26, 0.62], look: [0, 0.2, 0] },
-  nes: { meters: 0.3, axis: 'x', fov: 34, at: [0, 0.34, 0.92], look: [0, 0.16, 0] },
+  // Pulled well back: the whole set, the cable box, and the NES in frame.
+  crt: { meters: 0.62, axis: 'x', fov: 40, at: [0.04, 0.58, 1.72], look: [0.04, 0.22, 0] },
+  nes: { meters: 0.62, axis: 'x', fov: 40, at: [0.04, 0.58, 1.72], look: [0.04, 0.22, 0] },
   boombox: { meters: 0.38, axis: 'x', fov: 32, at: [0, 0.15, 0.72], look: [0, 0.12, 0] },
 };
 
-interface DeviceFocusProps {
-  device: DeviceId | null;
-  channel: TvChannel | null;
-  stationLabel: string;
-  radioOn: boolean;
-  nesOn: boolean;
-  stations: RadioStation[];
-  stationIndex: number;
-  radioVolume: number;
-  onTune: (index: number, play: boolean) => void;
-  onVolume: () => void;
-}
-
 /**
- * Smaller clone of the CRT, NES, or boombox, plus a close camera.
- * The meshes in the bedroom are left alone.
+ * Close-ups. The room copies of the CRT, NES, and boombox stay where they are;
+ * leaning in swaps the camera onto a clone parked above the room.
  */
-export function DeviceFocus({
-  device,
-  channel,
-  stationLabel,
-  radioOn,
-  nesOn,
-  stations,
-  stationIndex,
-  radioVolume,
-  onTune,
-  onVolume,
-}: DeviceFocusProps) {
+export function DeviceFocus({ device }: { device: DeviceId | null }) {
   return (
     <>
       <FocusRig device={device} />
-      {device && (
-        <Studio
-          device={device}
-          channel={channel}
-          stationLabel={stationLabel}
-          radioOn={radioOn}
-          nesOn={nesOn}
-          stations={stations}
-          stationIndex={stationIndex}
-          radioVolume={radioVolume}
-          onTune={onTune}
-          onVolume={onVolume}
-        />
-      )}
+      {device && <Studio device={device} />}
     </>
   );
 }
@@ -109,294 +76,142 @@ function FocusRig({ device }: { device: DeviceId | null }) {
   return null;
 }
 
-function Studio({
-  device,
-  channel,
-  stationLabel,
-  radioOn,
-  nesOn,
-  stations,
-  stationIndex,
-  radioVolume,
-  onTune,
-  onVolume,
-}: {
-  device: DeviceId;
-  channel: TvChannel | null;
-  stationLabel: string;
-  radioOn: boolean;
-  nesOn: boolean;
-  stations: RadioStation[];
-  stationIndex: number;
-  radioVolume: number;
-  onTune: (index: number, play: boolean) => void;
-  onVolume: () => void;
-}) {
+function Studio({ device }: { device: DeviceId }) {
   const pose = POSE[device];
   return (
     <group position={[0, STUDIO_Y, 0]}>
       <ambientLight intensity={0.55} color="#f0e2d4" />
       <pointLight position={[0.4, 0.8, 0.7]} color="#fff2e0" intensity={6} distance={3.2} decay={2} />
       <pointLight position={[-0.5, 0.4, 0.4]} color="#c9a0ff" intensity={2.2} distance={2.4} decay={2} />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.002, 0]}>
-        <circleGeometry args={[0.7, 40]} />
-        <meshBasicMaterial color="#100910" />
-      </mesh>
-      <SafeRoomModel
-        id={device}
-        position={[0, 0, 0]}
-        axis={pose.axis}
-        meters={pose.meters}
-        tintAmount={0}
-      />
-      {device === 'crt' && channel && <CrtScreen channel={channel} />}
-      {device === 'nes' && <NesScreen on={nesOn} />}
+      {device === 'crt' || device === 'nes' ? (
+        <TvSet />
+      ) : (
+        <>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.002, 0]}>
+            <circleGeometry args={[0.7, 40]} />
+            <meshBasicMaterial color="#100910" />
+          </mesh>
+          <SafeRoomModel id={device} position={[0, 0, 0]} axis={pose.axis} meters={pose.meters} tintAmount={0} />
+        </>
+      )}
       {device === 'boombox' && (
         <>
-          <RadioScreen label={stationLabel} on={radioOn} />
-          <RadioDeck
-            stations={stations}
-            stationIndex={stationIndex}
-            radioOn={radioOn}
-            radioVolume={radioVolume}
-            onTune={onTune}
-            onVolume={onVolume}
-          />
+          <RadioDial />
+          <RadioDeck />
         </>
       )}
     </group>
   );
 }
 
-function paintStatic(ctx: CanvasRenderingContext2D, w: number, h: number) {
-  const image = ctx.createImageData(w, h);
-  const data = image.data;
-  for (let i = 0; i < data.length; i += 16) {
-    const n = (Math.random() * 255) | 0;
-    for (let k = 0; k < 16 && i + k < data.length; k += 4) {
-      data[i + k] = data[i + k + 1] = data[i + k + 2] = n;
-      data[i + k + 3] = 255;
-    }
+const DIAL_W = 1024;
+const DIAL_H = 150;
+
+function paintDial(g: CanvasRenderingContext2D, s: RadioSnapshot, t: number) {
+  const on = s.power;
+  // backlit amber glass
+  const glass = g.createLinearGradient(0, 0, 0, DIAL_H);
+  glass.addColorStop(0, on ? '#2a1606' : '#0e0a07');
+  glass.addColorStop(0.5, on ? '#4a2a0a' : '#16100b');
+  glass.addColorStop(1, on ? '#2a1606' : '#0e0a07');
+  g.fillStyle = glass;
+  g.fillRect(0, 0, DIAL_W, DIAL_H);
+
+  const left = 40;
+  const right = 720;
+  const x = (f: number) => left + ((f - FM_MIN) / (FM_MAX - FM_MIN)) * (right - left);
+  const ink = on ? '#ffcf7a' : '#5a4630';
+
+  g.strokeStyle = ink;
+  g.fillStyle = ink;
+  g.lineWidth = 2;
+  g.font = '700 22px "IBM Plex Mono", monospace';
+  g.textAlign = 'center';
+  g.fillText('FM', 18, 42);
+  for (let f = 88; f <= 108; f += 1) {
+    const major = f % 2 === 0;
+    g.beginPath();
+    g.moveTo(x(f), 62);
+    g.lineTo(x(f), major ? 34 : 48);
+    g.stroke();
+    if (major) g.fillText(String(f), x(f), 26);
   }
-  ctx.putImageData(image, 0, 0);
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
-  for (let y = 0; y < h; y += 3) ctx.fillRect(0, y, w, 1);
+  // station marks with their call letters
+  g.font = '700 13px "IBM Plex Mono", monospace';
+  for (const st of STATIONS) {
+    g.fillStyle = on ? (st.call === 'SOMA' ? '#7ad7ff' : '#ff9ad5') : '#3a3028';
+    g.beginPath();
+    g.arc(x(st.freq), 74, 4, 0, Math.PI * 2);
+    g.fill();
+    g.fillText(st.call, x(st.freq), 96);
+  }
+  // needle
+  g.strokeStyle = on ? '#ff3b2f' : '#5a1c16';
+  g.lineWidth = 5;
+  g.beginPath();
+  g.moveTo(x(s.freq), 8);
+  g.lineTo(x(s.freq), 106);
+  g.stroke();
+
+  // LED readout
+  g.fillStyle = '#0a0503';
+  g.fillRect(744, 10, 268, 96);
+  g.textAlign = 'right';
+  g.fillStyle = on ? '#ff6a3a' : '#2a120c';
+  g.font = '800 58px "IBM Plex Mono", monospace';
+  g.fillText(on ? s.freq.toFixed(1) : '', 960, 76);
+  g.font = '700 18px "IBM Plex Mono", monospace';
+  g.fillText(on ? 'MHz' : '', 1004, 76);
+  g.textAlign = 'left';
+  g.fillStyle = on ? (s.scanning ? '#7aff8a' : '#ff6a3a') : '#2a120c';
+  g.fillText(on ? (s.scanning ? 'SCAN' : s.seeking ? 'SEEK' : s.strength > 0.97 ? 'STEREO' : 'TUNING') : '', 756, 32);
+
+  // signal bars
+  for (let i = 0; i < 8; i += 1) {
+    const lit = on && s.strength * 8 > i + 0.2;
+    g.fillStyle = lit ? (i < 5 ? '#7aff8a' : '#ffcf4a') : '#1b1410';
+    g.fillRect(756 + i * 30, 112, 22, 26 - i);
+  }
+
+  // station name ticker
+  g.fillStyle = on ? '#ffcf7a' : '#3a3028';
+  g.font = '700 22px "IBM Plex Mono", monospace';
+  g.textAlign = 'left';
+  const name = !on ? 'POWER OFF' : s.error ? s.error.toUpperCase() : s.station && s.strength > 0.5 ? s.station.name.toUpperCase() : '· · · STATIC · · ·';
+  const room = right - left;
+  g.save();
+  g.beginPath();
+  g.rect(left, 106, room, 40);
+  g.clip();
+  const width = g.measureText(name).width;
+  const offset = width > room ? ((t * 60) % (width + 60)) : 0;
+  g.fillText(name, left - offset, 136);
+  if (width > room) g.fillText(name, left - offset + width + 60, 136);
+  g.restore();
 }
 
-function paintBars(ctx: CanvasRenderingContext2D, w: number, h: number, time: number) {
-  const colors = ['#bfbfbf', '#bfbf00', '#00bfbf', '#00bf00', '#bf00bf', '#bf0000', '#0000bf'];
-  const band = w / colors.length;
-  colors.forEach((color, index) => {
-    ctx.fillStyle = color;
-    ctx.fillRect(index * band, 0, band + 1, h * 0.72);
-  });
-  ctx.fillStyle = '#0a0a0a';
-  ctx.fillRect(0, h * 0.72, w, h);
-  ctx.fillStyle = 'rgba(255,255,255,0.08)';
-  const sweep = ((time * 40) % (h + 20)) - 10;
-  ctx.fillRect(0, sweep, w, 8);
-}
-
-function paintSlate(ctx: CanvasRenderingContext2D, w: number, h: number, title: string) {
-  ctx.fillStyle = '#120814';
-  ctx.fillRect(0, 0, w, h);
-  ctx.strokeStyle = '#ffb45a';
-  ctx.lineWidth = 4;
-  ctx.strokeRect(10, 10, w - 20, h - 20);
-  ctx.fillStyle = '#ffd59a';
-  ctx.font = 'bold 28px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(title, w / 2, h / 2);
-}
-
-function CrtScreen({ channel }: { channel: TvChannel }) {
-  const mat = useRef<THREE.MeshBasicMaterial>(null);
+/** Backlit FM dial laid over the boombox's own tuning window. */
+function RadioDial() {
   const surface = useMemo(() => {
     const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 192;
+    canvas.width = DIAL_W;
+    canvas.height = DIAL_H;
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = 8;
     return { canvas, texture };
   }, []);
-
-  useLayoutEffect(() => {
-    return () => surface.texture.dispose();
-  }, [surface]);
-
-  useLayoutEffect(() => {
-    if (channel.kind !== 'video' || !channel.url || !mat.current) return;
-    const video = document.createElement('video');
-    video.src = channel.url;
-    video.crossOrigin = 'anonymous';
-    video.loop = true;
-    video.muted = true;
-    video.playsInline = true;
-    const texture = new THREE.VideoTexture(video);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    mat.current.map = texture;
-    video.play().catch(() => {});
-    return () => {
-      video.pause();
-      video.src = '';
-      texture.dispose();
-      if (mat.current) mat.current.map = surface.texture;
-    };
-  }, [channel, surface.texture]);
-
+  useLayoutEffect(() => () => surface.texture.dispose(), [surface]);
   useFrame(({ clock }) => {
-    if (channel.kind === 'video') return;
-    const ctx = surface.canvas.getContext('2d');
-    if (!ctx) return;
-    if (channel.kind === 'bars') paintBars(ctx, 256, 192, clock.elapsedTime);
-    else if (channel.kind === 'youtube') paintSlate(ctx, 256, 192, channel.name || 'TAPE');
-    else paintStatic(ctx, 256, 192);
+    const g = surface.canvas.getContext('2d');
+    if (!g) return;
+    paintDial(g, radio.state, clock.elapsedTime);
     surface.texture.needsUpdate = true;
   });
-
   return (
-    <mesh position={[0, 0.25, 0.2]}>
-      <planeGeometry args={[0.28, 0.2]} />
-      <meshBasicMaterial ref={mat} map={surface.texture} toneMapped={false} />
-    </mesh>
-  );
-}
-
-interface Pong {
-  py: number;
-  cy: number;
-  bx: number;
-  by: number;
-  vx: number;
-  vy: number;
-  ps: number;
-  cs: number;
-}
-
-const PONG_W = 320;
-const PONG_H = 180;
-const PADDLE_H = 36;
-
-function resetBall(pong: Pong, dir: number) {
-  pong.bx = PONG_W / 2;
-  pong.by = PONG_H / 2;
-  pong.vx = dir * 150;
-  pong.vy = (Math.random() * 120 - 60) || 40;
-}
-
-function NesScreen({ on }: { on: boolean }) {
-  const pong = useRef<Pong>({ py: 72, cy: 72, bx: 160, by: 90, vx: 150, vy: 50, ps: 0, cs: 0 });
-  const surface = useMemo(() => {
-    const canvas = document.createElement('canvas');
-    canvas.width = PONG_W;
-    canvas.height = PONG_H;
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    return { canvas, texture };
-  }, []);
-
-  useLayoutEffect(() => {
-    return () => surface.texture.dispose();
-  }, [surface]);
-
-  useFrame((_, raw) => {
-    const ctx = surface.canvas.getContext('2d');
-    if (!ctx) return;
-    const dt = Math.min(raw, 0.05);
-    ctx.fillStyle = on ? '#071407' : '#050505';
-    ctx.fillRect(0, 0, PONG_W, PONG_H);
-    if (!on) {
-      ctx.fillStyle = '#3a1010';
-      ctx.font = 'bold 22px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('POWER OFF', PONG_W / 2, PONG_H / 2);
-      surface.texture.needsUpdate = true;
-      return;
-    }
-    const p = pong.current;
-    if (nesPad.up) p.py -= 170 * dt;
-    if (nesPad.down) p.py += 170 * dt;
-    p.py = THREE.MathUtils.clamp(p.py, 4, PONG_H - PADDLE_H - 4);
-    const cpuTarget = p.by - PADDLE_H / 2;
-    p.cy += Math.sign(cpuTarget - p.cy) * Math.min(Math.abs(cpuTarget - p.cy), 120 * dt);
-    p.cy = THREE.MathUtils.clamp(p.cy, 4, PONG_H - PADDLE_H - 4);
-    p.bx += p.vx * dt;
-    p.by += p.vy * dt;
-    if (p.by < 6 || p.by > PONG_H - 6) p.vy *= -1;
-    if (p.bx < 22 && p.vx < 0 && p.by > p.py && p.by < p.py + PADDLE_H) {
-      p.vx = Math.abs(p.vx) + 8;
-      p.vy += (p.by - (p.py + PADDLE_H / 2)) * 3;
-    }
-    if (p.bx > PONG_W - 22 && p.vx > 0 && p.by > p.cy && p.by < p.cy + PADDLE_H) {
-      p.vx = -(Math.abs(p.vx) + 8);
-      p.vy += (p.by - (p.cy + PADDLE_H / 2)) * 3;
-    }
-    if (p.bx < 0) {
-      p.cs += 1;
-      resetBall(p, 1);
-    } else if (p.bx > PONG_W) {
-      p.ps += 1;
-      resetBall(p, -1);
-    }
-    ctx.fillStyle = '#b6ff9a';
-    ctx.fillRect(8, p.py, 6, PADDLE_H);
-    ctx.fillRect(PONG_W - 14, p.cy, 6, PADDLE_H);
-    ctx.fillRect(p.bx - 3, p.by - 3, 6, 6);
-    ctx.font = 'bold 16px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(`${p.ps}  ${p.cs}`, PONG_W / 2, 22);
-    surface.texture.needsUpdate = true;
-  });
-
-  return (
-    <group>
-      <mesh position={[0, 0.28, 0.12]}>
-        <planeGeometry args={[0.42, 0.24]} />
-        <meshBasicMaterial map={surface.texture} toneMapped={false} />
-      </mesh>
-      <mesh position={[0.11, 0.045, 0.12]}>
-        <sphereGeometry args={[0.008, 10, 10]} />
-        <meshBasicMaterial color={on ? '#ff3030' : '#2a0a0a'} toneMapped={false} />
-      </mesh>
-    </group>
-  );
-}
-
-function RadioScreen({ label, on }: { label: string; on: boolean }) {
-  const surface = useMemo(() => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 96;
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    return { canvas, texture };
-  }, []);
-
-  useLayoutEffect(() => {
-    return () => surface.texture.dispose();
-  }, [surface]);
-
-  useFrame(({ clock }) => {
-    const ctx = surface.canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.fillStyle = '#160c08';
-    ctx.fillRect(0, 0, 256, 96);
-    ctx.fillStyle = on ? '#ffb45a' : '#5a4030';
-    ctx.font = 'bold 28px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(on ? label.slice(0, 16) : 'STOPPED', 128, 42);
-    if (on) {
-      const level = 0.35 + Math.sin(clock.elapsedTime * 7) * 0.15;
-      ctx.fillStyle = '#ff7ad8';
-      ctx.fillRect(36, 62, 184 * level, 8);
-    }
-    surface.texture.needsUpdate = true;
-  });
-
-  return (
-    <mesh position={[0, 0.155, 0.11]}>
-      <planeGeometry args={[0.052, 0.015]} />
-      <meshBasicMaterial map={surface.texture} toneMapped={false} transparent opacity={0.92} />
+    <mesh position={[0.0096, 0.1555, 0.1102]}>
+      <planeGeometry args={[0.178, 0.026]} />
+      <meshBasicMaterial map={surface.texture} toneMapped={false} />
     </mesh>
   );
 }
@@ -409,11 +224,14 @@ function RadioHotspot({
   label,
   active,
   onClick,
+  repeat = false,
 }: {
   position: [number, number, number];
   label: string;
   active?: boolean;
   onClick: () => void;
+  /** Keep firing while held, like turning a knob. */
+  repeat?: boolean;
 }) {
   const { camera, gl } = useThree();
   const button = useRef<HTMLButtonElement | null>(null);
@@ -432,26 +250,39 @@ function RadioHotspot({
     el.style.left = '0';
     el.style.top = '0';
     el.style.zIndex = '50';
-    el.addEventListener('click', event => {
+    let hold: number | null = null;
+    let delay: number | null = null;
+    const stop = () => {
+      if (hold) window.clearInterval(hold);
+      if (delay) window.clearTimeout(delay);
+      hold = null;
+      delay = null;
+    };
+    el.addEventListener('pointerdown', event => {
       event.stopPropagation();
       click.current();
+      if (!repeat) return;
+      delay = window.setTimeout(() => {
+        hold = window.setInterval(() => click.current(), 90);
+      }, 320);
     });
+    el.addEventListener('pointerup', stop);
+    el.addEventListener('pointerleave', stop);
     host.appendChild(el);
     button.current = el;
     return () => {
+      stop();
       el.remove();
       button.current = null;
     };
-  }, [gl]);
+  }, [gl, repeat]);
 
   useEffect(() => {
     const el = button.current;
     if (!el) return;
     el.textContent = label;
-    el.className = `pointer-events-auto absolute left-0 top-0 z-50 rounded-md border px-1.5 py-1 text-[9px] font-bold uppercase leading-none tracking-wide shadow-md ${
-      active
-        ? 'border-amber-100 bg-amber-300 text-black'
-        : 'border-white/40 bg-black/75 text-white hover:bg-black/90'
+    el.className = `pointer-events-auto absolute left-0 top-0 z-50 rounded-md border px-1.5 py-1 text-[9px] font-bold uppercase leading-none tracking-wide shadow-md select-none ${
+      active ? 'border-amber-100 bg-amber-300 text-black' : 'border-white/40 bg-black/75 text-white hover:bg-black/90'
     }`;
   }, [label, active]);
 
@@ -473,68 +304,31 @@ function RadioHotspot({
 }
 
 /**
- * Mini controls sitting on the boombox face: volume knob, power switch,
- * the cassette-key row as station presets, and the tuning knob.
+ * Controls on the boombox face: volume knob, power, the tuning knob (hold to
+ * keep turning), and the cassette keys as SEEK / SCAN / SEEK.
  */
-function RadioDeck({
-  stations,
-  stationIndex,
-  radioOn,
-  radioVolume,
-  onTune,
-  onVolume,
-}: {
-  stations: RadioStation[];
-  stationIndex: number;
-  radioOn: boolean;
-  radioVolume: number;
-  onTune: (index: number, play: boolean) => void;
-  onVolume: () => void;
-}) {
+function RadioDeck() {
+  const r = useRadio();
   const meters = POSE.boombox.meters;
   const scale = meters / 0.98;
   const sx = 0.98 * scale;
   const sy = 0.661 * scale;
   const sz = 0.477 * scale;
   const z = sz * 0.5 + 0.01;
-  const spot = (across: number, up: number): [number, number, number] => [
-    across * sx * 0.5,
-    up * sy,
-    z,
-  ];
-  const presets = stations.slice(0, 4);
-  // Fitted local space: across -1..1 is the width, up 0..1 is the height
-  // including the antennas. Knobs sit under the handle; presets sit on the
-  // cassette-key row.
-  const presetX = [-0.16, -0.05, 0.06, 0.17];
+  const spot = (across: number, up: number): [number, number, number] => [across * sx * 0.5, up * sy, z];
+  const keyX = [-0.16, -0.05, 0.06, 0.17];
 
   return (
     <group>
-      <RadioHotspot
-        position={spot(-0.72, 0.6)}
-        label={radioVolume >= 0.95 ? 'VOL+' : radioVolume <= 0.4 ? 'VOL-' : 'VOL'}
-        onClick={onVolume}
-      />
-      <RadioHotspot
-        position={spot(-0.5, 0.585)}
-        label={radioOn ? 'ON' : 'PWR'}
-        active={radioOn}
-        onClick={() => onTune(stationIndex, !radioOn)}
-      />
-      {presets.map((station, index) => (
-        <RadioHotspot
-          key={station.id}
-          position={spot(presetX[index] ?? 0, 0.22)}
-          label={station.freq}
-          active={radioOn && index === stationIndex}
-          onClick={() => onTune(index, true)}
-        />
-      ))}
-      <RadioHotspot
-        position={spot(0.71, 0.6)}
-        label="TUNE"
-        onClick={() => onTune((stationIndex + 1) % Math.max(stations.length, 1), true)}
-      />
+      <RadioHotspot position={spot(-0.8, 0.6)} label="VOL −" onClick={() => radio.setVolume(r.volume - 0.1)} repeat />
+      <RadioHotspot position={spot(-0.64, 0.6)} label="VOL +" onClick={() => radio.setVolume(r.volume + 0.1)} repeat />
+      <RadioHotspot position={spot(-0.5, 0.585)} label={r.power ? 'ON' : 'PWR'} active={r.power} onClick={() => radio.setPower(!radio.state.power)} />
+      <RadioHotspot position={spot(0.64, 0.6)} label="◀ TUNE" onClick={() => radio.nudge(-1)} repeat />
+      <RadioHotspot position={spot(0.82, 0.6)} label="TUNE ▶" onClick={() => radio.nudge(1)} repeat />
+      <RadioHotspot position={spot(keyX[0], 0.22)} label="◀◀ SEEK" onClick={() => radio.seek(-1)} />
+      <RadioHotspot position={spot(keyX[1], 0.22)} label="SCAN" active={r.scanning} onClick={() => radio.toggleScan()} />
+      <RadioHotspot position={spot(keyX[2], 0.22)} label="SEEK ▶▶" onClick={() => radio.seek(1)} />
+      <RadioHotspot position={spot(keyX[3], 0.22)} label="■ OFF" onClick={() => radio.setPower(false)} />
     </group>
   );
 }

@@ -1,0 +1,140 @@
+import React, { useLayoutEffect, useRef, useState } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
+import * as THREE from 'three';
+import { SafeRoomModel } from '../room/RoomModel';
+import { BEANBAG_SEAT } from '../room/roomLayout';
+import { GlassAnchor } from './GlassScreen';
+import { PAD } from './cartridges';
+import { sendPad } from './gameboyBus';
+
+/**
+ * Sitting in the bean bag with the Game Boy. The camera drops to seat height
+ * and stays put; the Game Boy is held up in front of you with the emulator on
+ * its screen. Every button on the shell is pressable.
+ */
+
+/** Game Boy height when held, metres. */
+const M = 0.15;
+/**
+ * The mesh leans back on a little stand by ~27.7 degrees; tip it upright so
+ * the face points at the player. Positions below were measured off the mesh in
+ * its own fitted frame (height 1).
+ */
+const LEAN = 0.483;
+const faceZ = (y: number) => 0.329 - (y - 0.114) * 0.525;
+const at = (x: number, y: number, out = 0.012): [number, number, number] => [x * M, y * M, (faceZ(y) + out) * M];
+
+const SCREEN = { x: 0.05, y: 0.735, w: 0.4, h: 0.25 };
+export const GB_SCREEN_PX = 320;
+
+const BUTTONS: { key: keyof typeof PAD; x: number; y: number; r: number }[] = [
+  { key: 'UP', x: -0.176, y: 0.455, r: 0.04 },
+  { key: 'DOWN', x: -0.176, y: 0.363, r: 0.04 },
+  { key: 'LEFT', x: -0.222, y: 0.409, r: 0.04 },
+  { key: 'RIGHT', x: -0.13, y: 0.409, r: 0.04 },
+  { key: 'A', x: 0.229, y: 0.423, r: 0.048 },
+  { key: 'B', x: 0.123, y: 0.383, r: 0.048 },
+  { key: 'SELECT', x: -0.098, y: 0.256, r: 0.04 },
+  { key: 'START', x: 0.027, y: 0.256, r: 0.04 },
+];
+
+function SeatRig() {
+  const { camera } = useThree();
+  const saved = useRef<{ pos: THREE.Vector3; quat: THREE.Quaternion } | null>(null);
+  useLayoutEffect(() => {
+    saved.current = { pos: camera.position.clone(), quat: camera.quaternion.clone() };
+    return () => {
+      if (!saved.current) return;
+      camera.position.copy(saved.current.pos);
+      camera.quaternion.copy(saved.current.quat);
+    };
+  }, [camera]);
+  useFrame(({ clock }) => {
+    // a little breathing so it feels like sitting, not a fixed camera
+    const breathe = Math.sin(clock.elapsedTime * 1.1) * 0.004;
+    camera.position.set(BEANBAG_SEAT.at[0], BEANBAG_SEAT.at[1] + breathe, BEANBAG_SEAT.at[2]);
+    camera.lookAt(...BEANBAG_SEAT.look);
+  });
+  return null;
+}
+
+const OFFSET = new THREE.Vector3();
+
+function PadButton({ spec }: { spec: (typeof BUTTONS)[number] }) {
+  const [down, setDown] = useState(false);
+  const [hover, setHover] = useState(false);
+  const press = (on: boolean) => {
+    setDown(on);
+    sendPad(PAD[spec.key], on);
+  };
+  return (
+    <mesh
+      position={at(spec.x, spec.y, down ? 0.004 : 0.016)}
+      rotation={[-LEAN, 0, 0]}
+      onPointerOver={e => {
+        e.stopPropagation();
+        setHover(true);
+        document.body.style.cursor = 'pointer';
+      }}
+      onPointerOut={() => {
+        setHover(false);
+        document.body.style.cursor = '';
+        if (down) press(false);
+      }}
+      onPointerDown={e => {
+        e.stopPropagation();
+        press(true);
+      }}
+      onPointerUp={e => {
+        e.stopPropagation();
+        press(false);
+      }}
+    >
+      <circleGeometry args={[spec.r * M, 20]} />
+      <meshBasicMaterial color="#ffe45c" transparent opacity={down ? 0.45 : hover ? 0.25 : 0} depthWrite={false} />
+    </mesh>
+  );
+}
+
+/** The Game Boy held in both hands, kept in front of the camera. */
+function HeldGameBoy() {
+  const { camera } = useThree();
+  const hold = useRef<THREE.Group>(null);
+  useFrame(() => {
+    const g = hold.current;
+    if (!g) return;
+    OFFSET.set(0, -0.035, -0.27).applyQuaternion(camera.quaternion);
+    g.position.copy(camera.position).add(OFFSET);
+    g.quaternion.copy(camera.quaternion);
+  });
+  return (
+    <group ref={hold}>
+      {/* the player's own light on the screen and shell */}
+      <pointLight position={[0, 0.06, 0.25]} color="#fff1dc" intensity={0.5} distance={0.8} decay={2} />
+      <group rotation={[LEAN, 0, 0]} position={[0, -0.5 * M, 0]}>
+        <SafeRoomModel id="gameboy" position={[0, 0, 0]} axis="y" meters={M} tintAmount={0} />
+        <GlassAnchor
+          id="gameboy"
+          position={at(SCREEN.x, SCREEN.y, 0.01)}
+          rotation={[-LEAN, 0, 0]}
+          width={SCREEN.w * M}
+          widthPx={GB_SCREEN_PX}
+        />
+        {BUTTONS.map(b => (
+          <PadButton key={b.key} spec={b} />
+        ))}
+      </group>
+    </group>
+  );
+}
+
+export function GameBoySeat() {
+  return (
+    <>
+      <SeatRig />
+      <HeldGameBoy />
+    </>
+  );
+}
+
+export const GB_SCREEN_ASPECT = SCREEN.h / SCREEN.w;
