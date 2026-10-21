@@ -21,6 +21,11 @@ import { GameBoyGlass } from '../devices/GameBoyGlass';
 import { DEVICE_FROM_PROP, type DeviceId } from './devices';
 import { radio, useRadio } from '../radio/radioEngine';
 import { RoomStudio } from './RoomStudio';
+import { TouchHud } from './TouchHud';
+import { AimReticle } from './AimReticle';
+import { TouchGamepad } from '../devices/TouchGamepad';
+import { aim, isTouchDevice, pad } from './input';
+import { useTvStatus } from '../tv/tvBus';
 import { TABLE_GAMES, TableHudOverlay, type TableSession } from './table/TablePlay';
 import { walkRig } from './WalkController';
 import { TABLE_SEAT } from './roomLayout';
@@ -140,14 +145,22 @@ export function WalkRoom({
   const [placeName, setPlaceName] = useState('');
   const placeBytes = useRef<ArrayBuffer | null>(null);
   const placeUrl = useRef<string | null>(null);
-  const [locked, setLocked] = useState(false);
   const [engaged, setEngaged] = useState(scripted || Boolean(override.device) || override.seat || Boolean(queryTable));
   const [tourLabel, setTourLabel] = useState<string | null>(null);
   const [aimed, setAimed] = useState<Aimed | null>(null);
   const [pulledGameId, setPulledGameId] = useState<GameId | null>(null);
-  const [lampsWarm, setLampsWarm] = useState(false);
+  const [lampsWarm] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [cardOpen, setCardOpen] = useState(false);
+  /** The card you opened stays up until you close it or walk away. */
+  const [pinned, setPinned] = useState<Aimed | null>(null);
+  const pinnedAt = useRef<{ x: number; z: number } | null>(null);
+  const cardOpen = pinned !== null;
+  const setCardOpen = useCallback((open: boolean) => {
+    if (!open) setPinned(null);
+  }, []);
+  const [touch] = useState(isTouchDevice);
+  const [padCrouch, setPadCrouch] = useState(false);
+  const tvStatus = useTvStatus();
   const [device, setDevice] = useState<DeviceId | null>(override.device);
   const [seated, setSeated] = useState(override.seat);
   const [flashPhase, setFlashPhase] = useState<'idle' | 'cover' | 'reveal'>('idle');
@@ -281,16 +294,28 @@ export function WalkRoom({
     };
   }, [anchorId, placeHeight, placeLift, placeName, placeShadow]);
 
-  // Auto-open the glass card when aiming at a game or memory prop in reach
+  const pinCard = useCallback((target: Aimed) => {
+    pinnedAt.current = { x: walkRig.pos.x, z: walkRig.pos.z };
+    setPinned(target);
+    sound.playButtonClick();
+  }, []);
+
+  // Walking off closes the card; so does Escape.
   useEffect(() => {
-    if (device || flashPhase !== 'idle') return;
-    if (!aimed?.inReach) {
-      setCardOpen(false);
-      return;
-    }
-    if (aimed.kind === 'game' || propCardFor(aimed.id)) setCardOpen(true);
-    else setCardOpen(false);
-  }, [aimed, device, flashPhase]);
+    if (!pinned) return;
+    const timer = window.setInterval(() => {
+      const from = pinnedAt.current;
+      if (from && Math.hypot(walkRig.pos.x - from.x, walkRig.pos.z - from.z) > 1.1) setPinned(null);
+    }, 200);
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setPinned(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [pinned]);
 
   const onStep = useCallback(() => {
     heavyStep.current = !heavyStep.current;
@@ -446,51 +471,20 @@ export function WalkRoom({
       if (target.kind === 'game' && target.gameId) {
         const game = byId.get(target.gameId as GameId);
         if (!game) return;
-        // First E opens / confirms the card; second E (or Play button) pulls
-        if (!cardOpen) {
-          setCardOpen(true);
-          sound.playButtonClick();
-          return;
-        }
-        playGame(game);
+        // First press opens the box's card; pressing the same box again plays it.
+        if (pinned?.id === target.id) playGame(game);
+        else pinCard(target);
         return;
       }
-
-      const leaned = DEVICE_FROM_PROP[target.id];
-      if (leaned) {
-        enterDevice(leaned);
-        return;
-      }
-
-      switch (target.id) {
-        case 'lava-lamp':
-          sound.playButtonClick();
-          setLampsWarm(w => !w);
-          flash(lampsWarm ? 'Lamp back to pink' : 'Lamp warmed up');
-          break;
-        case 'door':
-          sound.playMoveClack();
-          flash('Locked. Pack 02 is behind this door.');
-          break;
-        case 'gameboy':
-          sitDown();
-          break;
-        case 'bed':
-        case 'vhs-stack':
-        case 'cards':
-          setCardOpen(true);
-          sound.playButtonClick();
-          break;
-        default:
-          break;
-      }
+      if (target.id === 'door') sound.playMoveClack();
+      if (propCardFor(target.id)) pinCard(target);
     },
-    [byId, cardOpen, enterDevice, flash, lampsWarm, playGame, sitDown],
+    [byId, pinCard, pinned, playGame],
   );
 
   const aimedGame =
-    aimed?.kind === 'game' && aimed.gameId ? byId.get(aimed.gameId as GameId) ?? null : null;
-  const aimedProp = aimed ? propCardFor(aimed.id) : null;
+    pinned?.kind === 'game' && pinned.gameId ? byId.get(pinned.gameId as GameId) ?? null : null;
+  const aimedProp = pinned && pinned.kind === 'prop' ? propCardFor(pinned.id) : null;
   const demoCardId = override.card;
   const demoPropId =
     demoCardId === 'vhs' ? 'vhs-stack' : demoCardId === 'gameboy' || demoCardId === 'cards' ? demoCardId : null;
@@ -498,12 +492,15 @@ export function WalkRoom({
   const demoProp = demoPropId ? propCardFor(demoPropId) : null;
   const cardGame = demoGame ?? aimedGame;
   const cardProp = demoProp ?? aimedProp;
-  const showCard = Boolean(demoGame || demoProp) || (engaged && cardOpen && aimed?.inReach && (aimedGame || aimedProp));
+  const showCard = Boolean(demoGame || demoProp) || (engaged && cardOpen && (aimedGame || aimedProp));
+  const walking = engaged && !device && !seated && !overlayGame && !pulledGameId && session?.phase !== 'unfold';
+  const emulatorOn = (device === 'crt' || device === 'nes') && tvStatus.mode === 'emulator';
 
 
   return (
-    <div className="relative w-full h-[100dvh] overflow-hidden bg-[#140c14] select-none">
+    <div className="relative w-full h-[100dvh] overflow-hidden bg-[#140c14] select-none overscroll-none">
       <Canvas
+        style={{ touchAction: 'none' }}
         frameloop={override.capture ? 'demand' : 'always'}
         dpr={override.capture ? 1 : [1, 1.5]}
         camera={{ fov: 72, near: 0.08, far: 40, position: [0.02, 1.58, 1.32] }}
@@ -547,14 +544,13 @@ export function WalkRoom({
             <WalkController
               enabled={!pulledGameId && !device && !seated && session?.phase !== 'unfold' && !overlayGame}
               engaged={engaged}
-              capturePointer={!tableGame}
-              onLockChange={setLocked}
               onStep={onStep}
             />
             <ReachRaycaster
               enabled={engaged && !pulledGameId && !device && !seated && !tableGame && !overlayGame}
               onAim={setAimed}
               onSelect={handleSelect}
+              onTooFar={target => flash(`Walk closer to the ${target.label.toLowerCase()}`)}
             />
           </>
         )}
@@ -569,11 +565,14 @@ export function WalkRoom({
           >
             Stand up
           </button>
-          <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/75">
-            Arrows · Z = A · X = B · Enter = Start · V = Select · or press the Game Boy's buttons · Esc stands up
-          </p>
+          {!touch && (
+            <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/75">
+              Arrows · Z = A · X = B · Enter = Start · V = Select · or press the Game Boy's buttons · Esc stands up
+            </p>
+          )}
         </div>
       )}
+      {touch && (seated || emulatorOn) && <TouchGamepad tone={seated ? 'gb' : 'nes'} />}
       {(device === 'crt' || device === 'nes') && !scripted && <TvGlass initialMode={device === 'nes' ? 'gaming' : 'menu'} />}
       {session && session.phase === 'play' && TABLE_GAMES.has(session.game.id) && (
         <TableHudOverlay
@@ -597,22 +596,27 @@ export function WalkRoom({
         </div>
       )}
 
-      {engaged && !device && !seated && !overlayGame && !session && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div
-            className={`rounded-full border transition-all duration-150 ${
-              aimed?.inReach
-                ? 'w-5 h-5 border-amber-300/90 bg-amber-200/20'
-                : aimed
-                  ? 'w-3.5 h-3.5 border-white/60'
-                  : 'w-1.5 h-1.5 border-white/70 bg-white/70'
-            }`}
-          />
-        </div>
+      {walking && !session && (
+        <AimReticle aimed={showCard ? null : aimed} showDot touch={touch} />
+      )}
+      {touch && walking && !showCard && !menuOpen && (
+        <TouchHud
+          useLabel={!session && aimed?.inReach ? aimed.label : null}
+          onUse={() => aimed?.inReach && handleSelect(aimed)}
+          crouched={crouched || padCrouch}
+          onCrouch={() => {
+            if (walkRig.crouchLock) {
+              walkRig.setCrouch(false);
+              return;
+            }
+            pad.crouch = !pad.crouch;
+            setPadCrouch(pad.crouch);
+          }}
+        />
       )}
 
       {/* Glass flash card — games + nostalgia props */}
-      {!overlayGame && (
+      {!overlayGame && (engaged || scripted) && (
       <button
         type="button"
         onClick={openMenu}
@@ -662,7 +666,7 @@ export function WalkRoom({
       />
 
       {showCard && !device && (
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 z-30 sm:right-8">
+        <div className="absolute inset-x-2 bottom-2 z-40 flex justify-center sm:inset-x-auto sm:bottom-auto sm:right-8 sm:top-1/2 sm:-translate-y-1/2">
           {cardGame ? (
             <MemoryFlashCard
               kind="game"
@@ -702,30 +706,19 @@ export function WalkRoom({
         </div>
       )}
 
-      {engaged && !device && aimed && !showCard && (
-        <div className="pointer-events-none absolute left-1/2 top-[56%] -translate-x-1/2 text-center">
-          <p className="font-display text-xl text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">{aimed.label}</p>
-          <p className="text-[11px] uppercase tracking-[0.22em] text-amber-200/90 font-bold mt-1">
-            {aimed.inReach ? `[E] ${aimed.hint ?? 'Inspect'}` : 'Walk closer'}
-          </p>
-        </div>
-      )}
-
       {toast && (
-        <div className="pointer-events-none absolute left-1/2 bottom-24 -translate-x-1/2 rounded-2xl bg-black/75 border border-white/15 px-4 py-2 text-sm text-white backdrop-blur">
+        <div className="pointer-events-none absolute left-1/2 bottom-28 z-40 -translate-x-1/2 rounded-2xl bg-black/75 border border-white/15 px-4 py-2 text-sm text-white backdrop-blur sm:bottom-24">
           {toast}
         </div>
       )}
 
-      {engaged && !device && !seated && (
-        <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-wrap items-center justify-center gap-2 text-[10px] uppercase tracking-[0.2em] font-bold text-white/70">
+      {walking && !touch && !showCard && (
+        <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 flex w-[calc(100%-2rem)] flex-wrap items-center justify-center gap-2 text-[10px] uppercase tracking-[0.2em] font-bold text-white/70">
           {[
-            ['W A S D', 'walk'],
-            ['Shift', 'run'],
-            ['C', 'crouch'],
-            [locked ? 'Mouse' : 'Drag / arrows', 'look'],
-            ['E', 'pull a game'],
-            ['Esc', 'release mouse'],
+            ['W A S D / arrows', 'walk'],
+            ['Drag · 2-finger swipe', 'look'],
+            ['Click', 'use things'],
+            ['C', 'duck'],
           ].map(([key, what]) => (
             <span key={key} className="rounded-lg bg-black/55 border border-white/10 px-2.5 py-1">
               <span className="text-amber-200">{key}</span> {what}

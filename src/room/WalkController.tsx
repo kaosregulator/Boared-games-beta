@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { PointerLockControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { PLAYER, WALL } from './videoRoom';
 import { ROOM_COLLIDERS, TABLE_COLLIDER } from './roomLayout';
+import { aim, emitRoomTap, fitFov, pad } from './input';
 
 /**
  * Outside control of the walking body: the table session sets the player
@@ -14,6 +14,8 @@ export const walkRig = {
   crouchLock: false,
   /** The spawned card table blocks walking only while it exists. */
   tableActive: false,
+  /** Where the player stands, for cards that close when you walk off. */
+  pos: { x: 0, z: 0 },
   listeners: new Set<(crouched: boolean) => void>(),
   setCrouch(on: boolean) {
     if (walkRig.crouchLock === on) return;
@@ -22,59 +24,81 @@ export const walkRig = {
   },
 };
 
+// Capture scripts move the player with window.__walkRig.teleport.
+if (import.meta.env.DEV && typeof window !== 'undefined') (window as unknown as { __walkRig: typeof walkRig }).__walkRig = walkRig;
+
 const FORWARD = new THREE.Vector3();
 const RIGHT = new THREE.Vector3();
 const WISH = new THREE.Vector3();
 const LOOK = new THREE.Euler(0, 0, 0, 'YXZ');
 
+/** A press that moves less than this is a click or tap, not a look-drag. */
+const TAP_SLOP = { mouse: 6, touch: 12 };
+const WALK_FOV = 72;
+
 interface WalkControllerProps {
   enabled: boolean;
-  /** True once the player has stepped in. Movement does not require pointer lock. */
+  /** True once the player has stepped in. */
   engaged: boolean;
-  /** When a table game is open, clicks belong to the board, not pointer lock. */
-  capturePointer?: boolean;
-  onLockChange?: (locked: boolean) => void;
   /** Fires when the player's footfall lands, for step audio. */
   onStep?: () => void;
 }
 
+function turn(camera: THREE.Camera, yaw: number, pitch: number) {
+  LOOK.setFromQuaternion(camera.quaternion, 'YXZ');
+  LOOK.y -= yaw;
+  LOOK.x = THREE.MathUtils.clamp(LOOK.x - pitch, -1.2, 1.2);
+  LOOK.z = 0;
+  camera.quaternion.setFromEuler(LOOK);
+}
+
 /**
  * Free-roam first-person movement with real furniture collision.
+ *
+ * No pointer lock: the cursor stays free so a click lands on what it points
+ * at. Drag (or swipe on a touch screen, or two-finger swipe on a trackpad) to
+ * look around.
  *
  * The player is a circle of PLAYER.radius on the floor plane. Each frame the
  * desired position is resolved against the room walls and every furniture box,
  * pushing out along whichever axis has the smaller overlap so you slide along
  * the bed and the dresser instead of sticking to them.
  */
-export function WalkController({ enabled, engaged, capturePointer = true, onLockChange, onStep }: WalkControllerProps) {
-  const { camera, gl } = useThree();
+export function WalkController({ enabled, engaged, onStep }: WalkControllerProps) {
+  const { camera, gl, size } = useThree();
   const keys = useRef<Record<string, boolean>>({});
-  const controls = useRef<any>(null);
   const velocity = useRef(new THREE.Vector3());
   const bobPhase = useRef(0);
   const stepArmed = useRef(false);
   const eyeHeight = useRef(PLAYER.height);
-  const dragging = useRef(false);
   const engagedRef = useRef(engaged);
   engagedRef.current = engaged;
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
-  const captureRef = useRef(capturePointer);
-  captureRef.current = capturePointer;
 
   useEffect(() => {
     camera.position.set(...PLAYER.spawn);
     camera.lookAt(...PLAYER.spawnLook);
   }, [camera]);
 
+  // Portrait phones see the room as wide as a laptop does.
+  useEffect(() => {
+    const cam = camera as THREE.PerspectiveCamera;
+    const fov = fitFov(WALK_FOV, size.width / Math.max(1, size.height));
+    if (Math.abs(cam.fov - fov) > 0.01) {
+      cam.fov = fov;
+      cam.updateProjectionMatrix();
+    }
+  }, [camera, size.width, size.height]);
+
   useEffect(() => {
     const blocked = new Set([
-      'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyC',
+      'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyC', 'KeyQ',
       'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space',
     ]);
     const typing = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;
-      return Boolean(el?.closest('input, textarea, select, [data-ui="studio"], [data-ui="table"]'));
+      return Boolean(el?.closest('input, textarea, select, iframe, [data-ui="studio"], [data-ui="table"]'));
     };
     const down = (e: KeyboardEvent) => {
       if (typing(e)) return;
@@ -85,62 +109,110 @@ export function WalkController({ enabled, engaged, capturePointer = true, onLock
         return;
       }
       keys.current[e.code] = true;
-      if (blocked.has(e.code)) e.preventDefault();
+      if (e.code.startsWith('Arrow')) aim.mode = 'center';
+      if (blocked.has(e.code) && enabledRef.current) e.preventDefault();
     };
     const up = (e: KeyboardEvent) => {
       keys.current[e.code] = false;
     };
+    const blur = () => {
+      keys.current = {};
+    };
     window.addEventListener('keydown', down);
     window.addEventListener('keyup', up);
+    window.addEventListener('blur', blur);
     return () => {
       window.removeEventListener('keydown', down);
       window.removeEventListener('keyup', up);
+      window.removeEventListener('blur', blur);
     };
   }, []);
 
   useEffect(() => {
-    const node = controls.current;
-    if (!node) return;
-    const lock = () => onLockChange?.(true);
-    const unlock = () => onLockChange?.(false);
-    node.addEventListener('lock', lock);
-    node.addEventListener('unlock', unlock);
-    return () => {
-      node.removeEventListener('lock', lock);
-      node.removeEventListener('unlock', unlock);
-    };
-  }, [onLockChange]);
-
-  useEffect(() => {
     const canvas = gl.domElement;
-    const down = (event: PointerEvent) => {
-      if (event.button !== 0 || !enabledRef.current || !engagedRef.current) return;
-      dragging.current = true;
+    let press: null | { id: number; x: number; y: number; lastX: number; lastY: number; touch: boolean; moved: boolean } = null;
+
+    const live = () => enabledRef.current && engagedRef.current;
+    const setCursor = (event: PointerEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      aim.px.x = event.clientX;
+      aim.px.y = event.clientY;
+      aim.ndc.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      aim.ndc.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
     };
-    const up = () => {
-      dragging.current = false;
+
+    const down = (event: PointerEvent) => {
+      const touch = event.pointerType !== 'mouse';
+      if (touch) aim.mode = 'center';
+      else {
+        aim.mode = 'cursor';
+        setCursor(event);
+      }
+      if (press || (!touch && event.button !== 0 && event.button !== 2)) return;
+      press = { id: event.pointerId, x: event.clientX, y: event.clientY, lastX: event.clientX, lastY: event.clientY, touch, moved: false };
     };
     const move = (event: PointerEvent) => {
-      if (!enabledRef.current || !engagedRef.current || controls.current?.isLocked || !dragging.current) return;
-      LOOK.setFromQuaternion(camera.quaternion, 'YXZ');
-      LOOK.y -= event.movementX * 0.0022;
-      LOOK.x = THREE.MathUtils.clamp(LOOK.x - event.movementY * 0.0022, -1.15, 1.15);
-      LOOK.z = 0;
-      camera.quaternion.setFromEuler(LOOK);
+      if (event.pointerType === 'mouse' && !press) {
+        aim.mode = 'cursor';
+        setCursor(event);
+      }
+      if (!press || event.pointerId !== press.id) return;
+      const dx = event.clientX - press.lastX;
+      const dy = event.clientY - press.lastY;
+      press.lastX = event.clientX;
+      press.lastY = event.clientY;
+      if (!press.moved) {
+        const slop = press.touch ? TAP_SLOP.touch : TAP_SLOP.mouse;
+        if (Math.hypot(event.clientX - press.x, event.clientY - press.y) < slop) return;
+        press.moved = true;
+        aim.dragging = true;
+        try {
+          canvas.setPointerCapture(event.pointerId);
+        } catch {
+          // The pointer may already be gone; the drag still works without capture.
+        }
+      }
+      if (!live()) return;
+      // A full swipe across a phone is about a half turn; a mouse is finer.
+      const sens = press.touch ? 3.4 / Math.max(window.innerWidth, window.innerHeight) : 0.0032;
+      turn(camera, dx * sens, dy * sens);
     };
-    const click = () => {
-      if (!captureRef.current || !enabledRef.current || !engagedRef.current || controls.current?.isLocked) return;
-      controls.current?.lock();
+    const up = (event: PointerEvent) => {
+      if (!press || event.pointerId !== press.id) return;
+      const tapped = !press.moved;
+      press = null;
+      aim.dragging = false;
+      if (event.pointerType === 'mouse') setCursor(event);
+      if (tapped && event.type === 'pointerup') emitRoomTap(event.clientX, event.clientY);
     };
+    const leave = (event: PointerEvent) => {
+      if (event.pointerType === 'mouse' && !press) aim.mode = 'center';
+    };
+    // Two-finger swipe on a trackpad (or a scroll wheel) looks around.
+    const wheel = (event: WheelEvent) => {
+      event.preventDefault();
+      if (event.ctrlKey || !live()) return;
+      const scale = event.deltaMode === 1 ? 16 : 1;
+      const clamp = (v: number) => THREE.MathUtils.clamp(v * scale, -60, 60);
+      turn(camera, clamp(event.deltaX) * 0.0042, clamp(event.deltaY) * 0.0032);
+    };
+    const menu = (event: Event) => event.preventDefault();
+
     canvas.addEventListener('pointerdown', down);
-    window.addEventListener('pointerup', up);
     window.addEventListener('pointermove', move);
-    canvas.addEventListener('click', click);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+    canvas.addEventListener('pointerleave', leave);
+    canvas.addEventListener('wheel', wheel, { passive: false });
+    canvas.addEventListener('contextmenu', menu);
     return () => {
       canvas.removeEventListener('pointerdown', down);
-      window.removeEventListener('pointerup', up);
       window.removeEventListener('pointermove', move);
-      canvas.removeEventListener('click', click);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      canvas.removeEventListener('pointerleave', leave);
+      canvas.removeEventListener('wheel', wheel);
+      canvas.removeEventListener('contextmenu', menu);
     };
   }, [camera, gl]);
 
@@ -153,7 +225,6 @@ export function WalkController({ enabled, engaged, capturePointer = true, onLock
     for (const box of colliders) {
       // Anything shorter than the player's knees is walked over, not into.
       if (box.top < 0.22) continue;
-      // Desk tops and shelves above head height never block the floor.
       const dx = px - box.x;
       const dz = pz - box.z;
       const overlapX = box.hx + r - Math.abs(dx);
@@ -180,18 +251,19 @@ export function WalkController({ enabled, engaged, capturePointer = true, onLock
       camera.position.set(jump.at[0], eyeHeight.current, jump.at[2]);
       camera.lookAt(jump.look[0], jump.look[1], jump.look[2]);
     }
+    walkRig.pos.x = camera.position.x;
+    walkRig.pos.z = camera.position.z;
     if (!enabled || !engagedRef.current) {
-      dragging.current = false;
       velocity.current.multiplyScalar(0.8);
       return;
     }
 
-    const crouching = keys.current.ControlLeft || keys.current.ControlRight || keys.current.KeyC || walkRig.crouchLock;
-    const sprinting = (keys.current.ShiftLeft || keys.current.ShiftRight) && !crouching;
+    const k = keys.current;
+    const crouching = k.ControlLeft || k.ControlRight || k.KeyC || pad.crouch || walkRig.crouchLock;
     const targetEye = crouching ? PLAYER.crouchHeight : PLAYER.height;
     eyeHeight.current += (targetEye - eyeHeight.current) * Math.min(1, delta * 9);
 
-    const speed = crouching ? PLAYER.crouchSpeed : sprinting ? PLAYER.sprintSpeed : PLAYER.walkSpeed;
+    const speed = crouching ? PLAYER.crouchSpeed : PLAYER.walkSpeed;
 
     camera.getWorldDirection(FORWARD);
     FORWARD.y = 0;
@@ -199,11 +271,16 @@ export function WalkController({ enabled, engaged, capturePointer = true, onLock
     RIGHT.crossVectors(FORWARD, camera.up).normalize();
 
     WISH.set(0, 0, 0);
-    if (keys.current.KeyW) WISH.add(FORWARD);
-    if (keys.current.KeyS) WISH.sub(FORWARD);
-    if (keys.current.KeyD) WISH.add(RIGHT);
-    if (keys.current.KeyA) WISH.sub(RIGHT);
+    if (k.KeyW || k.ArrowUp) WISH.add(FORWARD);
+    if (k.KeyS || k.ArrowDown) WISH.sub(FORWARD);
+    if (k.KeyD) WISH.add(RIGHT);
+    if (k.KeyA) WISH.sub(RIGHT);
     if (WISH.lengthSq() > 0) WISH.normalize().multiplyScalar(speed);
+    // The thumb stick is analog: push it a little to creep.
+    if (pad.x !== 0 || pad.y !== 0) {
+      WISH.addScaledVector(FORWARD, pad.y * speed).addScaledVector(RIGHT, pad.x * speed);
+      if (WISH.length() > speed) WISH.setLength(speed);
+    }
 
     velocity.current.x += (WISH.x - velocity.current.x) * Math.min(1, delta * PLAYER.accel);
     velocity.current.z += (WISH.z - velocity.current.z) * Math.min(1, delta * PLAYER.accel);
@@ -219,32 +296,24 @@ export function WalkController({ enabled, engaged, capturePointer = true, onLock
     // Footstep bob, with a step event at the bottom of each stride.
     const moving = velocity.current.lengthSq() > 0.09;
     if (moving) {
-      bobPhase.current += delta * (sprinting ? 11 : 7.4);
+      bobPhase.current += delta * 7.4;
       const sin = Math.sin(bobPhase.current);
       if (sin < -0.9 && stepArmed.current) {
         stepArmed.current = false;
         onStep?.();
       }
       if (sin > 0) stepArmed.current = true;
-      camera.position.y = eyeHeight.current + sin * (sprinting ? 0.035 : 0.022);
+      camera.position.y = eyeHeight.current + sin * 0.022;
     } else {
       bobPhase.current = 0;
       const t = performance.now() * 0.001;
       camera.position.y = eyeHeight.current + Math.sin(t * 1.25) * 0.008;
     }
 
-    LOOK.setFromQuaternion(camera.quaternion, 'YXZ');
-    if (keys.current.ArrowLeft) LOOK.y += 1.6 * delta;
-    if (keys.current.ArrowRight) LOOK.y -= 1.6 * delta;
-    if (keys.current.ArrowUp) LOOK.x += 1.2 * delta;
-    if (keys.current.ArrowDown) LOOK.x -= 1.2 * delta;
-    LOOK.x = THREE.MathUtils.clamp(LOOK.x, -1.15, 1.15);
-    LOOK.z = 0;
-    camera.quaternion.setFromEuler(LOOK);
+    // Left / right arrows (and Q / E-less laptops) turn in place.
+    const yaw = (k.ArrowLeft ? -1 : 0) + (k.ArrowRight ? 1 : 0);
+    if (yaw) turn(camera, yaw * 1.9 * delta, 0);
   });
 
-  // drei's controls aim every click at the screen centre while enabled, which
-  // is right for walking with a crosshair and wrong for clicking a board, a
-  // TV button, or a disc. Only switch them on while actually walking.
-  return <PointerLockControls ref={controls} selector="#enter-room" enabled={enabled && capturePointer} />;
+  return null;
 }

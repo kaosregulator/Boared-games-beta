@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { setPadFrame } from '../devices/gameboyBus';
 import { CHANNELS, guideRow, nowSeconds, snickOnAir, type Channel } from './channels';
 import { resolveArchive } from './archive';
 import { channelClick, paintSnow, startStatic, type StaticHandle } from './noise';
@@ -326,9 +327,13 @@ export function TvScreen({ width, height, command, initialMode, onStatus }: TvSc
 
   useEffect(() => {
     if (mode !== 'emulator') return;
+    setPadFrame(emu.current);
     const focus = window.setTimeout(() => emu.current?.focus(), 400);
-    return () => window.clearTimeout(focus);
-  }, [mode]);
+    return () => {
+      window.clearTimeout(focus);
+      setPadFrame(null);
+    };
+  }, [mode, cart]);
 
   const current = CHANNELS.find(c => c.number === channel) ?? CHANNELS[0];
   const rows = useMemo(() => CHANNELS.map(c => ({ c, ...guideRow(c) })), [now]); // eslint-disable-line react-hooks/exhaustive-deps

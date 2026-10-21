@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { SafeRoomModel } from './RoomModel';
+import { fitFov } from './input';
 import type { DeviceId } from './devices';
 import { TvSet } from '../tv/TvSet';
 import { radio, useRadio, type RadioSnapshot } from '../radio/radioEngine';
@@ -37,8 +38,10 @@ function applyPose(cam: THREE.PerspectiveCamera, device: DeviceId) {
   const pose = POSE[device];
   cam.position.set(pose.at[0], STUDIO_Y + pose.at[1], pose.at[2]);
   cam.lookAt(pose.look[0], STUDIO_Y + pose.look[1], pose.look[2]);
-  if (cam.fov !== pose.fov) {
-    cam.fov = pose.fov;
+  // Portrait screens widen the view so the whole set stays in frame.
+  const fov = fitFov(pose.fov, cam.aspect, 1.5, 112);
+  if (Math.abs(cam.fov - fov) > 0.01) {
+    cam.fov = fov;
     cam.updateProjectionMatrix();
   }
 }
