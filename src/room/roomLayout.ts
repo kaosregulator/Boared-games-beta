@@ -104,6 +104,8 @@ const clueSize = fit(N.clue, 'x', 0.36);
 const lifeSize = fit(N.life, 'x', 0.4);
 const yahtzeeSize = fit(N.yahtzee, 'x', 0.38);
 const beanSize = fit(N.beanbag, 'x', 1.38);
+const beanX = -0.15;
+const beanZ = SOUTH_Z - beanSize.sz / 2 - 0.06;
 const crateSize = fit(N.crate, 'x', 1.08);
 
 /** Push the frame into the plaster so the visible wood meets the wall. */
@@ -282,12 +284,13 @@ export const LAYOUT = {
     meters: 0.38,
     ...looseSize,
   },
+  // Left on the bean bag, screen toward the room, where you sit to play it.
   gameboy: {
     id: 'gameboy',
-    x: bedX + 0.2,
-    y: 0.5,
-    z: bedZ + 0.28,
-    rotY: 0.4,
+    x: beanX + 0.12,
+    y: beanSize.sy * 0.86,
+    z: beanZ - 0.18,
+    rotY: Math.PI - 0.25,
     axis: 'y' as const,
     meters: 0.16,
     ...gbSize,
@@ -344,9 +347,9 @@ export const LAYOUT = {
   },
   car: {
     id: 'car',
-    x: 0.35,
+    x: 1.0,
     y: 0,
-    z: 0.15,
+    z: 0.55,
     rotY: 0.7,
     axis: 'x' as const,
     meters: 0.32,
@@ -464,9 +467,9 @@ export const LAYOUT = {
   },
   beanbag: {
     id: 'beanbag',
-    x: -0.15,
+    x: beanX,
     y: 0,
-    z: SOUTH_Z - beanSize.sz / 2 - 0.06,
+    z: beanZ,
     rotY: Math.PI,
     axis: 'x' as const,
     meters: 1.38,
@@ -491,7 +494,8 @@ export const LAYOUT = {
 export const SOUTH_WINDOW = {
   x: -0.15,
   y: 0.96,
-  z: SOUTH_Z - windowSize.sz * 0.22,
+  // Same flush as the north window: frame pushed into the plaster.
+  z: SOUTH_Z - windowSize.sz * 0.18,
   rotY: Math.PI,
   axis: 'y' as const,
   meters: 1.12,
@@ -505,13 +509,51 @@ function footprint(p: Placed, quarterTurns: boolean) {
   return { x: p.x, z: p.z, hx, hz, top: p.y + p.sy };
 }
 
-/** Card table the 3D games are played on. It stays put; only the match changes. */
+/**
+ * Card table the games are played on. It is not in the room until a game is
+ * picked; then it spawns here on the rug and the player is set down crouched
+ * at its south edge.
+ */
 export const PLAY_TABLE = {
-  x: -0.82,
-  z: 0.18,
+  x: 0.12,
+  z: -0.28,
   w: 1.14,
   d: 0.74,
   h: 0.62,
+};
+
+/** Where the player crouches at the table: eye position and the point looked at. */
+export const TABLE_SEAT = {
+  at: [PLAY_TABLE.x, 1.0, PLAY_TABLE.z + PLAY_TABLE.d / 2 + 0.42] as [number, number, number],
+  look: [PLAY_TABLE.x, PLAY_TABLE.h, PLAY_TABLE.z - 0.02] as [number, number, number],
+};
+
+export const TABLE_COLLIDER = {
+  x: PLAY_TABLE.x,
+  z: PLAY_TABLE.z,
+  hx: PLAY_TABLE.w / 2,
+  hz: PLAY_TABLE.d / 2,
+  top: PLAY_TABLE.h,
+};
+
+/** Sitting in the bean bag with the Game Boy. */
+export const BEANBAG_SEAT = {
+  at: [beanX, 0.86, beanZ + 0.12] as [number, number, number],
+  look: [beanX, 0.62, beanZ - 1.2] as [number, number, number],
+};
+
+/**
+ * Neon game buttons on the east wall, one row exactly where the boxes stood
+ * on top of the old crate (crate gone, boxes kept at the same height).
+ */
+export const NEON_WALL = {
+  x: EAST_X - 0.012,
+  z: -1.45,
+  y: 1.04,
+  cols: 10,
+  w: 0.1,
+  h: 0.14,
+  gap: 0.012,
 };
 
 export const ROOM_COLLIDERS = [
@@ -526,8 +568,6 @@ export const ROOM_COLLIDERS = [
   footprint(LAYOUT.teddy, false),
   footprint(LAYOUT.army, false),
   footprint(LAYOUT.beanbag, false),
-  footprint(LAYOUT.crate, true),
-  { x: PLAY_TABLE.x, z: PLAY_TABLE.z, hx: PLAY_TABLE.w / 2, hz: PLAY_TABLE.d / 2, top: PLAY_TABLE.h },
 ];
 
 /** Game-box rows up the real shelf, helmet stays above the top row. */

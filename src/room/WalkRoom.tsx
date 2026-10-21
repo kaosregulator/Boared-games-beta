@@ -616,10 +616,10 @@ export function WalkRoom({
             <p className="text-[10px] uppercase tracking-[0.35em] text-amber-200/90 font-bold">Game Room</p>
             <h1 className="font-display text-4xl sm:text-5xl text-white mt-2">Walk the bedroom</h1>
             <p className="text-sm text-slate-300 mt-3 leading-relaxed">
-              This room is the menu. Walk up to a box, or the crate shelf, and play it here.
+              This room is the menu. Walk up to a game box or a neon sign on the wall, and play it here.
               WASD moves you. Click and drag to look around if the mouse is not captured.
             </p>
-            <p className="text-[11px] text-slate-400 mt-3">On the shelf: {shelfTitles}</p>
+            <p className="text-[11px] text-slate-400 mt-3">On the wall: {shelfTitles}</p>
             <button
               id="enter-room"
               type="button"

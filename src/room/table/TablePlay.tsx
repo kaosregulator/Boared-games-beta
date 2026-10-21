@@ -751,6 +751,7 @@ function Ocean({
 }
 
 export function PlayTable({ game, onLeave }: { game: TableGameId | null; onLeave: () => void }) {
+  if (!game) return null;
   return (
     <group position={[PLAY_TABLE.x, 0, PLAY_TABLE.z]}>
       <TableWood />
