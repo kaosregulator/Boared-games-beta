@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { GameMetadata } from '../types';
-import type { PropCard } from './propCards';
-import { GAME_PHOTOS, PROP_PHOTOS } from './gamePhotos';
-import { BookOpen, Users, Wifi, WifiOff, X, Sparkles } from 'lucide-react';
+import type { CardPhoto, CardVideo, PropCard } from './propCards';
+import { GAME_PHOTOS } from './gamePhotos';
+import { BookOpen, ChevronLeft, ChevronRight, Users, Wifi, WifiOff, X, Sparkles } from 'lucide-react';
 
 /** Board games that already have a real in-room engine vs coming-soon shells. */
 const ONLINE_READY = new Set([
@@ -37,28 +37,31 @@ interface PropCardProps {
   kind: 'prop';
   prop: PropCard;
   onClose: () => void;
-  /** Optional secondary action (e.g. boombox play). */
+  /** The card's own action: turn on the TV, sit down with the Game Boy... */
   onAction?: () => void;
-  actionLabel?: string;
+  /** An old commercial started or stopped, so the room music can step aside. */
+  onVideo?: (playing: boolean) => void;
 }
 
 export type MemoryFlashCardProps = GameCardProps | PropCardProps;
 
 /**
- * See-through glass flash card for shelf games and nostalgia props.
- * Desktop: appears while aiming; E opens play / inspect. Mobile: tap to pin.
+ * Glass card for a game box or a memory. On a phone it is a sheet along the
+ * bottom of the screen; on a bigger screen it sits on the right. The body
+ * scrolls, so long stories and the photo strip fit anywhere.
  */
 export function MemoryFlashCard(props: MemoryFlashCardProps) {
   return (
     <div
       data-ui="card"
-      className="pointer-events-auto w-[min(22rem,calc(100vw-2rem))] rounded-3xl border border-white/35 bg-white/10 shadow-[0_24px_70px_rgba(0,0,0,0.35)] backdrop-blur-2xl text-white overflow-hidden"
+      className="pointer-events-auto flex max-h-[min(72dvh,42rem)] w-[min(24rem,calc(100vw-1rem))] flex-col overflow-hidden rounded-3xl border border-white/25 bg-[#120a16]/80 text-white shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-2xl sm:max-h-[min(86dvh,46rem)]"
       onClick={e => e.stopPropagation()}
+      onPointerDown={e => e.stopPropagation()}
     >
-      <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 border-b border-white/10 bg-white/5">
-        <div className="flex items-center gap-2 min-w-0">
-          <Sparkles className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-          <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-100/90 truncate">
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-white/5 px-3.5 py-2.5">
+        <div className="flex min-w-0 items-center gap-2">
+          <Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-300" />
+          <span className="truncate text-[10px] font-bold uppercase tracking-[0.22em] text-amber-100/90">
             {props.kind === 'game' ? 'Game box' : 'Memory'}
           </span>
         </div>
@@ -66,13 +69,15 @@ export function MemoryFlashCard(props: MemoryFlashCardProps) {
           type="button"
           aria-label="Close card"
           onClick={props.onClose}
-          className="rounded-lg p-1 text-white/70 hover:text-white hover:bg-white/10"
+          className="rounded-lg p-1.5 text-white/70 hover:bg-white/10 hover:text-white"
         >
-          <X className="w-4 h-4" />
+          <X className="h-4 w-4" />
         </button>
       </div>
 
-      {props.kind === 'game' ? <GameBody {...props} /> : <PropBody {...props} />}
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain" style={{ touchAction: 'pan-y' }}>
+        {props.kind === 'game' ? <GameBody {...props} /> : <PropBody {...props} />}
+      </div>
     </div>
   );
 }
@@ -149,30 +154,152 @@ function GameBody({ game, onPlay, onRules }: GameCardProps) {
   );
 }
 
-function PropBody({ prop, onAction, actionLabel }: PropCardProps) {
-  const photo = PROP_PHOTOS[prop.id];
+/** Swipe (or click the arrows) through the real photos. */
+function Gallery({ photos }: { photos: CardPhoto[] }) {
+  const strip = useRef<HTMLDivElement>(null);
+  const [index, setIndex] = useState(0);
+  const go = (dir: number) => {
+    const el = strip.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * el.clientWidth, behavior: 'smooth' });
+  };
   return (
-    <div className="p-3.5 flex flex-col gap-3">
-      <PhotoFrame src={photo?.src || prop.image || undefined} alt={prop.title} credit={photo?.credit} fallback={prop.title} />
-      <p className="text-[10px] uppercase tracking-[0.2em] text-amber-200/80">{prop.era}</p>
-      <p className="text-sm text-white/85 leading-relaxed">{prop.blurb}</p>
-      <ul className="text-xs text-white/70 space-y-1.5">
-        {prop.facts.map(f => (
-          <li key={f} className="flex gap-2">
-            <span className="text-amber-300/80 shrink-0">▸</span>
-            <span>{f}</span>
-          </li>
+    <div className="relative">
+      <div
+        ref={strip}
+        className="flex snap-x snap-mandatory overflow-x-auto rounded-2xl border border-white/15 bg-black/40 [scrollbar-width:none]"
+        style={{ touchAction: 'pan-x pan-y' }}
+        onScroll={e => {
+          const el = e.currentTarget;
+          setIndex(Math.round(el.scrollLeft / Math.max(1, el.clientWidth)));
+        }}
+      >
+        {photos.map(photo => (
+          <figure key={photo.src} className="w-full shrink-0 snap-center">
+            <img
+              src={photo.src}
+              alt={photo.alt}
+              loading="lazy"
+              className="h-44 w-full bg-black/30 object-contain"
+              onError={e => {
+                // Offline or blocked: show the caption on a plain frame instead of a broken image.
+                const img = e.currentTarget;
+                img.style.visibility = 'hidden';
+                img.parentElement?.setAttribute('data-missing', '1');
+              }}
+            />
+            <figcaption className="truncate px-2.5 py-1 text-[9px] text-white/50">{photo.credit}</figcaption>
+          </figure>
         ))}
-      </ul>
-      {onAction && actionLabel && (
+      </div>
+      {photos.length > 1 && (
+        <>
+          <button
+            type="button"
+            aria-label="Previous photo"
+            onClick={() => go(-1)}
+            className="absolute left-1.5 top-[40%] hidden h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white/85 hover:bg-black/75 sm:flex"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            aria-label="Next photo"
+            onClick={() => go(1)}
+            className="absolute right-1.5 top-[40%] hidden h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white/85 hover:bg-black/75 sm:flex"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 gap-1">
+            {photos.map((photo, i) => (
+              <span key={photo.src} className={`h-1.5 w-1.5 rounded-full ${i === index ? 'bg-white' : 'bg-white/35'}`} />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** The old commercial, from archive.org's own player, loaded only when asked. */
+function Commercial({ video, onVideo }: { video: CardVideo; onVideo?: (playing: boolean) => void }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    onVideo?.(true);
+    return () => onVideo?.(false);
+  }, [open, onVideo]);
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="flex w-full items-center gap-3 rounded-2xl border border-white/15 bg-black/35 px-3 py-2.5 text-left hover:bg-black/50"
+      >
+        <span className="flex h-9 w-12 shrink-0 items-center justify-center rounded-md border border-white/20 bg-[#1a1a1a] font-mono text-[10px] font-bold text-red-400">
+          ▶ VHS
+        </span>
+        <span className="min-w-0">
+          <span className="block text-[9px] font-bold uppercase tracking-[0.2em] text-amber-200/80">Play the old commercial</span>
+          <span className="block truncate text-xs text-white/85">{video.title}</span>
+        </span>
+      </button>
+    );
+  }
+  return (
+    <div className="overflow-hidden rounded-2xl border border-white/15 bg-black">
+      <div className="relative w-full" style={{ paddingTop: '75%' }}>
+        <iframe
+          title={video.title}
+          src={`https://archive.org/embed/${encodeURIComponent(video.archiveId)}?autoplay=1`}
+          allow="autoplay; fullscreen"
+          allowFullScreen
+          className="absolute inset-0 h-full w-full border-0"
+        />
+      </div>
+      <div className="flex items-center justify-between gap-2 px-2.5 py-1.5">
+        <span className="truncate text-[9px] text-white/50">{video.title} · Internet Archive</span>
+        <button type="button" onClick={() => setOpen(false)} className="text-[9px] font-bold uppercase tracking-wider text-amber-200">
+          Stop
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PropBody({ prop, onAction, onVideo }: PropCardProps) {
+  return (
+    <div className="flex flex-col gap-3 p-3.5">
+      {prop.photos?.length ? (
+        <Gallery photos={prop.photos} />
+      ) : (
+        <div className="rounded-2xl border border-white/15 bg-gradient-to-br from-fuchsia-700/40 via-black/30 to-amber-600/30 px-4 py-5">
+          <p className="font-display text-2xl leading-tight text-white">{prop.title}</p>
+        </div>
+      )}
+      <div>
+        <p className="text-[10px] uppercase tracking-[0.2em] text-amber-200/80">{prop.era}</p>
+        {prop.photos?.length ? <h3 className="mt-0.5 font-display text-xl leading-tight text-white">{prop.title}</h3> : null}
+      </div>
+      {onAction && prop.action && (
         <button
           type="button"
           onClick={onAction}
-          className="rounded-xl bg-white/10 border border-white/20 px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-white hover:bg-white/15"
+          className="rounded-xl bg-gradient-to-r from-fuchsia-600 to-amber-500 px-3 py-2.5 font-display text-sm text-white shadow hover:brightness-110"
         >
-          {actionLabel}
+          {prop.action.label}
         </button>
       )}
+      <p className="text-sm leading-relaxed text-white/85">{prop.story}</p>
+      <ul className="space-y-1.5 text-xs text-white/70">
+        {prop.memories.map(line => (
+          <li key={line} className="flex gap-2">
+            <span className="shrink-0 text-amber-300/80">▸</span>
+            <span>{line}</span>
+          </li>
+        ))}
+      </ul>
+      {prop.video && <Commercial video={prop.video} onVideo={onVideo} />}
     </div>
   );
 }

@@ -14,15 +14,22 @@ const raycaster = new THREE.Raycaster();
 const CENTRE = new THREE.Vector2(0, 0);
 const POINT = new THREE.Vector2();
 
-function readTarget(object: THREE.Object3D | null): HoverTarget | null {
+function readTarget(object: THREE.Object3D | null): { target: HoverTarget; volume: number } | null {
   let node: THREE.Object3D | null = object;
   while (node) {
     const data = node.userData?.interactable as HoverTarget | undefined;
-    if (data?.id) return data;
+    if (data?.id) return { target: data, volume: (node.userData.volume as number | undefined) ?? 0.001 };
     node = node.parent;
   }
   return null;
 }
+
+/**
+ * How far behind the first box a smaller box can be and still win. A desk's
+ * own box wraps the lamp on top of it, so the lamp is "behind" the desk's
+ * front face; pointing at the lamp should still pick the lamp.
+ */
+const NESTED_DEPTH = 0.8;
 
 interface ReachRaycasterProps {
   enabled: boolean;
@@ -51,12 +58,17 @@ export function ReachRaycaster({ enabled, onAim, onSelect, onTooFar }: ReachRayc
     raycaster.setFromCamera(ndc, camera);
     raycaster.far = PLAYER.reach + 4;
     const hits = raycaster.intersectObjects(scene.children, true);
+    let best: { target: HoverTarget; volume: number; distance: number } | null = null;
+    let first = Infinity;
     for (const hit of hits) {
-      const target = readTarget(hit.object);
-      if (!target) continue;
-      return { ...target, distance: hit.distance, inReach: hit.distance <= PLAYER.reach };
+      const found = readTarget(hit.object);
+      if (!found) continue;
+      if (first === Infinity) first = hit.distance;
+      if (hit.distance > first + NESTED_DEPTH) break;
+      if (!best || found.volume < best.volume) best = { ...found, distance: hit.distance };
     }
-    return null;
+    if (!best) return null;
+    return { ...best.target, distance: best.distance, inReach: best.distance <= PLAYER.reach };
   };
 
   useEffect(() => {

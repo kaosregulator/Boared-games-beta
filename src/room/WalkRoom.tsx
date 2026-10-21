@@ -10,7 +10,8 @@ import { CaptureClock, TourCamera } from './TourCamera';
 import { LAYOUT } from './roomLayout';
 import { DESK_SLOTS, SHELF_SLOTS, SHELF_SLOTS_LOWER } from './videoRoom';
 import { MemoryFlashCard } from './MemoryFlashCard';
-import { propCardFor } from './propCards';
+import { propCardFor, type CardAction } from './propCards';
+import { TamagotchiPlay } from '../devices/TamagotchiPlay';
 import { DeviceFocus } from './DeviceFocus';
 import { DeviceOverlay } from './DeviceOverlay';
 import { TvGlass } from '../tv/TvSet';
@@ -163,6 +164,7 @@ export function WalkRoom({
   const tvStatus = useTvStatus();
   const [device, setDevice] = useState<DeviceId | null>(override.device);
   const [seated, setSeated] = useState(override.seat);
+  const [tamagotchi, setTamagotchi] = useState(false);
   const [flashPhase, setFlashPhase] = useState<'idle' | 'cover' | 'reveal'>('idle');
   const radioState = useRadio();
   const tapeOn = radioState.power;
@@ -197,7 +199,7 @@ export function WalkRoom({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [radioState.power]);
 
-  blockSelect.current = flashPhase !== 'idle' || device !== null || seated;
+  blockSelect.current = flashPhase !== 'idle' || device !== null || seated || tamagotchi;
 
   useEffect(() => {
     let cancelled = false;
@@ -482,18 +484,42 @@ export function WalkRoom({
     [byId, pinCard, pinned, playGame],
   );
 
+  const runCardAction = useCallback(
+    (kind: CardAction) => {
+      if (kind === 'tv') enterDevice('crt');
+      else if (kind === 'nes') enterDevice('nes');
+      else if (kind === 'radio') enterDevice('boombox');
+      else if (kind === 'gameboy') sitDown();
+      else if (kind === 'tamagotchi') {
+        setPinned(null);
+        sound.stopNostalgia();
+        sound.playButtonClick();
+        setTamagotchi(true);
+      }
+    },
+    [enterDevice, sitDown],
+  );
+
+  // An old commercial on a card pauses the room music; closing it brings the music back.
+  const onCardVideo = useCallback(
+    (playing: boolean) => {
+      if (playing) sound.stopNostalgia();
+      else if (musicOn && !radio.state.power) sound.startNostalgia();
+    },
+    [musicOn],
+  );
+
   const aimedGame =
     pinned?.kind === 'game' && pinned.gameId ? byId.get(pinned.gameId as GameId) ?? null : null;
   const aimedProp = pinned && pinned.kind === 'prop' ? propCardFor(pinned.id) : null;
   const demoCardId = override.card;
-  const demoPropId =
-    demoCardId === 'vhs' ? 'vhs-stack' : demoCardId === 'gameboy' || demoCardId === 'cards' ? demoCardId : null;
+  const demoPropId = demoCardId === 'vhs' ? 'vhs-stack' : demoCardId && propCardFor(demoCardId) ? demoCardId : null;
   const demoGame = demoCardId && !demoPropId ? byId.get(demoCardId as GameId) ?? null : null;
   const demoProp = demoPropId ? propCardFor(demoPropId) : null;
   const cardGame = demoGame ?? aimedGame;
   const cardProp = demoProp ?? aimedProp;
   const showCard = Boolean(demoGame || demoProp) || (engaged && cardOpen && (aimedGame || aimedProp));
-  const walking = engaged && !device && !seated && !overlayGame && !pulledGameId && session?.phase !== 'unfold';
+  const walking = engaged && !device && !seated && !tamagotchi && !overlayGame && !pulledGameId && session?.phase !== 'unfold';
   const emulatorOn = (device === 'crt' || device === 'nes') && tvStatus.mode === 'emulator';
 
 
@@ -542,12 +568,12 @@ export function WalkRoom({
         ) : (
           <>
             <WalkController
-              enabled={!pulledGameId && !device && !seated && session?.phase !== 'unfold' && !overlayGame}
+              enabled={!pulledGameId && !device && !seated && !tamagotchi && session?.phase !== 'unfold' && !overlayGame}
               engaged={engaged}
               onStep={onStep}
             />
             <ReachRaycaster
-              enabled={engaged && !pulledGameId && !device && !seated && !tableGame && !overlayGame}
+              enabled={engaged && !pulledGameId && !device && !seated && !tamagotchi && !tableGame && !overlayGame}
               onAim={setAimed}
               onSelect={handleSelect}
               onTooFar={target => flash(`Walk closer to the ${target.label.toLowerCase()}`)}
@@ -555,6 +581,14 @@ export function WalkRoom({
           </>
         )}
       </Canvas>
+      {tamagotchi && (
+        <TamagotchiPlay
+          onClose={() => {
+            setTamagotchi(false);
+            if (musicOn && !radio.state.power) sound.startNostalgia();
+          }}
+        />
+      )}
       {seated && <GameBoyGlass />}
       {seated && (
         <div data-ui="device" className="pointer-events-none absolute inset-0 z-40">
@@ -683,24 +717,8 @@ export function WalkRoom({
               kind="prop"
               prop={cardProp}
               onClose={() => setCardOpen(false)}
-              onAction={
-                cardProp.id === 'gameboy'
-                  ? sitDown
-                  : DEVICE_FROM_PROP[cardProp.id]
-                    ? () => enterDevice(DEVICE_FROM_PROP[cardProp.id])
-                    : undefined
-              }
-              actionLabel={
-                cardProp.id === 'crt-tv'
-                  ? 'Turn it on'
-                  : cardProp.id === 'nes'
-                    ? 'Power on'
-                    : cardProp.id === 'boombox'
-                      ? 'Tune in'
-                      : cardProp.id === 'gameboy'
-                        ? 'Sit down & play'
-                        : undefined
-              }
+              onAction={cardProp.action ? () => runCardAction(cardProp.action!.kind) : undefined}
+              onVideo={onCardVideo}
             />
           ) : null}
         </div>
