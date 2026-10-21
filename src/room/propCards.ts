@@ -20,7 +20,7 @@ export interface CardVideo {
   title: string;
 }
 
-export type CardAction = 'tv' | 'nes' | 'radio' | 'gameboy' | 'tamagotchi';
+export type CardAction = 'tv' | 'nes' | 'radio' | 'gameboy' | 'tamagotchi' | 'rubik';
 
 export interface PropCard {
   id: string;
@@ -698,7 +698,7 @@ const CARDS: PropCard[] = [
   },
   {
     id: 'cd-sketch',
-    title: 'The sketchbook',
+    title: 'The sketchbook (and the Cool S)',
     era: 'Graffiti letters, every page',
     story:
       'Every page is the same cool S, over and over, plus a dragon that doesn\'t look like a dragon. Everyone drew the S. Nobody knows who invented the S.',
@@ -969,8 +969,13 @@ const CARDS: PropCard[] = [
     era: 'Solved once, by peeling the stickers',
     story:
       'Never solved it legit. Peeled the stickers off and put them back once, and showed everybody. Nobody believed it. They were right not to.',
-    memories: ['Took it apart with a screwdriver. Couldn\'t get it back together.'],
+    memories: [
+      'Took it apart with a screwdriver. Couldn\'t get it back together.',
+      'One kid at school could solve it in a minute and everybody treated him like a wizard.',
+      'Got one side done once. Took a picture. Never touched it again.',
+    ],
     photos: [P.rubik],
+    action: { kind: 'rubik', label: 'Pick it up & twist it' },
   },
   {
     id: 'vhs-stack',

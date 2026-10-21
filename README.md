@@ -21,6 +21,9 @@ This project is intentionally branded as a **public beta**, end to end.
 - **Tamagotchi** on the bed: its card opens Dammagotchi
   ([dammafra/dammagotchi](https://github.com/dammafra/dammagotchi), AGPL-3.0, built
   into `public/tamagotchi`).
+- **Rubik's Cube**: its card (wall shelf, or the little cube on the game closet) has
+  *Pick it up & twist it* — swipe a sticker to turn that layer, drag around it to
+  look, U D L R F B keys or buttons, Scramble, timer, and a solved check.
 - **Music**: *Snowfall (slowed, birds)* is the default track; *Bedroom tape* is in the
   menu.
 - **TV** (click it, then Turn it on): power-on menu with *Watch TV* or *Gaming*. Watch TV is a

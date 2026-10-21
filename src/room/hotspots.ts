@@ -63,6 +63,8 @@ export const HOTSPOTS: Partial<Record<keyof typeof LAYOUT, Hotspot[]>> = {
     h('gs-helmet', -0.364, 1.754, 0.19, 0.4, 0.37, 0.3),
     h('gs-smiley', 0.023, 1.777, 0.03, 0.3, 0.3, 0.2),
     h('gs-plant', 0.456, 1.799, 0.07, 0.3, 0.4, 0.25),
+    // The little cube next to the smiley lamp opens the same Rubik's Cube card.
+    h('rubik', 0.182, 1.663, 0.11, 0.1, 0.1, 0.1),
     h('gs-lights', -0.66, 1.0, 0.26, 0.1, 1.85, 0.12),
     h('box-shelf-monopoly', -0.114, 1.367, 0.225, 0.88, 0.19, 0.3, 'monopoly'),
     h('box-shelf-battleship', -0.114, 1.153, 0.225, 0.88, 0.19, 0.3, 'battleship'),

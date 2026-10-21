@@ -12,6 +12,7 @@ import { DESK_SLOTS, SHELF_SLOTS, SHELF_SLOTS_LOWER } from './videoRoom';
 import { MemoryFlashCard } from './MemoryFlashCard';
 import { propCardFor, type CardAction } from './propCards';
 import { TamagotchiPlay } from '../devices/TamagotchiPlay';
+import { RubikPlay } from '../devices/RubikPlay';
 import { DeviceFocus } from './DeviceFocus';
 import { DeviceOverlay } from './DeviceOverlay';
 import { TvGlass } from '../tv/TvSet';
@@ -166,6 +167,9 @@ export function WalkRoom({
   const [device, setDevice] = useState<DeviceId | null>(override.device);
   const [seated, setSeated] = useState(override.seat);
   const [tamagotchi, setTamagotchi] = useState(false);
+  const [rubik, setRubik] = useState(false);
+  /** Something held up close (Tamagotchi, Rubik's Cube): the room waits behind it. */
+  const holding = tamagotchi || rubik;
   const [flashPhase, setFlashPhase] = useState<'idle' | 'cover' | 'reveal'>('idle');
   const radioState = useRadio();
   const tapeOn = radioState.power;
@@ -200,7 +204,7 @@ export function WalkRoom({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [radioState.power]);
 
-  blockSelect.current = flashPhase !== 'idle' || device !== null || seated || tamagotchi;
+  blockSelect.current = flashPhase !== 'idle' || device !== null || seated || holding;
 
   useEffect(() => {
     let cancelled = false;
@@ -496,6 +500,10 @@ export function WalkRoom({
         sound.stopNostalgia();
         sound.playButtonClick();
         setTamagotchi(true);
+      } else if (kind === 'rubik') {
+        setPinned(null);
+        sound.playButtonClick();
+        setRubik(true);
       }
     },
     [enterDevice, sitDown],
@@ -520,7 +528,7 @@ export function WalkRoom({
   const cardGame = demoGame ?? aimedGame;
   const cardProp = demoProp ?? aimedProp;
   const showCard = Boolean(demoGame || demoProp) || (engaged && cardOpen && (aimedGame || aimedProp));
-  const walking = engaged && !device && !seated && !tamagotchi && !overlayGame && !pulledGameId && session?.phase !== 'unfold';
+  const walking = engaged && !device && !seated && !holding && !overlayGame && !pulledGameId && session?.phase !== 'unfold';
   const emulatorOn = (device === 'crt' || device === 'nes') && tvStatus.mode === 'emulator';
 
 
@@ -569,12 +577,12 @@ export function WalkRoom({
         ) : (
           <>
             <WalkController
-              enabled={!pulledGameId && !device && !seated && !tamagotchi && session?.phase !== 'unfold' && !overlayGame}
+              enabled={!pulledGameId && !device && !seated && !holding && session?.phase !== 'unfold' && !overlayGame}
               engaged={engaged}
               onStep={onStep}
             />
             <ReachRaycaster
-              enabled={engaged && !pulledGameId && !device && !seated && !tamagotchi && !tableGame && !overlayGame}
+              enabled={engaged && !pulledGameId && !device && !seated && !holding && !tableGame && !overlayGame}
               onAim={setAimed}
               onSelect={handleSelect}
               onTooFar={target => flash(`Walk closer to the ${target.label.toLowerCase()}`)}
@@ -590,6 +598,7 @@ export function WalkRoom({
           }}
         />
       )}
+      {rubik && <RubikPlay onClose={() => setRubik(false)} />}
       {seated && <GameBoyGlass />}
       {seated && (
         <div data-ui="device" className="pointer-events-none absolute inset-0 z-40">
