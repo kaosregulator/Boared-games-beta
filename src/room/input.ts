@@ -60,3 +60,10 @@ export function fitFov(designFov: number, aspect: number, designAspect = 1.5, ma
   const wide = 2 * Math.atan((Math.tan(half) * designAspect) / Math.max(0.3, aspect));
   return Math.min(max, (wide * 180) / Math.PI);
 }
+
+/**
+ * Phones get fewer real-time lights: every point light costs every pixel of
+ * every mesh, and a phone GPU notices around twenty of them.
+ */
+export const LOW_POWER =
+  typeof window !== 'undefined' && isTouchDevice() && Math.min(window.screen.width, window.screen.height) < 820;

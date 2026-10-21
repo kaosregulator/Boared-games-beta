@@ -19,6 +19,7 @@ import { HOTSPOTS } from './hotspots';
 import { propCardFor } from './propCards';
 import { Tamagotchi } from './Tamagotchi';
 import { LAVA, LavaLamp } from './LavaLamp';
+import { LOW_POWER } from './input';
 import type { GameMetadata } from '../types';
 import { LAYOUT, SOUTH_WINDOW, WALL_SHELF } from './roomLayout';
 import { PlayTable, type TableSession } from './table/TablePlay';
@@ -183,14 +184,14 @@ function MountedShelf({
   );
 }
 
-function CeilingDome() {
+function CeilingDome({ level = 1 }: { level?: number }) {
   return (
     <group position={[0.05, WALL.height - 0.02, 0.15]}>
       <mesh rotation={[Math.PI, 0, 0]}>
         <sphereGeometry args={[0.22, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color="#fff1dc" emissive="#ffd7a4" emissiveIntensity={0.85} roughness={0.4} />
+        <meshStandardMaterial color="#fff1dc" emissive="#ffd7a4" emissiveIntensity={0.85 * level} roughness={0.4} />
       </mesh>
-      <pointLight position={[0, -0.18, 0]} color="#ffe2c2" intensity={2.1} distance={8.5} decay={2} />
+      <pointLight position={[0, -0.18, 0]} color="#ffe2c2" intensity={2.1 * level} distance={8.5} decay={2} />
     </group>
   );
 }
@@ -409,7 +410,7 @@ export function RealRoomScene({
         distance={3.4}
         decay={2}
       />
-      <CeilingDome />
+      <CeilingDome level={Math.min(1, lights.ceilI / 2.4)} />
 
       <PlacedModel id="window" hoveredId={hoveredId} card="window" />
       <pointLight
@@ -448,10 +449,10 @@ export function RealRoomScene({
         card="backpack"
       />
       <PlacedModel id="teddy" hoveredId={hoveredId} card="south-shelf">
-        <LavaLamp spec={LAVA.teddy} />
+        <LavaLamp spec={LAVA.teddy} light={!LOW_POWER} />
       </PlacedModel>
       <PlacedModel id="nightstand" hoveredId={hoveredId} card="nightstand">
-        <LavaLamp spec={LAVA.nightstand} />
+        <LavaLamp spec={LAVA.nightstand} light={!LOW_POWER} />
       </PlacedModel>
       <PlacedModel
         id="gushers"
@@ -483,7 +484,7 @@ export function RealRoomScene({
         card="door"
       />
       <PlacedModel id="toyshelf" hoveredId={hoveredId} card="toyshelf">
-        <LavaLamp spec={LAVA.toyshelf} />
+        <LavaLamp spec={LAVA.toyshelf} light={!LOW_POWER} />
       </PlacedModel>
       <PlacedModel
         id="nes"
@@ -519,8 +520,12 @@ export function RealRoomScene({
       />
       <BulbFlicker position={[LAYOUT.shelf.x + 0.55, 1.85, LAYOUT.shelf.z + 0.28]} color="#ffd27a" base={0.42} seed={1.2} />
       <BulbFlicker position={[LAYOUT.shelf.x + 0.58, 1.35, LAYOUT.shelf.z + 0.3]} color="#ffb45a" base={0.34} seed={2.4} />
-      <BulbFlicker position={[LAYOUT.shelf.x + 0.52, 0.85, LAYOUT.shelf.z + 0.26]} color="#ffe08a" base={0.3} seed={3.1} />
-      <BulbFlicker position={[LAYOUT.shelf.x - 0.5, 1.7, LAYOUT.shelf.z + 0.24]} color="#ffcc77" base={0.28} seed={4.2} />
+      {!LOW_POWER && (
+        <>
+          <BulbFlicker position={[LAYOUT.shelf.x + 0.52, 0.85, LAYOUT.shelf.z + 0.26]} color="#ffe08a" base={0.3} seed={3.1} />
+          <BulbFlicker position={[LAYOUT.shelf.x - 0.5, 1.7, LAYOUT.shelf.z + 0.24]} color="#ffcc77" base={0.28} seed={4.2} />
+        </>
+      )}
 
       <PlacedModel id="desk" hoveredId={hoveredId} card="desk">
         <DeskLampGlow at={[0.43, 0.86, -0.13]} />

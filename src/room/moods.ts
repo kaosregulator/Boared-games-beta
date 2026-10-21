@@ -1,7 +1,8 @@
-export type RoomMood = 'warm-night' | 'moonlight' | 'afternoon';
+export type RoomMood = 'warm-night' | 'lamps' | 'moonlight' | 'afternoon';
 
 export const MOOD_LABEL: Record<RoomMood, string> = {
   'warm-night': 'Warm night',
+  lamps: 'Lamps only (lava glow)',
   moonlight: 'Moonlight',
   afternoon: 'Afternoon',
 };
@@ -31,6 +32,19 @@ export const MOODS: Record<RoomMood, MoodLights> = {
     windowC: '#9eb0ff',
     windowI: 1.3,
     fog: '#1a1218',
+  },
+  // Ceiling light off: the lava lamps, desk lamps and string lights carry the room.
+  lamps: {
+    ambient: 0.14,
+    ambColor: '#ffd8c0',
+    hemiSky: '#8f78b8',
+    hemiGround: '#2a1810',
+    hemi: 0.22,
+    ceil: '#ffc890',
+    ceilI: 0.25,
+    windowC: '#8ea2ff',
+    windowI: 0.9,
+    fog: '#120c12',
   },
   moonlight: {
     ambient: 0.2,
