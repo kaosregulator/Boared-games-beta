@@ -13,6 +13,7 @@ import { MemoryFlashCard } from './MemoryFlashCard';
 import { propCardFor } from './propCards';
 import { DeviceFocus } from './DeviceFocus';
 import { DeviceOverlay } from './DeviceOverlay';
+import { TvGlass } from '../tv/TvSet';
 import {
   DEVICE_FROM_PROP,
   FALLBACK_DEVICES,
@@ -136,11 +137,9 @@ export function WalkRoom({
   const [device, setDevice] = useState<DeviceId | null>(override.device);
   const [flashPhase, setFlashPhase] = useState<'idle' | 'cover' | 'reveal'>('idle');
   const [manifest, setManifest] = useState<DeviceManifest>(FALLBACK_DEVICES);
-  const [tvIndex, setTvIndex] = useState(0);
   const [stationIndex, setStationIndex] = useState(0);
   const [radioOn, setRadioOn] = useState(false);
   const [radioError, setRadioError] = useState<string | null>(null);
-  const [nesOn, setNesOn] = useState(false);
   const toastTimer = useRef<number | null>(null);
   const flashTimers = useRef<number[]>([]);
   const radioAudio = useRef<HTMLAudioElement | null>(null);
@@ -529,10 +528,8 @@ export function WalkRoom({
         />
         <DeviceFocus
           device={scripted ? null : device}
-          channel={manifest.tv[tvIndex] ?? null}
           stationLabel={manifest.radio[stationIndex]?.freq ?? 'RADIO'}
           radioOn={radioOn}
-          nesOn={nesOn}
           stations={manifest.radio}
           stationIndex={stationIndex}
           radioVolume={radioVolume}
@@ -563,6 +560,7 @@ export function WalkRoom({
           </>
         )}
       </Canvas>
+      {(device === 'crt' || device === 'nes') && !scripted && <TvGlass initialMode={device === 'nes' ? 'gaming' : 'menu'} />}
       {tableGame && <TableHudOverlay />}
 
       {scripted && tourLabel && (
@@ -700,12 +698,7 @@ export function WalkRoom({
       {device && flashPhase !== 'cover' && (
         <DeviceOverlay
           device={device}
-          manifest={manifest}
-          tvIndex={tvIndex}
-          onTv={setTvIndex}
           radioError={radioError}
-          nesOn={nesOn}
-          onNesPower={() => setNesOn(on => !on)}
           onBack={exitDevice}
         />
       )}

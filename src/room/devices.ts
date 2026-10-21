@@ -51,9 +51,6 @@ export const FALLBACK_DEVICES: DeviceManifest = {
   ],
 };
 
-/** Shared NES pad so the overlay buttons and the canvas game agree. */
-export const nesPad = { up: false, down: false };
-
 function isChannel(value: unknown): value is TvChannel {
   if (!value || typeof value !== 'object') return false;
   const row = value as TvChannel;
