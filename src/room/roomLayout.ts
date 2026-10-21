@@ -524,8 +524,8 @@ export const PLAY_TABLE = {
 
 /** Where the player crouches at the table: eye position and the point looked at. */
 export const TABLE_SEAT = {
-  at: [PLAY_TABLE.x, 1.0, PLAY_TABLE.z + PLAY_TABLE.d / 2 + 0.42] as [number, number, number],
-  look: [PLAY_TABLE.x, PLAY_TABLE.h, PLAY_TABLE.z - 0.02] as [number, number, number],
+  at: [PLAY_TABLE.x, 1.0, PLAY_TABLE.z + PLAY_TABLE.d / 2 + 0.31] as [number, number, number],
+  look: [PLAY_TABLE.x, PLAY_TABLE.h, PLAY_TABLE.z - 0.04] as [number, number, number],
 };
 
 export const TABLE_COLLIDER = {

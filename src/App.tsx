@@ -3,16 +3,15 @@ import { GameId, GameMetadata, ViewMode, UserProfile } from './types';
 import { GAME_CATALOG, INITIAL_USER_PROFILE } from './utils/gameData';
 import { sound } from './utils/audio';
 
-import { ShelfUnboxing } from './components/ShelfUnboxing';
 import { ActiveGameSwitch } from './components/ActiveGameSwitch';
 import { InRoomTable } from './components/InRoomTable';
 import { WalkRoom } from './room/WalkRoom';
 import { RulesModal } from './components/RulesModal';
 
-/** Monopoly, Connect Four, and Battleship stay inside the room. Never the old board. */
+/** Monopoly, Connect Four, and Battleship are played in 3D on the table itself. */
 const IN_ROOM_TABLE = new Set<GameId>(['monopoly', 'connect4', 'battleship']);
 
-/** `?game=<id>` opens a title for capture scripts. The three table games stay in the room. */
+/** `?game=<id>` opens a 2D title straight away for capture scripts. */
 function initialGame(): GameMetadata | null {
   if (typeof window === 'undefined') return null;
   const id = new URLSearchParams(window.location.search).get('game');
@@ -20,29 +19,22 @@ function initialGame(): GameMetadata | null {
   return GAME_CATALOG.find(g => g.id === id) ?? null;
 }
 
+/**
+ * The room is always mounted. Every game starts at the card table: the room
+ * spawns it, unfolds the box, and either plays the match in 3D or opens the
+ * game's own board over the live room. Pack up closes it and the room packs
+ * the box away.
+ */
 export default function App() {
   const [activeGame, setActiveGame] = useState<GameMetadata | null>(initialGame);
-  const [isUnboxing, setIsUnboxing] = useState<boolean>(
-    () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('unbox'),
-  );
-  const [isPacking, setIsPacking] = useState<boolean>(
-    () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('pack'),
-  );
   const [viewMode, setViewMode] = useState<ViewMode>('isometric');
   const [showRulesForGame, setShowRulesForGame] = useState<GameMetadata | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile>(INITIAL_USER_PROFILE);
-
-  const handleSelectGame = (game: GameMetadata) => {
-    if (IN_ROOM_TABLE.has(game.id)) return;
-    setActiveGame(game);
-    setIsUnboxing(true);
-  };
 
   const handleLaunchGameById = (id: GameId) => {
     const found = GAME_CATALOG.find(g => g.id === id);
     if (found) {
       setActiveGame(found);
-      setIsUnboxing(false);
       sound.playVictoryFanfare();
     }
   };
@@ -52,20 +44,9 @@ export default function App() {
     setViewMode(prev => (prev === 'isometric' ? '2d' : 'isometric'));
   };
 
-  const backToRoom = () => {
+  const exitGame = () => {
     sound.playShelfSlide();
     setActiveGame(null);
-    setIsUnboxing(false);
-    setIsPacking(false);
-  };
-
-  const exitGame = () => {
-    if (activeGame) {
-      setIsUnboxing(false);
-      setIsPacking(true);
-      return;
-    }
-    backToRoom();
   };
 
   const handleUpdateChips = (amount: number) => {
@@ -75,65 +56,44 @@ export default function App() {
     }));
   };
 
-  const gameBoard = activeGame ? (
-    <ActiveGameSwitch
-      activeGame={activeGame}
-      viewMode={viewMode}
-      onToggleViewMode={handleToggleViewMode}
-      onOpenRules={() => setShowRulesForGame(activeGame)}
-      onExit={exitGame}
-      onLaunch={handleLaunchGameById}
-      userProfile={userProfile}
-      onUpdateUserProfile={setUserProfile}
-      onUpdateChips={handleUpdateChips}
-      onGameOver={(winnerName, isRealMatch) => {
-        if (isRealMatch && winnerName.includes('You')) {
-          setUserProfile(prev => ({
-            ...prev,
-            wins: prev.wins + 1,
-            seasonScore: prev.seasonScore + 250,
-            winStreak: prev.winStreak + 1,
-          }));
-        }
-      }}
-    />
-  ) : null;
-
   return (
     <>
-      {!activeGame && (
-        <WalkRoom
-          games={GAME_CATALOG}
-          onSelectGame={handleSelectGame}
-          onOpenRulesForGame={game => setShowRulesForGame(game)}
-        />
-      )}
+      <WalkRoom
+        games={GAME_CATALOG}
+        overlayGame={activeGame}
+        onOpenBoard={game => {
+          if (!IN_ROOM_TABLE.has(game.id)) setActiveGame(game);
+        }}
+        onOpenRulesForGame={game => setShowRulesForGame(game)}
+      />
 
-      {activeGame && isPacking && (
-        <ShelfUnboxing direction="pack" game={activeGame} onComplete={backToRoom} onBackToShelf={backToRoom} />
-      )}
-
-      {activeGame && isUnboxing && (
-        <ShelfUnboxing
-          direction="open"
-          game={activeGame}
-          onComplete={() => setIsUnboxing(false)}
-          onBackToShelf={() => {
-            setIsUnboxing(false);
-            setIsPacking(true);
-          }}
-        />
-      )}
-
-      {activeGame && !isUnboxing && !isPacking && (
+      {activeGame && (
         <InRoomTable game={activeGame} onPackUp={exitGame}>
-          {gameBoard}
+          <ActiveGameSwitch
+            activeGame={activeGame}
+            viewMode={viewMode}
+            onToggleViewMode={handleToggleViewMode}
+            onOpenRules={() => setShowRulesForGame(activeGame)}
+            onExit={exitGame}
+            onLaunch={handleLaunchGameById}
+            userProfile={userProfile}
+            onUpdateUserProfile={setUserProfile}
+            onUpdateChips={handleUpdateChips}
+            onGameOver={(winnerName, isRealMatch) => {
+              if (isRealMatch && winnerName.includes('You')) {
+                setUserProfile(prev => ({
+                  ...prev,
+                  wins: prev.wins + 1,
+                  seasonScore: prev.seasonScore + 250,
+                  winStreak: prev.winStreak + 1,
+                }));
+              }
+            }}
+          />
         </InRoomTable>
       )}
 
-      {showRulesForGame && (
-        <RulesModal game={showRulesForGame} onClose={() => setShowRulesForGame(null)} />
-      )}
+      {showRulesForGame && <RulesModal game={showRulesForGame} onClose={() => setShowRulesForGame(null)} />}
     </>
   );
 }

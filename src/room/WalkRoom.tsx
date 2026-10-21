@@ -21,7 +21,9 @@ import { GameBoyGlass } from '../devices/GameBoyGlass';
 import { DEVICE_FROM_PROP, type DeviceId } from './devices';
 import { radio, useRadio } from '../radio/radioEngine';
 import { RoomStudio } from './RoomStudio';
-import { TableHudOverlay, type TableGameId } from './table/TablePlay';
+import { TABLE_GAMES, TableHudOverlay, type TableSession } from './table/TablePlay';
+import { walkRig } from './WalkController';
+import { TABLE_SEAT } from './roomLayout';
 import { ANCHORS, anchorById, type Anchor } from './anchors';
 import { deletePlacement, loadPlacements, savePlacement, type SavedPlacement } from './userPlacements';
 import type { RoomMood } from './moods';
@@ -90,22 +92,26 @@ function DemoPose({ at, look }: { at: [number, number, number]; look: [number, n
 
 interface WalkRoomProps {
   games: GameMetadata[];
-  onSelectGame: (game: GameMetadata) => void;
+  /** A game's own 2D board, shown over the room once its box is open on the table. */
+  overlayGame: GameMetadata | null;
+  onOpenBoard: (game: GameMetadata) => void;
   onOpenRulesForGame?: (game: GameMetadata) => void;
 }
 
 const ALL_SLOTS = [...SHELF_SLOTS, ...SHELF_SLOTS_LOWER, ...DESK_SLOTS];
 
-function tableFromQuery(): TableGameId | null {
+/** `?game=monopoly|connect4|battleship` starts at the table, for capture scripts. */
+function tableFromQuery(games: GameMetadata[]): GameMetadata | null {
   if (typeof window === 'undefined') return null;
   const id = new URLSearchParams(window.location.search).get('game');
-  if (id === 'monopoly' || id === 'connect4' || id === 'battleship') return id;
-  return null;
+  if (!id || !TABLE_GAMES.has(id)) return null;
+  return games.find(g => g.id === id) ?? null;
 }
 
 export function WalkRoom({
   games,
-  onSelectGame,
+  overlayGame,
+  onOpenBoard,
   onOpenRulesForGame,
 }: WalkRoomProps) {
   const override = useMemo(readCameraOverride, []);
@@ -115,8 +121,11 @@ export function WalkRoom({
   const [mood, setMood] = useState<RoomMood>('warm-night');
   const [musicOn, setMusicOn] = useState(true);
   const [musicVolume, setMusicVolume] = useState(() => sound.getMusicVolume());
-  const queryTable = useMemo(tableFromQuery, []);
-  const [tableGame, setTableGame] = useState<TableGameId | null>(queryTable);
+  const queryTable = useMemo(() => tableFromQuery(games), [games]);
+  const [session, setSession] = useState<TableSession | null>(null);
+  const sessionKey = useRef(0);
+  const [crouched, setCrouched] = useState(false);
+  const tableGame = session !== null;
   const [placed, setPlaced] = useState<LiveProp[]>([]);
   const [anchorId, setAnchorId] = useState(ANCHORS[0].id);
   const [placeHeight, setPlaceHeight] = useState(0.45);
@@ -282,27 +291,72 @@ export function WalkRoom({
     sound.playFootstep(heavyStep.current);
   }, []);
 
+  /**
+   * Every game starts the same way: the card table spawns on the rug, you are
+   * set down crouched at its edge, and the box unfolds in front of you.
+   */
+  const startTable = useCallback((game: GameMetadata) => {
+    document.exitPointerLock?.();
+    setCardOpen(false);
+    sessionKey.current += 1;
+    walkRig.tableActive = true;
+    walkRig.setCrouch(true);
+    walkRig.teleport = { at: TABLE_SEAT.at, look: TABLE_SEAT.look };
+    setSession({ game, phase: 'unfold', key: sessionKey.current });
+  }, []);
+
   const playGame = useCallback(
     (game: GameMetadata) => {
-      if (pulledGameId) return;
-      const onTable = game.id === 'monopoly' || game.id === 'connect4' || game.id === 'battleship';
+      if (pulledGameId || session) return;
       setPulledGameId(game.id);
       setCardOpen(false);
       sound.playShelfSlide();
-      flash(onTable ? `Setting ${game.title} on the table` : `Pulling ${game.title} off the shelf`);
+      flash(`Taking ${game.title} to the table`);
       pullTimer.current = window.setTimeout(() => {
-        sound.playCardboardLid();
-        document.exitPointerLock?.();
         setPulledGameId(null);
-        if (game.id === 'monopoly' || game.id === 'connect4' || game.id === 'battleship') {
-          setTableGame(game.id);
-          return;
-        }
-        onSelectGame(game);
+        startTable(game);
       }, 620);
     },
-    [flash, onSelectGame, pulledGameId],
+    [flash, pulledGameId, session, startTable],
   );
+
+  const onUnfolded = useCallback(() => {
+    setSession(cur => (cur ? { ...cur, phase: 'play' } : cur));
+    if (session && !TABLE_GAMES.has(session.game.id)) onOpenBoard(session.game);
+  }, [onOpenBoard, session]);
+
+  const packUp = useCallback(() => {
+    setSession(cur => (cur && cur.phase !== 'pack' ? { ...cur, phase: 'pack' } : cur));
+  }, []);
+
+  const onPacked = useCallback(() => {
+    setSession(null);
+    walkRig.tableActive = false;
+    walkRig.setCrouch(false);
+  }, []);
+
+  // Closing a 2D board packs its box back up on the table.
+  const hadOverlay = useRef(false);
+  useEffect(() => {
+    if (overlayGame) hadOverlay.current = true;
+    else if (hadOverlay.current) {
+      hadOverlay.current = false;
+      packUp();
+    }
+  }, [overlayGame, packUp]);
+
+  useEffect(() => {
+    const fn = (on: boolean) => setCrouched(on);
+    walkRig.listeners.add(fn);
+    return () => {
+      walkRig.listeners.delete(fn);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (queryTable) startTable(queryTable);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!musicOn) return;
@@ -467,9 +521,11 @@ export function WalkRoom({
           showAnchors={menuOpen && Boolean(placeName)}
           ghost={ghost}
           onPickAnchor={(anchor: Anchor) => setAnchorId(anchor.id)}
-          tableGame={tableGame}
+          session={session}
+          onUnfolded={onUnfolded}
+          onPacked={onPacked}
+          onLeaveTable={packUp}
           hideGameboy={seated}
-          onLeaveTable={() => setTableGame(null)}
         />
         <DeviceFocus device={scripted ? null : device} />
         {seated && <GameBoySeat />}
@@ -483,14 +539,14 @@ export function WalkRoom({
         ) : (
           <>
             <WalkController
-              enabled={!pulledGameId && !device && !seated}
+              enabled={!pulledGameId && !device && !seated && session?.phase !== 'unfold' && !overlayGame}
               engaged={engaged}
               capturePointer={!tableGame}
               onLockChange={setLocked}
               onStep={onStep}
             />
             <ReachRaycaster
-              enabled={engaged && !pulledGameId && !device && !seated && !tableGame}
+              enabled={engaged && !pulledGameId && !device && !seated && !tableGame && !overlayGame}
               onAim={setAimed}
               onSelect={handleSelect}
             />
@@ -513,7 +569,21 @@ export function WalkRoom({
         </div>
       )}
       {(device === 'crt' || device === 'nes') && !scripted && <TvGlass initialMode={device === 'nes' ? 'gaming' : 'menu'} />}
-      {tableGame && <TableHudOverlay />}
+      {session && session.phase === 'play' && TABLE_GAMES.has(session.game.id) && (
+        <TableHudOverlay
+          crouched={crouched}
+          onStand={() => walkRig.setCrouch(false)}
+          onCrouch={() => {
+            walkRig.setCrouch(true);
+            walkRig.teleport = { at: TABLE_SEAT.at, look: TABLE_SEAT.look };
+          }}
+        />
+      )}
+      {session?.phase === 'unfold' && (
+        <p className="pointer-events-none absolute left-1/2 top-6 z-30 -translate-x-1/2 rounded-full bg-black/60 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-amber-100">
+          Opening {session.game.title}…
+        </p>
+      )}
 
       {scripted && tourLabel && (
         <div className="pointer-events-none absolute left-6 bottom-6 rounded-xl bg-black/60 border border-white/15 px-3 py-1.5 text-[11px] uppercase tracking-[0.22em] font-bold text-amber-200">

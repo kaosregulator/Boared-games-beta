@@ -17,7 +17,7 @@ import type { HoverTarget } from './Interactable';
 import { SafeRoomModel } from './RoomModel';
 import type { GameMetadata } from '../types';
 import { LAYOUT, SOUTH_WINDOW, WALL_SHELF } from './roomLayout';
-import { PlayTable, type TableGameId } from './table/TablePlay';
+import { PlayTable, type TableSession } from './table/TablePlay';
 import { NeonGameWall } from './NeonGameWall';
 import { ANCHORS, type Anchor } from './anchors';
 import { DynamicModel } from './UserProps';
@@ -303,7 +303,9 @@ export interface RealRoomSceneProps {
   ghost?: { url: string; anchor: Anchor; height: number; lift: number; shadow: boolean } | null;
   onPickAnchor?: (anchor: Anchor) => void;
   games: GameMetadata[];
-  tableGame?: TableGameId | null;
+  session?: TableSession | null;
+  onUnfolded?: () => void;
+  onPacked?: () => void;
   onLeaveTable?: () => void;
   /** The Game Boy is in the player's hands while sitting in the bean bag. */
   hideGameboy?: boolean;
@@ -323,7 +325,9 @@ export function RealRoomScene({
   ghost = null,
   onPickAnchor,
   games,
-  tableGame = null,
+  session = null,
+  onUnfolded,
+  onPacked,
   onLeaveTable,
   hideGameboy = false,
 }: RealRoomSceneProps) {
@@ -452,7 +456,12 @@ export function RealRoomScene({
       <GameShelf />
       <NeonGameWall games={games} hoveredId={hoveredId} pulledId={pulledGameId} />
       <PlacedModel id="beanbag" hoveredId={hoveredId} />
-      <PlayTable game={tableGame} onLeave={onLeaveTable ?? (() => {})} />
+      <PlayTable
+        session={session}
+        onUnfolded={onUnfolded ?? (() => {})}
+        onPacked={onPacked ?? (() => {})}
+        onLeave={onLeaveTable ?? (() => {})}
+      />
       <BulbFlicker position={[LAYOUT.shelf.x + 0.55, 1.85, LAYOUT.shelf.z + 0.28]} color="#ffd27a" base={0.42} seed={1.2} />
       <BulbFlicker position={[LAYOUT.shelf.x + 0.58, 1.35, LAYOUT.shelf.z + 0.3]} color="#ffb45a" base={0.34} seed={2.4} />
       <BulbFlicker position={[LAYOUT.shelf.x + 0.52, 0.85, LAYOUT.shelf.z + 0.26]} color="#ffe08a" base={0.3} seed={3.1} />
