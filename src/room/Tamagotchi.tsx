@@ -126,11 +126,11 @@ export function Tamagotchi({
       frame.current = next;
       draw(next);
     }
-    if (glow.current) glow.current.opacity = active ? 0.35 : 0.08 + Math.max(0, Math.sin(clock.elapsedTime * 2)) * 0.05;
+    if (glow.current) glow.current.opacity = active ? 0.22 : Math.max(0, Math.sin(clock.elapsedTime * 1.5)) * 0.045;
   });
 
   return (
-    <group position={position} rotation={rotation}>
+    <group position={position} rotation={rotation} scale={1.3}>
       <mesh geometry={lathe} castShadow>
         <meshPhysicalMaterial color="#8b45d6" roughness={0.28} clearcoat={1} clearcoatRoughness={0.15} sheen={0.4} sheenColor="#ffb3f0" />
       </mesh>

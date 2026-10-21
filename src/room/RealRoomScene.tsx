@@ -441,7 +441,7 @@ export function RealRoomScene({
 
 <PlacedModel id="bed" hoveredId={hoveredId} card="bed">
         {/* Left on the quilt by the foot of the bed, screen up. */}
-        <Tamagotchi position={[-0.25, 0.533, 0.3]} rotation={[-Math.PI / 2 + 0.1, 0, 0.55]} active={hoveredId === 'tamagotchi'} />
+        <Tamagotchi position={[-0.25, 0.538, 0.3]} rotation={[-Math.PI / 2 + 0.1, 0, 0.55]} active={hoveredId === 'tamagotchi'} />
       </PlacedModel>
       <PlacedModel
         id="backpack"
