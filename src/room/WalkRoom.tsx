@@ -32,12 +32,21 @@ import type { RoomMood } from './moods';
  * camera on tour waypoint N. Both skip pointer lock so the room can be captured
  * and reviewed without a mouse.
  */
+/** `?cam=x,y,z,lx,ly,lz` parks the camera anywhere, for capture scripts. */
+function parseCam(raw: string | null) {
+  if (!raw) return null;
+  const n = raw.split(',').map(Number);
+  if (n.length !== 6 || n.some(v => !Number.isFinite(v))) return null;
+  return { at: [n[0], n[1], n[2]] as [number, number, number], look: [n[3], n[4], n[5]] as [number, number, number] };
+}
+
 function readCameraOverride() {
   if (typeof window === 'undefined') {
     return {
       tour: false,
       shot: undefined as number | undefined,
       card: null as string | null,
+      cam: null as { at: [number, number, number]; look: [number, number, number] } | null,
       menu: false,
       capture: false,
       device: null as DeviceId | null,
@@ -52,6 +61,7 @@ function readCameraOverride() {
     tour: params.has('tour'),
     shot: shotRaw === null ? undefined : Number.parseInt(shotRaw, 10) || 0,
     card: params.get('card'),
+    cam: parseCam(params.get('cam')),
     menu: params.has('menu'),
     capture: params.has('capture'),
     device,
@@ -98,7 +108,8 @@ export function WalkRoom({
   onOpenRulesForGame,
 }: WalkRoomProps) {
   const override = useMemo(readCameraOverride, []);
-  const scripted = override.tour || override.shot !== undefined || Boolean(override.card) || override.capture;
+  const scripted =
+    override.tour || override.shot !== undefined || Boolean(override.card) || override.capture || Boolean(override.cam);
   const [menuOpen, setMenuOpen] = useState(override.menu);
   const [mood, setMood] = useState<RoomMood>('warm-night');
   const [musicOn, setMusicOn] = useState(true);
@@ -529,7 +540,9 @@ export function WalkRoom({
           onVolume={cycleRadioVolume}
         />
         {override.capture && <CaptureClock />}
-        {override.card && DEMO_POSE[override.card] ? (
+        {override.cam ? (
+          <DemoPose at={override.cam.at} look={override.cam.look} />
+        ) : override.card && DEMO_POSE[override.card] ? (
           <DemoPose at={DEMO_POSE[override.card].at} look={DEMO_POSE[override.card].look} />
         ) : scripted ? (
           <TourCamera staticIndex={override.shot} onWaypoint={label => setTourLabel(label)} />
