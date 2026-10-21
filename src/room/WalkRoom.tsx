@@ -126,6 +126,7 @@ export function WalkRoom({
   const [mood, setMood] = useState<RoomMood>('warm-night');
   const [musicOn, setMusicOn] = useState(true);
   const [musicVolume, setMusicVolume] = useState(() => sound.getMusicVolume());
+  const [track, setTrack] = useState(() => sound.getTrack());
   const queryTable = useMemo(() => tableFromQuery(games), [games]);
   const [session, setSession] = useState<TableSession | null>(null);
   const sessionKey = useRef(0);
@@ -625,6 +626,11 @@ export function WalkRoom({
         mood={mood}
         music={musicOn}
         musicVolume={musicVolume}
+        track={track}
+        onTrack={id => {
+          setTrack(id);
+          sound.setTrack(id);
+        }}
         placing={Boolean(placeName)}
         placeName={placeName}
         anchorId={anchorId}

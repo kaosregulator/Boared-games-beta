@@ -3,6 +3,23 @@
  * Generates tactile clicks, wood knocks, radar pings, explosions, disc drops, dice shakes, cards, chips, slots, roulette, etc.
  */
 
+/** Room music. The first one plays unless the player picked another. */
+export const ROOM_TRACKS = [
+  { id: 'snowfall', title: 'Snowfall (slowed, birds)', src: '/room/snowfall.mp3' },
+  { id: 'bedroom', title: 'Bedroom tape', src: '/room/bedroom.mp3' },
+] as const;
+export type RoomTrackId = (typeof ROOM_TRACKS)[number]['id'];
+
+function savedTrack(): RoomTrackId {
+  try {
+    const id = window.localStorage.getItem('room-track');
+    if (ROOM_TRACKS.some(t => t.id === id)) return id as RoomTrackId;
+  } catch {
+    // Private windows can refuse storage; the default track is fine.
+  }
+  return ROOM_TRACKS[0].id;
+}
+
 class SoundEngine {
   private ctx: AudioContext | null = null;
   private muted: boolean = false;
@@ -14,6 +31,7 @@ class SoundEngine {
   private bedAudio: HTMLAudioElement | null = null;
   private bedFade: number | null = null;
   private bedUnlock: (() => void) | null = null;
+  private track: RoomTrackId = typeof window === 'undefined' ? ROOM_TRACKS[0].id : savedTrack();
 
   private initCtx() {
     if (!this.ctx && typeof window !== 'undefined') {
@@ -54,9 +72,42 @@ class SoundEngine {
     this.bedAudio.volume = this.muted ? 0 : this.musicVolume;
   }
 
+  public getTrack() {
+    return this.track;
+  }
+
+  /** Swap the room music. A playing track crossfades into the new one. */
+  public setTrack(id: RoomTrackId) {
+    if (id === this.track) return;
+    this.track = id;
+    try {
+      window.localStorage.setItem('room-track', id);
+    } catch {
+      // Not saved; it still changes for this visit.
+    }
+    const old = this.bedAudio;
+    if (!old) return;
+    this.bedAudio = null;
+    if (this.bedFade !== null) window.clearInterval(this.bedFade);
+    this.bedFade = null;
+    const from = old.volume;
+    let i = 0;
+    const fade = window.setInterval(() => {
+      i += 1;
+      old.volume = Math.max(0, from * (1 - i / 10));
+      if (i >= 10) {
+        window.clearInterval(fade);
+        old.pause();
+        old.remove();
+      }
+    }, 60);
+    if (this.nostalgiaOn) this.startNostalgia();
+  }
+
   private ensureBed() {
     if (this.bedAudio) return this.bedAudio;
-    const audio = new Audio('/room/bedroom.mp3');
+    const src = ROOM_TRACKS.find(t => t.id === this.track)?.src ?? ROOM_TRACKS[0].src;
+    const audio = new Audio(src);
     audio.loop = true;
     audio.preload = 'auto';
     audio.volume = 0;
