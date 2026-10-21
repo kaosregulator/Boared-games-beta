@@ -78,6 +78,8 @@ function ThumbStick() {
 }
 
 interface TouchHudProps {
+  /** Hide the "drag to look" tip, e.g. while a table game has its own panel up top. */
+  quiet?: boolean;
   /** Something in reach under the middle dot. */
   useLabel: string | null;
   onUse: () => void;
@@ -86,7 +88,7 @@ interface TouchHudProps {
 }
 
 /** On-screen controls for phones and tablets. */
-export function TouchHud({ useLabel, onUse, crouched, onCrouch }: TouchHudProps) {
+export function TouchHud({ quiet = false, useLabel, onUse, crouched, onCrouch }: TouchHudProps) {
   return (
     <div className="pointer-events-none absolute inset-0 z-30">
       <ThumbStick />
@@ -113,9 +115,9 @@ export function TouchHud({ useLabel, onUse, crouched, onCrouch }: TouchHudProps)
           {crouched ? 'Stand' : 'Duck'}
         </button>
       </div>
-      <p className="absolute left-1/2 top-[max(0.9rem,env(safe-area-inset-top))] -translate-x-1/2 whitespace-nowrap rounded-full bg-black/45 px-3 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-white/60">
+      {!quiet && <p className="absolute left-1/2 top-[max(0.9rem,env(safe-area-inset-top))] -translate-x-1/2 whitespace-nowrap rounded-full bg-black/45 px-3 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-white/60">
         Drag to look · tap things
-      </p>
+      </p>}
     </div>
   );
 }

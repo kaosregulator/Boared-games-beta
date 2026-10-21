@@ -2,6 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
+import { isTouchDevice } from '../input';
+
+const TOUCH = isTouchDevice();
 import { checkConnect4Win, createEmptyConnect4Board, getBestConnect4Move, getLowestEmptyRow } from '../../games/connect4/connect4Logic';
 import type { DiscColor } from '../../types';
 import { sound } from '../../utils/audio';
@@ -154,6 +157,12 @@ export function ConnectFourTable({ onLeave }: { onLeave: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [turn, over, releasing]);
 
+  const columnAt = (point: THREE.Vector3) => {
+    const local = root.current ? root.current.worldToLocal(point.clone()).x : 0;
+    const c = Math.round((local / S + 41.85 - 0.45) / 13.8);
+    return Math.max(0, Math.min(COLS - 1, c));
+  };
+
   const pickUp = () => {
     if (turn !== 'red' || over || carry || busy.current || releasing) return;
     sound.playButtonClick();
@@ -186,8 +195,8 @@ export function ConnectFourTable({ onLeave }: { onLeave: () => void }) {
         winnerNote ??
         (turn === 'red'
           ? carry
-            ? 'Move over a column and click to drop.'
-            : `Your turn — click your red pile to pick up a disc. (${left.red} left)`
+            ? `${TOUCH ? 'Tap' : 'Move over'} a column${TOUCH ? '' : ' and click'} to drop.`
+            : `Your turn — ${TOUCH ? 'tap' : 'click'} your red pile to pick up a disc. (${left.red} left)`
           : 'The rival is choosing a column…'),
       onLeave,
       actions: over ? [{ label: 'Play again', onClick: playAgain }] : [],
@@ -282,14 +291,13 @@ export function ConnectFourTable({ onLeave }: { onLeave: () => void }) {
       {/* aiming plane in front of the frame */}
       <mesh
         position={[0, 0.13, FRAME_Z + 0.03]}
-        onPointerMove={e => {
-          const local = root.current ? root.current.worldToLocal(e.point.clone()).x : 0;
-          const c = Math.round((local / S + 41.85 - 0.45) / 13.8);
-          setHoverCol(Math.max(0, Math.min(COLS - 1, c)));
-        }}
+        onPointerMove={e => setHoverCol(columnAt(e.point))}
         onPointerDown={e => {
           e.stopPropagation();
-          if (carry?.color === 'red' && !busy.current) drop('red', hoverCol);
+          // A tap has no hover before it, so read the column off the tap itself.
+          const col = columnAt(e.point);
+          setHoverCol(col);
+          if (carry?.color === 'red' && !busy.current) drop('red', col);
           else pickUp();
         }}
       >

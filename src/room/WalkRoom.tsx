@@ -27,6 +27,7 @@ import { AimReticle } from './AimReticle';
 import { TouchGamepad } from '../devices/TouchGamepad';
 import { aim, isTouchDevice, pad } from './input';
 import { useTvStatus } from '../tv/tvBus';
+import { TvRemote } from '../tv/TvRemote';
 import { TABLE_GAMES, TableHudOverlay, type TableSession } from './table/TablePlay';
 import { walkRig } from './WalkController';
 import { TABLE_SEAT } from './roomLayout';
@@ -607,6 +608,7 @@ export function WalkRoom({
         </div>
       )}
       {touch && (seated || emulatorOn) && <TouchGamepad tone={seated ? 'gb' : 'nes'} />}
+      {touch && (device === 'crt' || device === 'nes') && !scripted && flashPhase !== 'cover' && <TvRemote />}
       {(device === 'crt' || device === 'nes') && !scripted && <TvGlass initialMode={device === 'nes' ? 'gaming' : 'menu'} />}
       {session && session.phase === 'play' && TABLE_GAMES.has(session.game.id) && (
         <TableHudOverlay
@@ -635,6 +637,7 @@ export function WalkRoom({
       )}
       {touch && walking && !showCard && !menuOpen && (
         <TouchHud
+          quiet={Boolean(session)}
           useLabel={!session && aimed?.inReach ? aimed.label : null}
           onUse={() => aimed?.inReach && handleSelect(aimed)}
           crouched={crouched || padCrouch}
@@ -747,6 +750,7 @@ export function WalkRoom({
 
       {device && flashPhase !== 'cover' && (
         <DeviceOverlay
+          touch={touch}
           device={device}
           radioError={radioError}
           onBack={exitDevice}
