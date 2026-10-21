@@ -19,8 +19,12 @@ From [BertovDev/3D-Connect-Four](https://github.com/BertovDev/3D-Connect-Four) (
 `board.glb` (the repo's `scene.gltf`: `FourInARowV2` frame and both disc meshes) and `wood.jpg` (resized).
 
 ## Monopoly — `monopoly/`
-From [Bizangel/MonopolyClone](https://github.com/Bizangel/MonopolyClone) (MIT), recovered from the
-repository history: `board.jpg` and the six `dice*.jpeg` faces. The token models the
-project referenced (`char1_car.glb` …) were never committed to that repository, so the
-room uses its own car and high-top meshes as tokens, finished in MonopolyClone's token material.
+- `board.jpg` and the six `dice*.jpeg` faces: [Bizangel/MonopolyClone](https://github.com/Bizangel/MonopolyClone)
+  (MIT), recovered from the repository history.
+- `pieces/penguin.glb`, `pieces/r2d2.glb`, `pieces/robot.glb`, `pieces/house.glb`, `pieces/hotel.glb`
+  and `sound/*.mp3`: [DanielGRasmussen/3d-monopoly](https://github.com/DanielGRasmussen/3d-monopoly)
+  (CMU Team16). Its README credits the meshes to clara.io (R2-D2, Penguin, Final Robot, Hotel, House).
+  They were stored in the retired three.js r91 JSON format; they were converted to glTF with that
+  repository's own three.js build, then welded and simplified.
+
 MONOPOLY and the board design are trademarks of Hasbro.
