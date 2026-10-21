@@ -100,11 +100,16 @@ interface WalkRoomProps {
 
 const ALL_SLOTS = [...SHELF_SLOTS, ...SHELF_SLOTS_LOWER, ...DESK_SLOTS];
 
-/** `?game=monopoly|connect4|battleship` starts at the table, for capture scripts. */
+/**
+ * `?game=monopoly|connect4|battleship`, or `?play=<any game id>`, starts at
+ * the table with the box unfolding, for capture scripts.
+ */
 function tableFromQuery(games: GameMetadata[]): GameMetadata | null {
   if (typeof window === 'undefined') return null;
-  const id = new URLSearchParams(window.location.search).get('game');
-  if (!id || !TABLE_GAMES.has(id)) return null;
+  const params = new URLSearchParams(window.location.search);
+  const game = params.get('game');
+  const id = params.get('play') ?? (game && TABLE_GAMES.has(game) ? game : null);
+  if (!id) return null;
   return games.find(g => g.id === id) ?? null;
 }
 
@@ -591,7 +596,7 @@ export function WalkRoom({
         </div>
       )}
 
-      {engaged && !device && !seated && (
+      {engaged && !device && !seated && !overlayGame && !session && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div
             className={`rounded-full border transition-all duration-150 ${
@@ -606,6 +611,7 @@ export function WalkRoom({
       )}
 
       {/* Glass flash card — games + nostalgia props */}
+      {!overlayGame && (
       <button
         type="button"
         onClick={openMenu}
@@ -613,6 +619,7 @@ export function WalkRoom({
       >
         Menu
       </button>
+      )}
       <RoomStudio
         open={menuOpen}
         mood={mood}
@@ -731,7 +738,7 @@ export function WalkRoom({
 
       {flashPhase !== 'idle' && <div className={`device-flash ${flashPhase}`} />}
 
-      {!engaged && !scripted && !menuOpen && (
+      {!engaged && !scripted && !menuOpen && !overlayGame && (
         <IntroCard
           wallTitles={neonGames(games).map(game => game.title)}
           onEnter={() => {
