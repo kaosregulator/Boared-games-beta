@@ -14,14 +14,8 @@ import { propCardFor } from './propCards';
 import { DeviceFocus } from './DeviceFocus';
 import { DeviceOverlay } from './DeviceOverlay';
 import { TvGlass } from '../tv/TvSet';
-import {
-  DEVICE_FROM_PROP,
-  FALLBACK_DEVICES,
-  loadDeviceManifest,
-  streamMirrors,
-  type DeviceId,
-  type DeviceManifest,
-} from './devices';
+import { DEVICE_FROM_PROP, type DeviceId } from './devices';
+import { radio, useRadio } from '../radio/radioEngine';
 import { RoomStudio } from './RoomStudio';
 import { TableHudOverlay, type TableGameId } from './table/TablePlay';
 import { ANCHORS, anchorById, type Anchor } from './anchors';
@@ -130,21 +124,16 @@ export function WalkRoom({
   const [tourLabel, setTourLabel] = useState<string | null>(null);
   const [aimed, setAimed] = useState<Aimed | null>(null);
   const [pulledGameId, setPulledGameId] = useState<GameId | null>(null);
-  const [tapeOn, setTapeOn] = useState(false);
   const [lampsWarm, setLampsWarm] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [cardOpen, setCardOpen] = useState(false);
   const [device, setDevice] = useState<DeviceId | null>(override.device);
   const [flashPhase, setFlashPhase] = useState<'idle' | 'cover' | 'reveal'>('idle');
-  const [manifest, setManifest] = useState<DeviceManifest>(FALLBACK_DEVICES);
-  const [stationIndex, setStationIndex] = useState(0);
-  const [radioOn, setRadioOn] = useState(false);
-  const [radioError, setRadioError] = useState<string | null>(null);
+  const radioState = useRadio();
+  const tapeOn = radioState.power;
+  const radioError = radioState.error;
   const toastTimer = useRef<number | null>(null);
   const flashTimers = useRef<number[]>([]);
-  const radioAudio = useRef<HTMLAudioElement | null>(null);
-  const radioToken = useRef(0);
-  const [radioVolume, setRadioVolume] = useState(0.7);
   const blockSelect = useRef(false);
   const heavyStep = useRef(false);
   const pullTimer = useRef<number | null>(null);
@@ -162,24 +151,16 @@ export function WalkRoom({
       if (toastTimer.current) window.clearTimeout(toastTimer.current);
       if (pullTimer.current) window.clearTimeout(pullTimer.current);
       flashTimers.current.forEach(id => window.clearTimeout(id));
-      if (radioAudio.current) {
-        radioAudio.current.pause();
-        radioAudio.current.src = '';
-        radioAudio.current.remove();
-      }
     },
     [],
   );
 
+  // The stereo and the room's background music never play over each other.
   useEffect(() => {
-    let cancelled = false;
-    loadDeviceManifest().then(next => {
-      if (!cancelled) setManifest(next);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    if (radioState.power) sound.stopNostalgia();
+    else if (musicOn && engaged && !device) sound.startNostalgia();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [radioState.power]);
 
   blockSelect.current = flashPhase !== 'idle' || device !== null;
 
@@ -350,77 +331,10 @@ export function WalkRoom({
     document.exitPointerLock?.();
     runFlash(() => {
       setDevice(null);
-      if (musicOn && !radioOn) sound.startNostalgia();
+      if (musicOn && !radio.state.power) sound.startNostalgia();
     });
-  }, [musicOn, radioOn, runFlash]);
+  }, [musicOn, runFlash]);
 
-  const tuneRadio = useCallback(
-    (index: number, play: boolean) => {
-      const station = manifest.radio[index];
-      setStationIndex(index);
-      setRadioError(null);
-      if (!station) return;
-      const existing = radioAudio.current;
-      const audio = existing ?? document.createElement('audio');
-      if (!existing) {
-        audio.preload = 'none';
-        audio.setAttribute('playsinline', 'true');
-        document.body.appendChild(audio);
-        radioAudio.current = audio;
-      }
-      audio.volume = radioVolume;
-      const token = ++radioToken.current;
-      if (!play) {
-        audio.pause();
-        audio.removeAttribute('src');
-        audio.load();
-        setRadioOn(false);
-        setTapeOn(false);
-        if (musicOn && engaged) sound.startNostalgia();
-        return;
-      }
-      sound.stopNostalgia();
-      const urls = streamMirrors(station.url);
-      const attempt = (i: number) => {
-        if (token !== radioToken.current) return;
-        if (i >= urls.length) {
-          setRadioOn(false);
-          setTapeOn(false);
-          setRadioError('That station did not answer. Try another.');
-          return;
-        }
-        let settled = false;
-        const fail = () => {
-          if (settled || token !== radioToken.current) return;
-          settled = true;
-          audio.removeEventListener('error', fail);
-          audio.removeEventListener('playing', ok);
-          attempt(i + 1);
-        };
-        const ok = () => {
-          if (settled || token !== radioToken.current) return;
-          settled = true;
-          audio.removeEventListener('error', fail);
-          audio.removeEventListener('playing', ok);
-          setRadioOn(true);
-          setTapeOn(true);
-          setRadioError(null);
-        };
-        audio.addEventListener('error', fail);
-        audio.addEventListener('playing', ok);
-        audio.src = urls[i];
-        void audio.play().catch(() => fail());
-      };
-      attempt(0);
-    },
-    [engaged, manifest.radio, musicOn, radioVolume],
-  );
-
-  const cycleRadioVolume = useCallback(() => {
-    const next = radioVolume < 0.45 ? 0.7 : radioVolume < 0.85 ? 1 : 0.35;
-    setRadioVolume(next);
-    if (radioAudio.current) radioAudio.current.volume = next;
-  }, [radioVolume]);
 
   useEffect(() => {
     if (!device) return;
@@ -526,16 +440,7 @@ export function WalkRoom({
           tableGame={tableGame}
           onLeaveTable={() => setTableGame(null)}
         />
-        <DeviceFocus
-          device={scripted ? null : device}
-          stationLabel={manifest.radio[stationIndex]?.freq ?? 'RADIO'}
-          radioOn={radioOn}
-          stations={manifest.radio}
-          stationIndex={stationIndex}
-          radioVolume={radioVolume}
-          onTune={tuneRadio}
-          onVolume={cycleRadioVolume}
-        />
+        <DeviceFocus device={scripted ? null : device} />
         {override.capture && <CaptureClock />}
         {override.cam ? (
           <DemoPose at={override.cam.at} look={override.cam.look} />
