@@ -305,6 +305,8 @@ export interface RealRoomSceneProps {
   games: GameMetadata[];
   tableGame?: TableGameId | null;
   onLeaveTable?: () => void;
+  /** The Game Boy is in the player's hands while sitting in the bean bag. */
+  hideGameboy?: boolean;
 }
 
 /**
@@ -323,6 +325,7 @@ export function RealRoomScene({
   games,
   tableGame = null,
   onLeaveTable,
+  hideGameboy = false,
 }: RealRoomSceneProps) {
   const lights = MOODS[mood];
   return (
@@ -403,11 +406,13 @@ export function RealRoomScene({
         hoveredId={hoveredId}
         interactable={{ id: 'cards', kind: 'prop', label: 'Trading cards', hint: 'Open memory card' }}
       />
-      <PlacedModel
-        id="gameboy"
-        hoveredId={hoveredId}
-        interactable={{ id: 'gameboy', kind: 'prop', label: 'Game Boy', hint: 'Sit down & play' }}
-      />
+      {!hideGameboy && (
+        <PlacedModel
+          id="gameboy"
+          hoveredId={hoveredId}
+          interactable={{ id: 'gameboy', kind: 'prop', label: 'Game Boy', hint: 'Sit down & play' }}
+        />
+      )}
 
       <PlacedModel id="dresser" hoveredId={hoveredId} />
       <PlacedModel

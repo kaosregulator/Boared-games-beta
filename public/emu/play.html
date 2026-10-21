@@ -48,6 +48,10 @@
       window.EJS_color = '#d63a3a';
       window.EJS_volume = Number(params.get('volume') || 0.7);
       window.EJS_threads = false;
+      // Original pea-green DMG screen rather than grey.
+      if (core === 'gb') {
+        window.EJS_defaultOptions = { gambatte_gb_colorization: 'internal', gambatte_gb_internal_palette: 'GB - DMG' };
+      }
       window.EJS_Buttons = {
         playPause: false,
         restart: false,

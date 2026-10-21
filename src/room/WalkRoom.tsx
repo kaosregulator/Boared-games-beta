@@ -14,6 +14,10 @@ import { propCardFor } from './propCards';
 import { DeviceFocus } from './DeviceFocus';
 import { DeviceOverlay } from './DeviceOverlay';
 import { TvGlass } from '../tv/TvSet';
+import { IntroCard } from './IntroCard';
+import { neonGames } from './NeonGameWall';
+import { GameBoySeat } from '../devices/GameBoySeat';
+import { GameBoyGlass } from '../devices/GameBoyGlass';
 import { DEVICE_FROM_PROP, type DeviceId } from './devices';
 import { radio, useRadio } from '../radio/radioEngine';
 import { RoomStudio } from './RoomStudio';
@@ -45,6 +49,7 @@ function readCameraOverride() {
       menu: false,
       capture: false,
       device: null as DeviceId | null,
+      seat: false,
     };
   }
   const params = new URLSearchParams(window.location.search);
@@ -60,6 +65,7 @@ function readCameraOverride() {
     menu: params.has('menu'),
     capture: params.has('capture'),
     device,
+    seat: params.get('seat') === 'gameboy',
   };
 }
 
@@ -120,7 +126,7 @@ export function WalkRoom({
   const placeBytes = useRef<ArrayBuffer | null>(null);
   const placeUrl = useRef<string | null>(null);
   const [locked, setLocked] = useState(false);
-  const [engaged, setEngaged] = useState(scripted || Boolean(override.device) || Boolean(queryTable));
+  const [engaged, setEngaged] = useState(scripted || Boolean(override.device) || override.seat || Boolean(queryTable));
   const [tourLabel, setTourLabel] = useState<string | null>(null);
   const [aimed, setAimed] = useState<Aimed | null>(null);
   const [pulledGameId, setPulledGameId] = useState<GameId | null>(null);
@@ -128,6 +134,7 @@ export function WalkRoom({
   const [toast, setToast] = useState<string | null>(null);
   const [cardOpen, setCardOpen] = useState(false);
   const [device, setDevice] = useState<DeviceId | null>(override.device);
+  const [seated, setSeated] = useState(override.seat);
   const [flashPhase, setFlashPhase] = useState<'idle' | 'cover' | 'reveal'>('idle');
   const radioState = useRadio();
   const tapeOn = radioState.power;
@@ -162,7 +169,7 @@ export function WalkRoom({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [radioState.power]);
 
-  blockSelect.current = flashPhase !== 'idle' || device !== null;
+  blockSelect.current = flashPhase !== 'idle' || device !== null || seated;
 
   useEffect(() => {
     let cancelled = false;
@@ -327,6 +334,32 @@ export function WalkRoom({
     [runFlash],
   );
 
+  const sitDown = useCallback(() => {
+    document.exitPointerLock?.();
+    setCardOpen(false);
+    sound.stopNostalgia();
+    sound.playButtonClick();
+    runFlash(() => setSeated(true));
+  }, [runFlash]);
+
+  const standUp = useCallback(() => {
+    runFlash(() => {
+      setSeated(false);
+      if (musicOn && !radio.state.power) sound.startNostalgia();
+    });
+  }, [musicOn, runFlash]);
+
+  useEffect(() => {
+    if (!seated) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      standUp();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [seated, standUp]);
+
   const exitDevice = useCallback(() => {
     document.exitPointerLock?.();
     runFlash(() => {
@@ -380,6 +413,8 @@ export function WalkRoom({
           flash('Locked. Pack 02 is behind this door.');
           break;
         case 'gameboy':
+          sitDown();
+          break;
         case 'bed':
         case 'vhs-stack':
         case 'cards':
@@ -390,7 +425,7 @@ export function WalkRoom({
           break;
       }
     },
-    [byId, cardOpen, enterDevice, flash, lampsWarm, playGame],
+    [byId, cardOpen, enterDevice, flash, lampsWarm, playGame, sitDown],
   );
 
   const aimedGame =
@@ -405,11 +440,6 @@ export function WalkRoom({
   const cardProp = demoProp ?? aimedProp;
   const showCard = Boolean(demoGame || demoProp) || (engaged && cardOpen && aimed?.inReach && (aimedGame || aimedProp));
 
-  const floorBoxes = new Set(['monopoly', 'battleship', 'clue', 'life', 'yahtzee']);
-  const shelfTitles = games
-    .filter(game => !floorBoxes.has(game.id))
-    .map(game => game.title)
-    .join(' · ');
 
   return (
     <div className="relative w-full h-[100dvh] overflow-hidden bg-[#140c14] select-none">
@@ -438,9 +468,11 @@ export function WalkRoom({
           ghost={ghost}
           onPickAnchor={(anchor: Anchor) => setAnchorId(anchor.id)}
           tableGame={tableGame}
+          hideGameboy={seated}
           onLeaveTable={() => setTableGame(null)}
         />
         <DeviceFocus device={scripted ? null : device} />
+        {seated && <GameBoySeat />}
         {override.capture && <CaptureClock />}
         {override.cam ? (
           <DemoPose at={override.cam.at} look={override.cam.look} />
@@ -451,20 +483,35 @@ export function WalkRoom({
         ) : (
           <>
             <WalkController
-              enabled={!pulledGameId && !device}
+              enabled={!pulledGameId && !device && !seated}
               engaged={engaged}
               capturePointer={!tableGame}
               onLockChange={setLocked}
               onStep={onStep}
             />
             <ReachRaycaster
-              enabled={engaged && !pulledGameId && !device && !tableGame}
+              enabled={engaged && !pulledGameId && !device && !seated && !tableGame}
               onAim={setAimed}
               onSelect={handleSelect}
             />
           </>
         )}
       </Canvas>
+      {seated && <GameBoyGlass />}
+      {seated && (
+        <div data-ui="device" className="pointer-events-none absolute inset-0 z-40">
+          <button
+            type="button"
+            onClick={standUp}
+            className="pointer-events-auto absolute right-4 top-4 rounded-xl border border-white/20 bg-black/60 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-white hover:bg-black/80"
+          >
+            Stand up
+          </button>
+          <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/75">
+            Arrows · Z = A · X = B · Enter = Start · V = Select · or press the Game Boy's buttons · Esc stands up
+          </p>
+        </div>
+      )}
       {(device === 'crt' || device === 'nes') && !scripted && <TvGlass initialMode={device === 'nes' ? 'gaming' : 'menu'} />}
       {tableGame && <TableHudOverlay />}
 
@@ -474,7 +521,7 @@ export function WalkRoom({
         </div>
       )}
 
-      {engaged && !device && (
+      {engaged && !device && !seated && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div
             className={`rounded-full border transition-all duration-150 ${
@@ -550,9 +597,11 @@ export function WalkRoom({
               prop={cardProp}
               onClose={() => setCardOpen(false)}
               onAction={
-                DEVICE_FROM_PROP[cardProp.id]
-                  ? () => enterDevice(DEVICE_FROM_PROP[cardProp.id])
-                  : undefined
+                cardProp.id === 'gameboy'
+                  ? sitDown
+                  : DEVICE_FROM_PROP[cardProp.id]
+                    ? () => enterDevice(DEVICE_FROM_PROP[cardProp.id])
+                    : undefined
               }
               actionLabel={
                 cardProp.id === 'crt-tv'
@@ -561,7 +610,9 @@ export function WalkRoom({
                     ? 'Power on'
                     : cardProp.id === 'boombox'
                       ? 'Tune in'
-                      : undefined
+                      : cardProp.id === 'gameboy'
+                        ? 'Sit down & play'
+                        : undefined
               }
             />
           ) : null}
@@ -583,7 +634,7 @@ export function WalkRoom({
         </div>
       )}
 
-      {engaged && !device && (
+      {engaged && !device && !seated && (
         <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-wrap items-center justify-center gap-2 text-[10px] uppercase tracking-[0.2em] font-bold text-white/70">
           {[
             ['W A S D', 'walk'],
@@ -611,28 +662,13 @@ export function WalkRoom({
       {flashPhase !== 'idle' && <div className={`device-flash ${flashPhase}`} />}
 
       {!engaged && !scripted && !menuOpen && (
-        <div className="absolute inset-x-0 bottom-0 z-20 flex justify-center p-4 sm:p-8 pointer-events-none">
-          <div className="pointer-events-auto max-w-xl w-full rounded-3xl border border-white/15 bg-black/75 p-6 text-center shadow-2xl backdrop-blur-md">
-            <p className="text-[10px] uppercase tracking-[0.35em] text-amber-200/90 font-bold">Game Room</p>
-            <h1 className="font-display text-4xl sm:text-5xl text-white mt-2">Walk the bedroom</h1>
-            <p className="text-sm text-slate-300 mt-3 leading-relaxed">
-              This room is the menu. Walk up to a game box or a neon sign on the wall, and play it here.
-              WASD moves you. Click and drag to look around if the mouse is not captured.
-            </p>
-            <p className="text-[11px] text-slate-400 mt-3">On the wall: {shelfTitles}</p>
-            <button
-              id="enter-room"
-              type="button"
-              onClick={() => {
-                setEngaged(true);
-                if (musicOn) sound.startNostalgia();
-              }}
-              className="mt-6 w-full rounded-2xl bg-gradient-to-r from-fuchsia-600 to-amber-500 px-6 py-3.5 font-display text-lg text-white shadow-lg hover:brightness-110 active:scale-[0.99] transition"
-            >
-              Step into the room
-            </button>
-          </div>
-        </div>
+        <IntroCard
+          wallTitles={neonGames(games).map(game => game.title)}
+          onEnter={() => {
+            setEngaged(true);
+            if (musicOn) sound.startNostalgia();
+          }}
+        />
       )}
     </div>
   );

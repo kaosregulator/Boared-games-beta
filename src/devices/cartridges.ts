@@ -2,6 +2,8 @@
 export interface Cartridge {
   id: string;
   title: string;
+  /** How the title reads in a sentence. */
+  name: string;
   publisher: string;
   rom: string;
   core: 'nes' | 'gb';
@@ -14,6 +16,7 @@ export const CARTRIDGES: Cartridge[] = [
   {
     id: 'tetris',
     title: 'TETRIS',
+    name: 'Tetris',
     publisher: 'Nintendo · 1989',
     rom: '/roms/tetris.nes',
     core: 'nes',
@@ -23,11 +26,26 @@ export const CARTRIDGES: Cartridge[] = [
   {
     id: 'pacman',
     title: 'PAC-MAN',
+    name: 'Pac-Man',
     publisher: 'Namco · 1993',
     rom: '/roms/pacman.nes',
     core: 'nes',
     label: 'radial-gradient(circle at 30% 40%, #ffe14d 0 22%, #10123a 23%)',
     ink: '#ffe14d',
+  },
+];
+
+/** Game Boy Game Paks: the owner's own copy, run on the gambatte core. */
+export const GAME_PAKS: Cartridge[] = [
+  {
+    id: 'tetris-gb',
+    title: 'TETRIS',
+    name: 'Tetris',
+    publisher: 'Nintendo · 1989',
+    rom: '/roms/tetris-gb.gb',
+    core: 'gb',
+    label: '#9bbc0f',
+    ink: '#0f380f',
   },
 ];
 
