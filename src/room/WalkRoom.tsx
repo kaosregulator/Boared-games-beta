@@ -29,6 +29,10 @@ import { TouchGamepad } from '../devices/TouchGamepad';
 import { aim, isTouchDevice, pad } from './input';
 import { useTvStatus } from '../tv/tvBus';
 import { TvRemote } from '../tv/TvRemote';
+import { DeviceGestures } from '../devices/DeviceGestures';
+import { insetsFor, resetView, setBig, setInsets, useViewRig, useViewport, viewRig } from '../devices/viewRig';
+import { setGlassBig } from '../devices/GlassScreen';
+import { enterFullscreen, exitFullscreen } from './immersive';
 import { resumedSession, saveEngaged } from './session';
 import { TABLE_GAMES, TableHudOverlay, type TableSession } from './table/TablePlay';
 import { walkRig } from './WalkController';
@@ -174,6 +178,8 @@ export function WalkRoom({
     if (!open) setPinned(null);
   }, []);
   const [touch] = useState(isTouchDevice);
+  const vp = useViewport();
+  const rig = useViewRig();
   const [padCrouch, setPadCrouch] = useState(false);
   const tvStatus = useTvStatus();
   const [device, setDevice] = useState<DeviceId | null>(override.device);
@@ -182,6 +188,11 @@ export function WalkRoom({
   const [rubik, setRubik] = useState(false);
   /** Something held up close (Tamagotchi, Rubik's Cube): the room waits behind it. */
   const holding = tamagotchi || rubik;
+  const emulatorOn = (device === 'crt' || device === 'nes') && tvStatus.mode === 'emulator';
+  const tvOn = (device === 'crt' || device === 'nes') && !scripted;
+  const padUp = touch && (seated || emulatorOn);
+  const viewKind = padUp ? 'gameboy' : tvOn ? 'tv' : device === 'boombox' ? 'radio' : null;
+  const big = rig.big && (tvOn || seated);
   const [flashPhase, setFlashPhase] = useState<'idle' | 'cover' | 'reveal'>('idle');
   const radioState = useRadio();
   const tapeOn = radioState.power;
@@ -458,7 +469,9 @@ export function WalkRoom({
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       event.preventDefault();
-      standUp();
+      // Escape leaves big screen first, then stands you up.
+      if (viewRig.big) setBig(false);
+      else standUp();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -478,11 +491,58 @@ export function WalkRoom({
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       event.preventDefault();
-      exitDevice();
+      if (viewRig.big) setBig(false);
+      else exitDevice();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [device, exitDevice]);
+
+  // Frame the close-up around whatever the controls cover, for this
+  // orientation; in big screen, lay the picture flat over the free area.
+  useEffect(() => {
+    if (!viewKind) return;
+    const remoteFloats = viewKind === 'tv' && big;
+    const insets = remoteFloats
+      ? { top: 0, right: 0, bottom: 0, left: 0 }
+      : insetsFor(viewKind, touch, vp, big);
+    setInsets(insets);
+    const glassId = seated ? 'gameboy' : 'tv';
+    setGlassBig(
+      glassId,
+      big ? { x: insets.left, y: insets.top, w: vp.w - insets.left - insets.right, h: vp.h - insets.top - insets.bottom } : null,
+    );
+    return () => setGlassBig(glassId, null);
+  }, [viewKind, touch, vp, big, seated]);
+
+  // Leaving the device always leaves big screen and real full screen.
+  useEffect(() => {
+    if (tvOn || seated) return;
+    if (viewRig.big) setBig(false);
+    resetView();
+  }, [tvOn, seated]);
+
+  const toggleBig = useCallback(
+    (on: boolean) => {
+      setBig(on);
+      if (on) void enterFullscreen(touch);
+      else void exitFullscreen();
+    },
+    [touch],
+  );
+
+  // F toggles big screen on a keyboard.
+  useEffect(() => {
+    if (!tvOn && !seated) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.code !== 'KeyF' || event.repeat) return;
+      const el = event.target as HTMLElement | null;
+      if (el?.closest('input, textarea, select')) return;
+      toggleBig(!viewRig.big);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [tvOn, seated, toggleBig]);
 
   const handleSelect = useCallback(
     (target: Aimed) => {
@@ -541,11 +601,10 @@ export function WalkRoom({
   const cardProp = demoProp ?? aimedProp;
   const showCard = Boolean(demoGame || demoProp) || (engaged && cardOpen && (aimedGame || aimedProp));
   const walking = engaged && !device && !seated && !holding && !overlayGame && !pulledGameId && session?.phase !== 'unfold';
-  const emulatorOn = (device === 'crt' || device === 'nes') && tvStatus.mode === 'emulator';
 
 
   return (
-    <div className="relative w-full h-[100dvh] overflow-hidden bg-[#140c14] select-none overscroll-none">
+    <div data-room className="relative w-full h-[100dvh] overflow-hidden bg-[#140c14] select-none overscroll-none">
       <Canvas
         key={glKey}
         style={{ touchAction: 'none' }}
@@ -596,6 +655,7 @@ export function WalkRoom({
         />
         <DeviceFocus device={scripted ? null : device} />
         {seated && <GameBoySeat />}
+        <DeviceGestures active={Boolean(device || seated) && !big && !scripted} />
         {override.capture && <CaptureClock />}
         {override.cam ? (
           <DemoPose at={override.cam.at} look={override.cam.look} />
@@ -631,22 +691,36 @@ export function WalkRoom({
       {seated && <GameBoyGlass />}
       {seated && (
         <div data-ui="device" className="pointer-events-none absolute inset-0 z-40">
-          <button
-            type="button"
-            onClick={standUp}
-            className="pointer-events-auto absolute right-4 top-4 rounded-xl border border-white/20 bg-black/60 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-white hover:bg-black/80"
-          >
-            Stand up
-          </button>
-          {!touch && (
-            <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/75">
-              Arrows · Z = A · X = B · Enter = Start · V = Select · or press the Game Boy's buttons · Esc stands up
+          <div className={`pointer-events-auto absolute flex gap-2 ${padUp && vp.landscape ? 'left-1/2 top-2 -translate-x-1/2' : 'right-4 top-4'}`}>
+            <button
+              type="button"
+              onClick={() => toggleBig(!big)}
+              className="rounded-xl border border-cyan-200/30 bg-black/60 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-cyan-100 hover:bg-black/80"
+            >
+              {big ? '⤡ Exit big screen' : '⤢ Big screen'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (big) toggleBig(false);
+                standUp();
+              }}
+              className="rounded-xl border border-white/20 bg-black/60 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-white hover:bg-black/80"
+            >
+              Stand up
+            </button>
+          </div>
+          {!touch && !big && (
+            <p className="absolute bottom-3 left-1/2 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-center text-[11px] font-bold uppercase tracking-[0.16em] text-white/75">
+              Arrows · Z = A · X = B · Enter = Start · V = Select · scroll to zoom · F big screen · Esc stands up
             </p>
           )}
         </div>
       )}
-      {touch && (seated || emulatorOn) && <TouchGamepad tone={seated ? 'gb' : 'nes'} />}
-      {touch && (device === 'crt' || device === 'nes') && !scripted && flashPhase !== 'cover' && <TvRemote />}
+      {padUp && <TouchGamepad tone={seated ? 'gb' : 'nes'} landscape={vp.landscape} />}
+      {tvOn && (touch || big) && flashPhase !== 'cover' && (
+        <TvRemote landscape={vp.landscape} big={big} onBig={toggleBig} padUp={padUp} />
+      )}
       {(device === 'crt' || device === 'nes') && !scripted && <TvGlass initialMode={device === 'nes' ? 'gaming' : 'menu'} />}
       {session && session.phase === 'play' && TABLE_GAMES.has(session.game.id) && (
         <TableHudOverlay
@@ -691,7 +765,7 @@ export function WalkRoom({
       )}
 
       {/* Glass flash card — games + nostalgia props */}
-      {!overlayGame && (engaged || scripted) && (
+      {!overlayGame && (engaged || scripted) && !device && !seated && !holding && (
       <button
         type="button"
         onClick={openMenu}
@@ -788,10 +862,15 @@ export function WalkRoom({
 
       {device && flashPhase !== 'cover' && (
         <DeviceOverlay
+          big={big}
+          onBig={tvOn ? toggleBig : undefined}
           touch={touch}
           device={device}
           radioError={radioError}
-          onBack={exitDevice}
+          onBack={() => {
+            if (big) toggleBig(false);
+            exitDevice();
+          }}
         />
       )}
 

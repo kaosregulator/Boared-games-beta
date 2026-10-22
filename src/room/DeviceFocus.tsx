@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { SafeRoomModel } from './RoomModel';
-import { fitFov } from './input';
+import { frameSubject, freeArea, resetView, viewRig } from '../devices/viewRig';
 import type { DeviceId } from './devices';
 import { TvSet } from '../tv/TvSet';
 import { radio, useRadio, type RadioSnapshot } from '../radio/radioEngine';
@@ -34,25 +34,31 @@ export function DeviceFocus({ device }: { device: DeviceId | null }) {
   );
 }
 
-function applyPose(cam: THREE.PerspectiveCamera, device: DeviceId) {
+/**
+ * What to keep in frame for each close-up, in the studio's own coordinates.
+ * The TV shows the whole set (NES, VCR, cable box) when the free area is
+ * wide, and just the TV when it's tall and narrow.
+ */
+const SUBJECT: Record<'wide' | 'tv' | 'boombox', { centre: [number, number, number]; w: number; h: number }> = {
+  wide: { centre: [0.03, 0.31, 0], w: 0.68, h: 0.35 },
+  tv: { centre: [0.01, 0.33, 0], w: 0.36, h: 0.35 },
+  boombox: { centre: [0, 0.13, 0], w: 0.21, h: 0.15 },
+};
+
+const CENTRE = new THREE.Vector3();
+
+function applyPose(cam: THREE.PerspectiveCamera, device: DeviceId, size: { width: number; height: number }) {
   const pose = POSE[device];
-  // On a portrait phone the remote covers the bottom of the screen, so the TV
-  // is framed on its own and sits in the top half; the cable box and NES are
-  // on the remote instead.
-  const portraitTv = cam.aspect < 1 && device !== 'boombox';
-  const lookDrop = portraitTv ? 0.17 : 0;
   cam.position.set(pose.at[0], STUDIO_Y + pose.at[1], pose.at[2]);
-  cam.lookAt(pose.look[0], STUDIO_Y + pose.look[1] - lookDrop, pose.look[2]);
-  // Portrait screens widen the view so the set stays in frame.
-  const fov = fitFov(pose.fov, cam.aspect, portraitTv ? 0.95 : 1.5, 112);
-  if (Math.abs(cam.fov - fov) > 0.01) {
-    cam.fov = fov;
-    cam.updateProjectionMatrix();
-  }
+  const free = freeArea(viewRig.insets, size.width, size.height);
+  const freeAspect = (free.fw * size.width) / Math.max(1, free.fh * size.height);
+  const subject = device === 'boombox' ? SUBJECT.boombox : freeAspect < 1.15 ? SUBJECT.tv : SUBJECT.wide;
+  CENTRE.set(subject.centre[0], STUDIO_Y + subject.centre[1], subject.centre[2]);
+  frameSubject(cam, CENTRE, subject, viewRig.insets, size);
 }
 
 function FocusRig({ device }: { device: DeviceId | null }) {
-  const { camera } = useThree();
+  const { camera, size } = useThree();
   const saved = useRef<{ pos: THREE.Vector3; quat: THREE.Quaternion; fov: number } | null>(null);
 
   useLayoutEffect(() => {
@@ -61,7 +67,8 @@ function FocusRig({ device }: { device: DeviceId | null }) {
       if (!saved.current) {
         saved.current = { pos: cam.position.clone(), quat: cam.quaternion.clone(), fov: cam.fov };
       }
-      applyPose(cam, device);
+      resetView();
+      applyPose(cam, device, size);
       return;
     }
     if (!saved.current) return;
@@ -70,15 +77,18 @@ function FocusRig({ device }: { device: DeviceId | null }) {
     cam.fov = saved.current.fov;
     cam.updateProjectionMatrix();
     saved.current = null;
+    // size is read live in useFrame; the pose only needs resetting per device.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [camera, device]);
 
-  // Hold the close-up every frame. The walk controller also writes the camera
-  // on mount, and a one-shot lookAt loses that race.
+  // Hold the close-up every frame (it follows rotation, pinch and pan). The
+  // walk controller also writes the camera on mount, and a one-shot lookAt
+  // loses that race.
   // Priority must stay 0. A positive priority tells fiber to skip its own
   // gl.render, which leaves the canvas blank for the whole room.
   useFrame(() => {
     if (!device) return;
-    applyPose(camera as THREE.PerspectiveCamera, device);
+    applyPose(camera as THREE.PerspectiveCamera, device, size);
   });
 
   return null;

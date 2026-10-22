@@ -23,6 +23,24 @@ interface Nodes {
 
 const surfaces = new Map<string, Nodes>();
 
+/**
+ * Big screen: instead of riding the 3D surface, the glass is laid flat and
+ * scaled to fill a rectangle of the page. It is the same DOM node either
+ * way, so a show keeps playing and a game keeps running when you switch.
+ */
+export interface FlatRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+const flat = new Map<string, FlatRect>();
+
+export function setGlassBig(id: string, rect: FlatRect | null) {
+  if (rect) flat.set(id, rect);
+  else flat.delete(id);
+}
+
 const eps = (v: number) => (Math.abs(v) < 1e-10 ? 0 : v);
 
 function cssMatrix(m: THREE.Matrix4, mul: number[], prepend = '') {
@@ -96,6 +114,24 @@ export function GlassAnchor({ id, position, rotation = [0, 0, 0], width, widthPx
     const group = anchor.current;
     const nodes = surfaces.get(id);
     if (!group || !nodes) return;
+    const big = flat.get(id);
+    if (big) {
+      const content = nodes.obj.firstElementChild as HTMLElement | null;
+      const nw = content?.offsetWidth || widthPx;
+      const nh = content?.offsetHeight || widthPx * 0.75;
+      const k = Math.min(big.w / nw, big.h / nh);
+      const x = big.x + (big.w - nw * k) / 2;
+      const y = big.y + (big.h - nh * k) / 2;
+      nodes.root.style.perspective = 'none';
+      nodes.root.style.background = '#000';
+      nodes.cam.style.transform = 'none';
+      nodes.obj.style.transformOrigin = '0 0';
+      nodes.obj.style.transform = `translate(${x}px,${y}px) scale(${k})`;
+      nodes.root.style.display = 'block';
+      return;
+    }
+    nodes.root.style.background = '';
+    nodes.obj.style.transformOrigin = '';
     const cam = camera as THREE.PerspectiveCamera;
     const w = size.width;
     const h = size.height;
