@@ -1,12 +1,14 @@
 import React from 'react';
 import { ANCHORS } from './anchors';
 import { MOOD_LABEL, type RoomMood } from './moods';
+import { ROOM_TRACKS, type RoomTrackId } from '../utils/audio';
 
 interface RoomStudioProps {
   open: boolean;
   mood: RoomMood;
   music: boolean;
   musicVolume: number;
+  track: RoomTrackId;
   placing: boolean;
   placeName: string;
   anchorId: string;
@@ -18,6 +20,7 @@ interface RoomStudioProps {
   onMood: (mood: RoomMood) => void;
   onMusic: (on: boolean) => void;
   onMusicVolume: (volume: number) => void;
+  onTrack: (id: RoomTrackId) => void;
   onFile: (file: File) => void;
   onAnchor: (id: string) => void;
   onHeight: (n: number) => void;
@@ -32,7 +35,7 @@ interface RoomStudioProps {
 export function RoomStudio(props: RoomStudioProps) {
   if (!props.open) return null;
   return (
-    <div data-ui="studio" className="absolute left-4 top-16 z-40 w-[min(22rem,calc(100vw-2rem))] rounded-3xl border border-white/25 bg-[#140c14]/75 text-white shadow-2xl backdrop-blur-2xl">
+    <div data-ui="studio" className="absolute left-4 top-16 z-40 max-h-[calc(100dvh-5rem)] w-[min(22rem,calc(100vw-2rem))] overflow-y-auto overscroll-contain rounded-3xl border border-white/25 bg-[#140c14]/75 text-white shadow-2xl backdrop-blur-2xl">
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
         <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-200">Room studio</p>
         <button type="button" onClick={props.onClose} className="text-xs text-white/70 hover:text-white">
@@ -58,6 +61,20 @@ export function RoomStudio(props: RoomStudioProps) {
         <label className="flex items-center justify-between gap-3 rounded-xl bg-black/30 border border-white/10 px-3 py-2">
           <span>Bedroom music</span>
           <input type="checkbox" checked={props.music} onChange={e => props.onMusic(e.target.checked)} />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-[10px] uppercase tracking-[0.18em] text-white/50 font-bold">Track</span>
+          <select
+            value={props.track}
+            onChange={e => props.onTrack(e.target.value as RoomTrackId)}
+            className="rounded-xl bg-black/40 border border-white/15 px-3 py-2"
+          >
+            {ROOM_TRACKS.map(t => (
+              <option key={t.id} value={t.id}>
+                {t.title}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-[10px] uppercase tracking-[0.18em] text-white/50 font-bold">

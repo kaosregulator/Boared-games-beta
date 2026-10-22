@@ -6,7 +6,27 @@ This project is intentionally branded as a **public beta**, end to end.
 
 ## What works in the room
 
-- **TV** (lean in with E): power-on menu with *Watch TV* or *Gaming*. Watch TV is a
+- **Controls**: phone and tablet — left thumb stick walks, drag to look, tap things;
+  the TV gets an on-screen remote and the NES / Game Boy get a thumb pad. Laptop —
+  WASD or arrows, two-finger swipe to look, click things. Mouse — drag to look, the
+  cursor aims. No pointer lock, no run key.
+- **Memory cards**: everything in the room has one, including the things baked into
+  the desks and shelves (lamps, clocks, tapes, the Walkman, POGs, View-Master,
+  stickers, posters). Each has a story, swipeable photos from Wikimedia Commons and,
+  for a lot of them, an old commercial from the Internet Archive. Hotspot boxes are in
+  `src/room/hotspots.ts`; the copy is in `src/room/propCards.ts`.
+- **Lava lamps**: the four lamps baked into the props are live — raymarched wax
+  (`src/room/LavaLamp.tsx`). The desk lamps light their desks. Menu → Mood → *Lamps
+  only* turns the ceiling light down.
+- **Tamagotchi** on the bed: its card opens Dammagotchi
+  ([dammafra/dammagotchi](https://github.com/dammafra/dammagotchi), AGPL-3.0, built
+  into `public/tamagotchi`).
+- **Rubik's Cube**: its card (wall shelf, or the little cube on the game closet) has
+  *Pick it up & twist it* — swipe a sticker to turn that layer, drag around it to
+  look, U D L R F B keys or buttons, Scramble, timer, and a solved check.
+- **Music**: *Snowfall (slowed, birds)* is the default track; *Bedroom tape* is in the
+  menu.
+- **TV** (click it, then Turn it on): power-on menu with *Watch TV* or *Gaming*. Watch TV is a
   cable lineup — channel 2 runs archived SNICK broadcasts back to back (data from
   [chairpants/snick-tv](https://github.com/chairpants/snick-tv)), every other channel
   is a Golden Age cartoon streamed from the Internet Archive (the Cartoon Vault
@@ -23,7 +43,8 @@ This project is intentionally branded as a **public beta**, end to end.
 - **Neon wall**: the smaller games hang on the east wall as neon signs.
 
 Capture links: `?cam=x,y,z,lx,ly,lz`, `?device=crt|nes|boombox`, `?seat=gameboy`,
-`?play=<game id>`, `?probe=<model>`.
+`?play=<game id>`, `?card=<card id>`, `?probe=<model>`, `?hotspots` (outline every
+hotspot), `?pick-probe=<prop>&pick=x,y` (read a point off a mesh, for placing hotspots).
 
 ## Local
 

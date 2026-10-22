@@ -15,6 +15,11 @@ import { useTexture } from '@react-three/drei';
 import { ceilingTexture, floorTexture, rugTexture, wallTexture } from './procTextures';
 import type { HoverTarget } from './Interactable';
 import { SafeRoomModel } from './RoomModel';
+import { HOTSPOTS } from './hotspots';
+import { propCardFor } from './propCards';
+import { Tamagotchi } from './Tamagotchi';
+import { LAVA, LavaLamp } from './LavaLamp';
+import { LOW_POWER } from './input';
 import type { GameMetadata } from '../types';
 import { LAYOUT, SOUTH_WINDOW, WALL_SHELF } from './roomLayout';
 import { PlayTable, type TableSession } from './table/TablePlay';
@@ -145,6 +150,18 @@ function BulbFlicker({
   return <pointLight ref={light} position={position} color={color} intensity={base} distance={1.05} decay={2} />;
 }
 
+/**
+ * The desk lamps are lit: a warm bulb under the shade throwing a pool of
+ * light on the desk top.
+ */
+function DeskLampGlow({ at }: { at: [number, number, number] }) {
+  return (
+    <group position={at}>
+      <pointLight position={[0, -0.06, 0]} color="#ffd59a" intensity={0.9} distance={1.7} decay={2} />
+    </group>
+  );
+}
+
 function MountedShelf({
   shelf,
 }: {
@@ -167,19 +184,20 @@ function MountedShelf({
   );
 }
 
-function CeilingDome() {
+function CeilingDome({ level = 1 }: { level?: number }) {
   return (
     <group position={[0.05, WALL.height - 0.02, 0.15]}>
       <mesh rotation={[Math.PI, 0, 0]}>
         <sphereGeometry args={[0.22, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color="#fff1dc" emissive="#ffd7a4" emissiveIntensity={0.85} roughness={0.4} />
+        <meshStandardMaterial color="#fff1dc" emissive="#ffd7a4" emissiveIntensity={0.85 * level} roughness={0.4} />
       </mesh>
-      <pointLight position={[0, -0.18, 0]} color="#ffe2c2" intensity={2.1} distance={8.5} decay={2} />
+      <pointLight position={[0, -0.18, 0]} color="#ffe2c2" intensity={2.1 * level} distance={8.5} decay={2} />
     </group>
   );
 }
 
 function WallArt() {
+  // Each poster has its own memory card (poster-pokemon, poster-mummy...).
   const maps = useTexture({
     pokemon: '/room/posters/pokemon.webp',
     giant: '/room/posters/iron-giant.jpg',
@@ -237,6 +255,13 @@ function WallArt() {
     <>
       {posters.map(p => (
         <group key={p.key} position={p.position} rotation={p.rotation}>
+          <mesh
+            position={[0, 0, 0.01]}
+            userData={{ interactable: cardTarget(`poster-${p.key}`), volume: p.w * p.h * 0.03 }}
+          >
+            <boxGeometry args={[p.w + 0.04, p.h + 0.04, 0.03]} />
+            <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+          </mesh>
           <mesh position={[0, 0, -0.01]}>
             <boxGeometry args={[p.w + 0.04, p.h + 0.04, 0.018]} />
             <meshStandardMaterial color="#4a342c" roughness={0.72} />
@@ -252,26 +277,49 @@ function WallArt() {
 }
 
 /** The original bookcase stays empty so the string lights around it stay visible. */
-function GameShelf() {
+function GameShelf({ hoveredId }: { hoveredId: string | null }) {
   const { shelf } = LAYOUT;
   return (
     <group position={[shelf.x, 0, shelf.z]}>
-      <SafeRoomModel id="shelf" position={[0, 0, 0]} axis="y" meters={shelf.meters} tintAmount={0} />
+      <SafeRoomModel
+        id="shelf"
+        position={[0, 0, 0]}
+        axis="y"
+        meters={shelf.meters}
+        tintAmount={0}
+        interactable={cardTarget('shelf')}
+        hovered={hoveredId === 'shelf'}
+        hotspots={HOTSPOTS.shelf}
+        activeId={hoveredId}
+      />
       <pointLight position={[0, shelf.sy * 0.92, 0.55]} color="#ffdf6e" intensity={1.6} distance={3.2} decay={2} />
     </group>
   );
+}
+
+/** A whole prop's own memory card, if it has one. */
+function cardTarget(cardId: string, hint = 'Memory card'): HoverTarget | undefined {
+  const card = propCardFor(cardId);
+  return card ? { id: cardId, kind: 'prop', label: card.title, hint: card.action?.label ?? hint } : undefined;
 }
 
 function PlacedModel({
   id,
   hoveredId,
   interactable,
+  card,
+  children,
 }: {
   id: keyof typeof LAYOUT;
   hoveredId: string | null;
   interactable?: HoverTarget;
+  /** Card id for the whole prop. */
+  card?: string;
+  children?: React.ReactNode;
 }) {
   const p = LAYOUT[id];
+  const lava = id in LAVA ? [LAVA[id as keyof typeof LAVA]] : undefined;
+  const target = interactable ?? (card ? cardTarget(card) : undefined);
   return (
     <SafeRoomModel
       id={id}
@@ -280,9 +328,14 @@ function PlacedModel({
       axis={p.axis}
       meters={p.meters}
       tintAmount={0}
-      interactable={interactable}
-      hovered={hoveredId === interactable?.id}
-    />
+      interactable={target}
+      hovered={hoveredId !== null && hoveredId === target?.id}
+      hotspots={HOTSPOTS[id]}
+      activeId={hoveredId}
+      lava={lava}
+    >
+      {children}
+    </SafeRoomModel>
   );
 }
 
@@ -357,9 +410,9 @@ export function RealRoomScene({
         distance={3.4}
         decay={2}
       />
-      <CeilingDome />
+      <CeilingDome level={Math.min(1, lights.ceilI / 2.4)} />
 
-      <PlacedModel id="window" hoveredId={hoveredId} />
+      <PlacedModel id="window" hoveredId={hoveredId} card="window" />
       <pointLight
         position={[LAYOUT.window.x, LAYOUT.window.y + 0.35, LAYOUT.window.z + 0.7]}
         color={lights.windowC}
@@ -375,6 +428,8 @@ export function RealRoomScene({
         axis={SOUTH_WINDOW.axis}
         meters={SOUTH_WINDOW.meters}
         tintAmount={0}
+        interactable={cardTarget('window-south')}
+        hovered={hoveredId === 'window-south'}
       />
       <pointLight
         position={[SOUTH_WINDOW.x, SOUTH_WINDOW.y + 0.35, SOUTH_WINDOW.z - 0.7]}
@@ -384,66 +439,67 @@ export function RealRoomScene({
         decay={2}
       />
 
-      <PlacedModel
-        id="bed"
-        hoveredId={hoveredId}
-        interactable={{ id: 'bed', kind: 'prop', label: 'Bed', hint: 'Open memory card' }}
-      />
+<PlacedModel id="bed" hoveredId={hoveredId} card="bed">
+        {/* Left on the quilt by the foot of the bed, screen up. */}
+        <Tamagotchi position={[-0.25, 0.538, 0.3]} rotation={[-Math.PI / 2 + 0.1, 0, 0.55]} active={hoveredId === 'tamagotchi'} />
+      </PlacedModel>
       <PlacedModel
         id="backpack"
         hoveredId={hoveredId}
-        interactable={{ id: 'backpack', kind: 'prop', label: 'Backpack', hint: 'Open memory card' }}
+        card="backpack"
       />
-      <PlacedModel
-        id="teddy"
-        hoveredId={hoveredId}
-        interactable={{ id: 'teddy', kind: 'prop', label: 'Teddy bear', hint: 'Open memory card' }}
-      />
-      <PlacedModel id="nightstand" hoveredId={hoveredId} />
+      <PlacedModel id="teddy" hoveredId={hoveredId} card="south-shelf">
+        <LavaLamp spec={LAVA.teddy} light={!LOW_POWER} />
+      </PlacedModel>
+      <PlacedModel id="nightstand" hoveredId={hoveredId} card="nightstand">
+        <LavaLamp spec={LAVA.nightstand} light={!LOW_POWER} />
+      </PlacedModel>
       <PlacedModel
         id="gushers"
         hoveredId={hoveredId}
-        interactable={{ id: 'gushers', kind: 'prop', label: 'Fruit snacks', hint: 'Open memory card' }}
+        card="gushers"
       />
       <PlacedModel
         id="cards"
         hoveredId={hoveredId}
-        interactable={{ id: 'cards', kind: 'prop', label: 'Trading cards', hint: 'Open memory card' }}
+        card="cards"
       />
       {!hideGameboy && (
         <PlacedModel
           id="gameboy"
           hoveredId={hoveredId}
-          interactable={{ id: 'gameboy', kind: 'prop', label: 'Game Boy', hint: 'Sit down & play' }}
+          card="gameboy"
         />
       )}
 
-      <PlacedModel id="dresser" hoveredId={hoveredId} />
+      <PlacedModel id="dresser" hoveredId={hoveredId} card="dresser" />
       <PlacedModel
         id="crt"
         hoveredId={hoveredId}
-        interactable={{ id: 'crt-tv', kind: 'prop', label: 'CRT television', hint: 'Lean in' }}
+        card="crt-tv"
       />
       <PlacedModel
         id="door"
         hoveredId={hoveredId}
-        interactable={{ id: 'door', kind: 'prop', label: 'Bedroom door', hint: 'Open memory card' }}
+        card="door"
       />
-      <PlacedModel id="toyshelf" hoveredId={hoveredId} />
+      <PlacedModel id="toyshelf" hoveredId={hoveredId} card="toyshelf">
+        <LavaLamp spec={LAVA.toyshelf} light={!LOW_POWER} />
+      </PlacedModel>
       <PlacedModel
         id="nes"
         hoveredId={hoveredId}
-        interactable={{ id: 'nes', kind: 'prop', label: 'NES', hint: 'Lean in' }}
+        card="nes"
       />
       <PlacedModel
         id="armor"
         hoveredId={hoveredId}
-        interactable={{ id: 'armor', kind: 'prop', label: 'Mini figure', hint: 'Open memory card' }}
+        card="armor"
       />
       <PlacedModel
         id="rubik"
         hoveredId={hoveredId}
-        interactable={{ id: 'rubik', kind: 'prop', label: "Rubik's cube", hint: 'Open memory card' }}
+        card="rubik"
       />
       <pointLight
         position={[LAYOUT.dresser.x, LAYOUT.dresser.sy + 0.35, LAYOUT.dresser.z + 0.55]}
@@ -453,9 +509,9 @@ export function RealRoomScene({
         decay={2}
       />
 
-      <GameShelf />
+      <GameShelf hoveredId={hoveredId} />
       <NeonGameWall games={games} hoveredId={hoveredId} pulledId={pulledGameId} />
-      <PlacedModel id="beanbag" hoveredId={hoveredId} />
+      <PlacedModel id="beanbag" hoveredId={hoveredId} card="beanbag" />
       <PlayTable
         session={session}
         onUnfolded={onUnfolded ?? (() => {})}
@@ -464,10 +520,16 @@ export function RealRoomScene({
       />
       <BulbFlicker position={[LAYOUT.shelf.x + 0.55, 1.85, LAYOUT.shelf.z + 0.28]} color="#ffd27a" base={0.42} seed={1.2} />
       <BulbFlicker position={[LAYOUT.shelf.x + 0.58, 1.35, LAYOUT.shelf.z + 0.3]} color="#ffb45a" base={0.34} seed={2.4} />
-      <BulbFlicker position={[LAYOUT.shelf.x + 0.52, 0.85, LAYOUT.shelf.z + 0.26]} color="#ffe08a" base={0.3} seed={3.1} />
-      <BulbFlicker position={[LAYOUT.shelf.x - 0.5, 1.7, LAYOUT.shelf.z + 0.24]} color="#ffcc77" base={0.28} seed={4.2} />
+      {!LOW_POWER && (
+        <>
+          <BulbFlicker position={[LAYOUT.shelf.x + 0.52, 0.85, LAYOUT.shelf.z + 0.26]} color="#ffe08a" base={0.3} seed={3.1} />
+          <BulbFlicker position={[LAYOUT.shelf.x - 0.5, 1.7, LAYOUT.shelf.z + 0.24]} color="#ffcc77" base={0.28} seed={4.2} />
+        </>
+      )}
 
-      <PlacedModel id="desk" hoveredId={hoveredId} />
+      <PlacedModel id="desk" hoveredId={hoveredId} card="desk">
+        <DeskLampGlow at={[0.43, 0.86, -0.13]} />
+      </PlacedModel>
       <PlacedModel
         id="clue"
         hoveredId={hoveredId}
@@ -476,10 +538,13 @@ export function RealRoomScene({
       <PlacedModel
         id="army"
         hoveredId={hoveredId}
-        interactable={{ id: 'army', kind: 'prop', label: 'Army men', hint: 'Open memory card' }}
+        card="army"
       />
-      <PlacedModel id="clutterdesk" hoveredId={hoveredId} />
-      <PlacedModel id="books" hoveredId={hoveredId} />
+      <PlacedModel id="clutterdesk" hoveredId={hoveredId} card="clutterdesk">
+        <LavaLamp spec={LAVA.clutterdesk} />
+        <DeskLampGlow at={[0.09, 0.93, -0.22]} />
+      </PlacedModel>
+      <PlacedModel id="books" hoveredId={hoveredId} card="books" />
       <PlacedModel
         id="board"
         hoveredId={hoveredId}
@@ -509,17 +574,17 @@ export function RealRoomScene({
       <PlacedModel
         id="hotpockets"
         hoveredId={hoveredId}
-        interactable={{ id: 'hotpockets', kind: 'prop', label: 'Hot pockets', hint: 'Open memory card' }}
+        card="hotpockets"
       />
       <PlacedModel
         id="jordans"
         hoveredId={hoveredId}
-        interactable={{ id: 'jordans', kind: 'prop', label: 'High-tops', hint: 'Open memory card' }}
+        card="jordans"
       />
       <PlacedModel
         id="car"
         hoveredId={hoveredId}
-        interactable={{ id: 'car', kind: 'prop', label: 'Toy car', hint: 'Open memory card' }}
+        card="car"
       />
 
       <PlacedModel
@@ -544,9 +609,9 @@ export function RealRoomScene({
       <PlacedModel
         id="vhs_stack"
         hoveredId={hoveredId}
-        interactable={{ id: 'vhs-stack', kind: 'prop', label: 'VHS stack', hint: 'Open memory card' }}
+        card="vhs-stack"
       />
-      <PlacedModel id="vhs_loose" hoveredId={hoveredId} />
+      <PlacedModel id="vhs_loose" hoveredId={hoveredId} card="vhs-loose" />
 
       <mesh position={[0.15, 0.004, -0.15]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <circleGeometry args={[1.28, 48]} />

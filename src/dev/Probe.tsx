@@ -13,7 +13,7 @@ export function Probe() {
   const q = new URLSearchParams(location.search);
   const id = q.get('probe') as ModelId;
   const view = q.get('view') ?? 'front';
-  const pos: [number, number, number] = view === 'side' ? [3, 0.5, 0] : view === 'top' ? [0, 3, 0.001] : [0, 0.5, 3];
+  const pos: [number, number, number] = view === 'side' ? [3, 0.5, 0] : view === 'top' ? [0, 3, 0.001] : view === 'iso' ? [1.6, 1.6, 2.6] : view === 'back' ? [0, 0.5, -3] : [0, 0.5, 3];
   const lines = [];
   for (let i = -10; i <= 10; i += 1) {
     lines.push(
@@ -34,7 +34,7 @@ export function Probe() {
         <ambientLight intensity={2} />
         <directionalLight position={[1, 2, 3]} intensity={2} />
         {q.get('glb') ? <Suspense fallback={null}><Url url={'/' + q.get('glb')! + '.glb'} /></Suspense> : <SafeRoomModel id={id} position={[0, 0, 0]} axis={(q.get('axis') as 'x' | 'y') ?? 'y'} meters={Number(q.get('m') ?? 1)} tintAmount={0} />}
-        {view !== 'top' && lines}
+        {view !== 'top' && view !== 'iso' && view !== 'back' && !q.has('nogrid') && lines}
       </Canvas>
     </div>
   );

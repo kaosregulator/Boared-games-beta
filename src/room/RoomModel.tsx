@@ -2,6 +2,9 @@ import React, { Component, Suspense, useMemo } from 'react';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import type { HoverTarget } from './Interactable';
+import type { Hotspot } from './hotspots';
+import type { LavaSpec } from './LavaLamp';
+import { propCardFor } from './propCards';
 
 export type ModelId =
   | 'bed'
@@ -128,6 +131,111 @@ interface RoomModelProps {
   /** Tint toward warm wood/purple. Keep low so baked Tripo art stays crisp. */
   tintAmount?: number;
   hovered?: boolean;
+  /** Things baked into this mesh that get their own card. */
+  hotspots?: Hotspot[];
+  /** What the player is pointing at, to outline the right box. */
+  activeId?: string | null;
+  children?: React.ReactNode;
+  /**
+   * Lava lamps baked into this mesh. Their painted glass is pulled in so the
+   * live lamp drawn over it (LavaLamp) is all you see.
+   */
+  lava?: LavaSpec[];
+}
+
+const V = new THREE.Vector3();
+const INV = new THREE.Matrix4();
+
+/**
+ * Pull every vertex of a baked lava lamp's glass in toward its axis, inside
+ * the radius the live lamp is drawn at. Geometry is shared with the GLTF
+ * cache, so each one is only squeezed once.
+ */
+function squeezeLava(root: THREE.Object3D, scale: number, offset: THREE.Vector3, lamps: LavaSpec[]) {
+  root.updateMatrixWorld(true);
+  const rootInv = new THREE.Matrix4().copy(root.matrixWorld).invert();
+  root.traverse(obj => {
+    const mesh = obj as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const geo = mesh.geometry as THREE.BufferGeometry;
+    if (geo.userData.lavaSqueezed) return;
+    geo.userData.lavaSqueezed = true;
+    const pos = geo.getAttribute('position') as THREE.BufferAttribute | undefined;
+    if (!pos) return;
+    // Mesh space -> the prop's placed frame (metres, floor at 0), and back.
+    const toPlaced = new THREE.Matrix4().multiplyMatrices(rootInv, mesh.matrixWorld);
+    INV.copy(toPlaced).invert();
+    let moved = 0;
+    for (let i = 0; i < pos.count; i += 1) {
+      V.fromBufferAttribute(pos, i).applyMatrix4(toPlaced).multiplyScalar(scale).add(offset);
+      for (const lamp of lamps) {
+        // Leave the base alone; go right up to the cap.
+        if (V.y < lamp.y0 + (lamp.y1 - lamp.y0) * 0.02 || V.y > lamp.y1) continue;
+        const t = (V.y - lamp.y0) / (lamp.y1 - lamp.y0);
+        const r = lamp.r0 + (lamp.r1 - lamp.r0) * t;
+        const dx = V.x - lamp.x;
+        const dz = V.z - lamp.z;
+        const d = Math.hypot(dx, dz);
+        if (d > r * 1.7 || d < r * 0.85) continue;
+        const k = (r * 0.85) / d;
+        V.x = lamp.x + dx * k;
+        V.z = lamp.z + dz * k;
+        V.sub(offset).divideScalar(scale).applyMatrix4(INV);
+        pos.setXYZ(i, V.x, V.y, V.z);
+        moved += 1;
+        break;
+      }
+    }
+    if (moved) {
+      pos.needsUpdate = true;
+      geo.computeBoundingSphere();
+      geo.computeBoundingBox();
+    }
+  });
+}
+
+const GAME_LABEL: Record<string, string> = {
+  monopoly: 'Monopoly',
+  battleship: 'Battleship',
+  pawnrush: 'Sorry!',
+  clue: 'Clue',
+  life: 'The Game of Life',
+  yahtzee: 'Yahtzee',
+};
+
+/** Thin amber outline around whatever is being pointed at. */
+function Outline({ size, position }: { size: [number, number, number]; position: [number, number, number] }) {
+  const geo = useMemo(() => new THREE.EdgesGeometry(new THREE.BoxGeometry(size[0], size[1], size[2])), [size[0], size[1], size[2]]); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <lineSegments geometry={geo} position={position} renderOrder={5}>
+      <lineBasicMaterial color="#ffd27a" transparent opacity={0.85} depthTest={false} />
+    </lineSegments>
+  );
+}
+
+/** `?hotspots` outlines every hotspot box, for lining them up with the meshes. */
+const SHOW_ALL_HOTSPOTS = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('hotspots');
+
+function HotspotBox({ spot, active }: { spot: Hotspot; active: boolean }) {
+  const card = propCardFor(spot.id);
+  const target = useMemo<HoverTarget>(
+    () =>
+      spot.gameId
+        ? { id: spot.id, kind: 'game', gameId: spot.gameId, label: GAME_LABEL[spot.gameId] ?? spot.gameId, hint: 'Inspect · play' }
+        : { id: spot.id, kind: 'prop', label: card?.title ?? spot.id, hint: card?.action?.label ?? 'Memory card' },
+    [spot.id, spot.gameId, card],
+  );
+  const [w, ht, d] = spot.size;
+  const centre: [number, number, number] = [spot.at[0], spot.at[1], spot.at[2] - d / 2];
+  return (
+    <>
+      <mesh position={centre} userData={{ interactable: target, volume: w * ht * d }}>
+        <boxGeometry args={[w, ht, d]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+      {(active || SHOW_ALL_HOTSPOTS) && <Outline size={[w * 1.06 + 0.01, ht * 1.06 + 0.01, d * 1.06 + 0.01]} position={centre} />}
+    </>
+  );
 }
 
 /**
@@ -148,6 +256,10 @@ export function RoomModel({
   interactable,
   tintAmount = 0.04,
   hovered = false,
+  hotspots,
+  activeId = null,
+  children,
+  lava,
 }: RoomModelProps) {
   const url = MODEL_URL[id];
   const { scene } = useGLTF(url);
@@ -192,13 +304,20 @@ export function RoomModel({
     };
   }, [root, axis, meters, fitWidth, fitHeight, fitDepth, scale]);
 
+  useMemo(() => {
+    if (lava?.length) squeezeLava(root, fitted.fitScale, fitted.offset, lava);
+  }, [root, fitted, lava]);
+
   return (
     <group position={position} rotation={rotation}>
       <group position={fitted.offset} scale={fitted.fitScale}>
         <primitive object={root} />
       </group>
       {interactable && (
-        <mesh position={[0, Math.max(fitted.size.y, 0.2) / 2, 0]} userData={{ interactable }}>
+        <mesh
+          position={[0, Math.max(fitted.size.y, 0.2) / 2, 0]}
+          userData={{ interactable, volume: fitted.size.x * fitted.size.y * fitted.size.z }}
+        >
           <boxGeometry
             args={[
               Math.max(fitted.size.x, 0.16),
@@ -210,11 +329,15 @@ export function RoomModel({
         </mesh>
       )}
       {hovered && (
-        <mesh position={[0, 0.55, 0.1]}>
-          <sphereGeometry args={[0.62, 18, 14]} />
-          <meshBasicMaterial color="#ffd59a" transparent opacity={0.1} depthWrite={false} />
-        </mesh>
+        <Outline
+          size={[fitted.size.x + 0.02, fitted.size.y + 0.02, fitted.size.z + 0.02]}
+          position={[0, fitted.size.y / 2, 0]}
+        />
       )}
+      {hotspots?.map(spot => (
+        <HotspotBox key={spot.id} spot={spot} active={activeId === spot.id} />
+      ))}
+      {children}
     </group>
   );
 }

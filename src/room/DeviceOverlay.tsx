@@ -3,6 +3,8 @@ import type { DeviceId } from './devices';
 
 interface DeviceOverlayProps {
   device: DeviceId;
+  /** Touch screens get the remote and the thumb pad instead of key hints. */
+  touch?: boolean;
   radioError: string | null;
   onBack: () => void;
 }
@@ -17,7 +19,7 @@ const HINT: Record<DeviceId, string> = {
  * Leaning in hands every control to the 3D device itself. All that stays on
  * screen is the way back out and a one-line hint.
  */
-export function DeviceOverlay({ device, radioError, onBack }: DeviceOverlayProps) {
+export function DeviceOverlay({ device, touch = false, radioError, onBack }: DeviceOverlayProps) {
   return (
     <div data-ui="device" className="pointer-events-none absolute inset-0 z-40">
       <button
@@ -27,9 +29,17 @@ export function DeviceOverlay({ device, radioError, onBack }: DeviceOverlayProps
       >
         Step back
       </button>
-      <p className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/75">
-        {HINT[device]} · Esc steps back
-      </p>
+      {touch ? (
+        device === 'boombox' && (
+          <p className="pointer-events-none absolute bottom-4 left-1/2 w-[calc(100%-2rem)] -translate-x-1/2 text-center text-[10px] font-bold uppercase tracking-[0.16em] text-white/70">
+            Tap the buttons on the stereo
+          </p>
+        )
+      ) : (
+        <p className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/75">
+          {HINT[device]} · Esc steps back
+        </p>
+      )}
       {radioError && (
         <p className="pointer-events-none absolute left-1/2 top-16 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-xs text-rose-200">
           {radioError}

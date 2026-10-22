@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { isTouchDevice } from './input';
 import { CHANNELS } from '../tv/channels';
 import { STATIONS } from '../radio/stations';
 import { CARTRIDGES, GAME_PAKS } from '../devices/cartridges';
@@ -43,10 +44,25 @@ const SPOTS: { tag: string; title: string; detail: string; tint: string }[] = [
 
 /** First thing you see: a taped-label title card over the dark room. */
 export function IntroCard({ wallTitles, onEnter }: IntroCardProps) {
+  const [touch] = useState(isTouchDevice);
+  const controls = touch
+    ? [
+        ['Left thumb', 'walk'],
+        ['Drag', 'look'],
+        ['Tap', 'use'],
+        ['Duck', 'crouch'],
+      ]
+    : [
+        ['WASD / arrows', 'walk'],
+        ['Drag · 2-finger swipe', 'look'],
+        ['Click · E', 'use'],
+        ['C', 'crouch'],
+        ['Esc', 'step back'],
+      ];
   return (
-    <div className="absolute inset-0 z-20 flex items-center justify-center p-4 sm:p-8 pointer-events-none">
+    <div className="absolute inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain p-3 pointer-events-none sm:items-center sm:p-8">
       <div
-        className="pointer-events-auto relative w-full max-w-2xl overflow-hidden rounded-[28px] border border-white/15 bg-[#0d0712]/85 shadow-[0_30px_80px_rgba(0,0,0,0.6)] backdrop-blur-md"
+        className="pointer-events-auto relative my-auto w-full max-w-2xl overflow-hidden rounded-[24px] border border-white/15 bg-[#0d0712]/90 shadow-[0_30px_80px_rgba(0,0,0,0.6)] backdrop-blur-md sm:rounded-[28px]"
         style={{ fontFamily: '"IBM Plex Mono", ui-monospace, monospace' }}
       >
         {/* tube scanlines over the whole card */}
@@ -60,7 +76,7 @@ export function IntroCard({ wallTitles, onEnter }: IntroCardProps) {
             <div key={c} className="flex-1" style={{ background: c }} />
           ))}
         </div>
-        <div className="relative px-6 pt-6 pb-5 sm:px-9">
+        <div className="relative px-5 pt-5 pb-5 sm:px-9 sm:pt-6">
           <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.3em] text-white/60">
             <span>
               <span className="mr-2 inline-block h-2 w-2 animate-pulse rounded-full bg-red-500 align-middle" />
@@ -68,14 +84,14 @@ export function IntroCard({ wallTitles, onEnter }: IntroCardProps) {
             </span>
             <span>Saturday · 8:00 PM</span>
           </div>
-          <h1 className="font-display mt-4 text-5xl leading-[0.95] text-white sm:text-6xl">
+          <h1 className="font-display mt-3 text-4xl leading-[0.95] text-white sm:mt-4 sm:text-6xl">
             Boared <span className="text-[#ff7ad8]">Games</span>
           </h1>
           <p className="mt-3 max-w-lg text-sm leading-relaxed text-slate-300">
-            A 90s bedroom where everything works. Walk up to anything that glows and press <b className="text-amber-200">E</b>.
+            A 90s bedroom where everything works, and everything has a story. Walk up to anything and {touch ? 'tap it' : 'click it'}.
           </p>
 
-          <ul className="mt-5 grid gap-2 sm:grid-cols-2">
+          <ul className="mt-4 grid grid-cols-2 gap-2 sm:mt-5">
             {SPOTS.map(spot => (
               <li key={spot.tag} className="flex gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
                 <span
@@ -86,7 +102,7 @@ export function IntroCard({ wallTitles, onEnter }: IntroCardProps) {
                 </span>
                 <span>
                   <span className="block text-[13px] font-bold text-white">{spot.title}</span>
-                  <span className="block text-[11px] leading-snug text-slate-400">{spot.detail}</span>
+                  <span className="hidden text-[11px] leading-snug text-slate-400 min-[420px]:block">{spot.detail}</span>
                 </span>
               </li>
             ))}
@@ -96,19 +112,13 @@ export function IntroCard({ wallTitles, onEnter }: IntroCardProps) {
               </span>
               <span>
                 <span className="block text-[13px] font-bold text-white">Neon signs</span>
-                <span className="block text-[11px] leading-snug text-slate-400">{wallTitles.slice(0, 5).join(' · ')} and more.</span>
+                <span className="hidden text-[11px] leading-snug text-slate-400 min-[420px]:block">{wallTitles.slice(0, 5).join(' · ')} and more.</span>
               </span>
             </li>
           </ul>
 
           <div className="mt-5 flex flex-wrap gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-white/70">
-            {[
-              ['WASD', 'walk'],
-              ['Mouse', 'look'],
-              ['E', 'use'],
-              ['C', 'crouch'],
-              ['Esc', 'step back'],
-            ].map(([k, v]) => (
+            {controls.map(([k, v]) => (
               <span key={k} className="rounded-md border border-white/10 bg-black/40 px-2 py-1">
                 <span className="text-amber-200">{k}</span> {v}
               </span>
@@ -119,7 +129,7 @@ export function IntroCard({ wallTitles, onEnter }: IntroCardProps) {
             id="enter-room"
             type="button"
             onClick={onEnter}
-            className="font-display mt-6 w-full rounded-2xl bg-gradient-to-r from-fuchsia-600 via-pink-500 to-amber-500 px-6 py-3.5 text-lg text-white shadow-lg transition hover:brightness-110 active:scale-[0.99]"
+            className="font-display sticky bottom-0 mt-5 w-full rounded-2xl bg-gradient-to-r from-fuchsia-600 via-pink-500 to-amber-500 px-6 py-3.5 text-lg text-white shadow-lg transition hover:brightness-110 active:scale-[0.99]"
           >
             Step into the room
           </button>
