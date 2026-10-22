@@ -27,8 +27,8 @@ export async function enterFullscreen(landscape = false) {
       else await el.webkitRequestFullscreen?.();
     }
     if (landscape) {
-      const orientation = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
-      await orientation.lock?.('landscape').catch(() => {});
+      const orientation = screen.orientation as (ScreenOrientation & { lock?: (o: string) => Promise<void> }) | undefined;
+      await orientation?.lock?.('landscape').catch(() => {});
     }
   } catch {
     // Refused (no gesture, not supported): the in-app immersive view still works.
@@ -38,7 +38,12 @@ export async function enterFullscreen(landscape = false) {
 export async function exitFullscreen() {
   const d = document as FsDoc;
   try {
-    (screen.orientation as ScreenOrientation & { unlock?: () => void }).unlock?.();
+    // Some full-screen browsers have no Screen Orientation API at all.
+    (screen.orientation as (ScreenOrientation & { unlock?: () => void }) | undefined)?.unlock?.();
+  } catch {
+    // Not locked.
+  }
+  try {
     if (d.fullscreenElement) await d.exitFullscreen();
     else if (d.webkitFullscreenElement) await d.webkitExitFullscreen?.();
   } catch {

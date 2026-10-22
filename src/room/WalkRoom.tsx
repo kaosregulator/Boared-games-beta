@@ -198,7 +198,7 @@ export function WalkRoom({
   const emulatorOn = (device === 'crt' || device === 'nes') && tvStatus.mode === 'emulator';
   const tvOn = (device === 'crt' || device === 'nes') && !scripted;
   const padUp = touch && (seated || emulatorOn);
-  const viewKind = padUp ? 'gameboy' : tvOn ? 'tv' : device === 'boombox' ? 'radio' : null;
+  const viewKind = seated || padUp ? 'gameboy' : tvOn ? 'tv' : device === 'boombox' ? 'radio' : null;
   const big = rig.big && (tvOn || seated);
   const [flashPhase, setFlashPhase] = useState<'idle' | 'cover' | 'reveal'>('idle');
   const radioState = useRadio();
