@@ -385,7 +385,7 @@ export function RubikPlay({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="relative min-h-0 flex-1" style={{ touchAction: 'none' }}>
-        <Canvas camera={{ position: [4.2, 3.6, 5.6], fov: 34 }} dpr={[1, 2]}>
+        <Canvas camera={{ position: [4.2, 3.6, 5.6], fov: 34 }} dpr={[1, 1.5]}>
           <ambientLight intensity={0.7} />
           <directionalLight position={[4, 6, 5]} intensity={1.6} />
           <directionalLight position={[-5, -2, -4]} intensity={0.5} color="#ffb3f0" />

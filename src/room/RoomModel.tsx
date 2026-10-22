@@ -1,5 +1,6 @@
 import React, { Component, Suspense, useMemo } from 'react';
 import { useGLTF } from '@react-three/drei';
+import { withKtx2 } from './ktx2';
 import * as THREE from 'three';
 import type { HoverTarget } from './Interactable';
 import type { Hotspot } from './hotspots';
@@ -262,7 +263,7 @@ export function RoomModel({
   lava,
 }: RoomModelProps) {
   const url = MODEL_URL[id];
-  const { scene } = useGLTF(url);
+  const { scene } = useGLTF(url, false, true, withKtx2);
   const root = useMemo(() => {
     const clone = scene.clone(true);
     finishMaterials(clone, new THREE.Color('#7a5a52'), tintAmount);
@@ -382,5 +383,5 @@ export function SafeRoomModel(props: RoomModelProps) {
     'toyshelf',
   ] as ModelId[]
 ).forEach(id => {
-  useGLTF.preload(MODEL_URL[id]);
+  useGLTF.preload(MODEL_URL[id], false, true, withKtx2);
 });

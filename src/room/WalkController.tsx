@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { PLAYER, WALL } from './videoRoom';
 import { ROOM_COLLIDERS, TABLE_COLLIDER } from './roomLayout';
 import { aim, emitRoomTap, fitFov, pad } from './input';
+import { resumedSession, savePose, type SavedPose } from './session';
 
 /**
  * Outside control of the walking body: the table session sets the player
@@ -16,6 +17,8 @@ export const walkRig = {
   tableActive: false,
   /** Where the player stands, for cards that close when you walk off. */
   pos: { x: 0, z: 0 },
+  /** Last full pose, so a rebuilt canvas (or a reloaded page) puts you back. */
+  lastPose: null as SavedPose | null,
   listeners: new Set<(crouched: boolean) => void>(),
   setCrouch(on: boolean) {
     if (walkRig.crouchLock === on) return;
@@ -77,9 +80,18 @@ export function WalkController({ enabled, engaged, onStep }: WalkControllerProps
   enabledRef.current = enabled;
 
   useEffect(() => {
+    const pose = walkRig.lastPose ?? resumedSession()?.pose ?? null;
+    if (pose) {
+      camera.position.set(...pose.p);
+      camera.quaternion.set(...pose.q);
+      return;
+    }
     camera.position.set(...PLAYER.spawn);
     camera.lookAt(...PLAYER.spawnLook);
   }, [camera]);
+
+  // Remember the pose: in memory every frame, in the tab every couple of seconds.
+  const lastSave = useRef(0);
 
   // Portrait phones see the room as wide as a laptop does.
   useEffect(() => {
@@ -253,6 +265,17 @@ export function WalkController({ enabled, engaged, onStep }: WalkControllerProps
     }
     walkRig.pos.x = camera.position.x;
     walkRig.pos.z = camera.position.z;
+    // Only while actually walking: device close-ups and the bean bag move the camera elsewhere.
+    if (enabled && engagedRef.current && !walkRig.crouchLock) {
+      const p = camera.position;
+      const q = camera.quaternion;
+      walkRig.lastPose = { p: [p.x, eyeHeight.current, p.z], q: [q.x, q.y, q.z, q.w] };
+      const now = performance.now();
+      if (now - lastSave.current > 2000) {
+        lastSave.current = now;
+        savePose(walkRig.lastPose);
+      }
+    }
     if (!enabled || !engagedRef.current) {
       velocity.current.multiplyScalar(0.8);
       return;

@@ -2,9 +2,10 @@ import React from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrthographicCamera, useGLTF, Center, Bounds } from '@react-three/drei';
 import { Suspense } from 'react';
+import { withKtx2 } from '../room/ktx2';
 
 function Url({ url }: { url: string }) {
-  const { scene } = useGLTF(url);
+  const { scene } = useGLTF(url, false, true, withKtx2);
   return <Bounds fit clip observe margin={1.1}><Center>{<primitive object={scene} />}</Center></Bounds>;
 }
 import { SafeRoomModel, type ModelId } from '../room/RoomModel';

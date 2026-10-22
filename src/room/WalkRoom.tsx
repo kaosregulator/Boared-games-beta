@@ -29,6 +29,7 @@ import { TouchGamepad } from '../devices/TouchGamepad';
 import { aim, isTouchDevice, pad } from './input';
 import { useTvStatus } from '../tv/tvBus';
 import { TvRemote } from '../tv/TvRemote';
+import { resumedSession, saveEngaged } from './session';
 import { TABLE_GAMES, TableHudOverlay, type TableSession } from './table/TablePlay';
 import { walkRig } from './WalkController';
 import { TABLE_SEAT } from './roomLayout';
@@ -148,7 +149,18 @@ export function WalkRoom({
   const [placeName, setPlaceName] = useState('');
   const placeBytes = useRef<ArrayBuffer | null>(null);
   const placeUrl = useRef<string | null>(null);
-  const [engaged, setEngaged] = useState(scripted || Boolean(override.device) || override.seat || Boolean(queryTable));
+  const [engaged, setEngaged] = useState(
+    () =>
+      scripted ||
+      Boolean(override.device) ||
+      override.seat ||
+      Boolean(queryTable) ||
+      // Back after a reload: skip the title card and stand where you were.
+      Boolean(resumedSession()?.engaged),
+  );
+  /** Bumped to rebuild the canvas after the browser drops its WebGL context. */
+  const [glKey, setGlKey] = useState(0);
+  const [glLost, setGlLost] = useState(false);
   const [tourLabel, setTourLabel] = useState<string | null>(null);
   const [aimed, setAimed] = useState<Aimed | null>(null);
   const [pulledGameId, setPulledGameId] = useState<GameId | null>(null);
@@ -535,12 +547,29 @@ export function WalkRoom({
   return (
     <div className="relative w-full h-[100dvh] overflow-hidden bg-[#140c14] select-none overscroll-none">
       <Canvas
+        key={glKey}
         style={{ touchAction: 'none' }}
-        frameloop={override.capture ? 'demand' : 'always'}
+        // Nothing to draw while something is held up over the whole room.
+        frameloop={override.capture ? 'demand' : holding ? 'never' : 'always'}
         dpr={override.capture ? 1 : [1, 1.5]}
         camera={{ fov: 72, near: 0.08, far: 40, position: [0.02, 1.58, 1.32] }}
         gl={{ antialias: true, powerPreference: 'high-performance', alpha: false }}
         onCreated={({ gl, scene }) => {
+          // If the GPU drops this context (memory pressure, a driver reset),
+          // rebuild the canvas instead of leaving a dead black screen. Room
+          // state lives outside the canvas, so nothing else resets.
+          const el = gl.domElement;
+          let retry = 0;
+          el.addEventListener('webglcontextlost', event => {
+            event.preventDefault();
+            setGlLost(true);
+            retry = window.setTimeout(() => setGlKey(k => k + 1), 2500);
+          });
+          el.addEventListener('webglcontextrestored', () => {
+            window.clearTimeout(retry);
+            setGlKey(k => k + 1);
+          });
+          setGlLost(false);
           gl.setClearColor('#2a2030', 1);
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.toneMappingExposure = 1.15;
@@ -767,12 +796,20 @@ export function WalkRoom({
       )}
 
       {flashPhase !== 'idle' && <div className={`device-flash ${flashPhase}`} />}
+      {glLost && (
+        <div className="pointer-events-none absolute inset-0 z-[60] flex items-center justify-center bg-[#140c14]/80">
+          <p className="rounded-full bg-black/70 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-amber-100">
+            Graphics hiccup — putting the room back…
+          </p>
+        </div>
+      )}
 
       {!engaged && !scripted && !menuOpen && !overlayGame && (
         <IntroCard
           wallTitles={neonGames(games).map(game => game.title)}
           onEnter={() => {
             setEngaged(true);
+            saveEngaged();
             if (musicOn) sound.startNostalgia();
           }}
         />
