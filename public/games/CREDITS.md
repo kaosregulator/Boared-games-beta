@@ -28,3 +28,25 @@ From [BertovDev/3D-Connect-Four](https://github.com/BertovDev/3D-Connect-Four) (
   repository's own three.js build, then welded and simplified.
 
 MONOPOLY and the board design are trademarks of Hasbro.
+
+## Tabletop Club — `tabletop/`
+From [drwhut/tabletop-club](https://github.com/drwhut/tabletop-club) (MIT code; asset pack licences below).
+Its camera and pick-up/carry/drop handling were the model for the table camera here.
+
+- `chess-pieces.glb` — "Chess Set 1" by rehcub, CC0 — https://opengameart.org/content/chess-set-1
+  (the six white pieces, merged, simplified to half and meshopt-compressed; black is the same mesh tinted).
+- `chess-board.glb` — "Chess Board" by Thane 'pennomi' Brimhall and Tiziana, CC-BY 3.0 —
+  https://opengameart.org/content/chess-board (textures resized).
+- `cards.webp` — playing card fronts, CC0 (unknown author, modified by Benjamin 'drwhut' Beddows) —
+  https://opengameart.org/content/playing-cards-vector-png; card back "Colorful poker card back" by jeffshee,
+  CC-BY 3.0 — https://opengameart.org/content/colorful-poker-card-back. Packed into one 13×4 atlas.
+
+## Monopoly tokens — `monopoly/pieces/tokens.glb`
+Cast in pewter in the game; packed, simplified and meshopt-compressed.
+
+- `car` (Race Car), `ship` (Ship Dark), `cannon` (Cannon) — Kenney, CC0, via [pmndrs/market-assets](https://github.com/pmndrs/market-assets).
+- `horse` — "Low Poly Horse" by MarkLaBarr (https://blendswap.com/blend/13092), via pmndrs/market-assets.
+- `dog` — "Dogue" by Reuben Sotomayor and Alejandro León, via pmndrs/market-assets.
+- `duck` — Khronos glTF sample "Duck", SCEA Shared Source License 1.0 —
+  https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Duck
+- The top hat and thimble are turned (lathed) in code from the real token profiles.

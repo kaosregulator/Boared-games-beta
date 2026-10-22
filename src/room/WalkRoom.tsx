@@ -37,6 +37,7 @@ import { ViewControls } from './ViewControls';
 import { setWalkFov, setWalkZoom, useWalkView } from './walkView';
 import { resumedSession, saveEngaged } from './session';
 import { TABLE_GAMES, TableHudOverlay, type TableSession } from './table/TablePlay';
+import { TableCameraRig } from './table/TableCameraRig';
 import { walkRig } from './WalkController';
 import { TABLE_SEAT } from './roomLayout';
 import { ANCHORS, anchorById, type Anchor } from './anchors';
@@ -147,6 +148,8 @@ export function WalkRoom({
   const sessionKey = useRef(0);
   const [crouched, setCrouched] = useState(false);
   const tableGame = session !== null;
+  /** Crouched at a 3D table game: the table camera has the view. */
+  const tableCamOn = Boolean(session && session.phase === 'play' && TABLE_GAMES.has(session.game.id) && crouched);
   const [placed, setPlaced] = useState<LiveProp[]>([]);
   const [anchorId, setAnchorId] = useState(ANCHORS[0].id);
   const [placeHeight, setPlaceHeight] = useState(0.45);
@@ -616,7 +619,7 @@ export function WalkRoom({
   const cardGame = demoGame ?? aimedGame;
   const cardProp = demoProp ?? aimedProp;
   const showCard = Boolean(demoGame || demoProp) || (engaged && cardOpen && (aimedGame || aimedProp));
-  const walking = engaged && !device && !seated && !holding && !overlayGame && !pulledGameId && session?.phase !== 'unfold';
+  const walking = engaged && !device && !seated && !holding && !overlayGame && !pulledGameId && session?.phase !== 'unfold' && !tableCamOn;
 
 
   return (
@@ -682,10 +685,11 @@ export function WalkRoom({
         ) : (
           <>
             <WalkController
-              enabled={!pulledGameId && !device && !seated && !holding && session?.phase !== 'unfold' && !overlayGame}
+              enabled={!pulledGameId && !device && !seated && !holding && session?.phase !== 'unfold' && !overlayGame && !tableCamOn}
               engaged={engaged}
               onStep={onStep}
             />
+            <TableCameraRig active={tableCamOn} />
             <ReachRaycaster
               enabled={engaged && !pulledGameId && !device && !seated && !holding && !tableGame && !overlayGame}
               onAim={setAimed}
