@@ -148,7 +148,7 @@ export const CHANCE: Card[] = [
 
 export const CHEST: Card[] = [
   { text: 'Advance to GO. Collect $200.', effect: { type: 'move', to: 0 } },
-  { text: 'Bank error in your favour. Collect $200.', effect: { type: 'cash', amount: 200 } },
+  { text: 'Bank error in your favor. Collect $200.', effect: { type: 'cash', amount: 200 } },
   { text: "Doctor's fee. Pay $50.", effect: { type: 'cash', amount: -50 } },
   { text: 'From sale of stock you get $50.', effect: { type: 'cash', amount: 50 } },
   { text: 'Get out of jail free. Keep this card.', effect: { type: 'getOutFree' } },

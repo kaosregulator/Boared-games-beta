@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import type { GameId, GameMetadata } from '../../types';
 import { sound } from '../../utils/audio';
 import { BOX_FACE, boardHalfTexture, lidTexture } from '../realBoardArt';
+import { usBoardTexture } from './monopolyArt';
 import { PLAY_TABLE } from '../roomLayout';
 
 /**
@@ -61,16 +62,14 @@ function Leaf({ w, d, map, side }: { w: number; d: number; map: THREE.Texture; s
 
 function useLeafMaps(game: GameMetadata) {
   const id = game.id as GameId;
-  const board = useTexture('/games/monopoly/board.jpg');
   const water = useTexture('/games/battleship/water.jpg');
   return useMemo(() => {
     if (id === 'monopoly') {
-      // MonopolyClone's board art, split along the fold.
+      // The US board, printed from the engine's own data, split along the fold.
+      const board = usBoardTexture();
       const near = board.clone();
       const far = board.clone();
       [near, far].forEach(t => {
-        t.colorSpace = THREE.SRGBColorSpace;
-        t.anisotropy = 8;
         t.repeat.set(1, 0.5);
         t.needsUpdate = true;
       });
@@ -90,7 +89,7 @@ function useLeafMaps(game: GameMetadata) {
       return { near, far };
     }
     return { near: boardHalfTexture(id, 'near'), far: boardHalfTexture(id, 'far') };
-  }, [board, id, water]);
+  }, [id, water]);
 }
 
 function ConnectFrame() {
