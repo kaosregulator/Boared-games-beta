@@ -592,6 +592,10 @@ export function WalkRoom({
     },
     [enterDevice, sitDown],
   );
+  // Capture scripts open things with window.__cardAction (dev server only).
+  useEffect(() => {
+    if (import.meta.env.DEV) (window as unknown as { __cardAction?: typeof runCardAction }).__cardAction = runCardAction;
+  }, [runCardAction]);
 
   // An old commercial on a card pauses the room music; closing it brings the music back.
   const onCardVideo = useCallback(

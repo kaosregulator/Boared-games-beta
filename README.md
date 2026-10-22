@@ -8,8 +8,18 @@ This project is intentionally branded as a **public beta**, end to end.
 
 - **Controls**: phone and tablet — left thumb stick walks, drag to look, tap things;
   the TV gets an on-screen remote and the NES / Game Boy get a thumb pad. Laptop —
-  WASD or arrows, two-finger swipe to look, click things. Mouse — drag to look, the
-  cursor aims. No pointer lock, no run key.
+  WASD walks, arrow keys look (up/down too), two-finger swipe to look, click things.
+  Mouse — drag to look, the cursor aims. No pointer lock, no run key.
+- **View**: top right while walking — *FOV* steps the field of view (fine-tune it in
+  the menu; it's remembered), pinch / ctrl+scroll / + − zooms in without leaving the
+  first-person view, and ⤢ goes full screen. Close up on the TV, NES, boombox or
+  Game Boy: pinch or scroll to zoom, drag to pan, double-tap to reset, and *Big
+  screen* (F) lays the picture over the whole display. The framing follows the phone
+  when it turns, so the remote and thumb pad never cover the screen. On iPhone, Add
+  to Home Screen for a true full screen (Safari only lets videos go full screen).
+- **Stability**: the room's textures are GPU-compressed KTX2 (about a tenth of the
+  graphics memory), a lost graphics context rebuilds the room in place, and a reload
+  puts you back where you were instead of the intro.
 - **Memory cards**: everything in the room has one, including the things baked into
   the desks and shelves (lamps, clocks, tapes, the Walkman, POGs, View-Master,
   stickers, posters). Each has a story, swipeable photos from Wikimedia Commons and,
@@ -20,7 +30,9 @@ This project is intentionally branded as a **public beta**, end to end.
   only* turns the ceiling light down.
 - **Tamagotchi** on the bed: its card opens Dammagotchi
   ([dammafra/dammagotchi](https://github.com/dammafra/dammagotchi), AGPL-3.0, built
-  into `public/tamagotchi`).
+  into `public/tamagotchi`; our changes are in `public/tamagotchi/CHANGES.patch`).
+  Big A / B / C buttons sit beside it on phones; on a computer Tab, Enter and
+  Backspace press them.
 - **Rubik's Cube**: its card (wall shelf, or the little cube on the game closet) has
   *Pick it up & twist it* — swipe a sticker to turn that layer, drag around it to
   look, U D L R F B keys or buttons, Scramble, timer, and a solved check.
