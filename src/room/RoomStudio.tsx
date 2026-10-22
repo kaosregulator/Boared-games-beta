@@ -9,6 +9,9 @@ interface RoomStudioProps {
   music: boolean;
   musicVolume: number;
   track: RoomTrackId;
+  /** Walking field of view, degrees. */
+  fov: number;
+  onFov: (fov: number) => void;
   placing: boolean;
   placeName: string;
   anchorId: string;
@@ -56,6 +59,21 @@ export function RoomStudio(props: RoomStudioProps) {
               </option>
             ))}
           </select>
+        </label>
+
+        <label className="flex flex-col gap-1">
+          <span className="text-[10px] uppercase tracking-[0.18em] text-white/50 font-bold">
+            Field of view {props.fov}°
+          </span>
+          <input
+            type="range"
+            min={50}
+            max={110}
+            step={1}
+            value={props.fov}
+            onChange={e => props.onFov(Number(e.target.value))}
+          />
+          <span className="text-[10px] text-white/40">Wider sees more of the room; narrower feels closer. Pinch to zoom any time.</span>
         </label>
 
         <label className="flex items-center justify-between gap-3 rounded-xl bg-black/30 border border-white/10 px-3 py-2">

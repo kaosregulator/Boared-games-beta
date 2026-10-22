@@ -32,7 +32,9 @@ import { TvRemote } from '../tv/TvRemote';
 import { DeviceGestures } from '../devices/DeviceGestures';
 import { insetsFor, resetView, setBig, setInsets, useViewRig, useViewport, viewRig } from '../devices/viewRig';
 import { setGlassBig } from '../devices/GlassScreen';
-import { enterFullscreen, exitFullscreen } from './immersive';
+import { enterFullscreen, exitFullscreen, useFullscreen } from './immersive';
+import { ViewControls } from './ViewControls';
+import { setWalkFov, setWalkZoom, useWalkView } from './walkView';
 import { resumedSession, saveEngaged } from './session';
 import { TABLE_GAMES, TableHudOverlay, type TableSession } from './table/TablePlay';
 import { walkRig } from './WalkController';
@@ -179,6 +181,11 @@ export function WalkRoom({
   }, []);
   const [touch] = useState(isTouchDevice);
   const vp = useViewport();
+  const walkLens = useWalkView();
+  const fullscreen = useFullscreen();
+  /** Immersive: hints and labels off, just the room (and the thumb stick). */
+  const [immersiveOn, setImmersiveOn] = useState(false);
+  const immersive = immersiveOn || fullscreen;
   const rig = useViewRig();
   const [padCrouch, setPadCrouch] = useState(false);
   const tvStatus = useTvStatus();
@@ -515,6 +522,11 @@ export function WalkRoom({
     return () => setGlassBig(glassId, null);
   }, [viewKind, touch, vp, big, seated]);
 
+  // A walking zoom doesn't carry into close-ups.
+  useEffect(() => {
+    if (device || seated || holding) setWalkZoom(1);
+  }, [device, seated, holding]);
+
   // Leaving the device always leaves big screen and real full screen.
   useEffect(() => {
     if (tvOn || seated) return;
@@ -749,7 +761,7 @@ export function WalkRoom({
       )}
       {touch && walking && !showCard && !menuOpen && (
         <TouchHud
-          quiet={Boolean(session)}
+          quiet={Boolean(session) || immersive}
           useLabel={!session && aimed?.inReach ? aimed.label : null}
           onUse={() => aimed?.inReach && handleSelect(aimed)}
           crouched={crouched || padCrouch}
@@ -780,6 +792,8 @@ export function WalkRoom({
         music={musicOn}
         musicVolume={musicVolume}
         track={track}
+        fov={walkLens.fov}
+        onFov={setWalkFov}
         onTrack={id => {
           setTrack(id);
           sound.setTrack(id);
@@ -845,12 +859,17 @@ export function WalkRoom({
         </div>
       )}
 
-      {walking && !touch && !showCard && (
+      {walking && !session && !menuOpen && (
+        <ViewControls immersive={immersiveOn} onImmersive={setImmersiveOn} />
+      )}
+
+      {walking && !touch && !showCard && !immersive && (
         <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 flex w-[calc(100%-2rem)] flex-wrap items-center justify-center gap-2 text-[10px] uppercase tracking-[0.2em] font-bold text-white/70">
           {[
-            ['W A S D / arrows', 'walk'],
-            ['Drag · 2-finger swipe', 'look'],
+            ['W A S D', 'walk'],
+            ['Arrows · drag · 2-finger swipe', 'look'],
             ['Click', 'use things'],
+            ['Pinch · + −', 'zoom'],
             ['C', 'duck'],
           ].map(([key, what]) => (
             <span key={key} className="rounded-lg bg-black/55 border border-white/10 px-2.5 py-1">
