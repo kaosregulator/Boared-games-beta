@@ -40,6 +40,7 @@ Its camera and pick-up/carry/drop handling were the model for the table camera h
 - `cards.webp` — playing card fronts, CC0 (unknown author, modified by Benjamin 'drwhut' Beddows) —
   https://opengameart.org/content/playing-cards-vector-png; card back "Colorful poker card back" by jeffshee,
   CC-BY 3.0 — https://opengameart.org/content/colorful-poker-card-back. Packed into one 13×4 atlas.
+- `chips.webp` — Tabletop Club's poker chip faces ($1, $5, $10, $25, $100), CC0, packed side by side.
 
 ## Monopoly tokens — `monopoly/pieces/tokens.glb`
 Cast in pewter in the game; packed, simplified and meshopt-compressed.
