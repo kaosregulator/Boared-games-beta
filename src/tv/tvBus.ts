@@ -48,3 +48,8 @@ export function useTvStatus() {
   }, []);
   return s;
 }
+
+/** The set's last reported status, outside React. */
+export function getTvStatus() {
+  return status;
+}

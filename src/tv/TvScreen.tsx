@@ -4,6 +4,7 @@ import { CHANNELS, guideRow, nowSeconds, snickOnAir, type Channel } from './chan
 import { resolveArchive } from './archive';
 import { channelClick, paintSnow, startStatic, type StaticHandle } from './noise';
 import { snickShowAt } from './snick';
+import { mayTurnOn } from '../room/houseRules';
 import { blockOnAir } from './lineups/archiveBlocks';
 import { CARTRIDGES, cartridgeSrc, type Cartridge } from '../devices/cartridges';
 import { TV247_ON } from './tv247';
@@ -55,7 +56,12 @@ function halfHour(at: Date, step: number) {
  * guide, and the cartridge slot. Lives inside a drei <Html transform>.
  */
 export function TvScreen({ width, height, command, initialMode, onStatus, inRoom = false }: TvScreenProps) {
-  const [mode, setMode] = useState<TvMode>(initialMode);
+  // Walking up to the set while the radio plays: it stays dark and someone yells.
+  const [startBlocked] = useState(() => initialMode !== 'off' && !mayTurnOn('tv', true));
+  const [mode, setMode] = useState<TvMode>(startBlocked ? 'off' : initialMode);
+  useEffect(() => {
+    if (startBlocked) mayTurnOn('tv');
+  }, [startBlocked]);
   const [channel, setChannel] = useState(memory.channel);
   const [volume, setVolume] = useState(memory.volume);
   const [menuIndex, setMenuIndex] = useState(initialMode === 'gaming' ? 1 : 0);
@@ -91,6 +97,12 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
     memory.volume = volume;
     onStatus?.({ mode, channel, volume });
   }, [channel, mode, onStatus, volume]);
+
+  // A set that's gone is off, as far as the room (and the house rules) can tell.
+  useEffect(
+    () => () => onStatus?.({ mode: 'off', channel: memory.channel, volume: memory.volume }),
+    [onStatus],
+  );
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 15000);
@@ -329,6 +341,8 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
     };
     switch (command.key) {
       case 'power':
+        // not with the radio going: someone downstairs will hear about it
+        if (mode === 'off' && !mayTurnOn('tv')) break;
         channelClick();
         setMode(m => (m === 'off' ? 'menu' : 'off'));
         break;
@@ -336,6 +350,7 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
         setMode(m => (m === 'off' ? m : 'menu'));
         break;
       case 'game':
+        if (mode === 'off' && !mayTurnOn('tv')) break;
         channelClick();
         setMenuIndex(1);
         setMode('gaming');

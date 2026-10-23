@@ -16,6 +16,7 @@ import { RubikPlay } from '../devices/RubikPlay';
 import { DeviceFocus } from './DeviceFocus';
 import { DeviceOverlay } from './DeviceOverlay';
 import { TvGlass } from '../tv/TvSet';
+import { ParentYell } from './ParentYell';
 import { IntroCard } from './IntroCard';
 import { neonGames } from './NeonGameWall';
 import { GameBoySeat } from '../devices/GameBoySeat';
@@ -927,6 +928,7 @@ export function WalkRoom({
       )}
 
       {flashPhase !== 'idle' && <div className={`device-flash ${flashPhase}`} />}
+      <ParentYell />
       {glLost && (
         <div className="pointer-events-none absolute inset-0 z-[60] flex items-center justify-center bg-[#140c14]/80">
           <p className="rounded-full bg-black/70 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-amber-100">
