@@ -4,6 +4,7 @@ import { CHANNELS, guideRow, nowSeconds, snickOnAir, type Channel } from './chan
 import { resolveArchive } from './archive';
 import { channelClick, paintSnow, startStatic, type StaticHandle } from './noise';
 import { snickShowAt } from './snick';
+import { blockOnAir } from './lineups/archiveBlocks';
 import { CARTRIDGES, cartridgeSrc, type Cartridge } from '../devices/cartridges';
 import { TV247_ON } from './tv247';
 import { YouTubeTv } from './YouTubeTv';
@@ -184,6 +185,13 @@ export function TvScreen({ width, height, command, initialMode, onStatus }: TvSc
             const air = snickOnAir();
             return resolveArchive(air.episode[0], 'video', air.episode[2]).then(file =>
               file ? { file, offset: air.offset, label: snickShowAt(air.episode, air.offset) } : null,
+            );
+          })()
+        : ch.kind === 'block'
+        ? (() => {
+            const air = blockOnAir(ch.block, nowSeconds());
+            return resolveArchive(ch.block.id, 'video', air.part.file).then(file =>
+              file ? { file, offset: air.offset, label: air.part.title } : null,
             );
           })()
         : resolveArchive((ch as Extract<Channel, { kind: 'cartoon' }>).cartoon.id, 'video').then(file =>
@@ -434,7 +442,7 @@ export function TvScreen({ width, height, command, initialMode, onStatus }: TvSc
         style={{ ...videoStyle, visibility: watching && current.kind !== 'youtube' ? 'visible' : 'hidden', background: '#000' }}
         onEnded={() => {
           // SNICK rolls straight into the next archived Saturday.
-          if (current.kind === 'snick') setRetune(r => r + 1);
+          if (current.kind === 'snick' || current.kind === 'block') setRetune(r => r + 1);
           else if (video.current) {
             video.current.currentTime = 0;
             void video.current.play();
