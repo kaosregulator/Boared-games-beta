@@ -176,6 +176,8 @@ export function WalkRoom({
   const [aimed, setAimed] = useState<Aimed | null>(null);
   const [pulledGameId, setPulledGameId] = useState<GameId | null>(null);
   const [lampsWarm] = useState(false);
+  /** The wall switch by the door. */
+  const [lightsOut, setLightsOut] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   /** The card you opened stays up until you close it or walk away. */
   const [pinned, setPinned] = useState<Aimed | null>(null);
@@ -584,6 +586,11 @@ export function WalkRoom({
         else pinCard(target);
         return;
       }
+      if (target.id === 'light-switch') {
+        sound.playButtonClick();
+        setLightsOut(out => !out);
+        return;
+      }
       if (target.id === 'door') sound.playMoveClack();
       if (propCardFor(target.id)) pinCard(target);
     },
@@ -609,9 +616,13 @@ export function WalkRoom({
     },
     [enterDevice, sitDown],
   );
-  // Capture scripts open things with window.__cardAction (dev server only).
+  // Capture scripts open things with window.__cardAction and flip the wall
+  // switch with window.__lightsOut (dev server only).
   useEffect(() => {
-    if (import.meta.env.DEV) (window as unknown as { __cardAction?: typeof runCardAction }).__cardAction = runCardAction;
+    if (!import.meta.env.DEV) return;
+    const w = window as unknown as { __cardAction?: typeof runCardAction; __lightsOut?: (out: boolean) => void };
+    w.__cardAction = runCardAction;
+    w.__lightsOut = setLightsOut;
   }, [runCardAction]);
 
   // An old commercial on a card pauses the room music; closing it brings the music back.
@@ -697,6 +708,7 @@ export function WalkRoom({
           onLeaveTable={packUp}
           hideGameboy={seated}
           tvInRoom={tvInRoom}
+          lightsOut={lightsOut}
         />
         <DeviceFocus device={scripted ? null : device} />
         {seated && <GameBoySeat />}

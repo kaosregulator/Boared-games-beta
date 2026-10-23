@@ -30,6 +30,7 @@ import { DynamicModel } from './UserProps';
 import { MOODS, type RoomMood } from './moods';
 import type { SavedPlacement } from './userPlacements';
 import { RoomTvGlass } from '../tv/TvSet';
+import { LightSwitch, TvGlow } from './LightSwitch';
 
 function MoodFog({ color }: { color: string }) {
   const { scene } = useThree();
@@ -366,6 +367,8 @@ export interface RealRoomSceneProps {
   hideGameboy?: boolean;
   /** The TV was left on: its picture plays on the room's CRT. */
   tvInRoom?: boolean;
+  /** Wall switch off: only the TV, the lava lamps and the shelf's string lights glow. */
+  lightsOut?: boolean;
 }
 
 /**
@@ -388,13 +391,17 @@ export function RealRoomScene({
   onLeaveTable,
   hideGameboy = false,
   tvInRoom = false,
+  lightsOut = false,
 }: RealRoomSceneProps) {
   const lights = MOODS[mood];
+  /** Room lights (ceiling, lamps, fill) scaled by the wall switch. */
+  const on = lightsOut ? 0 : 1;
   return (
     <group>
       <MoodFog color={lights.fog} />
-      <ambientLight intensity={lights.ambient} color={lights.ambColor} />
-      <hemisphereLight args={[lights.hemiSky, lights.hemiGround, lights.hemi]} />
+      {/* lights out: just enough to make out shapes once your eyes adjust */}
+      <ambientLight intensity={lightsOut ? 0.03 : lights.ambient} color={lights.ambColor} />
+      <hemisphereLight args={[lights.hemiSky, lights.hemiGround, lightsOut ? 0.05 : lights.hemi]} />
       <Shell />
       <WindowGlare />
       <Suspense fallback={null}>
@@ -404,24 +411,24 @@ export function RealRoomScene({
       <pointLight
         position={[LAYOUT.teddy.x + 0.2, LAYOUT.teddy.y + 0.35, LAYOUT.teddy.z - 1.35]}
         color="#ffd0a8"
-        intensity={2.3}
+        intensity={2.3 * on}
         distance={6.8}
         decay={2}
       />
       <pointLight
         position={[LAYOUT.army.x, 0.9, LAYOUT.army.z - 0.7]}
         color="#ffc090"
-        intensity={0.7}
+        intensity={0.7 * on}
         distance={3.4}
         decay={2}
       />
-      <CeilingDome level={Math.min(1, lights.ceilI / 2.4)} />
+      <CeilingDome level={Math.min(1, lights.ceilI / 2.4) * on} />
 
       <PlacedModel id="window" hoveredId={hoveredId} card="window" />
       <pointLight
         position={[LAYOUT.window.x, LAYOUT.window.y + 0.35, LAYOUT.window.z + 0.7]}
         color={lights.windowC}
-        intensity={lights.windowI}
+        intensity={lights.windowI * (lightsOut ? 0.2 : 1)}
         distance={3.6}
         decay={2}
       />
@@ -439,7 +446,7 @@ export function RealRoomScene({
       <pointLight
         position={[SOUTH_WINDOW.x, SOUTH_WINDOW.y + 0.35, SOUTH_WINDOW.z - 0.7]}
         color={lights.windowC}
-        intensity={lights.windowI * 0.8}
+        intensity={lights.windowI * 0.8 * (lightsOut ? 0.2 : 1)}
         distance={3.6}
         decay={2}
       />
@@ -507,9 +514,15 @@ export function RealRoomScene({
       <pointLight
         position={[LAYOUT.dresser.x, LAYOUT.dresser.sy + 0.35, LAYOUT.dresser.z + 0.55]}
         color="#7ec8ff"
-        intensity={0.45}
+        intensity={0.45 * on}
         distance={1.6}
         decay={2}
+      />
+      {lightsOut && tvInRoom && <TvGlow position={[LAYOUT.crt.x, LAYOUT.crt.y + 0.3, LAYOUT.crt.z + 0.7]} />}
+      <LightSwitch
+        position={[LAYOUT.door.x - LAYOUT.door.sx / 2 - 0.14, 1.22, NORTH_Z + 0.012]}
+        on={!lightsOut}
+        hovered={hoveredId === 'light-switch'}
       />
 
       <GameShelf hoveredId={hoveredId} />
@@ -532,7 +545,7 @@ export function RealRoomScene({
       )}
 
       <PlacedModel id="desk" hoveredId={hoveredId} card="desk">
-        <DeskLampGlow at={[0.43, 0.86, -0.13]} />
+        {!lightsOut && <DeskLampGlow at={[0.43, 0.86, -0.13]} />}
       </PlacedModel>
       <PlacedModel
         id="clue"
@@ -546,7 +559,7 @@ export function RealRoomScene({
       />
       <PlacedModel id="clutterdesk" hoveredId={hoveredId} card="clutterdesk">
         <LavaLamp spec={LAVA.clutterdesk} />
-        <DeskLampGlow at={[0.09, 0.93, -0.22]} />
+        {!lightsOut && <DeskLampGlow at={[0.09, 0.93, -0.22]} />}
       </PlacedModel>
       <PlacedModel id="books" hoveredId={hoveredId} card="books" />
       <PlacedModel
@@ -622,8 +635,8 @@ export function RealRoomScene({
         <meshStandardMaterial map={rugTexture()} transparent roughness={1} />
       </mesh>
 
-      <pointLight position={[0.1, WALL.height - 0.45, 0.2]} color={lights.ceil} intensity={lights.ceilI * 0.45} distance={8} decay={2} />
-      <pointLight position={[-1.6, 1.9, -0.2]} color="#e7b08a" intensity={mood === 'afternoon' ? 0.35 : 0.5} distance={4} decay={2} />
+      <pointLight position={[0.1, WALL.height - 0.45, 0.2]} color={lights.ceil} intensity={lights.ceilI * 0.45 * on} distance={8} decay={2} />
+      <pointLight position={[-1.6, 1.9, -0.2]} color="#e7b08a" intensity={(mood === 'afternoon' ? 0.35 : 0.5) * on} distance={4} decay={2} />
 
       {placed.map(item => (
         <Suspense key={item.placement.id} fallback={null}>
