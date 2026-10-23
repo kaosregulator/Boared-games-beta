@@ -638,15 +638,23 @@ export function WalkRoom({
           // state lives outside the canvas, so nothing else resets.
           const el = gl.domElement;
           let retry = 0;
-          el.addEventListener('webglcontextlost', event => {
-            event.preventDefault();
-            setGlLost(true);
-            retry = window.setTimeout(() => setGlKey(k => k + 1), 2500);
-          });
-          el.addEventListener('webglcontextrestored', () => {
+          // Once this canvas has asked to be replaced it is retired: the loss
+          // R3F forces on it while disposing it must not start another rebuild.
+          let retired = false;
+          const rebuild = () => {
+            if (retired) return;
+            retired = true;
             window.clearTimeout(retry);
             setGlKey(k => k + 1);
+          };
+          el.addEventListener('webglcontextlost', event => {
+            if (retired) return;
+            event.preventDefault();
+            setGlLost(true);
+            window.clearTimeout(retry);
+            retry = window.setTimeout(rebuild, 2500);
           });
+          el.addEventListener('webglcontextrestored', rebuild);
           setGlLost(false);
           gl.setClearColor('#2a2030', 1);
           gl.toneMapping = THREE.ACESFilmicToneMapping;
