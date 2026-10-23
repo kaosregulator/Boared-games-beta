@@ -201,6 +201,8 @@ export function WalkRoom({
   const holding = tamagotchi || rubik;
   const emulatorOn = (device === 'crt' || device === 'nes') && tvStatus.mode === 'emulator';
   const tvOn = (device === 'crt' || device === 'nes') && !scripted;
+  // Stepping back with the set on leaves it playing on the room's TV until POWER.
+  const tvInRoom = !tvOn && !scripted && tvStatus.mode !== 'off';
   const padUp = touch && (seated || emulatorOn);
   const viewKind = seated || padUp ? 'gameboy' : tvOn ? 'tv' : device === 'boombox' ? 'radio' : null;
   const big = rig.big && (tvOn || seated);
@@ -634,7 +636,8 @@ export function WalkRoom({
 
 
   return (
-    <div data-room className="relative w-full h-[100dvh] overflow-hidden bg-[#140c14] select-none overscroll-none">
+    // isolate: the TV left on in the room sits just under the canvas, above this background
+    <div data-room className="relative isolate w-full h-[100dvh] overflow-hidden bg-[#140c14] select-none overscroll-none">
       <Canvas
         key={glKey}
         style={{ touchAction: 'none' }}
@@ -643,7 +646,8 @@ export function WalkRoom({
         frameloop={override.capture || seated ? 'demand' : holding ? 'never' : 'always'}
         dpr={override.capture ? 1 : [1, 1.5]}
         camera={{ fov: 72, near: 0.08, far: 40, position: [0.02, 1.58, 1.32] }}
-        gl={{ antialias: true, powerPreference: 'high-performance', alpha: false }}
+        // alpha so the room TV's picture can show through the hole cut for it (RoomTvGlass)
+        gl={{ antialias: true, powerPreference: 'high-performance', alpha: true }}
         onCreated={({ gl, scene }) => {
           // If the GPU drops this context (memory pressure, a driver reset),
           // rebuild the canvas instead of leaving a dead black screen. Room
@@ -691,6 +695,7 @@ export function WalkRoom({
           onPacked={onPacked}
           onLeaveTable={packUp}
           hideGameboy={seated}
+          tvInRoom={tvInRoom}
         />
         <DeviceFocus device={scripted ? null : device} />
         {seated && <GameBoySeat />}
@@ -761,7 +766,7 @@ export function WalkRoom({
       {tvOn && (touch || big) && flashPhase !== 'cover' && (
         <TvRemote landscape={vp.landscape} big={big} onBig={toggleBig} padUp={padUp} />
       )}
-      {(device === 'crt' || device === 'nes') && !scripted && <TvGlass initialMode={device === 'nes' ? 'gaming' : 'menu'} />}
+      {(tvOn || tvInRoom) && <TvGlass initialMode={device === 'nes' ? 'gaming' : 'menu'} inRoom={tvInRoom} />}
       {session && session.phase === 'play' && TABLE_GAMES.has(session.game.id) && (
         <TableHudOverlay
           crouched={crouched}

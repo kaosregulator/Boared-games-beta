@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
+import * as THREE from 'three';
 import { SafeRoomModel } from '../room/RoomModel';
 import { PanelButton, labelTexture } from '../devices/PanelButton';
 import { GlassAnchor, GlassSurface } from '../devices/GlassScreen';
@@ -160,13 +161,43 @@ export function TvSet() {
   );
 }
 
+/**
+ * The room's own CRT with the set left on. Same mesh and frame as the close-up
+ * set, so the glass sits in the same spot. The picture goes behind the canvas
+ * here (TvGlass inRoom), and this plane cuts a see-through hole for it, so
+ * anything standing in front of the TV still hides it.
+ */
+export function RoomTvGlass() {
+  const hole = useMemo(
+    () =>
+      new THREE.MeshBasicMaterial({
+        color: '#000',
+        opacity: 0,
+        blending: THREE.NoBlending,
+        fog: false,
+        toneMapped: false,
+      }),
+    [],
+  );
+  useEffect(() => () => hole.dispose(), [hole]);
+  return (
+    <>
+      <GlassAnchor id="tv" position={[GLASS.x, GLASS.y, GLASS.z]} width={GLASS.w} widthPx={SCREEN_PX} />
+      <mesh position={[GLASS.x, GLASS.y, GLASS.z]} material={hole}>
+        <planeGeometry args={[GLASS.w, GLASS.h]} />
+      </mesh>
+    </>
+  );
+}
+
 /** DOM half of the set: the picture itself, glued onto the glass by <GlassAnchor id="tv">. */
-export function TvGlass({ initialMode }: { initialMode: TvMode }) {
+export function TvGlass({ initialMode, inRoom = false }: { initialMode: TvMode; inRoom?: boolean }) {
   const command = useTvCommand();
   const height = Math.round((SCREEN_PX * GLASS.h) / GLASS.w);
   return (
-    <GlassSurface id="tv">
-      <TvScreen width={SCREEN_PX} height={height} command={command} initialMode={initialMode} onStatus={publishTvStatus} />
+    // in the room it sits under the canvas and shows through RoomTvGlass's hole
+    <GlassSurface id="tv" zIndex={inRoom ? -1 : 10}>
+      <TvScreen width={SCREEN_PX} height={height} command={command} initialMode={initialMode} onStatus={publishTvStatus} inRoom={inRoom} />
     </GlassSurface>
   );
 }

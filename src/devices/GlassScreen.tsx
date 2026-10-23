@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
 /**
@@ -79,6 +79,10 @@ export function GlassSurface({ id, children, zIndex = 10 }: { id: string; childr
   const holder = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
+    nodes.root.style.zIndex = String(zIndex);
+  }, [nodes, zIndex]);
+
+  useLayoutEffect(() => {
     holder.current?.appendChild(nodes.root);
     surfaces.set(id, nodes);
     return () => {
@@ -107,11 +111,32 @@ const toCam = new THREE.Vector3();
 const here = new THREE.Vector3();
 const normal = new THREE.Vector3();
 
+/**
+ * The glass is placed from inside three's render, after it has refreshed the
+ * camera's matrices for the frame being drawn. Placing it in useFrame read the
+ * camera before the walk controller moved it, so the picture trailed the set
+ * by a frame while turning.
+ */
+const placers = new Set<() => void>();
+const hooked = new WeakSet<THREE.Scene>();
+
+function hookScene(scene: THREE.Scene) {
+  if (hooked.has(scene)) return;
+  hooked.add(scene);
+  const prev = scene.onBeforeRender;
+  scene.onBeforeRender = function (...args) {
+    prev.apply(this, args);
+    placers.forEach(place => place());
+  };
+}
+
 /** Canvas side: where the glass is. Writes the CSS transform every frame. */
 export function GlassAnchor({ id, position, rotation = [0, 0, 0], width, widthPx }: GlassAnchorProps) {
-  const { camera, size } = useThree();
+  const get = useThree(state => state.get);
+  const scene = useThree(state => state.scene);
   const anchor = useRef<THREE.Group>(null);
   const factor = widthPx / width;
+  const place = useRef<() => void>(() => {});
 
   useEffect(
     () => () => {
@@ -121,7 +146,17 @@ export function GlassAnchor({ id, position, rotation = [0, 0, 0], width, widthPx
     [id],
   );
 
-  useFrame(() => {
+  useLayoutEffect(() => {
+    hookScene(scene);
+    const run = () => place.current();
+    placers.add(run);
+    return () => {
+      placers.delete(run);
+    };
+  }, [scene]);
+
+  place.current = () => {
+    const { camera, size } = get();
     const group = anchor.current;
     const nodes = surfaces.get(id);
     if (!group || !nodes) return;
@@ -156,7 +191,7 @@ export function GlassAnchor({ id, position, rotation = [0, 0, 0], width, widthPx
     toCam.setFromMatrixPosition(cam.matrixWorld).sub(here.setFromMatrixPosition(group.matrixWorld));
     normal.set(0, 0, 1).transformDirection(group.matrixWorld);
     nodes.root.style.display = toCam.dot(normal) > 0 ? 'block' : 'none';
-  });
+  };
 
   return <group ref={anchor} position={position} rotation={rotation} />;
 }

@@ -28,6 +28,8 @@ interface TvScreenProps {
   initialMode: TvMode;
   /** Reports what the cable box LED and the room should show. */
   onStatus?: (status: { mode: TvMode; channel: number; volume: number }) => void;
+  /** Left on in the room: it keeps showing the channel, and the keys belong to walking. */
+  inRoom?: boolean;
 }
 
 const NEON = '#39ff14';
@@ -52,7 +54,7 @@ function halfHour(at: Date, step: number) {
  * channels from the Internet Archive with snow between them, the scrolling
  * guide, and the cartridge slot. Lives inside a drei <Html transform>.
  */
-export function TvScreen({ width, height, command, initialMode, onStatus }: TvScreenProps) {
+export function TvScreen({ width, height, command, initialMode, onStatus, inRoom = false }: TvScreenProps) {
   const [mode, setMode] = useState<TvMode>(initialMode);
   const [channel, setChannel] = useState(memory.channel);
   const [volume, setVolume] = useState(memory.volume);
@@ -372,9 +374,20 @@ export function TvScreen({ width, height, command, initialMode, onStatus }: TvSc
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [command?.seq]);
 
+  // Stepping back with the set on leaves the last channel playing in the room
+  // until POWER; coming back over to it from the NES goes straight to the games.
+  useEffect(() => {
+    if (inRoom) setMode(m => (m === 'off' || m === 'tv' ? m : 'tv'));
+    else if (initialMode === 'gaming') {
+      setMenuIndex(1);
+      setMode(m => (m === 'off' || m === 'emulator' ? m : 'gaming'));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inRoom]);
+
   // Keyboard on the TV: arrows = channel/selection, Enter = OK, G = guide, M = menu.
   useEffect(() => {
-    if (mode === 'emulator' || mode === 'off' || mode === 'link') return;
+    if (inRoom || mode === 'emulator' || mode === 'off' || mode === 'link') return;
     const onKey = (e: KeyboardEvent) => {
       if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
         e.preventDefault();
@@ -401,7 +414,7 @@ export function TvScreen({ width, height, command, initialMode, onStatus }: TvSc
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, menuIndex, guideIndex, cartIndex, channel]);
+  }, [mode, menuIndex, guideIndex, cartIndex, channel, inRoom]);
 
   useEffect(() => {
     if (mode !== 'emulator') return;

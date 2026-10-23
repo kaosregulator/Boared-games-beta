@@ -29,6 +29,7 @@ import { ANCHORS, type Anchor } from './anchors';
 import { DynamicModel } from './UserProps';
 import { MOODS, type RoomMood } from './moods';
 import type { SavedPlacement } from './userPlacements';
+import { RoomTvGlass } from '../tv/TvSet';
 
 function MoodFog({ color }: { color: string }) {
   const { scene } = useThree();
@@ -363,6 +364,8 @@ export interface RealRoomSceneProps {
   onLeaveTable?: () => void;
   /** The Game Boy is in the player's hands while sitting in the bean bag. */
   hideGameboy?: boolean;
+  /** The TV was left on: its picture plays on the room's CRT. */
+  tvInRoom?: boolean;
 }
 
 /**
@@ -384,6 +387,7 @@ export function RealRoomScene({
   onPacked,
   onLeaveTable,
   hideGameboy = false,
+  tvInRoom = false,
 }: RealRoomSceneProps) {
   const lights = MOODS[mood];
   return (
@@ -474,11 +478,9 @@ export function RealRoomScene({
       )}
 
       <PlacedModel id="dresser" hoveredId={hoveredId} card="dresser" />
-      <PlacedModel
-        id="crt"
-        hoveredId={hoveredId}
-        card="crt-tv"
-      />
+      <PlacedModel id="crt" hoveredId={hoveredId} card="crt-tv">
+        {tvInRoom && <RoomTvGlass />}
+      </PlacedModel>
       <PlacedModel
         id="door"
         hoveredId={hoveredId}
