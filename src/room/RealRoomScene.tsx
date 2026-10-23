@@ -24,6 +24,7 @@ import type { GameMetadata } from '../types';
 import { LAYOUT, SOUTH_WINDOW, WALL_SHELF } from './roomLayout';
 import { PlayTable, type TableSession } from './table/TablePlay';
 import { NeonGameWall } from './NeonGameWall';
+import { WallPosters } from './WallPosters';
 import { ANCHORS, type Anchor } from './anchors';
 import { DynamicModel } from './UserProps';
 import { MOODS, type RoomMood } from './moods';
@@ -511,6 +512,7 @@ export function RealRoomScene({
 
       <GameShelf hoveredId={hoveredId} />
       <NeonGameWall games={games} hoveredId={hoveredId} pulledId={pulledGameId} />
+      <WallPosters />
       <PlacedModel id="beanbag" hoveredId={hoveredId} card="beanbag" />
       <PlayTable
         session={session}

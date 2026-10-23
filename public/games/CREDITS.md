@@ -55,3 +55,9 @@ Cast in pewter in the game; packed, simplified and meshopt-compressed.
 ## Kytric's Voxel Board Games — `tabletop/checkers.glb`
 "Voxel Board Games" by Kytric, CC0 — https://kytric.itch.io/board-game-assets
 The brown and tan checkers board with the red and black men (v1), packed into one file.
+
+## Wall posters — `../room/posters/`
+Promotional art used as bedroom decor; all rights belong to their owners.
+- Jurassic Park (Universal, 1993) and Toy Story (Disney/Pixar, 1995) one-sheets — scans from IMP Awards (impawards.com).
+- Super Mario 64 and The Legend of Zelda: Ocarina of Time box art (Nintendo), Street Fighter II flyer (Capcom),
+  Nirvana "Nevermind" (DGC) and 2Pac "All Eyez on Me" (Death Row) covers — from their Wikipedia file pages.
