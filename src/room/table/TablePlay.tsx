@@ -13,12 +13,13 @@ const BattleshipTable = lazy(() => import('./BattleshipTable').then(m => ({ defa
 const MonopolyTable = lazy(() => import('./MonopolyTable').then(m => ({ default: m.MonopolyTable })));
 const ChessTable = lazy(() => import('./ChessTable').then(m => ({ default: m.ChessTable })));
 const CheckersTable = lazy(() => import('./CheckersTable').then(m => ({ default: m.CheckersTable })));
+const ClueTable = lazy(() => import('./ClueTable').then(m => ({ default: m.ClueTable })));
 const BlackjackTable = lazy(() => import('./BlackjackTable').then(m => ({ default: m.BlackjackTable })));
 
 export { TableHudOverlay } from './tableHud';
 
-export type TableGameId = 'monopoly' | 'connect4' | 'battleship' | 'chess' | 'checkers' | 'blackjack';
-export const TABLE_GAMES = new Set<string>(['monopoly', 'connect4', 'battleship', 'chess', 'checkers', 'blackjack']);
+export type TableGameId = 'monopoly' | 'connect4' | 'battleship' | 'chess' | 'checkers' | 'blackjack' | 'clue';
+export const TABLE_GAMES = new Set<string>(['monopoly', 'connect4', 'battleship', 'chess', 'checkers', 'blackjack', 'clue']);
 
 /**
  * unfold — the table has spawned and the box is opening
@@ -129,6 +130,7 @@ export function PlayTable({
               {game.id === 'chess' && <ChessTable onLeave={onLeave} />}
               {game.id === 'checkers' && <CheckersTable onLeave={onLeave} />}
               {game.id === 'blackjack' && <BlackjackTable onLeave={onLeave} />}
+              {game.id === 'clue' && <ClueTable onLeave={onLeave} />}
             </Suspense>
           </group>
         )}

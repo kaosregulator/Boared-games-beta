@@ -5,6 +5,7 @@ import { sound } from "./utils/audio";
 
 import { InRoomTable } from "./components/InRoomTable";
 import { WalkRoom } from "./room/WalkRoom";
+import { TABLE_GAMES } from "./room/table/TablePlay";
 
 // The 2D boards and the rules load on first use (and in the background once
 // the room is up, see warmTableGames), keeping them out of the first download.
@@ -17,14 +18,14 @@ const RulesModal = lazy(() =>
   import("./components/RulesModal").then((m) => ({ default: m.RulesModal })),
 );
 
-/** Monopoly, Connect Four, and Battleship are played in 3D on the table itself. */
-const IN_ROOM_TABLE = new Set<GameId>(["monopoly", "connect4", "battleship"]);
+/** The table games (Monopoly, Clue, Chess and the rest) are played in 3D on the table itself. */
+const IN_ROOM_TABLE: ReadonlySet<string> = TABLE_GAMES;
 
 /** `?game=<id>` opens a 2D title straight away for capture scripts. */
 function initialGame(): GameMetadata | null {
   if (typeof window === "undefined") return null;
   const id = new URLSearchParams(window.location.search).get("game");
-  if (!id || IN_ROOM_TABLE.has(id as GameId)) return null;
+  if (!id || IN_ROOM_TABLE.has(id)) return null;
   return GAME_CATALOG.find((g) => g.id === id) ?? null;
 }
 
