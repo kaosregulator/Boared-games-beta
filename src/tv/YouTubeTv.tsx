@@ -13,6 +13,8 @@ interface YouTubeTvProps {
   onFail: () => void;
   /** The browser would only start it muted. */
   onMuted: () => void;
+  /** Throwback Trivia borrowed the speakers. */
+  quiet?: boolean;
 }
 
 /** One YouTube player on the glass: the one on air, or the next video waiting behind it. */
@@ -35,13 +37,16 @@ const PRELOAD_SECONDS = 60;
  * out of sight before this one ends and cuts straight to it, starts over after
  * the last one, and quietly skips any that won't play.
  */
-export function YouTubeTv({ channel, style, volume, onPlaying, onFail, onMuted }: YouTubeTvProps) {
+export function YouTubeTv({ channel, style, volume, onPlaying, onFail, onMuted, quiet = false }: YouTubeTvProps) {
   const host = useRef<HTMLDivElement>(null);
   const player = useRef<YTPlayer | null>(null);
   const volumeRef = useRef(volume);
   volumeRef.current = volume;
   /** The browser refused sound, so it plays muted until the volume is touched. */
   const forcedMute = useRef(false);
+  const quietRef = useRef(quiet);
+  quietRef.current = quiet;
+  const pausedByHold = useRef(false);
   const cb = useRef({ onPlaying, onFail, onMuted });
   cb.current = { onPlaying, onFail, onMuted };
 
@@ -167,6 +172,12 @@ export function YouTubeTv({ channel, style, volume, onPlaying, onFail, onMuted }
               p.playVideo();
               return;
             }
+            player.current = p;
+            if (quietRef.current) {
+              p.pauseVideo();
+              pausedByHold.current = true;
+              return;
+            }
             sound(p);
             p.playVideo();
             // If sound was refused, start muted rather than not at all.
@@ -189,6 +200,11 @@ export function YouTubeTv({ channel, style, volume, onPlaying, onFail, onMuted }
               return;
             }
             if (e.data === YT_STATE.PLAYING) {
+              if (quietRef.current) {
+                e.target.pauseVideo();
+                pausedByHold.current = true;
+                return;
+              }
               catchUp(s);
               fails = 0;
               locked = true;
@@ -241,6 +257,22 @@ export function YouTubeTv({ channel, style, volume, onPlaying, onFail, onMuted }
       player.current = null;
     };
   }, [channel]);
+
+  useEffect(() => {
+    const p = player.current;
+    if (!p?.pauseVideo) return;
+    try {
+      if (quiet) {
+        p.pauseVideo();
+        pausedByHold.current = true;
+      } else if (pausedByHold.current) {
+        pausedByHold.current = false;
+        p.playVideo();
+      }
+    } catch {
+      // not ready yet; onStateChange catches a late start
+    }
+  }, [quiet]);
 
   useEffect(() => {
     const p = player.current;

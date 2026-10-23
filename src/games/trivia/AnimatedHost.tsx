@@ -138,7 +138,7 @@ export const AnimatedHost: React.FC<AnimatedHostProps> = ({
       {quipText && (
         <div
           className={`flex-1 ${
-            compact ? 'max-w-xs' : 'max-w-xl'
+            compact ? 'max-w-full min-w-0' : 'max-w-xl'
           } relative bg-slate-900/95 border border-slate-700/80 p-3 sm:p-4 rounded-2xl shadow-xl backdrop-blur animate-in fade-in slide-in-from-left duration-300`}
         >
           {/* Speech Bubble Arrow */}

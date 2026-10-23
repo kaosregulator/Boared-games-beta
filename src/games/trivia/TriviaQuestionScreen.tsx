@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TriviaQuestion, TriviaPlayer } from '../../types/trivia';
 import { sound } from '../../utils/audio';
+import { holdRoomForCue, releaseRoomCue } from '../../room/roomHold';
+import { ArchiveClip, FadePicture } from './CueMedia';
 import { Timer, Zap, Volume2, Sparkles, HelpCircle, Flame, CheckCircle, XCircle } from 'lucide-react';
 
 interface TriviaQuestionScreenProps {
@@ -27,21 +29,40 @@ export const TriviaQuestionScreen: React.FC<TriviaQuestionScreenProps> = ({
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [startTime, setStartTime] = useState<number>(Date.now());
   const [isPlayingTune, setIsPlayingTune] = useState<boolean>(false);
+  const roomHeld = useRef(false);
 
-  // Reset state when question changes
+  const releaseCue = () => {
+    sound.stopChiptune();
+    document.querySelectorAll('video[data-throwback-cue]').forEach(node => {
+      if (node instanceof HTMLMediaElement) node.pause();
+    });
+    if (roomHeld.current) {
+      releaseRoomCue();
+      roomHeld.current = false;
+    }
+  };
+
+  // Reset state when question changes. Sound and commercials hush the room first.
   useEffect(() => {
     setTimeLeft(timeLimit);
     setSelectedIdx(null);
     setStartTime(Date.now());
     setIsPlayingTune(false);
 
-    // Auto play chiptune sound clip if question has one
+    const needsRoom = Boolean(question.chiptuneId) || question.type === 'video_clip';
+    if (!needsRoom) return;
+    holdRoomForCue();
+    roomHeld.current = true;
     if (question.chiptuneId) {
       sound.playChiptuneTrack(question.chiptuneId);
       setIsPlayingTune(true);
-      setTimeout(() => setIsPlayingTune(false), 2600);
     }
+    return () => releaseCue();
   }, [question.id]);
+
+  useEffect(() => {
+    if (showResults) releaseCue();
+  }, [showResults]);
 
   // Main Clock countdown
   useEffect(() => {
@@ -50,7 +71,8 @@ export const TriviaQuestionScreen: React.FC<TriviaQuestionScreenProps> = ({
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timer);
-          handleTimeOut();
+          // Not inside this setState: answering updates the parent match.
+          window.setTimeout(() => handleTimeOut(), 0);
           return 0;
         }
         // Accelerate tick frequency in final 5 seconds
@@ -82,11 +104,14 @@ export const TriviaQuestionScreen: React.FC<TriviaQuestionScreenProps> = ({
   };
 
   const handleReplayChiptune = () => {
-    if (question.chiptuneId) {
-      setIsPlayingTune(true);
-      sound.playChiptuneTrack(question.chiptuneId);
-      setTimeout(() => setIsPlayingTune(false), 2500);
+    if (!question.chiptuneId) return;
+    if (!roomHeld.current) {
+      holdRoomForCue();
+      roomHeld.current = true;
     }
+    setIsPlayingTune(true);
+    sound.playChiptuneTrack(question.chiptuneId);
+    window.setTimeout(() => setIsPlayingTune(false), 4200);
   };
 
   const percentageLeft = (timeLeft / timeLimit) * 100;
@@ -124,16 +149,62 @@ export const TriviaQuestionScreen: React.FC<TriviaQuestionScreenProps> = ({
       <div className="w-full bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 border-2 border-indigo-500/40 rounded-3xl p-6 sm:p-8 shadow-2xl relative mb-6 flex flex-col items-center text-center">
         {/* Category Pill */}
         <div className="text-[10px] sm:text-xs font-black uppercase tracking-wider bg-indigo-950/90 text-indigo-300 border border-indigo-500/50 px-4 py-1 rounded-full mb-3 shadow">
-          {question.type === 'quote'
+          {question.type === 'picture_fade'
+            ? '📷 GUESS THE PICTURE'
+            : question.type === 'video_clip'
+            ? '📺 GUESS THE CLIP'
+            : question.type === 'quote'
             ? '🎬 FINISH THE QUOTE'
-            : question.type === 'actor_star'
-            ? '⭐ THIS ACTOR STARRED IN...'
-            : question.type === 'system_guess'
-            ? '🕹️ GAME SYSTEM SPEC'
             : question.type === 'sound_guess'
-            ? '🎵 8-BIT AUDIO SYNTH'
-            : '💡 TRIVIA QUESTION'}
+            ? '🎵 8-BIT ON THE BOOMBOX'
+            : question.type === 'system_guess'
+            ? '🕹️ THE CARTRIDGE YEARS'
+            : question.category === 'heart'
+            ? '💛 SOMETHING YOU KEPT'
+            : question.category === 'style'
+            ? '👟 THE CLOSET'
+            : question.category === 'laugh'
+            ? '😂 WE ALL KNEW'
+            : '💡 THROWBACK'}
         </div>
+
+        {(question.chiptuneId || question.type === 'video_clip') && !showResults && (
+          <div className="mb-3 w-full max-w-lg rounded-2xl border border-amber-400/40 bg-amber-950/50 px-3 py-2 text-left">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-amber-200">
+              TV, radio, and the bedroom tape are paused
+            </p>
+            <p className="text-[11px] text-amber-50/80">
+              {question.chiptuneId
+                ? 'The boombox has the room. This 8-bit cue is ours.'
+                : 'The commercial from the Internet Archive has the room.'}
+            </p>
+          </div>
+        )}
+
+        {question.photo && question.type === 'picture_fade' && (
+          <div className="mb-4 w-full max-w-lg">
+            <FadePicture
+              src={question.photo.src}
+              alt={question.photo.alt}
+              credit={question.photo.credit}
+              seconds={question.fadeSeconds ?? 10}
+              revealed={showResults || selectedIdx !== null}
+            />
+          </div>
+        )}
+
+        {question.type === 'video_clip' && question.video && !showResults && (
+          <div className="mb-4 w-full max-w-lg">
+            <ArchiveClip archiveId={question.video.archiveId} title={question.video.title} />
+          </div>
+        )}
+
+        {question.photo && question.type !== 'picture_fade' && (
+          <div className="mb-4 w-full max-w-lg overflow-hidden rounded-2xl border border-white/15">
+            <img src={question.photo.src} alt={question.photo.alt} className="h-36 w-full object-cover" />
+            <p className="bg-black/40 px-2 py-1 text-[9px] text-white/55">{question.photo.credit}</p>
+          </div>
+        )}
 
         {/* Media Clue / Quote Box if available */}
         {question.mediaClue && (

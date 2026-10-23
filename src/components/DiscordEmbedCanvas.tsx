@@ -124,7 +124,7 @@ export const DiscordEmbedCanvas: React.FC<DiscordEmbedCanvasProps> = ({
 
   const channelName = activeGame
     ? activeGame.id === 'trivia'
-      ? '🎙️・trivia-party'
+      ? '📼・throwback-trivia'
       : activeGame.id === 'poker'
       ? '♠️・poker-room'
       : activeGame.id === 'casino'
@@ -239,7 +239,7 @@ export const DiscordEmbedCanvas: React.FC<DiscordEmbedCanvasProps> = ({
           {/* Embed Title & Description */}
           <div>
             <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
-              {activeGame?.id === 'trivia' && '🎙️ Jackbox Trivia Party & Murder Mystery'}
+              {activeGame?.id === 'trivia' && '📼 Throwback Trivia'}
               {activeGame?.id === 'poker' && '♠️ Texas Hold’em Live Embed Room'}
               {activeGame?.id === 'casino' && '🎰 Royal Casino & Slots Lounge'}
               {activeGame?.id === 'battleship' && '⚓ Naval Strike: Dual Radar Target Array'}
@@ -405,7 +405,7 @@ export const DiscordEmbedCanvas: React.FC<DiscordEmbedCanvasProps> = ({
               <div className="flex flex-wrap gap-1">
                 {(
                   [
-                    { id: 'trivia', label: '🎙️ Trivia Party' },
+                    { id: 'trivia', label: '📼 Throwback Trivia' },
                     { id: 'poker', label: '♠️ Poker' },
                     { id: 'casino', label: '🎰 Casino' },
                     { id: 'battleship', label: '⚓ Battleship' },
