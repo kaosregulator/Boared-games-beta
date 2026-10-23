@@ -203,6 +203,7 @@ export const TriviaQuestionScreen: React.FC<TriviaQuestionScreenProps> = ({
             file={question.audio.file}
             start={question.audio.start}
             end={question.audio.end}
+              stopped={showResults}
           />
         )}
         {hasTune && !hasClip && !hasSound && (
@@ -425,6 +426,7 @@ export const TriviaQuestionScreen: React.FC<TriviaQuestionScreenProps> = ({
               file={question.audio.file}
               start={question.audio.start}
               end={question.audio.end}
+              stopped={showResults}
             />
           </div>
         )}
