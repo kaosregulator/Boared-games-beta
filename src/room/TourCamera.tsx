@@ -37,6 +37,22 @@ const EASE = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) /
 /** Steps the tour from a capture script. The canvas is in demand mode, so nothing renders until this asks. */
 export function CaptureClock() {
   const invalidate = useThree(state => state.invalidate);
+  const clock = useThree(state => state.clock);
+  // Everything that animates on the frame clock (lava lamps, twinkling bulbs)
+  // follows the capture time too, so it moves at its real pace in the recording.
+  useEffect(() => {
+    const original = clock.getDelta;
+    clock.getDelta = function () {
+      const time = (window as unknown as { __tourTime?: number }).__tourTime ?? 0;
+      const delta = Math.max(0, time - this.elapsedTime);
+      this.oldTime = this.elapsedTime;
+      this.elapsedTime = time;
+      return delta;
+    };
+    return () => {
+      clock.getDelta = original;
+    };
+  }, [clock]);
   useEffect(() => {
     const renderAt = (time: number) => {
       (window as unknown as { __tourTime?: number }).__tourTime = time;
