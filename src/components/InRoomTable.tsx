@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { GameMetadata } from '../types';
+import { TriviaOnTableContext, useTriviaTableRect } from '../room/table/triviaTable';
 
 export function InRoomTable({
   game,
@@ -10,26 +11,36 @@ export function InRoomTable({
   onPackUp: () => void;
   children: ReactNode;
 }) {
+  const tableRect = useTriviaTableRect();
   if (game.id === 'trivia') {
+    if (!tableRect) return null;
+    // A thin rim of the real table stays visible around the board.
+    const insetX = Math.round(tableRect.width * 0.03);
+    const insetY = Math.round(tableRect.height * 0.035);
     return (
-      // The bedroom stays up. Throwback is a stack of cards, not a second room.
       <div className="pointer-events-none fixed inset-0 z-40 text-white">
-        <div className="pointer-events-auto absolute inset-x-2 bottom-2 top-14 flex flex-col sm:inset-x-auto sm:right-5 sm:top-16 sm:bottom-5 sm:w-[min(36rem,calc(100vw-2.5rem))]">
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-[0.28em] text-amber-200 font-bold">Still in the room</p>
-              <h1 className="font-display text-2xl truncate">{game.title}</h1>
-            </div>
+        <div
+          data-trivia-table
+          className="pointer-events-auto absolute flex flex-col overflow-hidden rounded-2xl border-2 border-[#e7c27a]/80 bg-[#2a1812] shadow-[0_22px_50px_rgba(0,0,0,0.55)]"
+          style={{
+            left: tableRect.left + insetX,
+            top: tableRect.top + insetY,
+            width: Math.max(120, tableRect.width - insetX * 2),
+            height: Math.max(80, tableRect.height - insetY * 2),
+          }}
+        >
+          <div className="flex h-7 shrink-0 items-center justify-between gap-2 border-b border-amber-200/15 bg-[#1a100c] px-2.5">
+            <p className="truncate text-[10px] font-black uppercase tracking-[0.22em] text-amber-200">{game.title}</p>
             <button
               type="button"
               onClick={onPackUp}
-              className="shrink-0 rounded-2xl bg-amber-400 text-black px-4 py-2 text-xs font-black uppercase tracking-wider"
+              className="shrink-0 rounded-lg bg-amber-400 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-black"
             >
               Pack up
             </button>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden rounded-3xl border border-amber-100/20 bg-[#1a1024]/80 shadow-2xl backdrop-blur-xl">
-            {children}
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <TriviaOnTableContext.Provider value={true}>{children}</TriviaOnTableContext.Provider>
           </div>
         </div>
       </div>

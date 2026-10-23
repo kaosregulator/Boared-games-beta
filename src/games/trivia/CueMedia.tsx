@@ -8,12 +8,15 @@ export function FadePicture({
   credit,
   seconds,
   revealed,
+  fill = false,
 }: {
   src: string;
   alt: string;
   credit: string;
   seconds: number;
   revealed: boolean;
+  /** Stretch to the card on the table. */
+  fill?: boolean;
 }) {
   const [progress, setProgress] = useState(0);
 
@@ -36,9 +39,10 @@ export function FadePicture({
   const eased = shown * shown * (3 - 2 * shown);
 
   return (
-    <figure className="w-full overflow-hidden rounded-2xl border border-amber-200/30 bg-black">
-      <div className="relative h-44 sm:h-52 w-full">
+    <figure className={`w-full overflow-hidden bg-black ${fill ? 'h-full' : 'rounded-2xl border border-amber-200/30'}`}>
+      <div className={`relative w-full ${fill ? 'h-full' : 'h-44 sm:h-52'}`}>
         <img
+          key={src}
           src={src}
           alt={alt}
           className="absolute inset-0 h-full w-full object-cover"
@@ -49,20 +53,27 @@ export function FadePicture({
           }}
         />
         {!revealed && (
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-3 py-2 text-left">
+          <div className={fill
+            ? 'absolute left-2 top-2 rounded-full bg-black/55 px-2 py-0.5 text-left'
+            : 'absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-3 py-2 text-left'}>
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-200">
               Coming into focus · {Math.round(eased * 100)}%
             </p>
           </div>
         )}
+        {fill && (
+          <figcaption className="absolute right-2 top-2 max-w-[40%] truncate rounded-full bg-black/45 px-2 py-0.5 text-[9px] text-white/70">
+            {credit}
+          </figcaption>
+        )}
       </div>
-      <figcaption className="px-3 py-1.5 text-[9px] leading-snug text-white/55">{credit}</figcaption>
+      {!fill && <figcaption className="px-3 py-1.5 text-[9px] leading-snug text-white/55">{credit}</figcaption>}
     </figure>
   );
 }
 
 /** A short commercial from the Internet Archive. The room is already quiet. */
-export function ArchiveClip({ archiveId, title }: { archiveId: string; title: string }) {
+export function ArchiveClip({ archiveId, title, fill = false }: { archiveId: string; title: string; fill?: boolean }) {
   const [url, setUrl] = useState<string | null>(null);
   const [missed, setMissed] = useState(false);
   const [needTap, setNeedTap] = useState(false);
@@ -90,8 +101,8 @@ export function ArchiveClip({ archiveId, title }: { archiveId: string; title: st
   }, [url]);
 
   return (
-    <figure className="w-full overflow-hidden rounded-2xl border border-amber-200/30 bg-black">
-      <div className="relative aspect-video w-full bg-black">
+    <figure className={`w-full overflow-hidden bg-black ${fill ? 'flex h-full flex-col' : 'rounded-2xl border border-amber-200/30'}`}>
+      <div className={`relative w-full bg-black ${fill ? 'min-h-0 flex-1' : 'aspect-video'}`}>
         {url ? (
           <video
             key={url}
@@ -115,8 +126,13 @@ export function ArchiveClip({ archiveId, title }: { archiveId: string; title: st
             Press play — the browser wants a tap
           </p>
         )}
+        {fill && (
+          <figcaption className="pointer-events-none absolute left-2 top-2 max-w-[70%] truncate rounded-full bg-black/50 px-2 py-0.5 text-[9px] text-white/75">
+            {title} · Internet Archive
+          </figcaption>
+        )}
       </div>
-      <figcaption className="px-3 py-1.5 text-[9px] text-white/55">{title} · Internet Archive</figcaption>
+      {!fill && <figcaption className="px-3 py-1.5 text-[9px] text-white/55">{title} · Internet Archive</figcaption>}
     </figure>
   );
 }

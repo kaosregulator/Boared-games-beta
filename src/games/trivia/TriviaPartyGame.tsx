@@ -20,6 +20,7 @@ import { KillingFloorView } from './KillingFloorView';
 import { FinalEscapeView } from './FinalEscapeView';
 import { CustomPackCreator } from './CustomPackCreator';
 import { sound } from '../../utils/audio';
+import { useTriviaOnTable } from '../../room/table/triviaTable';
 import confetti from 'canvas-confetti';
 import {
   Trophy,
@@ -50,6 +51,7 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
   onGameOver,
   onExitToShelf
 }) => {
+  const onTable = useTriviaOnTable();
   // Game Flow Phases
   const [phase, setPhase] = useState<
     'unboxing' | 'mode_select' | 'lobby' | 'question' | 'killing_floor' | 'final_escape' | 'creator' | 'game_over'
@@ -396,12 +398,17 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
   };
 
   return (
-    <div className="w-full text-white rounded-3xl p-3 sm:p-4 flex flex-col items-center justify-between relative select-none">
+    <div className={onTable
+      ? 'relative flex h-full min-h-0 w-full flex-col overflow-hidden text-white select-none'
+      : 'w-full text-white rounded-3xl p-3 sm:p-4 flex flex-col items-center justify-between relative select-none'}>
       {/* Background Ambience / Stage Lighting */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-950/40 via-slate-950 to-black pointer-events-none" />
+      {!onTable && (
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-950/40 via-slate-950 to-black pointer-events-none" />
+      )}
 
       {/* Top Navigation & Host Strip */}
-      <div className="w-full flex flex-col items-stretch gap-3 mb-4 z-10 min-w-0">
+      {!(onTable && (phase === 'mode_select' || phase === 'question')) && (
+      <div className={`w-full flex flex-col items-stretch z-10 min-w-0 ${onTable ? 'shrink-0 gap-1 px-2 pt-1' : 'gap-3 mb-4'}`}>
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setPhase('mode_select')}
@@ -433,26 +440,37 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
         </div>
 
         {/* Theatrical Host Pod */}
-        <AnimatedHost host={activeHost} quipText={hostQuip} isSpeaking={isHostSpeaking} compact={phase === 'question' || phase === 'killing_floor'} />
+        {!onTable && (
+          <AnimatedHost host={activeHost} quipText={hostQuip} isSpeaking={isHostSpeaking} compact={phase === 'question' || phase === 'killing_floor'} />
+        )}
       </div>
+      )}
 
       {/* Main Content Area based on Game Phase */}
-      <div className="w-full flex-1 flex flex-col items-center justify-center z-10 my-2">
+      <div className={onTable
+        ? `z-10 flex min-h-0 w-full flex-1 flex-col ${phase === 'question' || phase === 'mode_select' ? 'overflow-hidden' : 'overflow-y-auto'}`
+        : 'w-full flex-1 flex flex-col items-center justify-center z-10 my-2'}>
         {/* Phase 1: Mode Select Menu */}
         {phase === 'mode_select' && (
-          <div className="w-full max-w-4xl flex flex-col items-center animate-in fade-in zoom-in duration-300">
-            <div className="text-center mb-6">
-              <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-pink-400 to-purple-400 flex items-center justify-center gap-2">
-                <Crown className="w-7 h-7 text-amber-400" />
+          <div className={onTable
+            ? 'flex h-full min-h-0 w-full flex-col p-1.5'
+            : 'w-full max-w-4xl flex flex-col items-center animate-in fade-in zoom-in duration-300'}>
+            <div className={onTable ? 'mb-1 shrink-0 text-center' : 'text-center mb-6'}>
+              <h1 className={`font-black uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-pink-400 to-purple-400 flex items-center justify-center gap-2 ${onTable ? 'text-sm' : 'text-2xl sm:text-3xl'}`}>
+                <Crown className={onTable ? 'h-4 w-4 text-amber-400' : 'w-7 h-7 text-amber-400'} />
                 THROWBACK TRIVIA
               </h1>
-              <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-xl mx-auto">
-                Born in 1991. Pictures fade in, Archive commercials play, and the 8-bit cues hush the TV, the radio, and the bedroom tape.
-              </p>
+              {!onTable && (
+                <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-xl mx-auto">
+                  Born in 1991. Pictures fade in, Archive commercials play, and the 8-bit cues hush the TV, the radio, and the bedroom tape.
+                </p>
+              )}
             </div>
 
             {/* Sub-Mode Cards Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full mb-6">
+            <div className={onTable
+              ? 'grid min-h-0 flex-1 grid-cols-4 grid-rows-2 gap-1.5 [&_button]:h-full [&_button]:min-h-0 [&_button]:justify-start [&_button]:overflow-hidden [&_button]:rounded-xl [&_button]:p-2 [&_button]:shadow-none [&_button]:hover:scale-100 [&_h3]:text-xs [&_h3]:leading-tight [&_p]:line-clamp-2 [&_p]:text-[10px] [&_p]:leading-tight [&_.w-12]:mb-1 [&_.w-12]:h-7 [&_.w-12]:w-7 [&_.w-12]:text-base [&_.mt-4]:mt-1'
+              : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full mb-6'}>
               {/* Mode 1: Party Mix */}
               <button
                 onClick={() => {
@@ -658,7 +676,9 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
 
         {/* Phase 2: Match Setup Lobby */}
         {phase === 'lobby' && (
-          <div className="w-full max-w-2xl bg-slate-900/90 border border-slate-700/80 rounded-3xl p-6 sm:p-8 text-center shadow-2xl flex flex-col items-center animate-in zoom-in duration-200">
+          <div className={onTable
+            ? 'm-1 flex w-auto flex-col items-center rounded-2xl border border-amber-200/20 bg-black/35 p-3 text-center'
+            : 'w-full max-w-2xl bg-slate-900/90 border border-slate-700/80 rounded-3xl p-6 sm:p-8 text-center shadow-2xl flex flex-col items-center animate-in zoom-in duration-200'}>
             <h2 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-white mb-2 flex items-center gap-2">
               <Sparkles className="w-6 h-6 text-amber-400" />
               MATCH SETUP • {selectedMode.replaceAll('_', ' ').toUpperCase()}
@@ -731,7 +751,9 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
 
         {/* Phase 3: Active Question View */}
         {phase === 'question' && questionDeck.length > 0 && (
+          <div className={onTable ? 'h-full min-h-0' : 'contents'}>
           <TriviaQuestionScreen
+            key={questionDeck[currentQIndex].id}
             question={questionDeck[currentQIndex]}
             roundNumber={currentQIndex + 1}
             totalRounds={questionDeck.length}
@@ -740,6 +762,7 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
             onAnswerSelected={handleAnswerSelected}
             showResults={showQuestionResults}
           />
+          </div>
         )}
 
         {/* Phase 4: Killing Floor View (Murder Mystery) */}
@@ -848,10 +871,12 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
       </div>
 
       {/* Footer Game Tip */}
+      {!onTable && (
       <div className="w-full flex items-center justify-between text-[10px] font-mono text-slate-500 pt-2 border-t border-slate-900 z-10">
         <span>Throwback Trivia · born 1991 · the room goes quiet for the 8-bit</span>
         <span>Commons photos · Internet Archive clips</span>
       </div>
+      )}
     </div>
   );
 };

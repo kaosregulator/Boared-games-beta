@@ -42,6 +42,7 @@ import { setWalkFov, setWalkZoom, useWalkView } from './walkView';
 import { resumedSession, saveEngaged } from './session';
 import { TABLE_GAMES, TableHudOverlay, type TableSession } from './table/TablePlay';
 import { TableCameraRig } from './table/TableCameraRig';
+import { TriviaTableCam } from './table/TriviaTableCam';
 import { walkRig } from './WalkController';
 import { TABLE_SEAT } from './roomLayout';
 import { ANCHORS, anchorById, type Anchor } from './anchors';
@@ -457,6 +458,14 @@ export function WalkRoom({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Throwback opens on the table even from ?game=trivia, which skips the wall.
+  useEffect(() => {
+    if (overlayGame?.id !== 'trivia') return;
+    setEngaged(true);
+    setMenuShown(false);
+    if (!session) startTable(overlayGame);
+  }, [overlayGame, session, startTable]);
+
   useEffect(() => {
     if (!musicOn) return;
     sound.setMusicVolume(musicVolume);
@@ -754,6 +763,7 @@ export function WalkRoom({
               onStep={onStep}
             />
             <TableCameraRig active={tableCamOn} />
+            <TriviaTableCam active={overlayGame?.id === 'trivia' && session?.phase === 'play'} />
             <ReachRaycaster
               enabled={engaged && !pulledGameId && !device && !seated && !holding && !tableGame && !overlayGame}
               onAim={setAimed}
