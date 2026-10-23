@@ -72,8 +72,122 @@ export function FadePicture({
   );
 }
 
+/** Start a clip at `start` and stop it at `end`, so only the few seconds the question is about play. */
+function trimHandlers(start?: number, end?: number) {
+  return {
+    onLoadedMetadata: (e: React.SyntheticEvent<HTMLMediaElement>) => {
+      if (start) e.currentTarget.currentTime = start;
+    },
+    onTimeUpdate: (e: React.SyntheticEvent<HTMLMediaElement>) => {
+      const el = e.currentTarget;
+      if (end && el.currentTime >= end) {
+        el.pause();
+        el.currentTime = start ?? 0;
+      }
+    },
+  };
+}
+
+/**
+ * A real recording from the Internet Archive (NASA, a modem), shown as a
+ * tape in a boombox. Streams from archive.org; nothing is stored here.
+ */
+export function ArchiveSound({
+  archiveId,
+  title,
+  credit,
+  file,
+  start,
+  end,
+}: {
+  archiveId: string;
+  title: string;
+  credit: string;
+  file?: string;
+  start?: number;
+  end?: number;
+}) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [missed, setMissed] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const ref = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    let dead = false;
+    setUrl(null);
+    setMissed(false);
+    resolveArchive(archiveId, 'audio', file).then(found => {
+      if (dead) return;
+      if (!found) setMissed(true);
+      else setUrl(found.url);
+    });
+    return () => {
+      dead = true;
+    };
+  }, [archiveId, file]);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node || !url) return;
+    void node.play().catch(() => setPlaying(false));
+  }, [url]);
+
+  const replay = () => {
+    const node = ref.current;
+    if (!node) return;
+    node.currentTime = start ?? 0;
+    void node.play().catch(() => {});
+  };
+
+  return (
+    <div className="tt-boombox">
+      <div className="tt-boombox-speaker" data-on={playing || undefined} />
+      <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
+        <div className="tt-cassette">
+          <span className="tt-cassette-label">{title}</span>
+          <span className="tt-reel" data-on={playing || undefined} />
+          <span className="tt-reel" data-on={playing || undefined} />
+        </div>
+        {url && (
+          <audio
+            key={url}
+            ref={ref}
+            src={url}
+            data-throwback-cue="true"
+            preload="auto"
+            onPlay={() => setPlaying(true)}
+            onPause={() => setPlaying(false)}
+            onEnded={() => setPlaying(false)}
+            onError={() => setMissed(true)}
+            {...trimHandlers(start, end)}
+          />
+        )}
+        <button type="button" onClick={replay} disabled={!url} className="tt-key">
+          {missed ? 'Tape is missing' : !url ? 'Finding the tape…' : playing ? '▶ Playing' : '▶ Play it again'}
+        </button>
+        <p className="max-w-full truncate text-[9px] text-[#3a2a1a]/70">{credit}</p>
+      </div>
+      <div className="tt-boombox-speaker" data-on={playing || undefined} />
+    </div>
+  );
+}
+
 /** A short commercial from the Internet Archive. The room is already quiet. */
-export function ArchiveClip({ archiveId, title, fill = false }: { archiveId: string; title: string; fill?: boolean }) {
+export function ArchiveClip({
+  archiveId,
+  title,
+  file,
+  start,
+  end,
+  fill = false,
+}: {
+  archiveId: string;
+  title: string;
+  file?: string;
+  start?: number;
+  end?: number;
+  fill?: boolean;
+}) {
   const [url, setUrl] = useState<string | null>(null);
   const [missed, setMissed] = useState(false);
   const [needTap, setNeedTap] = useState(false);
@@ -84,15 +198,15 @@ export function ArchiveClip({ archiveId, title, fill = false }: { archiveId: str
     setUrl(null);
     setMissed(false);
     setNeedTap(false);
-    resolveArchive(archiveId, 'video').then(file => {
+    resolveArchive(archiveId, 'video', file).then(found => {
       if (dead) return;
-      if (!file) setMissed(true);
-      else setUrl(file.url);
+      if (!found) setMissed(true);
+      else setUrl(found.url);
     });
     return () => {
       dead = true;
     };
-  }, [archiveId]);
+  }, [archiveId, file]);
 
   useEffect(() => {
     const node = videoRef.current;
@@ -114,6 +228,7 @@ export function ArchiveClip({ archiveId, title, fill = false }: { archiveId: str
             className="h-full w-full object-contain"
             onPlay={() => setNeedTap(false)}
             onError={() => setMissed(true)}
+            {...trimHandlers(start, end)}
             ref={videoRef}
           />
         ) : (

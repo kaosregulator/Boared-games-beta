@@ -32,6 +32,12 @@ function seconds(raw?: string): number | null {
 }
 
 function pick(files: MetaFile[], kind: 'video' | 'audio', hint?: string): MetaFile | null {
+  if (hint?.startsWith('~')) {
+    // "~part of a name": the first playable file whose name contains it
+    const part = hint.slice(1).toLowerCase();
+    const playable = kind === 'audio' ? /\.(mp3|ogg|m4a|wav)$/i : /\.(mp4|ogv|webm)$/i;
+    return files.find(f => playable.test(f.name) && f.name.toLowerCase().includes(part)) ?? null;
+  }
   if (hint) return files.find(f => f.name === hint) ?? null;
   if (kind === 'audio') {
     return (

@@ -19,66 +19,193 @@ import { TriviaQuestionScreen } from './TriviaQuestionScreen';
 import { KillingFloorView } from './KillingFloorView';
 import { FinalEscapeView } from './FinalEscapeView';
 import { CustomPackCreator } from './CustomPackCreator';
+import { RerunBoardGame } from './RerunBoardGame';
 import { sound } from '../../utils/audio';
 import { useTriviaOnTable } from '../../room/table/triviaTable';
 import confetti from 'canvas-confetti';
-import {
-  Trophy,
-  Sparkles,
-  Play,
-  RotateCcw,
-  Film,
-  Gamepad2,
-  Skull,
-  Music,
-  Wand2,
-  Users,
-  Bot,
-  ShieldAlert,
-  ArrowRight,
-  HelpCircle,
-  Award,
-  Crown,
-  Volume2
-} from 'lucide-react';
+import { Trophy, Sparkles, Play, RotateCcw, Users, Bot, ArrowRight, Crown } from 'lucide-react';
 
 interface TriviaPartyGameProps {
   onGameOver?: (winnerName: string, isRealMatch: boolean) => void;
   onExitToShelf?: () => void;
 }
 
+type HostId = 'buzz' | 'mortimer' | 'pixel8' | 'scarlett';
+
+interface ModeCard {
+  id: TriviaSubMode | 'creator';
+  title: string;
+  blurb: string;
+  icon: string;
+  host: HostId;
+  /** Box-lid colour on the table. */
+  ink: string;
+  greeting: string;
+  deck?: (q: TriviaQuestion) => boolean;
+}
+
+/** Every box on the shelf, in the order they're laid out on the table. */
+const MODES: ModeCard[] = [
+  {
+    id: 'party_mix',
+    title: 'The Whole Block',
+    blurb: 'A little of everything: commercials, the 8-bit, the closet, the porch.',
+    icon: '🏘️',
+    host: 'buzz',
+    ink: '#d4890b',
+    greeting: "Shoes off, door shut, lights OFF if you leave the room. Let's see what you still remember.",
+  },
+  {
+    id: 'rerun_board',
+    title: 'Prime Time Rerun',
+    blurb: 'Our mini Jeopardy board. Pick a tile, answer in the form of a question.',
+    icon: '📺',
+    host: 'scarlett',
+    ink: '#2457c5',
+    greeting: 'Grandpa has been doing this from the recliner since 1984. Answer in the form of a question.',
+  },
+  {
+    id: 'heart_block',
+    title: 'Heard It Growing Up',
+    blurb: '"Were you raised in a barn?" Finish what the kitchen yelled.',
+    icon: '🍳',
+    host: 'scarlett',
+    ink: '#c0392b',
+    greeting: "I'm not asking twice. Who left the front door open? Were you raised in a barn?",
+    deck: q => q.category === 'heard_it' || q.category === 'heart',
+  },
+  {
+    id: 'cinephile',
+    title: 'Commercial Break',
+    blurb: 'Real 90s spots from the Internet Archive. Name the snack, the toy, the kid.',
+    icon: '📼',
+    host: 'buzz',
+    ink: '#7b3fa0',
+    greeting: "Don't touch the remote. We're watching the commercials. They're the best part.",
+    deck: q => q.category === 'commercials' || q.type === 'video_clip',
+  },
+  {
+    id: 'real_sounds',
+    title: 'Off the Hook',
+    blurb: 'Dial tone, busy signal, dial-up, the moon landing. The real sounds.',
+    icon: '☎️',
+    host: 'scarlett',
+    ink: '#1f7a4a',
+    greeting: 'Get off the phone! I need to use the internet. And somebody left the hallway phone off the hook.',
+    deck: q => q.category === 'real_sound' || q.type === 'quote' || q.category === 'movie_quotes',
+  },
+  {
+    id: 'name_that_tune',
+    title: '8-Bit Boombox',
+    blurb: 'Our original cues and the songs every toy and truck played. Name them.',
+    icon: '🎮',
+    host: 'pixel8',
+    ink: '#0e8a8a',
+    greeting: "TV's off, radio's off, tape's off. The boombox has the room. Don't touch my controller.",
+    deck: q => q.category === 'chiptune_sound',
+  },
+  {
+    id: 'picture_fade',
+    title: 'Polaroid Fade',
+    blurb: 'The picture develops slowly. Shout it before it does.',
+    icon: '📷',
+    host: 'buzz',
+    ink: '#b56b1f',
+    greeting: "Shake it like a Polaroid. Don't actually, it doesn't help. Just guess.",
+    deck: q => q.type === 'picture_fade',
+  },
+  {
+    id: 'gaming_vault',
+    title: 'Cartridge Years',
+    blurb: 'Blow in it, enter the code, die of dysentery.',
+    icon: '🕹️',
+    host: 'pixel8',
+    ink: '#4a5d8a',
+    greeting: 'Up, up, down, down. You know the rest. Prove it.',
+    deck: q => q.category === 'video_games' || q.category === 'game_systems',
+  },
+  {
+    id: 'murder_mystery',
+    title: 'After the Streetlights',
+    blurb: 'Scary-sleepover trivia. Miss one and you go down to the basement.',
+    icon: '🕯️',
+    host: 'mortimer',
+    ink: '#5a1f2e',
+    greeting: "Your parents won't be home till late. Miss a question and you go down to the basement. Alone.",
+    deck: q => q.category === 'murder_mystery',
+  },
+  {
+    id: 'creator',
+    title: 'Make Your Own Pack',
+    blurb: 'Write your own cards, or let the AI write a pack on anything.',
+    icon: '✏️',
+    host: 'buzz',
+    ink: '#6b6b6b',
+    greeting: 'Grab a marker. Write the questions you always wanted to ask.',
+  },
+];
+
+const FORMATS: Array<{ id: MatchFormat; title: string; blurb: string; icon: React.ReactNode }> = [
+  { id: 'solo_vs_ai', title: 'You vs. the family', blurb: 'Know-It-All Kyle, Cousin Bobby and Grandpa.', icon: <Bot className="h-5 w-5" /> },
+  { id: 'team_vs_ai', title: 'You + Grandpa', blurb: 'Team up against the cousins.', icon: <Users className="h-5 w-5" /> },
+  { id: 'pass_and_play', title: 'Couch rules', blurb: 'Two players, one controller, no peeking.', icon: <Trophy className="h-5 w-5" /> },
+];
+
+const hostById = (id: HostId) => TRIVIA_HOSTS.find(h => h.id === id) ?? TRIVIA_HOSTS[0];
+
+function shuffle<T>(list: T[]): T[] {
+  const out = [...list];
+  for (let i = out.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+/** The right answer is written first in the deck; move it somewhere new every match. */
+function shuffleOptions(q: TriviaQuestion): TriviaQuestion {
+  const order = shuffle(q.options.map((text, i) => ({ text, right: i === q.correctIndex })));
+  return { ...q, options: order.map(o => o.text), correctIndex: order.findIndex(o => o.right) };
+}
+
+/** A Whole Block night: never three of the same kind in a row. */
+function mixDeck(all: TriviaQuestion[], rounds: number): TriviaQuestion[] {
+  const pool = shuffle(all);
+  const out: TriviaQuestion[] = [];
+  while (out.length < rounds && pool.length) {
+    const recent = out.slice(-2).map(q => q.category);
+    const i = pool.findIndex(q => !(recent.length === 2 && recent.every(c => c === q.category)));
+    out.push(...pool.splice(i < 0 ? 0 : i, 1));
+  }
+  return out;
+}
+
+const fresh = { score: 0, lives: 3, isGhost: false, streak: 0, selectedAnswer: null, answerTimeMs: null, isAnswerCorrect: null };
+
 export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
   onGameOver,
   onExitToShelf
 }) => {
   const onTable = useTriviaOnTable();
-  // Game Flow Phases
   const [phase, setPhase] = useState<
-    'unboxing' | 'mode_select' | 'lobby' | 'question' | 'killing_floor' | 'final_escape' | 'creator' | 'game_over'
+    'mode_select' | 'lobby' | 'question' | 'rerun' | 'killing_floor' | 'final_escape' | 'creator' | 'game_over'
   >('mode_select');
 
-  // Selected Mode & Host
   const [selectedMode, setSelectedMode] = useState<TriviaSubMode>('party_mix');
   const [matchFormat, setMatchFormat] = useState<MatchFormat>('solo_vs_ai');
   const [activeHost, setActiveHost] = useState<HostCharacter>(TRIVIA_HOSTS[0]);
   const [hostQuip, setHostQuip] = useState<string>(TRIVIA_HOSTS[0].defaultGreeting);
   const [isHostSpeaking, setIsHostSpeaking] = useState<boolean>(true);
 
-  // Question Queue & Progression
   const [questionDeck, setQuestionDeck] = useState<TriviaQuestion[]>([]);
   const [currentQIndex, setCurrentQIndex] = useState<number>(0);
   const [showQuestionResults, setShowQuestionResults] = useState<boolean>(false);
-
-  // Players State
   const [players, setPlayers] = useState<TriviaPlayer[]>([]);
-
-  // Killing Floor State (Murder Mystery)
   const [killingFloor, setKillingFloor] = useState<KillingFloorState | null>(null);
-
-  // Custom Packs State
   const [customPacks, setCustomPacks] = useState<CustomTriviaPack[]>(PRESET_CUSTOM_PACKS);
 
-  // Host dialogue timer helper
+  const mode = MODES.find(m => m.id === selectedMode) ?? MODES[0];
+
   const triggerHostQuip = (quip: string, durationMs: number = 4000) => {
     setHostQuip(quip);
     setIsHostSpeaking(true);
@@ -88,166 +215,107 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
     }, durationMs);
   };
 
-  // Switch Host based on sub-mode
   useEffect(() => {
-    if (selectedMode === 'murder_mystery') {
-      const mortimer = TRIVIA_HOSTS.find(h => h.id === 'mortimer') || TRIVIA_HOSTS[1];
-      setActiveHost(mortimer);
-      triggerHostQuip(mortimer.defaultGreeting);
-    } else if (selectedMode === 'picture_fade' || selectedMode === 'cinephile') {
-      const scarlett = TRIVIA_HOSTS.find(h => h.id === 'scarlett') || TRIVIA_HOSTS[3];
-      setActiveHost(scarlett);
-      triggerHostQuip(selectedMode === 'picture_fade'
-        ? 'Let it fade in. Say it before the picture does.'
-        : 'Saturday morning. The commercial has the room.');
-    } else if (selectedMode === 'heart_block') {
-      const buzz = TRIVIA_HOSTS[0];
-      setActiveHost(buzz);
-      triggerHostQuip('The porch light is on. Some of these are going to hurt, in the good way.');
-    } else if (selectedMode === 'gaming_vault' || selectedMode === 'name_that_tune') {
-      const pixel8 = TRIVIA_HOSTS.find(h => h.id === 'pixel8') || TRIVIA_HOSTS[2];
-      setActiveHost(pixel8);
-      triggerHostQuip(pixel8.defaultGreeting);
-    } else {
-      const buzz = TRIVIA_HOSTS[0];
-      setActiveHost(buzz);
-      triggerHostQuip(buzz.defaultGreeting);
-    }
+    const host = hostById(mode.host);
+    setActiveHost(host);
+    triggerHostQuip(mode.greeting);
   }, [selectedMode]);
 
-  // Start Match & Build Question Deck
-  const handleStartMatch = (customPack?: CustomTriviaPack) => {
-    sound.playShelfSlide();
-
-    // 1. Prepare Question Deck
-    let deck: TriviaQuestion[] = [];
-    if (customPack) {
-      deck = [...customPack.questions];
-    } else if (selectedMode === 'picture_fade') {
-      deck = TRIVIA_QUESTIONS.filter(q => q.type === 'picture_fade');
-    } else if (selectedMode === 'heart_block') {
-      deck = TRIVIA_QUESTIONS.filter(q => q.category === 'heart' || q.category === 'style' || q.category === 'laugh');
-    } else if (selectedMode === 'cinephile') {
-      deck = TRIVIA_QUESTIONS.filter(q => q.type === 'video_clip' || q.category === 'movies' || q.category === 'movie_quotes' || q.category === 'actors');
-    } else if (selectedMode === 'gaming_vault') {
-      deck = TRIVIA_QUESTIONS.filter(q => q.category === 'video_games' || q.category === 'game_systems');
-    } else if (selectedMode === 'name_that_tune') {
-      deck = TRIVIA_QUESTIONS.filter(q => q.type === 'sound_guess' || q.category === 'chiptune_sound');
-    } else if (selectedMode === 'murder_mystery') {
-      deck = TRIVIA_QUESTIONS.filter(q => q.category === 'murder_mystery');
-    } else {
-      // Party Mix (All categories shuffled)
-      deck = [...TRIVIA_QUESTIONS].sort(() => Math.random() - 0.5);
+  const pickMode = (card: ModeCard) => {
+    sound.playButtonClick();
+    if (card.id === 'creator') {
+      setPhase('creator');
+      return;
     }
+    setSelectedMode(card.id);
+    setPhase('lobby');
+  };
 
-    if (deck.length === 0) {
-      deck = [...TRIVIA_QUESTIONS];
-    }
-
-    const rounds = Math.min(deck.length, selectedMode === 'party_mix' ? 8 : deck.length);
-    setQuestionDeck(deck.slice(0, rounds));
-    setCurrentQIndex(0);
-    setShowQuestionResults(false);
-
-    // 2. Prepare Players
-    const humanPlayer: TriviaPlayer = {
+  const buildRoster = (): TriviaPlayer[] => {
+    const human: TriviaPlayer = {
       id: 'human_1',
-      name: 'You (Player 1)',
+      name: 'You',
       avatar: '👑',
       color: 'bg-indigo-600',
       isBot: false,
-      score: 0,
-      lives: 3,
-      isGhost: false,
-      streak: 0,
+      ...fresh,
       team: matchFormat === 'team_vs_ai' ? 'Alpha' : null,
-      selectedAnswer: null,
-      answerTimeMs: null,
-      isAnswerCorrect: null
     };
-
-    let roster: TriviaPlayer[] = [humanPlayer];
-
-    if (matchFormat === 'solo_vs_ai') {
-      roster.push(
-        { ...MOCK_TRIVIA_AI_BOTS[0], score: 0, lives: 3, isGhost: false, streak: 0, selectedAnswer: null, answerTimeMs: null, isAnswerCorrect: null },
-        { ...MOCK_TRIVIA_AI_BOTS[1], score: 0, lives: 3, isGhost: false, streak: 0, selectedAnswer: null, answerTimeMs: null, isAnswerCorrect: null },
-        { ...MOCK_TRIVIA_AI_BOTS[2], score: 0, lives: 3, isGhost: false, streak: 0, selectedAnswer: null, answerTimeMs: null, isAnswerCorrect: null }
-      );
-    } else if (matchFormat === 'team_vs_ai') {
-      // Co-op Duo: Human + TriviaBot 9000 (Team Alpha) vs Popcorn Pete + Pixel Pete (Team Omega)
-      const botTeammate = { ...MOCK_TRIVIA_AI_BOTS[2], name: 'TriviaBot (Your Partner)', team: 'Alpha' as const, score: 0, lives: 3, isGhost: false, streak: 0, selectedAnswer: null, answerTimeMs: null, isAnswerCorrect: null };
-      const botRival1 = { ...MOCK_TRIVIA_AI_BOTS[0], team: 'Omega' as const, score: 0, lives: 3, isGhost: false, streak: 0, selectedAnswer: null, answerTimeMs: null, isAnswerCorrect: null };
-      const botRival2 = { ...MOCK_TRIVIA_AI_BOTS[1], team: 'Omega' as const, score: 0, lives: 3, isGhost: false, streak: 0, selectedAnswer: null, answerTimeMs: null, isAnswerCorrect: null };
-      roster = [humanPlayer, botTeammate, botRival1, botRival2];
-    } else if (matchFormat === 'pass_and_play') {
-      roster = [
-        humanPlayer,
-        {
-          id: 'player_2',
-          name: 'Player 2 (Couch)',
-          avatar: '🎮',
-          color: 'bg-rose-600',
-          isBot: false,
-          score: 0,
-          lives: 3,
-          isGhost: false,
-          streak: 0,
-          selectedAnswer: null,
-          answerTimeMs: null,
-          isAnswerCorrect: null
-        }
+    const [kyle, bobby, grandpa, sister] = MOCK_TRIVIA_AI_BOTS;
+    if (matchFormat === 'team_vs_ai') {
+      return [
+        human,
+        { ...grandpa, ...fresh, name: 'Grandpa (your team)', team: 'Alpha' },
+        { ...kyle, ...fresh, team: 'Omega' },
+        { ...bobby, ...fresh, team: 'Omega' },
       ];
-    } else {
-      // Ranked Arena Free-For-All
-      roster.push(
-        { ...MOCK_TRIVIA_AI_BOTS[0], score: 0, lives: 3, isGhost: false, streak: 0, selectedAnswer: null, answerTimeMs: null, isAnswerCorrect: null },
-        { ...MOCK_TRIVIA_AI_BOTS[1], score: 0, lives: 3, isGhost: false, streak: 0, selectedAnswer: null, answerTimeMs: null, isAnswerCorrect: null }
-      );
     }
-
-    setPlayers(roster);
-    setPhase('question');
-    triggerHostQuip(`ROUND 1 BEGINS! Question on screen now! Watch that timer!`);
+    if (matchFormat === 'pass_and_play') {
+      return [
+        human,
+        { id: 'player_2', name: 'Player 2', avatar: '🎮', color: 'bg-rose-600', isBot: false, ...fresh },
+      ];
+    }
+    if (matchFormat === 'ranked_arena') {
+      return [human, { ...kyle, ...fresh }, { ...bobby, ...fresh }];
+    }
+    return [human, { ...kyle, ...fresh }, { ...grandpa, ...fresh }, { ...sister, ...fresh }];
   };
 
-  // Handling Player Answer
+  const handleStartMatch = (customPack?: CustomTriviaPack) => {
+    sound.playShelfSlide();
+    const roster = buildRoster();
+    setPlayers(roster);
+
+    if (!customPack && selectedMode === 'rerun_board') {
+      setPhase('rerun');
+      triggerHostQuip('Pick a category. Any category. Grandpa already knows the answer.');
+      return;
+    }
+
+    let deck: TriviaQuestion[];
+    if (customPack) deck = [...customPack.questions];
+    else if (mode.deck) deck = shuffle(TRIVIA_QUESTIONS.filter(mode.deck));
+    else deck = mixDeck(TRIVIA_QUESTIONS, 10);
+    if (deck.length === 0) deck = mixDeck(TRIVIA_QUESTIONS, 10);
+
+    const rounds = Math.min(deck.length, selectedMode === 'party_mix' ? 10 : 12);
+    setQuestionDeck(deck.slice(0, rounds).map(shuffleOptions));
+    setCurrentQIndex(0);
+    setShowQuestionResults(false);
+    setPhase('question');
+    triggerHostQuip('Card one. No peeking at your neighbor.');
+  };
+
   const handleAnswerSelected = (chosenIndex: number, timeMs: number) => {
     const currentQ = questionDeck[currentQIndex];
     const isCorrect = chosenIndex === currentQ.correctIndex;
 
-    // Simulate bot answers with distinct personality accuracies and reaction speeds
     const updatedPlayers = players.map(p => {
       if (!p.isBot) {
         const pointsEarned = isCorrect ? currentQ.points + Math.max(0, 15000 - timeMs) / 20 : 0;
-        const newStreak = isCorrect ? p.streak + 1 : 0;
         return {
           ...p,
           selectedAnswer: chosenIndex,
           answerTimeMs: timeMs,
           isAnswerCorrect: isCorrect,
           score: p.score + Math.round(pointsEarned),
-          streak: newStreak
-        };
-      } else {
-        // AI Bot Answer simulation
-        const accuracy = p.botAccuracy || 0.75;
-        const botCorrect = Math.random() < accuracy;
-        const botAns = botCorrect
-          ? currentQ.correctIndex
-          : (currentQ.correctIndex + 1) % currentQ.options.length;
-        const botTime = 3000 + Math.random() * 6000;
-        const botPoints = botCorrect ? currentQ.points + Math.max(0, 15000 - botTime) / 20 : 0;
-
-        return {
-          ...p,
-          selectedAnswer: botAns,
-          answerTimeMs: botTime,
-          isAnswerCorrect: botCorrect,
-          score: p.score + Math.round(botPoints),
-          streak: botCorrect ? p.streak + 1 : 0
+          streak: isCorrect ? p.streak + 1 : 0
         };
       }
+      const botCorrect = Math.random() < (p.botAccuracy || 0.75);
+      const wrongs = currentQ.options.map((_, i) => i).filter(i => i !== currentQ.correctIndex);
+      const botAns = botCorrect ? currentQ.correctIndex : wrongs[Math.floor(Math.random() * wrongs.length)];
+      const botTime = 3000 + Math.random() * 6000;
+      const botPoints = botCorrect ? currentQ.points + Math.max(0, 15000 - botTime) / 20 : 0;
+      return {
+        ...p,
+        selectedAnswer: botAns,
+        answerTimeMs: botTime,
+        isAnswerCorrect: botCorrect,
+        score: p.score + Math.round(botPoints),
+        streak: botCorrect ? p.streak + 1 : 0
+      };
     });
 
     setPlayers(updatedPlayers);
@@ -255,78 +323,60 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
 
     if (isCorrect) {
       sound.playTriviaCorrect();
-      triggerHostQuip(`THAT'S CORRECT! ${currentQ.explanation}`);
+      triggerHostQuip(`That's it! ${currentQ.explanation}`);
     } else {
       sound.playTriviaWrong();
-      triggerHostQuip(`OOF, WRONG! The correct answer was ${currentQ.options[currentQ.correctIndex]}!`);
+      triggerHostQuip(`Nope. It was "${currentQ.options[currentQ.correctIndex]}." ${currentQ.explanation}`);
     }
 
-    // Advance to next round or Killing Floor
+    // Long enough to read the joke on the card.
     setTimeout(() => {
       handleAdvanceRound(updatedPlayers);
-    }, 4000);
+    }, 5200);
+  };
+
+  const nextQuestion = () => {
+    setCurrentQIndex(prev => prev + 1);
+    setShowQuestionResults(false);
+    setPlayers(prev => prev.map(p => ({ ...p, selectedAnswer: null, answerTimeMs: null, isAnswerCorrect: null })));
+    setPhase('question');
   };
 
   const handleAdvanceRound = (currentRoster: TriviaPlayer[]) => {
-    // If in Murder Mystery mode and someone failed or had lowest score, trigger Killing Floor
     if (selectedMode === 'murder_mystery' && currentQIndex < questionDeck.length - 1) {
-      const livingPlayers = currentRoster.filter(p => !p.isGhost);
-      const wrongPlayers = livingPlayers.filter(p => !p.isAnswerCorrect);
-      const target = wrongPlayers.length > 0
-        ? wrongPlayers[Math.floor(Math.random() * wrongPlayers.length)]
-        : livingPlayers.sort((a, b) => a.score - b.score)[0];
+      const living = currentRoster.filter(p => !p.isGhost);
+      const wrong = living.filter(p => !p.isAnswerCorrect);
+      const target = wrong.length > 0
+        ? wrong[Math.floor(Math.random() * wrong.length)]
+        : [...living].sort((a, b) => a.score - b.score)[0];
 
       if (target) {
-        const trapTypes: KillingFloorState['type'][] = [
-          'chalice_roulette',
-          'wire_cut',
-          'guillotine_reaction',
-          'math_bomb',
-          'memory_code'
-        ];
-        const randomTrap = trapTypes[Math.floor(Math.random() * trapTypes.length)];
-
+        const traps: KillingFloorState['type'][] = ['chalice_roulette', 'wire_cut', 'guillotine_reaction', 'math_bomb', 'memory_code'];
         setKillingFloor({
-          type: randomTrap,
-          title: 'Survival Floor Trap',
-          description: 'Survive the trap or become a lingering Ghost!',
+          type: traps[Math.floor(Math.random() * traps.length)],
+          title: 'Down to the basement',
+          description: 'Get out of the basement, or stay down there as a ghost.',
           targetPlayerId: target.id,
           timeRemaining: 10,
           isResolved: false,
           survived: null
         });
-
         setPhase('killing_floor');
-        triggerHostQuip(
-          `HALT! ${target.name} has stumbled into Lord Mortimer's Killing Floor! Survive or join the ghosts!`
-        );
+        triggerHostQuip(`${target.name}, the basement light is broken. Good luck.`);
         return;
       }
     }
 
-    // Check if we hit final round in Murder Mystery -> Final Escape
     if (selectedMode === 'murder_mystery' && currentQIndex >= questionDeck.length - 1) {
       setPhase('final_escape');
-      triggerHostQuip(`THE FINAL ESCAPE! Sprint down the mansion hallway to freedom!`);
+      triggerHostQuip('Headlights in the driveway! Get back to bed before they walk in!');
       return;
     }
 
-    // Standard progression
     if (currentQIndex < questionDeck.length - 1) {
-      setCurrentQIndex(prev => prev + 1);
-      setShowQuestionResults(false);
-      setPlayers(prev =>
-        prev.map(p => ({
-          ...p,
-          selectedAnswer: null,
-          answerTimeMs: null,
-          isAnswerCorrect: null
-        }))
-      );
-      setPhase('question');
-      triggerHostQuip(`Next question on the board! Keep your eyes on the buzzer!`);
+      nextQuestion();
+      triggerHostQuip('Next card.');
     } else {
-      // Game Over
       handleMatchComplete(currentRoster);
     }
   };
@@ -334,34 +384,14 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
   const handleSurvivalResult = (survived: boolean) => {
     if (!killingFloor) return;
     const targetId = killingFloor.targetPlayerId;
-
     setPlayers(prev =>
-      prev.map(p => {
-        if (p.id === targetId) {
-          if (!survived) {
-            return { ...p, isGhost: true, lives: Math.max(0, p.lives - 1) };
-          }
-        }
-        return p;
-      })
+      prev.map(p => (p.id === targetId && !survived ? { ...p, isGhost: true, lives: Math.max(0, p.lives - 1) } : p))
     );
-
-    // Return to questions
     setTimeout(() => {
       setKillingFloor(null);
       if (currentQIndex < questionDeck.length - 1) {
-        setCurrentQIndex(prev => prev + 1);
-        setShowQuestionResults(false);
-        setPlayers(prev =>
-          prev.map(p => ({
-            ...p,
-            selectedAnswer: null,
-            answerTimeMs: null,
-            isAnswerCorrect: null
-          }))
-        );
-        setPhase('question');
-        triggerHostQuip(`Back to the trivia stage! The tension is electric!`);
+        nextQuestion();
+        triggerHostQuip('Back upstairs. Somebody turn a light on. Not that one, your dad will see.');
       } else {
         setPhase('final_escape');
       }
@@ -369,22 +399,20 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
   };
 
   const handleMatchComplete = (roster: TriviaPlayer[]) => {
+    setPlayers(roster);
     setPhase('game_over');
     sound.playVictoryFanfare();
     confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
 
-    const sorted = [...roster].sort((a, b) => b.score - a.score);
-    const winner = sorted[0];
+    const winner = [...roster].sort((a, b) => b.score - a.score)[0];
     const isRealMatch = matchFormat === 'pass_and_play' || matchFormat === 'ranked_arena';
-
     triggerHostQuip(
-      `CONGRATULATIONS TO OUR CHAMPION, ${winner.name} with ${winner.score} POINTS! What a legendary show!`,
+      winner.isBot
+        ? `${winner.name} wins. Of course. Go get your shoes, it's getting dark.`
+        : `You win! Don't let it go to your head. Go turn the porch light off.`,
       6000
     );
-
-    if (onGameOver) {
-      onGameOver(winner.name, isRealMatch);
-    }
+    onGameOver?.(winner.name, isRealMatch);
   };
 
   const handleSaveCustomPack = (pack: CustomTriviaPack) => {
@@ -397,361 +425,99 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
     handleStartMatch(pack);
   };
 
-  return (
-    <div className={onTable
-      ? 'relative flex h-full min-h-0 w-full flex-col overflow-hidden text-white select-none'
-      : 'w-full text-white rounded-3xl p-3 sm:p-4 flex flex-col items-center justify-between relative select-none'}>
-      {/* Background Ambience / Stage Lighting */}
-      {!onTable && (
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-950/40 via-slate-950 to-black pointer-events-none" />
-      )}
+  const standings = [...players].sort((a, b) => b.score - a.score);
+  const isRerun = selectedMode === 'rerun_board';
+  const scoreText = (n: number) => (isRerun ? `${n < 0 ? '-' : ''}$${Math.abs(n).toLocaleString()}` : `${n.toLocaleString()} pts`);
 
-      {/* Top Navigation & Host Strip */}
-      {!(onTable && (phase === 'mode_select' || phase === 'question')) && (
-      <div className={`w-full flex flex-col items-stretch z-10 min-w-0 ${onTable ? 'shrink-0 gap-1 px-2 pt-1' : 'gap-3 mb-4'}`}>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => setPhase('mode_select')}
-            className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-bold text-slate-300 hover:text-white transition flex items-center gap-1.5"
-          >
-            <RotateCcw className="w-3.5 h-3.5" /> Modes
-          </button>
-
-          {/* Mode Badge */}
-          <span className="bg-indigo-950/90 text-indigo-300 border border-indigo-500/40 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 shadow">
-            <Sparkles className="w-3 h-3 text-amber-400" />
-            {selectedMode.replaceAll('_', ' ')}
-          </span>
-
-          {/* Real Match vs Bot Practice Tag */}
-          <span
-            className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider border ${
-              matchFormat === 'solo_vs_ai'
-                ? 'bg-amber-950/80 text-amber-300 border-amber-500/50'
-                : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50'
-            }`}
-          >
-            {matchFormat === 'solo_vs_ai'
-              ? '🤖 AI PRACTICE TIER'
-              : matchFormat === 'team_vs_ai'
-              ? '🤝 CO-OP TEAM MATCH'
-              : '🏆 RANKED PVP ARENA'}
-          </span>
-        </div>
-
-        {/* Theatrical Host Pod */}
-        {!onTable && (
-          <AnimatedHost host={activeHost} quipText={hostQuip} isSpeaking={isHostSpeaking} compact={phase === 'question' || phase === 'killing_floor'} />
-        )}
-      </div>
-      )}
-
-      {/* Main Content Area based on Game Phase */}
-      <div className={onTable
-        ? `z-10 flex min-h-0 w-full flex-1 flex-col ${phase === 'question' || phase === 'mode_select' ? 'overflow-hidden' : 'overflow-y-auto'}`
-        : 'w-full flex-1 flex flex-col items-center justify-center z-10 my-2'}>
-        {/* Phase 1: Mode Select Menu */}
+  // ---------------------------------------------------------------- on the table
+  if (onTable) {
+    const showNote = phase === 'lobby' || phase === 'game_over' || phase === 'killing_floor' || phase === 'final_escape';
+    return (
+      <div className="tt-board relative flex h-full min-h-0 w-full flex-col overflow-hidden select-none">
         {phase === 'mode_select' && (
-          <div className={onTable
-            ? 'flex h-full min-h-0 w-full flex-col p-1.5'
-            : 'w-full max-w-4xl flex flex-col items-center animate-in fade-in zoom-in duration-300'}>
-            <div className={onTable ? 'mb-1 shrink-0 text-center' : 'text-center mb-6'}>
-              <h1 className={`font-black uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-pink-400 to-purple-400 flex items-center justify-center gap-2 ${onTable ? 'text-sm' : 'text-2xl sm:text-3xl'}`}>
-                <Crown className={onTable ? 'h-4 w-4 text-amber-400' : 'w-7 h-7 text-amber-400'} />
-                THROWBACK TRIVIA
+          <div className="flex h-full min-h-0 flex-col p-2.5">
+            <div className="mb-2 flex shrink-0 items-end justify-between gap-2">
+              <h1 className="tt-marker leading-none text-[#f2c14e]" style={{ textShadow: '2px 2px 0 #000', fontSize: 'clamp(18px, 5cqmin, 44px)' }}>
+                Throwback Trivia
               </h1>
-              {!onTable && (
-                <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-xl mx-auto">
-                  Born in 1991. Pictures fade in, Archive commercials play, and the 8-bit cues hush the TV, the radio, and the bedroom tape.
-                </p>
-              )}
+              <p className="tt-sticky tt-s max-w-[55%] truncate rounded-sm px-2 py-1 font-bold">
+                {activeHost.avatar} {hostQuip}
+              </p>
             </div>
-
-            {/* Sub-Mode Cards Grid */}
-            <div className={onTable
-              ? 'grid min-h-0 flex-1 grid-cols-4 grid-rows-2 gap-1.5 [&_button]:h-full [&_button]:min-h-0 [&_button]:justify-start [&_button]:overflow-hidden [&_button]:rounded-xl [&_button]:p-2 [&_button]:shadow-none [&_button]:hover:scale-100 [&_h3]:text-xs [&_h3]:leading-tight [&_p]:line-clamp-2 [&_p]:text-[10px] [&_p]:leading-tight [&_.w-12]:mb-1 [&_.w-12]:h-7 [&_.w-12]:w-7 [&_.w-12]:text-base [&_.mt-4]:mt-1'
-              : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full mb-6'}>
-              {/* Mode 1: Party Mix */}
-              <button
-                onClick={() => {
-                  setSelectedMode('party_mix');
-                  setPhase('lobby');
-                  sound.playButtonClick();
-                }}
-                className="bg-gradient-to-b from-indigo-950/80 to-slate-950 border-2 border-indigo-500/40 hover:border-amber-400 rounded-3xl p-5 text-left flex flex-col justify-between shadow-xl transition-transform hover:scale-[1.03] group"
-              >
-                <div>
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-600/30 border border-indigo-400 flex items-center justify-center text-2xl mb-3 group-hover:rotate-6 transition-transform">
-                    🎙️
-                  </div>
-                  <h3 className="font-black text-base text-white group-hover:text-amber-300 transition">
-                    Throwback Mix
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    The whole block. Pictures, commercials, clothes, the porch light, and the 8-bit.
-                  </p>
-                </div>
-                <div className="mt-4 text-[10px] font-mono font-bold text-amber-300 flex items-center gap-1 uppercase tracking-wider">
-                  Host: DJ Rewind <ArrowRight className="w-3 h-3" />
-                </div>
-              </button>
-
-              {/* Mode 2: Hollywood Cinephile */}
-              <button
-                onClick={() => {
-                  setSelectedMode('cinephile');
-                  setPhase('lobby');
-                  sound.playButtonClick();
-                }}
-                className="bg-gradient-to-b from-rose-950/80 to-slate-950 border-2 border-rose-500/40 hover:border-amber-400 rounded-3xl p-5 text-left flex flex-col justify-between shadow-xl transition-transform hover:scale-[1.03] group"
-              >
-                <div>
-                  <div className="w-12 h-12 rounded-2xl bg-rose-600/30 border border-rose-400 flex items-center justify-center text-2xl mb-3 group-hover:rotate-6 transition-transform">
-                    🎬
-                  </div>
-                  <h3 className="font-black text-base text-white group-hover:text-amber-300 transition">
-                    Saturday Clips
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Internet Archive commercials and the movies that raised the class of 1991.
-                  </p>
-                </div>
-                <div className="mt-4 text-[10px] font-mono font-bold text-rose-300 flex items-center gap-1 uppercase tracking-wider">
-                  Host: Director Scarlett <ArrowRight className="w-3 h-3" />
-                </div>
-              </button>
-
-              {/* Mode 3: Video Game Vault */}
-              <button
-                onClick={() => {
-                  setSelectedMode('gaming_vault');
-                  setPhase('lobby');
-                  sound.playButtonClick();
-                }}
-                className="bg-gradient-to-b from-cyan-950/80 to-slate-950 border-2 border-cyan-500/40 hover:border-amber-400 rounded-3xl p-5 text-left flex flex-col justify-between shadow-xl transition-transform hover:scale-[1.03] group"
-              >
-                <div>
-                  <div className="w-12 h-12 rounded-2xl bg-cyan-600/30 border border-cyan-400 flex items-center justify-center text-2xl mb-3 group-hover:rotate-6 transition-transform">
-                    🕹️
-                  </div>
-                  <h3 className="font-black text-base text-white group-hover:text-amber-300 transition">
-                    Cartridge Years
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    SNES in 1991, the N64, the Dreamcast date you could chant, and the gray brick.
-                  </p>
-                </div>
-                <div className="mt-4 text-[10px] font-mono font-bold text-cyan-300 flex items-center gap-1 uppercase tracking-wider">
-                  Host: Pixel-8 Hologram <ArrowRight className="w-3 h-3" />
-                </div>
-              </button>
-
-              {/* Mode 4: Trivia Murder Mystery */}
-              <button
-                onClick={() => {
-                  setSelectedMode('murder_mystery');
-                  setPhase('lobby');
-                  sound.playButtonClick();
-                }}
-                className="bg-gradient-to-b from-purple-950/90 to-black border-2 border-rose-600/60 hover:border-rose-400 rounded-3xl p-5 text-left flex flex-col justify-between shadow-xl transition-transform hover:scale-[1.03] group"
-              >
-                <div>
-                  <div className="w-12 h-12 rounded-2xl bg-rose-600/30 border border-rose-500 flex items-center justify-center text-2xl mb-3 group-hover:rotate-6 transition-transform">
-                    💀
-                  </div>
-                  <h3 className="font-black text-base text-white group-hover:text-rose-300 transition flex items-center gap-1.5">
-                    After Dark
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    The hallway after the porch light. Miss one and the Killing Floor still wants you.
-                  </p>
-                </div>
-                <div className="mt-4 text-[10px] font-mono font-bold text-rose-400 flex items-center gap-1 uppercase tracking-wider">
-                  Host: Lord Mortimer <ArrowRight className="w-3 h-3" />
-                </div>
-              </button>
-
-              {/* Mode 5: Name That 8-Bit Tune */}
-              <button
-                onClick={() => {
-                  setSelectedMode('name_that_tune');
-                  setPhase('lobby');
-                  sound.playButtonClick();
-                }}
-                className="bg-gradient-to-b from-emerald-950/80 to-slate-950 border-2 border-emerald-500/40 hover:border-amber-400 rounded-3xl p-5 text-left flex flex-col justify-between shadow-xl transition-transform hover:scale-[1.03] group"
-              >
-                <div>
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-600/30 border border-emerald-400 flex items-center justify-center text-2xl mb-3 group-hover:rotate-6 transition-transform">
-                    🎵
-                  </div>
-                  <h3 className="font-black text-base text-white group-hover:text-amber-300 transition">
-                    8-Bit Boombox
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    The old cues, rewritten with a bass and a second voice. The room goes quiet so you can hear them.
-                  </p>
-                </div>
-                <div className="mt-4 text-[10px] font-mono font-bold text-emerald-300 flex items-center gap-1 uppercase tracking-wider">
-                  Pauses TV, radio, and music <ArrowRight className="w-3 h-3" />
-                </div>
-              </button>
-
-              <button
-                onClick={() => {
-                  setSelectedMode('picture_fade');
-                  setPhase('lobby');
-                  sound.playButtonClick();
-                }}
-                className="bg-gradient-to-b from-amber-950/80 to-slate-950 border-2 border-amber-500/40 hover:border-amber-300 rounded-3xl p-5 text-left flex flex-col justify-between shadow-xl transition-transform hover:scale-[1.03] group"
-              >
-                <div>
-                  <div className="w-12 h-12 rounded-2xl bg-amber-600/30 border border-amber-300 flex items-center justify-center text-2xl mb-3 group-hover:rotate-6 transition-transform">
-                    📷
-                  </div>
-                  <h3 className="font-black text-base text-white group-hover:text-amber-300 transition">
-                    Fade the Picture
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Streetlights, parachute pants, the gray brick. It comes into focus. Say it before it does.
-                  </p>
-                </div>
-                <div className="mt-4 text-[10px] font-mono font-bold text-amber-200 flex items-center gap-1 uppercase tracking-wider">
-                  Wikimedia stills <ArrowRight className="w-3 h-3" />
-                </div>
-              </button>
-
-              <button
-                onClick={() => {
-                  setSelectedMode('heart_block');
-                  setPhase('lobby');
-                  sound.playButtonClick();
-                }}
-                className="bg-gradient-to-b from-rose-950/70 to-slate-950 border-2 border-rose-400/30 hover:border-amber-300 rounded-3xl p-5 text-left flex flex-col justify-between shadow-xl transition-transform hover:scale-[1.03] group"
-              >
-                <div>
-                  <div className="w-12 h-12 rounded-2xl bg-rose-600/20 border border-rose-300 flex items-center justify-center text-2xl mb-3 group-hover:rotate-6 transition-transform">
-                    💛
-                  </div>
-                  <h3 className="font-black text-base text-white group-hover:text-amber-300 transition">
-                    Closet & the Porch
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    JNCOs, Starter jackets, the middle name from the porch, the empty desk on Monday.
-                  </p>
-                </div>
-                <div className="mt-4 text-[10px] font-mono font-bold text-rose-200 flex items-center gap-1 uppercase tracking-wider">
-                  The ones that stay <ArrowRight className="w-3 h-3" />
-                </div>
-              </button>
-
-              {/* Custom Pack Creator */}
-              <button
-                onClick={() => {
-                  setPhase('creator');
-                  sound.playButtonClick();
-                }}
-                className="bg-gradient-to-b from-purple-950/80 to-indigo-950 border-2 border-purple-500/40 hover:border-amber-400 rounded-3xl p-5 text-left flex flex-col justify-between shadow-xl transition-transform hover:scale-[1.03] group"
-              >
-                <div>
-                  <div className="w-12 h-12 rounded-2xl bg-purple-600/30 border border-purple-400 flex items-center justify-center text-2xl mb-3 group-hover:rotate-6 transition-transform">
-                    🛠️
-                  </div>
-                  <h3 className="font-black text-base text-white group-hover:text-amber-300 transition flex items-center gap-1.5">
-                    Make Your Own Pack
-                    <span className="text-[9px] bg-purple-500 text-white px-1.5 py-0.5 rounded font-mono font-bold">
-                      AI GENERATOR
+            <div className="grid min-h-0 flex-1 grid-cols-5 grid-rows-2 gap-2">
+              {MODES.map((card, i) => (
+                <button
+                  key={card.id}
+                  type="button"
+                  onClick={() => pickMode(card)}
+                  className="tt-card tt-pop relative flex min-h-0 flex-col overflow-hidden p-0 text-left"
+                  style={{ animationDelay: `${i * 45}ms` }}
+                >
+                  <div className="flex shrink-0 items-center gap-1.5 px-2 py-1 text-white" style={{ background: card.ink }}>
+                    <span className="tt-a leading-none">{card.icon}</span>
+                    <span className="tt-s truncate font-black uppercase tracking-wider">
+                      {card.id === 'rerun_board' ? 'New!' : hostById(card.host).name}
                     </span>
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Create custom quizzes or use Google AI to build instant packs for any movie, franchise, or anime topic!
-                  </p>
-                </div>
-                <div className="mt-4 text-[10px] font-mono font-bold text-purple-300 flex items-center gap-1 uppercase tracking-wider">
-                  Open Pack Builder <ArrowRight className="w-3 h-3" />
-                </div>
-              </button>
+                  </div>
+                  <div className="flex min-h-0 flex-1 flex-col gap-0.5 px-2 py-1.5">
+                    <h3 className="tt-marker tt-h">{card.title}</h3>
+                    <p className="tt-s line-clamp-4 leading-tight text-[#2a1d12]/75">{card.blurb}</p>
+                  </div>
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute bottom-1 right-2 rotate-[-8deg] leading-none drop-shadow-[0_3px_0_rgba(0,0,0,0.15)]"
+                    style={{ fontSize: 'clamp(22px, 11cqmin, 96px)' }}
+                  >
+                    {card.icon}
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
         )}
 
-        {/* Phase 2: Match Setup Lobby */}
         {phase === 'lobby' && (
-          <div className={onTable
-            ? 'm-1 flex w-auto flex-col items-center rounded-2xl border border-amber-200/20 bg-black/35 p-3 text-center'
-            : 'w-full max-w-2xl bg-slate-900/90 border border-slate-700/80 rounded-3xl p-6 sm:p-8 text-center shadow-2xl flex flex-col items-center animate-in zoom-in duration-200'}>
-            <h2 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-white mb-2 flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-amber-400" />
-              MATCH SETUP • {selectedMode.replaceAll('_', ' ').toUpperCase()}
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-300 mb-6">
-              Choose your match format. Real player matches track on season leaderboards, while AI matches let you train with custom bot personalities!
-            </p>
-
-            {/* Match Format Selector */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full mb-8">
-              <button
-                onClick={() => {
-                  setMatchFormat('solo_vs_ai');
-                  sound.playButtonClick();
-                }}
-                className={`p-4 rounded-2xl border-2 text-left transition-all ${
-                  matchFormat === 'solo_vs_ai'
-                    ? 'bg-amber-950/60 border-amber-400 text-white shadow-lg'
-                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-600'
-                }`}
-              >
-                <Bot className="w-6 h-6 text-amber-400 mb-2" />
-                <div className="font-bold text-xs uppercase">Solo vs AI Bots</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">Practice lobby with 3 distinct AI bot rivals.</div>
+          <div className="flex h-full min-h-0 flex-col items-center justify-center gap-3 p-3">
+            <div className="tt-paper tt-pop w-full max-w-[70%] py-4 pl-10 pr-5">
+              <p className="tt-s font-black uppercase tracking-[0.2em] text-[#c0392b]">{mode.icon} {mode.title}</p>
+              <p className="tt-type tt-q mt-1">{mode.blurb}</p>
+            </div>
+            <div className="grid w-full max-w-[70%] grid-cols-3 gap-3">
+              {FORMATS.map((f, i) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => {
+                    setMatchFormat(f.id);
+                    sound.playButtonClick();
+                  }}
+                  data-state={matchFormat === f.id ? 'picked' : undefined}
+                  className="tt-card tt-pop flex flex-col items-start gap-1 p-3 text-left"
+                  style={{ animationDelay: `${100 + i * 70}ms` }}
+                >
+                  <span className="text-[#2457c5]">{f.icon}</span>
+                  <span className="tt-marker tt-h">{f.title}</span>
+                  <span className="tt-s leading-tight text-[#2a1d12]/70">{f.blurb}</span>
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setPhase('mode_select')} className="tt-key">
+                ◀ Other boxes
               </button>
-
               <button
-                onClick={() => {
-                  setMatchFormat('team_vs_ai');
-                  sound.playButtonClick();
-                }}
-                className={`p-4 rounded-2xl border-2 text-left transition-all ${
-                  matchFormat === 'team_vs_ai'
-                    ? 'bg-indigo-950/60 border-indigo-400 text-white shadow-lg'
-                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-600'
-                }`}
+                type="button"
+                onClick={() => handleStartMatch()}
+                className="tt-card tt-pop tt-a flex items-center gap-2 px-6 py-2.5 font-black uppercase tracking-widest"
+                style={{ background: '#f2c14e', animationDelay: '320ms' }}
               >
-                <Users className="w-6 h-6 text-indigo-400 mb-2" />
-                <div className="font-bold text-xs uppercase">Team Co-op vs AI</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">Play as Human + AI Partner vs rival Bot Team.</div>
-              </button>
-
-              <button
-                onClick={() => {
-                  setMatchFormat('pass_and_play');
-                  sound.playButtonClick();
-                }}
-                className={`p-4 rounded-2xl border-2 text-left transition-all ${
-                  matchFormat === 'pass_and_play'
-                    ? 'bg-emerald-950/60 border-emerald-400 text-white shadow-lg'
-                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-600'
-                }`}
-              >
-                <Trophy className="w-6 h-6 text-emerald-400 mb-2" />
-                <div className="font-bold text-xs uppercase">Ranked Real Match</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">2-Player Pass-and-Play ranked competition.</div>
+                <Play className="h-4 w-4" /> Deal the cards
               </button>
             </div>
-
-            {/* Start Button */}
-            <button
-              onClick={() => handleStartMatch()}
-              className="w-full max-w-sm py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-purple-600 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-white font-black text-sm uppercase tracking-widest shadow-2xl transition-transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
-            >
-              <Play className="w-5 h-5 text-white" />
-              START THROWBACK
-            </button>
           </div>
         )}
 
-        {/* Phase 3: Active Question View */}
         {phase === 'question' && questionDeck.length > 0 && (
-          <div className={onTable ? 'h-full min-h-0' : 'contents'}>
           <TriviaQuestionScreen
             key={questionDeck[currentQIndex].id}
             question={questionDeck[currentQIndex]}
@@ -762,10 +528,173 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
             onAnswerSelected={handleAnswerSelected}
             showResults={showQuestionResults}
           />
+        )}
+
+        {phase === 'rerun' && <RerunBoardGame players={players} onFinish={handleMatchComplete} />}
+
+        {phase === 'killing_floor' && killingFloor && (
+          <div className="min-h-0 flex-1 overflow-y-auto p-2">
+            <KillingFloorView
+              killingFloor={killingFloor}
+              targetPlayer={players.find(p => p.id === killingFloor.targetPlayerId) || players[0]}
+              onSurvivalResult={handleSurvivalResult}
+            />
           </div>
         )}
 
-        {/* Phase 4: Killing Floor View (Murder Mystery) */}
+        {phase === 'final_escape' && (
+          <div className="min-h-0 flex-1 overflow-y-auto p-2">
+            <FinalEscapeView players={players} onEscapeComplete={() => handleMatchComplete(players)} />
+          </div>
+        )}
+
+        {phase === 'creator' && (
+          <div className="min-h-0 flex-1 overflow-y-auto p-2">
+            <CustomPackCreator
+              onSavePack={handleSaveCustomPack}
+              onPlayPackNow={handlePlayCustomPack}
+              onCancel={() => setPhase('mode_select')}
+            />
+          </div>
+        )}
+
+        {phase === 'game_over' && (
+          <div className="flex h-full min-h-0 items-center justify-center gap-3 p-3">
+            <div className="tt-paper tt-pop flex max-h-full w-full max-w-md flex-col overflow-hidden py-3 pl-9 pr-4">
+              <p className="tt-marker text-xl leading-none text-[#c0392b]">Final score</p>
+              <p className="tt-type mb-2 text-[11px] opacity-70">{mode.title} · written on the back of a pizza box</p>
+              <ol className="min-h-0 flex-1 space-y-1 overflow-y-auto">
+                {standings.map((p, idx) => (
+                  <li key={p.id} className="tt-type flex items-center justify-between gap-2 text-[13px]">
+                    <span className="truncate">
+                      {idx === 0 ? '★' : `${idx + 1}.`} {p.isGhost ? '👻' : p.avatar} {p.name}
+                    </span>
+                    <span className={`tt-marker shrink-0 ${idx === 0 ? 'text-[#c0392b]' : ''}`}>{scoreText(p.score)}</span>
+                  </li>
+                ))}
+              </ol>
+              <div className="mt-3 flex gap-2">
+                <button type="button" onClick={() => handleStartMatch()} className="tt-key">
+                  Rematch
+                </button>
+                <button type="button" onClick={() => setPhase('mode_select')} className="tt-key">
+                  Other boxes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showNote && (
+          <p className="tt-sticky tt-s pointer-events-none absolute bottom-3 right-3 max-w-[34%] rounded-sm px-2.5 py-1.5 font-bold leading-snug">
+            {activeHost.avatar} <span className="uppercase">{activeHost.name}:</span> {hostQuip}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // ------------------------------------------------------------ in a window
+  return (
+    <div className="w-full text-white rounded-3xl p-3 sm:p-4 flex flex-col items-center justify-between relative select-none">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-950/40 via-slate-950 to-black pointer-events-none" />
+
+      <div className="w-full flex flex-col items-stretch z-10 min-w-0 gap-3 mb-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setPhase('mode_select')}
+            className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-bold text-slate-300 hover:text-white transition flex items-center gap-1.5"
+          >
+            <RotateCcw className="w-3.5 h-3.5" /> Boxes
+          </button>
+          <span className="bg-indigo-950/90 text-indigo-300 border border-indigo-500/40 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 shadow">
+            <Sparkles className="w-3 h-3 text-amber-400" />
+            {mode.title}
+          </span>
+        </div>
+        <AnimatedHost host={activeHost} quipText={hostQuip} isSpeaking={isHostSpeaking} compact={phase !== 'mode_select'} />
+      </div>
+
+      <div className="w-full flex-1 flex flex-col items-center justify-center z-10 my-2">
+        {phase === 'mode_select' && (
+          <div className="w-full max-w-4xl flex flex-col items-center animate-in fade-in zoom-in duration-300">
+            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-pink-400 to-purple-400 flex items-center justify-center gap-2 mb-6">
+              <Crown className="w-7 h-7 text-amber-400" />
+              THROWBACK TRIVIA
+            </h1>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full mb-6">
+              {MODES.map(card => (
+                <button
+                  key={card.id}
+                  onClick={() => pickMode(card)}
+                  className="bg-slate-950 border-2 rounded-3xl p-5 text-left flex flex-col justify-between shadow-xl transition-transform hover:scale-[1.03] group"
+                  style={{ borderColor: card.ink }}
+                >
+                  <div>
+                    <div className="text-2xl mb-2">{card.icon}</div>
+                    <h3 className="font-black text-base text-white group-hover:text-amber-300 transition">{card.title}</h3>
+                    <p className="text-xs text-slate-400 mt-1">{card.blurb}</p>
+                  </div>
+                  <div className="mt-4 text-[10px] font-mono font-bold text-amber-300 flex items-center gap-1 uppercase tracking-wider">
+                    Host: {hostById(card.host).name} <ArrowRight className="w-3 h-3" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {phase === 'lobby' && (
+          <div className="w-full max-w-2xl bg-slate-900/90 border border-slate-700/80 rounded-3xl p-6 sm:p-8 text-center shadow-2xl flex flex-col items-center">
+            <h2 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-white mb-2">{mode.title}</h2>
+            <p className="text-xs sm:text-sm text-slate-300 mb-6">{mode.blurb}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full mb-8">
+              {FORMATS.map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => {
+                    setMatchFormat(f.id);
+                    sound.playButtonClick();
+                  }}
+                  className={`p-4 rounded-2xl border-2 text-left transition-all ${
+                    matchFormat === f.id ? 'bg-amber-950/60 border-amber-400 text-white shadow-lg' : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-600'
+                  }`}
+                >
+                  <div className="text-amber-400 mb-2">{f.icon}</div>
+                  <div className="font-bold text-xs uppercase">{f.title}</div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">{f.blurb}</div>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => handleStartMatch()}
+              className="w-full max-w-sm py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-purple-600 to-indigo-600 text-white font-black text-sm uppercase tracking-widest shadow-2xl transition-transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+            >
+              <Play className="w-5 h-5 text-white" />
+              DEAL THE CARDS
+            </button>
+          </div>
+        )}
+
+        {phase === 'question' && questionDeck.length > 0 && (
+          <TriviaQuestionScreen
+            key={questionDeck[currentQIndex].id}
+            question={questionDeck[currentQIndex]}
+            roundNumber={currentQIndex + 1}
+            totalRounds={questionDeck.length}
+            players={players}
+            activePlayer={players.find(p => !p.isBot) || players[0]}
+            onAnswerSelected={handleAnswerSelected}
+            showResults={showQuestionResults}
+          />
+        )}
+
+        {phase === 'rerun' && (
+          <div className="tt-board h-[30rem] w-full max-w-4xl">
+            <RerunBoardGame players={players} onFinish={handleMatchComplete} />
+          </div>
+        )}
+
         {phase === 'killing_floor' && killingFloor && (
           <KillingFloorView
             killingFloor={killingFloor}
@@ -774,15 +703,10 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
           />
         )}
 
-        {/* Phase 5: Final Escape View (Murder Mystery Climax) */}
         {phase === 'final_escape' && (
-          <FinalEscapeView
-            players={players}
-            onEscapeComplete={winner => handleMatchComplete(players)}
-          />
+          <FinalEscapeView players={players} onEscapeComplete={() => handleMatchComplete(players)} />
         )}
 
-        {/* Phase 6: Custom Pack Builder & AI Generator */}
         {phase === 'creator' && (
           <CustomPackCreator
             onSavePack={handleSaveCustomPack}
@@ -791,92 +715,47 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
           />
         )}
 
-        {/* Phase 7: Game Over / Victory Podium */}
         {phase === 'game_over' && (
-          <div className="w-full max-w-2xl bg-slate-900/95 border-2 border-amber-500/50 rounded-3xl p-6 sm:p-8 text-center shadow-2xl flex flex-col items-center animate-in zoom-in duration-300">
+          <div className="w-full max-w-2xl bg-slate-900/95 border-2 border-amber-500/50 rounded-3xl p-6 sm:p-8 text-center shadow-2xl flex flex-col items-center">
             <Trophy className="w-14 h-14 text-amber-400 animate-bounce mb-2" />
-            <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-amber-400 to-rose-400 mb-1">
-              THROWBACK'S OVER
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-300 mb-6">
-              Final Season Leaderboard Scores & Podium Standings
-            </p>
-
-            {/* Scoreboard List */}
+            <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-wider text-amber-300 mb-4">Final score</h2>
             <div className="w-full flex flex-col gap-2.5 mb-6 max-w-lg">
-              {[...players]
-                .sort((a, b) => b.score - a.score)
-                .map((p, idx) => (
-                  <div
-                    key={p.id}
-                    className={`flex items-center justify-between p-3 rounded-2xl border ${
-                      idx === 0
-                        ? 'bg-amber-950/60 border-amber-400 text-amber-200 shadow-lg'
-                        : 'bg-slate-950/80 border-slate-800 text-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="w-6 font-mono font-black text-sm">
-                        {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`}
-                      </span>
-                      <div className={`w-8 h-8 rounded-full ${p.color} flex items-center justify-center text-sm shadow`}>
-                        {p.isGhost ? '👻' : p.avatar}
-                      </div>
-                      <div className="text-left">
-                        <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                          {p.name}
-                          {p.isBot && (
-                            <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-mono">
-                              AI BOT
-                            </span>
-                          )}
-                          {p.isGhost && (
-                            <span className="text-[9px] bg-purple-900/80 text-purple-300 px-1.5 py-0.5 rounded font-mono">
-                              GHOST
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[10px] text-slate-400 font-mono">
-                          Streak: {p.streak} • Lives: {p.lives}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <span className="text-sm font-mono font-black text-amber-300">
-                        {p.score.toLocaleString()} PTS
-                      </span>
-                    </div>
-                  </div>
-                ))}
+              {standings.map((p, idx) => (
+                <div
+                  key={p.id}
+                  className={`flex items-center justify-between p-3 rounded-2xl border ${
+                    idx === 0 ? 'bg-amber-950/60 border-amber-400 text-amber-200' : 'bg-slate-950/80 border-slate-800 text-slate-300'
+                  }`}
+                >
+                  <span className="text-xs font-bold">
+                    {idx + 1}. {p.isGhost ? '👻' : p.avatar} {p.name}
+                  </span>
+                  <span className="text-sm font-mono font-black text-amber-300">{scoreText(p.score)}</span>
+                </div>
+              ))}
             </div>
-
-            {/* Rematch / Back to Modes */}
             <div className="flex gap-3">
               <button
                 onClick={() => handleStartMatch()}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg transition transform hover:scale-105"
+                className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider"
               >
-                Play Rematch
+                Rematch
               </button>
               <button
                 onClick={() => setPhase('mode_select')}
-                className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-bold text-xs uppercase tracking-wider transition"
+                className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-bold text-xs uppercase tracking-wider"
               >
-                Mode Menu
+                Other boxes
               </button>
             </div>
           </div>
         )}
       </div>
 
-      {/* Footer Game Tip */}
-      {!onTable && (
       <div className="w-full flex items-center justify-between text-[10px] font-mono text-slate-500 pt-2 border-t border-slate-900 z-10">
-        <span>Throwback Trivia · born 1991 · the room goes quiet for the 8-bit</span>
+        <span>Throwback Trivia · the room goes quiet for the boombox</span>
         <span>Commons photos · Internet Archive clips</span>
       </div>
-      )}
     </div>
   );
 };

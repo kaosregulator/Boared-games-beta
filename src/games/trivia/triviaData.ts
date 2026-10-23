@@ -5,54 +5,54 @@ export const TRIVIA_HOSTS: HostCharacter[] = [
   {
     id: 'buzz',
     name: 'DJ Rewind',
-    title: 'The Bedroom Boombox',
+    title: 'Owns every tape on the shelf',
     avatar: '📼',
     themeColor: 'from-amber-500 via-purple-600 to-indigo-700',
     accentGlow: 'text-yellow-400 border-yellow-400',
-    personality: 'Talks like a 1991 kid who never left the block. Hushes the room when the 8-bit starts.',
-    defaultGreeting: 'Born in \'91. The streetlights are coming on. Let\'s see what you still remember.'
+    personality: 'Talks like a kid from 1991 who never left the block. Hushes the room when the boombox starts.',
+    defaultGreeting: "Shoes off, door shut, lights OFF if you leave the room. Let's see what you still remember.",
   },
   {
     id: 'mortimer',
-    name: 'Lord Mortimer',
-    title: 'Victorian Ghost & Murder Mystery Master',
-    avatar: '👻',
+    name: 'The Babysitter',
+    title: 'Lets you stay up for the scary stuff',
+    avatar: '🕯️',
     themeColor: 'from-purple-950 via-slate-900 to-rose-950',
     accentGlow: 'text-rose-400 border-rose-500',
-    personality: 'Gothic, eerie, politely sinister, welcomes players to his deadly Victorian manor.',
-    defaultGreeting: 'Welcome to my humble manor... Answer correctly, or take your chances on the Killing Floor!'
+    personality: 'Tells the story with a flashlight under her chin. Miss one and the Killing Floor gets you.',
+    defaultGreeting: "Your parents won't be home till late. Miss a question and you go down to the basement. Alone.",
   },
   {
     id: 'pixel8',
-    name: 'Pixel-8 Hologram',
-    title: 'Retro Arcade System AI',
+    name: 'Cousin Pixel',
+    title: 'Has every cartridge, lets you hold none',
     avatar: '👾',
     themeColor: 'from-cyan-900 via-blue-950 to-emerald-950',
     accentGlow: 'text-cyan-400 border-cyan-400',
-    personality: 'Chiptune loving, glitchy 8-bit enthusiast who speaks in retro video game jargon.',
-    defaultGreeting: 'SYSTEM ONLINE. The TV, the radio, and the tape just stepped aside. These 8-bit cues are ours. Listen.'
+    personality: 'The older cousin with the good console. Blows in every cartridge.',
+    defaultGreeting: "TV's off, radio's off, tape's off. The boombox has the room. Don't touch my controller.",
   },
   {
     id: 'scarlett',
-    name: 'Director Scarlett',
-    title: 'Hollywood Film Buff',
-    avatar: '🎬',
+    name: 'Mom, From the Kitchen',
+    title: 'Heard everything, saw everything',
+    avatar: '🍳',
     themeColor: 'from-rose-900 via-amber-950 to-slate-900',
     accentGlow: 'text-amber-400 border-amber-500',
-    personality: 'Fast-talking film critic who quotes classic cinema and tests deep movie knowledge.',
-    defaultGreeting: 'QUIET ON SET! Cameras rolling! Let\'s see who actually knows their Oscar winners and cult classics!'
-  }
+    personality: 'Yells trivia through the wall. Wants to know who left the fridge open.',
+    defaultGreeting: "I'm not asking twice. Who left the front door open? Were you raised in a barn? Answer the question.",
+  },
 ];
 
-/** The Jackbox pack, rebuilt as Throwback Trivia. */
+/** Every throwback question. Modes filter this by category and type. */
 export const TRIVIA_QUESTIONS: TriviaQuestion[] = NOSTALGIA_DECK;
 
 export const PRESET_CUSTOM_PACKS: CustomTriviaPack[] = [
   {
     id: 'pack_retro_90s',
-    title: '90s Nostalgia & Cartoons',
-    description: 'Throwback questions on 90s Saturday morning cartoons, commercials, VHS tapes, and snacks.',
-    author: 'TriviaBot_Curator',
+    title: 'Saturday Morning Starter Pack',
+    description: 'Cartoons, cereal, and a pet that died in your desk.',
+    author: 'DJ Rewind',
     category: '90s Pop Culture',
     createdAt: '2026',
     questions: [
@@ -80,9 +80,9 @@ export const PRESET_CUSTOM_PACKS: CustomTriviaPack[] = [
   },
   {
     id: 'pack_horror_cinema',
-    title: 'Slasher & Cult Horror',
-    description: 'From Camp Crystal Lake to Elm Street and the Overlook Hotel.',
-    author: 'Lord_Mortimer',
+    title: 'Sleepover Scary Movies',
+    description: 'The tapes your older cousin rented when the parents went out.',
+    author: 'The Babysitter',
     category: 'Horror Films',
     createdAt: '2026',
     questions: [
@@ -113,8 +113,8 @@ export const PRESET_CUSTOM_PACKS: CustomTriviaPack[] = [
 export const MOCK_TRIVIA_AI_BOTS = [
   {
     id: 'bot_carl',
-    name: 'Cinephile Carl',
-    avatar: '🍿',
+    name: 'Know-It-All Kyle',
+    avatar: '🤓',
     color: 'bg-rose-600',
     botPersonality: 'cinephile' as const,
     botAccuracy: 0.9,
@@ -129,7 +129,7 @@ export const MOCK_TRIVIA_AI_BOTS = [
   },
   {
     id: 'bot_pete',
-    name: 'Pixel Pete',
+    name: 'Cousin Bobby',
     avatar: '🕹️',
     color: 'bg-cyan-600',
     botPersonality: 'gamer' as const,
@@ -145,8 +145,8 @@ export const MOCK_TRIVIA_AI_BOTS = [
   },
   {
     id: 'bot_bot9000',
-    name: 'TriviaBot 9000',
-    avatar: '🤖',
+    name: 'Grandpa',
+    avatar: '👴',
     color: 'bg-indigo-600',
     botPersonality: 'genius' as const,
     botAccuracy: 0.82,
@@ -161,8 +161,8 @@ export const MOCK_TRIVIA_AI_BOTS = [
   },
   {
     id: 'bot_polly',
-    name: 'Panic Polly',
-    avatar: '😱',
+    name: 'Little Sister',
+    avatar: '🎀',
     color: 'bg-amber-600',
     botPersonality: 'panic' as const,
     botAccuracy: 0.65,

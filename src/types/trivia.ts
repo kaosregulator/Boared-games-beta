@@ -12,6 +12,9 @@ export type TriviaCategory =
   | 'style'
   | 'heart'
   | 'laugh'
+  | 'heard_it'
+  | 'commercials'
+  | 'real_sound'
   | 'custom';
 
 export type TriviaSubMode = 
@@ -22,6 +25,8 @@ export type TriviaSubMode =
   | 'name_that_tune'
   | 'picture_fade'
   | 'heart_block'
+  | 'real_sounds'
+  | 'rerun_board'
   | 'custom_pack';
 
 export type MatchFormat = 
@@ -53,7 +58,7 @@ export interface HostCharacter {
 export interface TriviaQuestion {
   id: string;
   category: TriviaCategory;
-  type: 'multiple_choice' | 'quote' | 'actor_star' | 'system_guess' | 'sound_guess' | 'murder_trap' | 'picture_fade' | 'video_clip';
+  type: 'multiple_choice' | 'quote' | 'actor_star' | 'system_guess' | 'sound_guess' | 'murder_trap' | 'picture_fade' | 'video_clip' | 'audio_clip';
   question: string;
   options: string[];
   correctIndex: number;
@@ -70,8 +75,14 @@ export interface TriviaQuestion {
   chiptuneId?: string;
   /** Wikimedia (or other free) still. Fades in on picture rounds. */
   photo?: { src: string; alt: string; credit: string };
-  /** Internet Archive item. Streamed, never hosted here. */
-  video?: { archiveId: string; title: string };
+  /**
+   * Internet Archive item. Streamed, never hosted here. `file` picks one file
+   * inside a big item (exact name, or "~part of the name"); start/end trim it
+   * to the few seconds the question is about.
+   */
+  video?: { archiveId: string; title: string; file?: string; start?: number; end?: number };
+  /** Same idea for a sound: NASA, a modem, a public-domain recording. */
+  audio?: { archiveId: string; title: string; credit: string; file?: string; start?: number; end?: number };
   /** How long a picture takes to come into focus. */
   fadeSeconds?: number;
 }

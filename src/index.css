@@ -245,3 +245,365 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .parent-yell { animation: none; }
 }
+
+/* ------------------------------------------------------------------
+ * Throwback Trivia on the card table. Everything is meant to read as a
+ * thing lying on the wood: a printed cardboard board, paper cards that pop
+ * up off it, a little TV, a boombox, a score pad.
+ * ------------------------------------------------------------------ */
+.tt-board {
+  position: relative;
+  color: #fbf5e6;
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.025) 0 2px, transparent 2px 6px),
+    radial-gradient(120% 90% at 50% 40%, #24406e 0%, #1a2d52 55%, #111d36 100%);
+  border: 6px solid #f1e3bf;
+  outline: 2px solid #b48a3c;
+  outline-offset: -12px;
+  border-radius: 14px;
+  box-shadow:
+    0 2px 0 #c9b484,
+    0 4px 0 #a8915d,
+    0 18px 34px rgba(0, 0, 0, 0.55);
+}
+.tt-board::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 8px;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.45);
+}
+
+.tt-marker {
+  font-family: 'Permanent Marker', 'Bricolage Grotesque', cursive;
+  letter-spacing: 0.01em;
+}
+.tt-type {
+  font-family: 'Special Elite', 'IBM Plex Mono', monospace;
+}
+.tt-pixel {
+  font-family: 'Press Start 2P', 'IBM Plex Mono', monospace;
+  letter-spacing: 0.02em;
+}
+
+/* An index card: cream stock, blue rules, a red margin line. */
+.tt-paper {
+  color: #2a1d12;
+  background:
+    linear-gradient(90deg, transparent 0 22px, rgba(200, 60, 60, 0.45) 22px 23.5px, transparent 23.5px),
+    repeating-linear-gradient(180deg, transparent 0 21px, rgba(70, 110, 190, 0.18) 21px 22px),
+    #fbf5e6;
+  border-radius: 6px;
+  box-shadow: 0 1px 0 #e2d3ad, 0 10px 22px rgba(0, 0, 0, 0.45);
+}
+
+/* A plain printed game card. */
+.tt-card {
+  color: #2a1d12;
+  background: linear-gradient(180deg, #fffaf0, #f2e6c8);
+  border-radius: 10px;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 0 #d8c69d, 0 3px 0 #b9a576, 0 10px 18px rgba(0, 0, 0, 0.45);
+  transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+}
+button.tt-card:not(:disabled):hover {
+  transform: translateY(-3px) rotate(-0.4deg);
+  box-shadow: 0 1px 0 #d8c69d, 0 3px 0 #b9a576, 0 18px 26px rgba(0, 0, 0, 0.5);
+}
+button.tt-card:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+/* Cards rise off the table: start flat and small, land with a little bounce. */
+@keyframes tt-pop {
+  0% {
+    opacity: 0;
+    transform: perspective(700px) rotateX(70deg) scale(0.6) translateY(16px);
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+  70% {
+    opacity: 1;
+    transform: perspective(700px) rotateX(-6deg) scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+.tt-pop {
+  animation: tt-pop 420ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+@keyframes tt-flip {
+  0% { transform: perspective(700px) rotateY(0); }
+  50% { transform: perspective(700px) rotateY(90deg); }
+  100% { transform: perspective(700px) rotateY(0); }
+}
+.tt-flip {
+  animation: tt-flip 520ms ease both;
+}
+
+/* Rubber stamp for right and wrong. */
+@keyframes tt-stamp {
+  0% { opacity: 0; transform: rotate(-14deg) scale(2.4); }
+  60% { opacity: 1; transform: rotate(-14deg) scale(0.92); }
+  100% { opacity: 0.92; transform: rotate(-14deg) scale(1); }
+}
+.tt-stamp {
+  font-family: 'Permanent Marker', cursive;
+  border: 3px solid currentColor;
+  border-radius: 8px;
+  padding: 0 8px;
+  text-transform: uppercase;
+  animation: tt-stamp 360ms ease-out both;
+  mix-blend-mode: multiply;
+}
+
+/* A sticky note from the kitchen. */
+.tt-sticky {
+  color: #3a2a12;
+  background: linear-gradient(180deg, #fff59a, #ffe766);
+  box-shadow: 0 8px 14px rgba(0, 0, 0, 0.4);
+  transform: rotate(-1.5deg);
+}
+
+/* Little CRT for commercials and cartoons. */
+.tt-tv {
+  background: linear-gradient(180deg, #4a3a2c, #2c2018);
+  border-radius: 18px;
+  padding: 10px 44px 10px 10px;
+  position: relative;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.12), 0 12px 22px rgba(0, 0, 0, 0.55);
+}
+.tt-tv::after {
+  content: '';
+  position: absolute;
+  right: 12px;
+  top: 16px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #d9c9a0, #6b5a3e);
+  box-shadow: 0 28px 0 -2px #6b5a3e, 0 52px 0 -6px #1a120c, 0 62px 0 -6px #1a120c;
+}
+.tt-tv-glass {
+  border-radius: 14px / 18px;
+  overflow: hidden;
+  background: #000;
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.9);
+  height: 100%;
+}
+
+/* Polaroid for pictures that fade in. */
+.tt-polaroid {
+  background: #fdfcf8;
+  padding: 8px 8px 26px;
+  border-radius: 3px;
+  box-shadow: 0 12px 22px rgba(0, 0, 0, 0.5);
+  transform: rotate(-1.2deg);
+}
+
+/* Boombox for sound rounds. */
+.tt-boombox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #c9c4b8, #8f8a7f);
+  border-top: 3px solid #e7e2d6;
+  box-shadow: 0 12px 22px rgba(0, 0, 0, 0.5);
+  color: #1d1a14;
+}
+.tt-boombox-speaker {
+  flex: 0 0 auto;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, #2a2722 0 18%, #11100d 19% 22%, transparent 23%),
+    repeating-radial-gradient(circle, #2c2a25 0 2px, #1a1915 2px 4px);
+  border: 4px solid #5a564d;
+}
+.tt-boombox-speaker[data-on] {
+  animation: tt-thump 0.3s ease-in-out infinite alternate;
+}
+@keyframes tt-thump {
+  from { transform: scale(1); }
+  to { transform: scale(1.06); }
+}
+.tt-cassette {
+  position: relative;
+  width: 150px;
+  max-width: 100%;
+  height: 58px;
+  border-radius: 6px;
+  background: #2a2622;
+  border: 2px solid #4a443c;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 34px;
+  padding-bottom: 8px;
+}
+.tt-cassette-label {
+  position: absolute;
+  top: 5px;
+  left: 8px;
+  right: 8px;
+  height: 18px;
+  border-radius: 2px;
+  background: #fbf5e6;
+  color: #2a1d12;
+  font-family: 'Permanent Marker', cursive;
+  font-size: 9px;
+  line-height: 18px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 4px;
+}
+.tt-reel {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(#fbf5e6 0 30deg, #3a342c 30deg 60deg);
+  border: 3px solid #fbf5e6;
+}
+.tt-reel[data-on] {
+  animation: tt-spin 1.2s linear infinite;
+}
+@keyframes tt-spin {
+  to { transform: rotate(360deg); }
+}
+.tt-key {
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: linear-gradient(180deg, #3b3833, #1f1d1a);
+  color: #f5e7c2;
+  box-shadow: 0 3px 0 #0e0d0b;
+}
+.tt-key:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #0e0d0b;
+}
+
+/* Prime Time Rerun tiles. */
+.tt-tile {
+  background: linear-gradient(180deg, #1f3fbf, #12288a);
+  border: 2px solid #0a1a5c;
+  border-radius: 4px;
+  color: #f2c14e;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-weight: 800;
+  text-shadow: 2px 2px 0 #000;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.18), 0 4px 0 #071341, 0 8px 14px rgba(0, 0, 0, 0.45);
+  transition: transform 120ms ease;
+}
+button.tt-tile:not(:disabled):hover {
+  transform: translateY(-2px);
+}
+.tt-tile[data-used] {
+  background: #0d1b4d;
+  color: transparent;
+  text-shadow: none;
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.6);
+}
+.tt-clue {
+  background: radial-gradient(120% 120% at 50% 30%, #2347d8, #0f2378);
+  color: #fff;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  text-shadow: 3px 3px 0 #000;
+  border-radius: 8px;
+  border: 3px solid #0a1a5c;
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.55);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tt-pop,
+  .tt-flip,
+  .tt-stamp,
+  .tt-reel[data-on],
+  .tt-boombox-speaker[data-on] {
+    animation: none;
+  }
+}
+
+/* Type that grows with the table, not the window. */
+.tt-board {
+  container-type: size;
+}
+.tt-q {
+  font-size: clamp(13px, 3.2cqmin, 30px);
+  line-height: 1.3;
+}
+.tt-a {
+  font-size: clamp(11px, 2.5cqmin, 21px);
+  line-height: 1.2;
+}
+.tt-n {
+  font-size: clamp(11px, 2.2cqmin, 19px);
+  line-height: 1.3;
+}
+.tt-s {
+  font-size: clamp(9px, 1.6cqmin, 14px);
+}
+.tt-h {
+  font-size: clamp(13px, 2.8cqmin, 24px);
+  line-height: 1.1;
+}
+.tt-card[data-state='right'] {
+  outline: 4px solid #5fd3a2;
+  outline-offset: 2px;
+}
+.tt-card[data-state='wrong'] {
+  outline: 4px solid #e5484d;
+  outline-offset: 2px;
+  opacity: 0.85;
+}
+.tt-card[data-state='picked'] {
+  outline: 4px solid #f2c14e;
+  outline-offset: 2px;
+}
+.tt-card[data-state='dim'] {
+  opacity: 0.45;
+}
+
+.tt-clue .tt-stamp,
+.tt-board > .tt-stamp {
+  mix-blend-mode: normal;
+}
+.tt-clue-text {
+  font-size: clamp(15px, 5.2cqmin, 46px);
+  line-height: 1.2;
+}
+/* The boombox grows with the table. */
+.tt-board .tt-boombox-speaker {
+  width: clamp(52px, 12cqmin, 110px);
+  height: clamp(52px, 12cqmin, 110px);
+}
+.tt-board .tt-cassette {
+  width: clamp(130px, 27cqmin, 240px);
+  height: clamp(56px, 13cqmin, 112px);
+  gap: clamp(30px, 8cqmin, 70px);
+}
+.tt-board .tt-reel {
+  width: clamp(18px, 5cqmin, 40px);
+  height: clamp(18px, 5cqmin, 40px);
+}
+.tt-board .tt-cassette-label {
+  height: clamp(18px, 4cqmin, 32px);
+  line-height: clamp(18px, 4cqmin, 32px);
+  font-size: clamp(9px, 2cqmin, 16px);
+}
+.tt-board .tt-key {
+  font-size: clamp(10px, 1.8cqmin, 14px);
+}

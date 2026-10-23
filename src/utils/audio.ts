@@ -2,7 +2,7 @@
  * Procedural Web Audio Sound Synthesizer for Mini Game Party Pack & Casino Poker Lounge
  * Generates tactile clicks, wood knocks, radar pings, explosions, disc drops, dice shakes, cards, chips, slots, roulette, etc.
  */
-import { CHIP_TUNES, type ChipNote } from './chiptunes';
+import { CHIP_TUNES, DEFAULT_TUNE, type ChipNote } from './chiptunes';
 
 /** Room music. The first one plays unless the player picked another. */
 export const ROOM_TRACKS = [
@@ -1098,7 +1098,7 @@ class SoundEngine {
     osc.stop(t + 0.04);
   }
 
-  // --- Jackbox Trivia & Murder Mystery Party Synthesizers ---
+  // --- Throwback Trivia buzzers and stingers ---
   public playTriviaTick(speedFactor: number = 1.0) {
     if (this.muted) return;
     this.initCtx();
@@ -1306,7 +1306,7 @@ class SoundEngine {
     if (!this.ctx) return;
     this.stopChiptune();
 
-    const notes = CHIP_TUNES[tuneId] ?? CHIP_TUNES.platform_hop;
+    const notes = CHIP_TUNES[tuneId] ?? CHIP_TUNES[DEFAULT_TUNE];
     const ctx = this.ctx;
     const t0 = ctx.currentTime + 0.06;
     const master = ctx.createGain();

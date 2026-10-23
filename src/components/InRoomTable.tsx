@@ -21,7 +21,7 @@ export function InRoomTable({
       <div className="pointer-events-none fixed inset-0 z-40 text-white">
         <div
           data-trivia-table
-          className="pointer-events-auto absolute flex flex-col overflow-hidden rounded-2xl border-2 border-[#e7c27a]/80 bg-[#2a1812] shadow-[0_22px_50px_rgba(0,0,0,0.55)]"
+          className="pointer-events-auto absolute flex flex-col"
           style={{
             left: tableRect.left + insetX,
             top: tableRect.top + insetY,
@@ -29,17 +29,16 @@ export function InRoomTable({
             height: Math.max(80, tableRect.height - insetY * 2),
           }}
         >
-          <div className="flex h-7 shrink-0 items-center justify-between gap-2 border-b border-amber-200/15 bg-[#1a100c] px-2.5">
-            <p className="truncate text-[10px] font-black uppercase tracking-[0.22em] text-amber-200">{game.title}</p>
-            <button
-              type="button"
-              onClick={onPackUp}
-              className="shrink-0 rounded-lg bg-amber-400 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-black"
-            >
-              Pack up
-            </button>
-          </div>
-          <div className="min-h-0 flex-1 overflow-hidden">
+          {/* The box lid's tab: closes the game and puts it back on the shelf. */}
+          <button
+            type="button"
+            onClick={onPackUp}
+            className="absolute -top-3 right-5 z-10 rounded-md border-2 border-[#f1e3bf] bg-[#c0392b] px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-[#fbf5e6] shadow-[0_4px_8px_rgba(0,0,0,0.5)] hover:bg-[#d64a3b]"
+            aria-label={`Pack up ${game.title}`}
+          >
+            Pack up
+          </button>
+          <div className="min-h-0 flex-1">
             <TriviaOnTableContext.Provider value={true}>{children}</TriviaOnTableContext.Provider>
           </div>
         </div>

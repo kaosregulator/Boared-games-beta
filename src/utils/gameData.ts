@@ -4,19 +4,19 @@ export const GAME_CATALOG: GameMetadata[] = [
   {
     id: 'trivia',
     title: 'Throwback Trivia',
-    subtitle: 'Born 1991 · pictures, commercials, and the 8-bit boombox',
+    subtitle: 'Heard it growing up · real 90s commercials · 8-bit boombox · a mini Jeopardy board',
     players: '1 - 8 Players (Party, AI Bots & Co-op)',
     duration: '5 - 15 min',
     boxColor: 'from-purple-950 via-indigo-950 to-slate-900',
     boxAccent: 'border-amber-400/50 text-amber-300',
-    badge: 'Class of 1991',
-    description: 'A throwback for the year you were born and the kids you sat next to. Pictures fade in on a timer, Internet Archive commercials play on the card, and the 8-bit cues hush the TV, the radio, and the bedroom tape so the boombox has the room.',
+    badge: 'Close the door!',
+    description: 'A throwback for everybody who grew up being asked if they were raised in a barn. Real 90s commercials play on a little TV on the table, the boombox plays the 8-bit and the songs every toy and truck played, the house phone makes its real noises, and Prime Time Rerun is a mini Jeopardy board for the shows we watched every night.',
     rules: [
-      'Pick a stack: Throwback Mix, Fade the Picture, Saturday Clips, Cartridge Years, 8-Bit Boombox, Closet & the Porch, or After Dark.',
-      'On a sound round or a commercial, the room pauses — TV, radio, and music — and the cue plays.',
-      'Picture rounds start almost black and come into focus. Say it before they do.',
-      'After Dark still sends a miss to the Killing Floor.',
-      'Answer fast. The middle name from the porch still counts.'
+      'Pick a box: The Whole Block, Prime Time Rerun, Heard It Growing Up, Commercial Break, Off the Hook, 8-Bit Boombox, Polaroid Fade, Cartridge Years, or After the Streetlights.',
+      'On a sound round or a commercial, the room pauses (TV, radio, and music) and the cue plays.',
+      'Prime Time Rerun: pick a tile, answer in the form of a question. Right adds the money, wrong takes it away. One tile is a Daily Double.',
+      'Polaroid rounds start almost black and develop. Say it before they do.',
+      'After the Streetlights sends a miss down to the basement.',
     ],
     icon: 'Sparkles',
     rating: '5.0 ★★★★★'

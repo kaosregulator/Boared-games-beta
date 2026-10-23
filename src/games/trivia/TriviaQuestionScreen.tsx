@@ -3,7 +3,8 @@ import { TriviaQuestion, TriviaPlayer } from '../../types/trivia';
 import { sound } from '../../utils/audio';
 import { holdRoomForCue, releaseRoomCue } from '../../room/roomHold';
 import { useTriviaOnTable } from '../../room/table/triviaTable';
-import { ArchiveClip, FadePicture } from './CueMedia';
+import { ArchiveClip, ArchiveSound, FadePicture } from './CueMedia';
+import { tuneLength } from '../../utils/chiptunes';
 import { Timer, Zap, Volume2, Sparkles, HelpCircle, Flame, CheckCircle, XCircle } from 'lucide-react';
 
 interface TriviaQuestionScreenProps {
@@ -35,7 +36,7 @@ export const TriviaQuestionScreen: React.FC<TriviaQuestionScreenProps> = ({
 
   const releaseCue = () => {
     sound.stopChiptune();
-    document.querySelectorAll('video[data-throwback-cue]').forEach(node => {
+    document.querySelectorAll('video[data-throwback-cue], audio[data-throwback-cue]').forEach(node => {
       if (node instanceof HTMLMediaElement) node.pause();
     });
     if (roomHeld.current) {
@@ -52,15 +53,20 @@ export const TriviaQuestionScreen: React.FC<TriviaQuestionScreenProps> = ({
     setIsPlayingTune(false);
     timedOut.current = false;
 
-    const needsRoom = Boolean(question.chiptuneId) || question.type === 'video_clip';
+    const needsRoom = Boolean(question.chiptuneId) || question.type === 'video_clip' || question.type === 'audio_clip';
     if (!needsRoom) return;
     holdRoomForCue();
     roomHeld.current = true;
+    let stopGlow = 0;
     if (question.chiptuneId) {
       sound.playChiptuneTrack(question.chiptuneId);
       setIsPlayingTune(true);
+      stopGlow = window.setTimeout(() => setIsPlayingTune(false), tuneLength(question.chiptuneId) * 1000 + 200);
     }
-    return () => releaseCue();
+    return () => {
+      window.clearTimeout(stopGlow);
+      releaseCue();
+    };
   }, [question.id]);
 
   useEffect(() => {
@@ -106,7 +112,7 @@ export const TriviaQuestionScreen: React.FC<TriviaQuestionScreenProps> = ({
     }
     setIsPlayingTune(true);
     sound.playChiptuneTrack(question.chiptuneId);
-    window.setTimeout(() => setIsPlayingTune(false), 4200);
+    window.setTimeout(() => setIsPlayingTune(false), tuneLength(question.chiptuneId) * 1000 + 200);
   };
 
   const percentageLeft = (timeLeft / timeLimit) * 100;
@@ -132,98 +138,190 @@ export const TriviaQuestionScreen: React.FC<TriviaQuestionScreenProps> = ({
   };
 
   if (onTable) {
+    const answered = showResults || selectedIdx !== null;
     const hasPicture = Boolean(question.photo && question.type === 'picture_fade');
-    const hasClip = question.type === 'video_clip' && Boolean(question.video) && !showResults;
-    const hasStill = Boolean(question.photo && question.type !== 'picture_fade');
-    return (
-      <div className="flex h-full min-h-0 w-full flex-col gap-1.5 p-1.5 select-none">
-        <div className="flex shrink-0 items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-amber-100">
-          <span className="shrink-0">Round {roundNumber}/{totalRounds}</span>
-          {(question.chiptuneId || question.type === 'video_clip') && !showResults && (
-            <span className="shrink-0 text-amber-200/80">Quiet</span>
-          )}
-          <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-black/50">
-            <div
-              className={`h-full rounded-full transition-all duration-1000 ease-linear ${
-                timeLeft <= 4 ? 'bg-rose-500' : timeLeft <= 8 ? 'bg-amber-400' : 'bg-cyan-400'
-              }`}
-              style={{ width: `${percentageLeft}%` }}
-            />
-          </div>
-          <span className="shrink-0 tabular-nums">{timeLeft}s</span>
-          {question.chiptuneId && (
-            <button
-              type="button"
-              onClick={handleReplayChiptune}
-              className="shrink-0 rounded-full bg-cyan-950 px-2 py-0.5 text-[10px] font-black text-cyan-200"
-            >
-              {isPlayingTune ? 'Playing' : 'Replay'}
-            </button>
-          )}
-          <span className="shrink-0 text-amber-300">{question.points}</span>
-        </div>
+    const hasClip = question.type === 'video_clip' && Boolean(question.video);
+    const hasSound = question.type === 'audio_clip' && Boolean(question.audio);
+    const hasTune = Boolean(question.chiptuneId) && !hasPicture;
+    const hasStill = Boolean(question.photo && !hasPicture && !hasClip);
+    const hasQuote = question.mediaClue?.type === 'quote_speaker';
+    const hasProp = hasPicture || hasClip || hasSound || hasTune || hasStill || hasQuote;
+    const timerTone = timeLeft <= 4 ? '#e5484d' : timeLeft <= 8 ? '#f2c14e' : '#5fd3a2';
+    const human = players.find(p => !p.isBot);
+    const humanRight = showResults && selectedIdx === question.correctIndex;
 
-        <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-amber-200/25 bg-black">
-          {hasPicture && question.photo && (
-            <FadePicture
-              src={question.photo.src}
-              alt={question.photo.alt}
-              credit={question.photo.credit}
-              seconds={question.fadeSeconds ?? 10}
-              revealed={showResults || selectedIdx !== null}
-              fill
-            />
-          )}
-          {hasClip && question.video && (
-            <ArchiveClip archiveId={question.video.archiveId} title={question.video.title} fill />
-          )}
-          {hasStill && question.photo && (
-            <img src={question.photo.src} alt={question.photo.alt} className="absolute inset-0 h-full w-full object-cover" />
-          )}
-          {!hasPicture && !hasClip && !hasStill && (
-            <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-amber-200">
-                {question.type === 'sound_guess' ? '8-bit on the boombox' : 'Throwback'}
-              </p>
-              {question.chiptuneId && (
-                <button
-                  type="button"
-                  onClick={handleReplayChiptune}
-                  className={`rounded-xl px-4 py-2 text-xs font-black uppercase tracking-wider ${
-                    isPlayingTune ? 'bg-cyan-400 text-black' : 'bg-cyan-950 text-cyan-200 border border-cyan-400/50'
-                  }`}
-                >
-                  <Volume2 className="mr-1 inline h-4 w-4" />
-                  {isPlayingTune ? 'Playing' : 'Replay the cue'}
-                </button>
+    const prop = (
+      <div className="tt-pop flex h-full min-h-0 w-full items-center justify-center" style={{ animationDelay: '60ms' }}>
+        {hasClip && question.video && (
+          <div className="tt-tv h-full w-full max-w-full">
+            <div className="tt-tv-glass">
+              {!showResults ? (
+                <ArchiveClip
+                  archiveId={question.video.archiveId}
+                  title={question.video.title}
+                  file={question.video.file}
+                  start={question.video.start}
+                  end={question.video.end}
+                  fill
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center bg-[repeating-linear-gradient(0deg,#111_0_2px,#1c1c1c_2px_4px)] px-3 text-center text-[11px] font-bold uppercase tracking-widest text-white/60">
+                  {question.video.title}
+                </div>
               )}
             </div>
-          )}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/80 to-transparent px-3 pb-2 pt-8">
-            <h2 className="line-clamp-2 text-center text-sm font-black leading-tight text-white sm:text-base">
-              {question.question}
-            </h2>
-            {showResults && (
-              <p className="mt-1 line-clamp-2 text-center text-[11px] text-emerald-100">{question.explanation}</p>
-            )}
+          </div>
+        )}
+        {hasPicture && question.photo && (
+          <div className="tt-polaroid flex flex-col" style={{ height: '100%', maxWidth: '100%', aspectRatio: '0.92' }}>
+            <div className="min-h-0 flex-1">
+              <FadePicture
+                src={question.photo.src}
+                alt={question.photo.alt}
+                credit={question.photo.credit}
+                seconds={question.fadeSeconds ?? 10}
+                revealed={answered}
+                fill
+              />
+            </div>
+            <p className="tt-marker mt-1 truncate text-center text-[11px] text-[#2a1d12]">
+              {answered ? question.options[question.correctIndex] : 'what is it??'}
+            </p>
+          </div>
+        )}
+        {hasStill && question.photo && (
+          <div className="tt-polaroid flex flex-col" style={{ height: '100%', maxWidth: '100%', aspectRatio: '0.92' }}>
+            <img src={question.photo.src} alt={question.photo.alt} className="min-h-0 w-full flex-1 object-cover" />
+            <p className="mt-1 truncate text-center text-[8px] text-[#2a1d12]/60">{question.photo.credit}</p>
+          </div>
+        )}
+        {hasSound && question.audio && (
+          <ArchiveSound
+            archiveId={question.audio.archiveId}
+            title={question.audio.title}
+            credit={question.audio.credit}
+            file={question.audio.file}
+            start={question.audio.start}
+            end={question.audio.end}
+          />
+        )}
+        {hasTune && !hasClip && !hasSound && (
+          <div className="tt-boombox">
+            <div className="tt-boombox-speaker" data-on={isPlayingTune || undefined} />
+            <div className="flex flex-col items-center gap-1.5">
+              <div className="tt-cassette">
+                <span className="tt-cassette-label">{question.mediaClue?.content ?? 'MIX TAPE · SIDE A'}</span>
+                <span className="tt-reel" data-on={isPlayingTune || undefined} />
+                <span className="tt-reel" data-on={isPlayingTune || undefined} />
+              </div>
+              <button type="button" onClick={handleReplayChiptune} className="tt-key">
+                {isPlayingTune ? '▶ Playing' : '▶ Play it again'}
+              </button>
+              {question.mediaClue?.subtext && (
+                <p className="text-[9px] font-bold uppercase tracking-wider text-[#1d1a14]/70">{question.mediaClue.subtext}</p>
+              )}
+            </div>
+            <div className="tt-boombox-speaker" data-on={isPlayingTune || undefined} />
+          </div>
+        )}
+        {hasQuote && !hasTune && !hasClip && !hasSound && !hasPicture && !hasStill && question.mediaClue && (
+          <div className="tt-card flex max-w-[92%] -rotate-2 flex-col items-center gap-1 px-5 py-4 text-center">
+            <span className="text-3xl leading-none">🎬</span>
+            <p className="tt-marker text-base leading-tight">{question.mediaClue.content}</p>
+            {question.mediaClue.subtext && <p className="tt-type text-[11px] opacity-70">{question.mediaClue.subtext}</p>}
+          </div>
+        )}
+      </div>
+    );
+
+    return (
+      <div className="flex h-full min-h-0 w-full flex-col gap-2 p-2.5 select-none">
+        {/* Round, egg-timer, points */}
+        <div className="tt-s flex shrink-0 items-center gap-2 font-black uppercase tracking-[0.18em] text-[#f1e3bf]">
+          <span className="shrink-0 rounded bg-[#f1e3bf] px-1.5 py-0.5 text-[#1a2d52]">
+            {roundNumber}/{totalRounds}
+          </span>
+          <span className="hidden shrink-0 truncate sm:inline">{categoryLabel(question)}</span>
+          <div className="relative h-2.5 min-w-0 flex-1 overflow-hidden rounded-full bg-black/40 ring-1 ring-[#f1e3bf]/30">
+            <div
+              className="h-full rounded-full transition-all duration-1000 ease-linear"
+              style={{ width: `${percentageLeft}%`, background: timerTone }}
+            />
+          </div>
+          <span className="w-7 shrink-0 text-right tabular-nums">{timeLeft}s</span>
+          <span className="shrink-0 text-[#f2c14e]">{question.points} pts</span>
+        </div>
+
+        <div className={`grid min-h-0 flex-1 gap-2.5 ${hasProp ? 'grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]' : 'grid-cols-1'}`}>
+          {hasProp && <div className="min-h-0">{prop}</div>}
+
+          <div className="flex min-h-0 flex-col gap-2">
+            {/* The question card */}
+            <div className="tt-paper tt-pop relative flex min-h-0 flex-1 flex-col justify-center overflow-hidden py-2 pl-8 pr-3">
+              <h2 className="tt-type tt-q">{question.question}</h2>
+              {showResults && (
+                <p className="tt-marker tt-n mt-2 line-clamp-4 text-[#1f5b3a]">
+                  {question.explanation}
+                </p>
+              )}
+              {showResults && (
+                <span
+                  className={`tt-stamp tt-h absolute right-2 top-1 ${humanRight ? 'text-[#1f7a4a]' : 'text-[#c0392b]'}`}
+                >
+                  {humanRight ? 'Got it!' : selectedIdx === -1 ? "Time's up" : 'Nope'}
+                </span>
+              )}
+            </div>
+
+            {/* Four answer cards */}
+            <div className="grid shrink-0 grid-cols-2 gap-1.5" style={{ minHeight: '42%' }}>
+              {question.options.map((option, idx) => {
+                const isCorrect = idx === question.correctIndex;
+                const isPicked = selectedIdx === idx;
+                const state = showResults ? (isCorrect ? 'right' : isPicked ? 'wrong' : 'dim') : isPicked ? 'picked' : 'open';
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleSelectOption(idx)}
+                    disabled={answered}
+                    data-state={state}
+                    className={`tt-card tt-pop flex min-h-0 items-center gap-2 px-2.5 py-1.5 text-left ${state === 'right' ? 'tt-flip' : ''}`}
+                    style={{ animationDelay: `${140 + idx * 70}ms` }}
+                  >
+                    <span
+                      className="flex h-[1.9em] w-[1.9em] shrink-0 items-center justify-center rounded-full tt-a font-black text-white shadow"
+                      style={{ background: CARD_INKS[idx % CARD_INKS.length] }}
+                    >
+                      {letters[idx]}
+                    </span>
+                    <span className="tt-a line-clamp-3 font-bold">{option}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
-        <div className="grid min-h-[4.75rem] grid-cols-2 grid-rows-2 gap-1.5" style={{ flex: '0 1 32%' }}>
-          {question.options.map((option, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => handleSelectOption(idx)}
-              disabled={selectedIdx !== null || showResults}
-              className={`flex h-full min-h-0 items-center gap-2 rounded-xl border-2 px-2 text-left ${optionClass(idx)}`}
-            >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-black/30 text-xs font-black">
-                {letters[idx]}
-              </span>
-              <span className="line-clamp-2 text-[11px] font-bold leading-tight sm:text-xs">{option}</span>
-            </button>
-          ))}
+        {/* Score pad along your edge of the table */}
+        <div className="flex shrink-0 items-center gap-1.5 overflow-hidden">
+          {players.map(p => {
+            const done = p.selectedAnswer !== null;
+            const right = showResults && p.isAnswerCorrect;
+            return (
+              <div
+                key={p.id}
+                className={`tt-s flex min-w-0 items-center gap-1 rounded-full px-2 py-0.5 font-bold ${
+                  p.id === human?.id ? 'bg-[#f1e3bf] text-[#1a2d52]' : 'bg-black/35 text-[#f1e3bf]'
+                } ${showResults ? (right ? 'ring-2 ring-[#5fd3a2]' : 'ring-2 ring-[#e5484d]/70') : ''}`}
+              >
+                <span>{p.isGhost ? '👻' : p.avatar}</span>
+                <span className="truncate">{p.name}</span>
+                <span className="tabular-nums opacity-80">{p.score}</span>
+                {!showResults && done && <span className="h-1.5 w-1.5 rounded-full bg-[#5fd3a2]" />}
+              </div>
+            );
+          })}
         </div>
       </div>
     );
@@ -308,7 +406,26 @@ export const TriviaQuestionScreen: React.FC<TriviaQuestionScreenProps> = ({
 
         {question.type === 'video_clip' && question.video && !showResults && (
           <div className="mb-4 w-full max-w-lg">
-            <ArchiveClip archiveId={question.video.archiveId} title={question.video.title} />
+            <ArchiveClip
+              archiveId={question.video.archiveId}
+              title={question.video.title}
+              file={question.video.file}
+              start={question.video.start}
+              end={question.video.end}
+            />
+          </div>
+        )}
+
+        {question.type === 'audio_clip' && question.audio && (
+          <div className="mb-4 w-full max-w-lg">
+            <ArchiveSound
+              archiveId={question.audio.archiveId}
+              title={question.audio.title}
+              credit={question.audio.credit}
+              file={question.audio.file}
+              start={question.audio.start}
+              end={question.audio.end}
+            />
           </div>
         )}
 
@@ -350,7 +467,7 @@ export const TriviaQuestionScreen: React.FC<TriviaQuestionScreenProps> = ({
         </h2>
       </div>
 
-      {/* Answer Choices Grid (Jackbox 4-Box Layout) */}
+      {/* Four answer choices */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 w-full mb-6">
         {question.options.map((option, idx) => {
           const isSelected = selectedIdx === idx;
@@ -444,3 +561,19 @@ export const TriviaQuestionScreen: React.FC<TriviaQuestionScreenProps> = ({
     </div>
   );
 };
+
+/** Answer-card dots, like the wedges on a board-game spinner. */
+const CARD_INKS = ['#c0392b', '#2457c5', '#d4890b', '#1f7a4a'];
+
+function categoryLabel(q: TriviaQuestion) {
+  if (q.category === 'heard_it') return 'Heard it growing up';
+  if (q.category === 'real_sound') return 'Off the hook';
+  if (q.category === 'commercials' || q.type === 'video_clip') return 'Commercial break';
+  if (q.type === 'picture_fade') return 'Polaroid fade';
+  if (q.type === 'sound_guess') return '8-bit boombox';
+  if (q.type === 'quote') return 'Rewind the tape';
+  if (q.category === 'murder_mystery') return 'After the streetlights';
+  if (q.category === 'video_games' || q.category === 'game_systems') return 'Cartridge years';
+  if (q.category === 'heart') return 'Something you kept';
+  return 'Throwback';
+}
