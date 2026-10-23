@@ -20,6 +20,7 @@ import { IntroCard } from './IntroCard';
 import { neonGames } from './NeonGameWall';
 import { GameBoySeat } from '../devices/GameBoySeat';
 import { GameBoyGlass } from '../devices/GameBoyGlass';
+import { warmCartridges } from '../devices/cartridges';
 import { DEVICE_FROM_PROP, type DeviceId } from './devices';
 import { radio, useRadio } from '../radio/radioEngine';
 import { RoomStudio } from './RoomStudio';
@@ -229,6 +230,16 @@ export function WalkRoom({
     },
     [],
   );
+
+  // Once the room is in and quiet, get the Game Boy's emulator into the cache.
+  useEffect(() => {
+    if (!engaged) return;
+    const id = window.setTimeout(() => {
+      if ('requestIdleCallback' in window) window.requestIdleCallback(() => warmCartridges(), { timeout: 5000 });
+      else warmCartridges();
+    }, 6000);
+    return () => window.clearTimeout(id);
+  }, [engaged]);
 
   // The stereo and the room's background music never play over each other.
   useEffect(() => {
@@ -627,8 +638,9 @@ export function WalkRoom({
       <Canvas
         key={glKey}
         style={{ touchAction: 'none' }}
-        // Nothing to draw while something is held up over the whole room.
-        frameloop={override.capture ? 'demand' : holding ? 'never' : 'always'}
+        // Nothing to draw while something is held up over the whole room;
+        // seated with the Game Boy, draw on demand so the emulator gets the thread.
+        frameloop={override.capture || seated ? 'demand' : holding ? 'never' : 'always'}
         dpr={override.capture ? 1 : [1, 1.5]}
         camera={{ fov: 72, near: 0.08, far: 40, position: [0.02, 1.58, 1.32] }}
         gl={{ antialias: true, powerPreference: 'high-performance', alpha: false }}

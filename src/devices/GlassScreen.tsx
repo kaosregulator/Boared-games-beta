@@ -49,8 +49,19 @@ function cssMatrix(m: THREE.Matrix4, mul: number[], prepend = '') {
   return prepend + out;
 }
 
-const CAMERA_MUL = [1, -1, 1, 1, 1, -1, 1, 1, 1, -1, 1, 1, 1, -1, 1, 1];
-const objectMul = (f: number) => [1 / f, 1 / f, 1 / f, 1, -1 / f, -1 / f, -1 / f, -1, 1 / f, 1 / f, 1 / f, 1, 1, 1, 1, 1];
+/**
+ * CSS pixels per metre for the 3D transforms. Scaling the whole world by the
+ * same amount leaves the picture unchanged, but metres-as-pixels put a held
+ * Game Boy's screen a fraction of a pixel from the eye, magnified thousands of
+ * times: browsers lose precision there (soft, slightly off edges) and some
+ * stop drawing the layer at all.
+ */
+const K = 1000;
+const CAMERA_MUL = [1, -1, 1, 1, 1, -1, 1, 1, 1, -1, 1, 1, K, -K, K, 1];
+const objectMul = (f: number) => {
+  const s = K / f;
+  return [s, s, s, 1, -s, -s, -s, -1, s, s, s, 1, K, K, K, 1];
+};
 
 /** DOM side. Render it as a sibling of the <Canvas>, inside the same positioned box. */
 export function GlassSurface({ id, children, zIndex = 10 }: { id: string; children: React.ReactNode; zIndex?: number }) {

@@ -39,7 +39,6 @@
       window.EJS_gameUrl = rom;
       window.EJS_gameName = params.get('name') || 'Cartridge';
       window.EJS_pathtodata = '/emu/data/';
-      window.EJS_DEBUG_XX = true;
       window.EJS_startOnLoaded = true;
       window.EJS_language = 'en-US';
       window.EJS_disableAutoLang = false;
@@ -48,8 +47,10 @@
       window.EJS_color = '#d63a3a';
       window.EJS_volume = Number(params.get('volume') || 0.7);
       window.EJS_threads = false;
-      // Original pea-green DMG screen rather than grey.
+      // Original pea-green DMG screen rather than grey, inside the LCD's dark frame.
       if (core === 'gb') {
+        window.EJS_backgroundColor = '#33323b';
+        document.documentElement.style.background = document.body.style.background = '#33323b';
         window.EJS_defaultOptions = { gambatte_gb_colorization: 'internal', gambatte_gb_internal_palette: 'GB - DMG' };
       }
       window.EJS_Buttons = {
