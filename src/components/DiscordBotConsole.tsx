@@ -92,7 +92,7 @@ export const DiscordBotConsole: React.FC<DiscordBotConsoleProps> = ({
         text: 'Opening **Throwback Trivia**! 📼 The streetlights are on.',
         embed: {
           title: '📼 Throwback Trivia',
-          description: 'Hollywood Cinephile, Video Game Vault, Murder Mystery Killing Floor & AI Pack Builder ready!',
+          description: 'Prime Time Rerun, Heard It Growing Up, Commercial Break, the 8-Bit Boombox & the pack builder are on the table!',
           color: '#a855f7'
         }
       };

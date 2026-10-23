@@ -1,7 +1,15 @@
 /**
- * Original 8-bit cues for Throwback Trivia. These are written for this room.
- * They borrow the *feeling* of a platformer, a cave, a boss, a Saturday bumper —
- * not the notes of anyone's published theme.
+ * Throwback Trivia's boombox. Three kinds of cue live here:
+ *
+ * - The original 8-bit snippets this room shipped with (mario_run, zelda_cave,
+ *   cyber_boss, arcade_rush, spooky_organ), restored note for note.
+ * - Public-domain melodies played on a square wave: folk songs, ragtime,
+ *   Bach, Grieg, Tárrega. Old enough that anyone can play them, famous
+ *   enough that a toy, a truck, or a phone made you hear them a thousand times.
+ * - The real tones a 90s house made: the dial tone, the busy signal, the
+ *   "number you have reached" beeps, Jenny's number on a touch-tone pad, the
+ *   Emergency Broadcast System. These are built from the published
+ *   frequencies, so they are the actual sound, not an impression of it.
  */
 
 export type ChipWave = OscillatorType | 'noise';
@@ -21,188 +29,290 @@ export interface ChipNote {
   filter?: number;
 }
 
-const lead = (f: number, t: number, d: number, gain = 0.16): ChipNote => ({ f, t, d, wave: 'square', gain, filter: 1400 });
-const soft = (f: number, t: number, d: number, gain = 0.1): ChipNote => ({ f, t, d, wave: 'triangle', gain, filter: 900 });
-const bass = (f: number, t: number, d: number): ChipNote => ({ f, t, d, wave: 'triangle', gain: 0.2, filter: 420 });
-const sine = (f: number, t: number, d: number, gain = 0.14): ChipNote => ({ f, t, d, wave: 'sine', gain, filter: 2200 });
+const SEMI: Record<string, number> = { C: -9, D: -7, E: -5, F: -4, G: -2, A: 0, B: 2 };
 
-/** A bouncy hop. Not the plumber's song — a new one, in that shoes-off feeling. */
-const platformHop: ChipNote[] = [
-  lead(392, 0, 0.16),
-  lead(440, 0.18, 0.16),
-  lead(523.25, 0.36, 0.18),
-  lead(659.25, 0.56, 0.26, 0.18),
-  lead(587.33, 0.86, 0.16),
-  lead(523.25, 1.04, 0.16),
-  lead(440, 1.22, 0.3),
-  lead(392, 1.56, 0.16),
-  lead(659.25, 1.76, 0.34, 0.18),
-  lead(523.25, 2.16, 0.42),
-  soft(329.63, 0.56, 0.26, 0.07),
-  soft(293.66, 1.22, 0.3, 0.07),
-  soft(523.25, 1.76, 0.34, 0.07),
-  bass(130.81, 0, 0.34),
-  bass(196, 0.56, 0.28),
-  bass(174.61, 1.22, 0.3),
-  bass(130.81, 1.76, 0.7),
-];
+/** 'C#5' → Hz. */
+function hz(name: string): number {
+  const m = /^([A-G])([#b]?)(\d)$/.exec(name);
+  if (!m) return 0;
+  const step = SEMI[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0) + (Number(m[3]) - 4) * 12;
+  return 440 * 2 ** (step / 12);
+}
+
+type Voice = Pick<ChipNote, 'wave' | 'gain' | 'filter'>;
+const SQUARE: Voice = { wave: 'square', gain: 0.16, filter: 1700 };
+const BASS: Voice = { wave: 'triangle', gain: 0.2, filter: 480 };
+const ORGAN: Voice = { wave: 'sawtooth', gain: 0.09, filter: 1300 };
+const CHIME: Voice = { wave: 'triangle', gain: 0.2, filter: 3200 };
 
 /**
- * The old cave arpeggio, kept and thickened: a drone under it, a softer second
- * voice, and an answering phrase that wanders back down.
+ * A melody from note names and beats. `null` is a rest.
+ * Each note sounds for most of its beat so repeated notes stay separate.
  */
-const zeldaCave: ChipNote[] = [
-  sine(440, 0, 0.22, 0.13),
-  sine(493.88, 0.24, 0.22, 0.13),
-  sine(523.25, 0.48, 0.22, 0.14),
-  sine(659.25, 0.72, 0.42, 0.15),
-  sine(587.33, 1.18, 0.22, 0.13),
-  sine(523.25, 1.42, 0.22, 0.13),
-  sine(493.88, 1.66, 0.5, 0.14),
-  soft(220, 0, 2.2, 0.08),
-  soft(329.63, 0.72, 0.42, 0.06),
-  sine(392, 2.3, 0.24, 0.12),
-  sine(440, 2.56, 0.24, 0.12),
-  sine(493.88, 2.82, 0.28, 0.13),
-  sine(523.25, 3.14, 0.36, 0.14),
-  sine(440, 3.54, 0.7, 0.13),
-  bass(110, 2.3, 1.9),
+function tune(beat: number, notes: Array<[string | null, number]>, voice: Voice = SQUARE, start = 0): ChipNote[] {
+  const out: ChipNote[] = [];
+  let t = start;
+  for (const [name, beats] of notes) {
+    const len = beats * beat;
+    if (name) out.push({ f: hz(name), t, d: Math.max(0.05, len * 0.88), ...voice });
+    t += len;
+  }
+  return out;
+}
+
+/** The old one-voice format: back to back, a 20 ms breath between notes. */
+function classic(melody: Array<[number, number]>): ChipNote[] {
+  const out: ChipNote[] = [];
+  let t = 0;
+  for (const [f, d] of melody) {
+    if (f > 0) out.push({ f, t, d, wave: 'square', gain: 0.22, filter: 1600 });
+    t += d + 0.02;
+  }
+  return out;
+}
+
+/** Two sines at once, the way the phone company made every tone. */
+function dual(a: number, b: number, t: number, d: number, gain = 0.12): ChipNote[] {
+  return [
+    { f: a, t, d, wave: 'sine', gain, filter: 4000 },
+    { f: b, t, d, wave: 'sine', gain, filter: 4000 },
+  ];
+}
+
+// ---------------------------------------------------------------- the originals
+
+const marioRun = classic([
+  [659.25, 0.12], [659.25, 0.12], [0, 0.1], [659.25, 0.12], [0, 0.1],
+  [523.25, 0.12], [659.25, 0.12], [783.99, 0.24], [392.0, 0.24],
+]);
+
+const zeldaCave = classic([
+  [440, 0.15], [493.88, 0.15], [523.25, 0.15], [659.25, 0.3],
+  [587.33, 0.15], [523.25, 0.15], [493.88, 0.4],
+]);
+
+const cyberBoss = classic([
+  [110, 0.1], [220, 0.1], [164.81, 0.1], [329.63, 0.1], [293.66, 0.15], [220, 0.25],
+]);
+
+const arcadeRush = classic([
+  [523.25, 0.08], [587.33, 0.08], [659.25, 0.08], [783.99, 0.08], [880, 0.08], [1046.5, 0.2],
+]);
+
+const spookyOrgan = classic([
+  [261.63, 0.2], [311.13, 0.2], [392.0, 0.2], [466.16, 0.4],
+]);
+
+// ------------------------------------------------- public-domain, on a square wave
+
+/** Korobeiniki, a Russian folk song from 1861. Game Boys played it until the batteries died. */
+const korobeiniki = [
+  ...tune(0.2, [
+    ['E5', 2], ['B4', 1], ['C5', 1], ['D5', 2], ['C5', 1], ['B4', 1],
+    ['A4', 2], ['A4', 1], ['C5', 1], ['E5', 2], ['D5', 1], ['C5', 1],
+    ['B4', 3], ['C5', 1], ['D5', 2], ['E5', 2],
+    ['C5', 2], ['A4', 2], ['A4', 4],
+  ]),
+  ...tune(0.2, [
+    ['E3', 1], ['E4', 1], ['E3', 1], ['E4', 1], ['A2', 1], ['A3', 1], ['A2', 1], ['A3', 1],
+    ['G#2', 1], ['G#3', 1], ['G#2', 1], ['G#3', 1], ['A2', 1], ['A3', 1], ['A2', 2],
+  ], BASS),
 ];
 
-/** Fast minor bass from the old boss cue, now with a lead stabbing over it. */
-const cyberBoss: ChipNote[] = [
-  bass(110, 0, 0.12),
-  bass(220, 0.14, 0.12),
-  bass(164.81, 0.28, 0.12),
-  bass(329.63, 0.42, 0.12),
-  bass(293.66, 0.58, 0.18),
-  bass(220, 0.8, 0.28),
-  bass(110, 1.16, 0.12),
-  bass(220, 1.3, 0.12),
-  bass(164.81, 1.44, 0.12),
-  bass(329.63, 1.58, 0.12),
-  bass(246.94, 1.74, 0.16),
-  bass(196, 1.94, 0.36),
-  lead(440, 0.14, 0.1, 0.1),
-  lead(466.16, 0.42, 0.1, 0.11),
-  lead(523.25, 0.58, 0.16, 0.12),
-  lead(392, 1.3, 0.1, 0.1),
-  lead(493.88, 1.58, 0.18, 0.12),
-  lead(311.13, 1.94, 0.28, 0.1),
+/** Scott Joplin's The Entertainer (1902). Half the ice cream trucks in America. */
+const entertainer = [
+  ...tune(0.15, [
+    ['D5', 1], ['D#5', 1], ['E5', 1], ['C6', 2], ['E5', 1], ['C6', 2], ['E5', 1], ['C6', 5],
+    [null, 1], ['C6', 1], ['D6', 1], ['D#6', 1], ['E6', 1], ['C6', 1], ['D6', 1], ['E6', 2],
+    ['B5', 1], ['D6', 2], ['C6', 5],
+  ], CHIME),
+  ...tune(0.3, [['C3', 2], ['G3', 2], ['C3', 2], ['G3', 2], ['F3', 2], ['G3', 2], ['C3', 2]], BASS, 0.45),
 ];
 
-/** The old rising run, played twice, the second time with a friend a fourth below. */
-const arcadeRush: ChipNote[] = [
-  lead(523.25, 0, 0.09, 0.14),
-  lead(587.33, 0.1, 0.09, 0.14),
-  lead(659.25, 0.2, 0.09, 0.14),
-  lead(783.99, 0.3, 0.09, 0.15),
-  lead(880, 0.4, 0.09, 0.15),
-  lead(1046.5, 0.5, 0.22, 0.16),
-  soft(392, 0.1, 0.09, 0.07),
-  soft(440, 0.2, 0.09, 0.07),
-  soft(523.25, 0.3, 0.09, 0.07),
-  soft(587.33, 0.4, 0.09, 0.07),
-  soft(659.25, 0.5, 0.22, 0.08),
-  lead(523.25, 0.86, 0.09, 0.14),
-  lead(659.25, 0.96, 0.09, 0.14),
-  lead(783.99, 1.06, 0.09, 0.15),
-  lead(1046.5, 1.16, 0.28, 0.16),
-  bass(130.81, 0, 0.4),
-  bass(196, 0.5, 0.3),
-  bass(261.63, 1.16, 0.4),
+/** Gran Vals, Francisco Tárrega, 1902. Four bars of it rang in every pocket in 1999. */
+const granVals = tune(0.13, [
+  ['E6', 1], ['D6', 1], ['F#5', 2], ['G#5', 2],
+  ['C#6', 1], ['B5', 1], ['D5', 2], ['E5', 2],
+  ['B5', 1], ['A5', 1], ['C#5', 2], ['E5', 2],
+  ['A5', 6],
+], { wave: 'square', gain: 0.13, filter: 2600 });
+
+/** Bach's Toccata and Fugue in D minor: the spooky-organ button on every keyboard. */
+const toccata: ChipNote[] = [
+  ...tune(0.11, [
+    ['A5', 1], ['G5', 1], ['A5', 6], [null, 2],
+    ['G5', 1], ['F5', 1], ['E5', 1], ['D5', 1], ['C#5', 4], ['D5', 8], [null, 3],
+    ['A4', 1], ['G4', 1], ['A4', 6], [null, 2],
+    ['E4', 2], ['F4', 2], ['C#4', 2], ['D4', 8],
+  ], ORGAN),
+  ...tune(0.11, [['A4', 8], [null, 2], ['C#4', 4], ['D4', 8]], { ...ORGAN, gain: 0.05 }, 0.88),
+  { f: hz('D2'), t: 2.2, d: 3.2, wave: 'triangle', gain: 0.18, filter: 300 },
 ];
 
-/** A little organ in a minor key. For the hallway after the porch light. */
-const spookyOrgan: ChipNote[] = [
-  sine(146.83, 0, 1.1, 0.12),
-  sine(174.61, 0, 1.1, 0.08),
-  sine(220, 0, 1.1, 0.07),
-  sine(220, 1.2, 1.2, 0.12),
-  sine(261.63, 1.2, 1.2, 0.08),
-  sine(329.63, 1.2, 1.2, 0.06),
-  sine(174.61, 2.5, 1.4, 0.12),
-  sine(220, 2.5, 1.4, 0.08),
-  sine(261.63, 2.5, 1.4, 0.07),
-  soft(73.42, 0, 3.9, 0.1),
+/** In the Hall of the Mountain King, Grieg, 1875. Sneaking music, getting faster. */
+const mountainKing = [
+  ...tune(0.17, [
+    ['A3', 1], ['B3', 1], ['C4', 1], ['D4', 1], ['E4', 1], ['C4', 1], ['E4', 2],
+    ['D#4', 1], ['B3', 1], ['D#4', 2], ['D4', 1], ['A#3', 1], ['D4', 2],
+  ], { wave: 'square', gain: 0.15, filter: 1100 }),
+  ...tune(0.13, [
+    ['A3', 1], ['B3', 1], ['C4', 1], ['D4', 1], ['E4', 1], ['C4', 1], ['E4', 1], ['A4', 1],
+    ['G4', 1], ['E4', 1], ['C4', 1], ['E4', 1], ['G4', 4],
+  ], { wave: 'square', gain: 0.17, filter: 1500 }, 2.38),
 ];
 
-/** Two close sines beating, the way a sodium lamp hums when it catches. */
-const duskHum: ChipNote[] = [
-  sine(174, 0, 4.2, 0.1),
-  sine(178, 0, 4.2, 0.08),
-  sine(87, 0, 4.2, 0.12),
-  { f: 800, t: 0.4, d: 0.35, wave: 'noise', gain: 0.04, filter: 1400 },
-  { f: 800, t: 1.6, d: 0.5, wave: 'noise', gain: 0.035, filter: 1600 },
-  { f: 800, t: 2.8, d: 0.7, wave: 'noise', gain: 0.04, filter: 1800 },
+/** The organ at the ballgame. Everybody yells the last note. */
+const charge = tune(0.16, [
+  ['G4', 1], ['C5', 1], ['E5', 1], ['G5', 2], ['E5', 1], ['G5', 5],
+], { wave: 'square', gain: 0.17, filter: 2200 });
+
+/** Take Me Out to the Ball Game (1908). */
+const ballGame = tune(0.22, [
+  ['C5', 2], ['C6', 1], ['A5', 1], ['G5', 1], ['E5', 1], ['G5', 3], ['D5', 3],
+], ORGAN);
+
+/** Pop Goes the Weasel: the crank on the jack-in-the-box. The lid flies on POP. */
+const weasel: ChipNote[] = [
+  ...tune(0.17, [
+    ['C5', 2], ['F5', 1], ['F5', 1], ['G5', 1], ['G5', 1], ['A5', 1], ['C6', 1], ['A5', 1], ['F5', 2],
+    ['C5', 1], ['F5', 1], ['F5', 1], ['G5', 1], ['G5', 1], ['A5', 3], ['F5', 1], ['C5', 2],
+    [null, 1], ['D6', 2], ['G5', 1], ['A#5', 1], ['A5', 1], ['F5', 3],
+  ], CHIME),
+  { f: 600, t: 4.0, d: 0.18, wave: 'noise', gain: 0.12, filter: 2400 },
 ];
 
-/** Metal bell, then the lower one that means line up. */
-const recessBell: ChipNote[] = [
-  sine(880, 0, 0.55, 0.16),
-  sine(882.5, 0, 0.55, 0.08),
-  sine(1760, 0, 0.2, 0.05),
-  sine(659.25, 0.7, 0.7, 0.15),
-  sine(661, 0.7, 0.7, 0.07),
-  sine(1318.5, 0.7, 0.18, 0.04),
+/** La Cucaracha, the folk song that lived in somebody's uncle's car horn. */
+const cucaracha = tune(0.13, [
+  ['C5', 1], ['C5', 1], ['C5', 1], ['F5', 3], ['A5', 2], [null, 1],
+  ['C5', 1], ['C5', 1], ['C5', 1], ['F5', 3], ['A5', 2], [null, 2],
+  ['F5', 1], ['F5', 1], ['E5', 1], ['E5', 1], ['D5', 1], ['D5', 1], ['C5', 4],
+], { wave: 'sawtooth', gain: 0.12, filter: 1800 });
+
+/** Shave and a haircut… two bits. The knock that meant a cousin, never a stranger. */
+const shaveHaircut = tune(0.2, [
+  ['C5', 2], ['G4', 1], ['G4', 1], ['A4', 2], ['G4', 2], [null, 2], ['B4', 2], ['C5', 2],
+], { wave: 'triangle', gain: 0.22, filter: 1200 });
+
+/** Für Elise. The music box, the doorbell, the piano lesson you skipped. */
+const furElise = tune(0.16, [
+  ['E5', 1], ['D#5', 1], ['E5', 1], ['D#5', 1], ['E5', 1], ['B4', 1], ['D5', 1], ['C5', 1], ['A4', 3],
+  [null, 1], ['C4', 1], ['E4', 1], ['A4', 1], ['B4', 3],
+], CHIME);
+
+/** Happy Birthday (in the public domain since 2016, which is why the restaurant sang something else). */
+const birthday = tune(0.22, [
+  ['G4', 0.75], ['G4', 0.25], ['A4', 1], ['G4', 1], ['C5', 1], ['B4', 2],
+  ['G4', 0.75], ['G4', 0.25], ['A4', 1], ['G4', 1], ['D5', 1], ['C5', 2],
+], { wave: 'square', gain: 0.15, filter: 1800 });
+
+// --------------------------------------------------------- the house's real tones
+
+/** North American dial tone: 350 Hz and 440 Hz together. */
+const dialTone = dual(350, 440, 0, 3.2, 0.11);
+
+/** Busy signal: 480 + 620 Hz, half a second on, half off. */
+const busySignal = [0, 1, 2, 3].flatMap(i => dual(480, 620, i, 0.5, 0.11));
+
+/** Somebody else's phone ringing: 440 + 480 Hz, two seconds on. */
+const ringback = [...dual(440, 480, 0, 2, 0.1), ...dual(440, 480, 4, 1.2, 0.1)];
+
+/** The three rising beeps before "we're sorry, the number you have reached…". */
+const sitTones: ChipNote[] = [
+  { f: 913.8, t: 0, d: 0.274, wave: 'sine', gain: 0.16 },
+  { f: 1370.6, t: 0.29, d: 0.274, wave: 'sine', gain: 0.16 },
+  { f: 1776.7, t: 0.58, d: 0.38, wave: 'sine', gain: 0.16 },
 ];
 
-/** Chirps and a sweep. An impression of a modem, not a recording of one. */
-const dialup: ChipNote[] = [
-  { f: 900, t: 0, d: 0.12, wave: 'sawtooth', gain: 0.08, filter: 2400, slide: 1800 },
-  { f: 1400, t: 0.16, d: 0.1, wave: 'square', gain: 0.06, filter: 2600 },
-  { f: 700, t: 0.32, d: 0.18, wave: 'sawtooth', gain: 0.07, filter: 2000, slide: 2200 },
-  { f: 400, t: 0.2, d: 0.5, wave: 'noise', gain: 0.05, filter: 3000 },
-  { f: 1200, t: 0.7, d: 0.25, wave: 'square', gain: 0.06, filter: 2800, slide: 600 },
-  { f: 500, t: 1.05, d: 0.3, wave: 'noise', gain: 0.05, filter: 3200 },
-  { f: 1800, t: 1.4, d: 0.2, wave: 'sawtooth', gain: 0.05, filter: 3000, slide: 900 },
-  { f: 440, t: 1.7, d: 0.45, wave: 'triangle', gain: 0.08, filter: 800 },
+/** Left the phone off the hook too long: four tones, pulsing, and very rude about it. */
+const howler = Array.from({ length: 16 }, (_, i) => i * 0.2).flatMap(t => [
+  { f: 1400, t, d: 0.1, wave: 'sine' as const, gain: 0.06 },
+  { f: 2060, t, d: 0.1, wave: 'sine' as const, gain: 0.06 },
+  { f: 2450, t, d: 0.1, wave: 'sine' as const, gain: 0.05 },
+  { f: 2600, t, d: 0.1, wave: 'sine' as const, gain: 0.05 },
+]);
+
+const DTMF: Record<string, [number, number]> = {
+  '1': [697, 1209], '2': [697, 1336], '3': [697, 1477],
+  '4': [770, 1209], '5': [770, 1336], '6': [770, 1477],
+  '7': [852, 1209], '8': [852, 1336], '9': [852, 1477],
+  '*': [941, 1209], '0': [941, 1336], '#': [941, 1477],
+};
+
+/** Touch-tone keypad: the real pair of frequencies for every digit. */
+function dial(number: string, gap = 0.26): ChipNote[] {
+  return [...number].filter(c => DTMF[c]).flatMap((c, i) => {
+    const [low, high] = DTMF[c];
+    return dual(low, high, i * gap + (i >= 3 ? 0.18 : 0), 0.16, 0.1);
+  });
+}
+
+/** Emergency Broadcast System attention signal: 853 + 960 Hz. "This is only a test." */
+const ebsTone = dual(853, 960, 0, 4.5, 0.09);
+
+/** The 1 kHz tone under the color bars after the station signed off. */
+const signOff: ChipNote[] = [{ f: 1000, t: 0, d: 3.5, wave: 'sine', gain: 0.1 }];
+
+// ----------------------------------------------------- house cues for the board
+
+/** Rerun Board: tiles flip up across the table. */
+const boardFill: ChipNote[] = Array.from({ length: 12 }, (_, i) => ({
+  f: hz(['C5', 'E5', 'G5', 'C6'][i % 4]) * (i >= 8 ? 2 : 1),
+  t: i * 0.06,
+  d: 0.08,
+  wave: 'square' as const,
+  gain: 0.1,
+  filter: 2600,
+}));
+
+/** The hidden double tile. A siren-y laser drop, ours. */
+const dailyDouble: ChipNote[] = [
+  { f: 1800, t: 0, d: 0.45, wave: 'square', gain: 0.12, filter: 3000, slide: 300 },
+  { f: 1200, t: 0.1, d: 0.45, wave: 'square', gain: 0.08, filter: 2500, slide: 200 },
+  ...tune(0.1, [['C6', 1], ['G5', 1], ['C6', 1], ['E6', 3]], { wave: 'square', gain: 0.14, filter: 3000 }, 0.6),
 ];
 
-/** Slow, on purpose. The porch light, the walk back. */
-const heartPorch: ChipNote[] = [
-  sine(261.63, 0, 0.55, 0.14),
-  sine(329.63, 0.6, 0.5, 0.14),
-  sine(392, 1.15, 0.75, 0.15),
-  sine(329.63, 2.0, 0.45, 0.13),
-  sine(440, 2.55, 0.55, 0.14),
-  sine(392, 3.2, 0.5, 0.13),
-  sine(349.23, 3.8, 0.45, 0.13),
-  sine(293.66, 4.35, 0.9, 0.14),
-  sine(261.63, 5.4, 1.3, 0.15),
-  soft(130.81, 0, 6.6, 0.07),
-  soft(196, 2.55, 1.2, 0.05),
-];
-
-/** A made-up Saturday ident. Bright, short, then it's gone. */
-const saturday: ChipNote[] = [
-  lead(523.25, 0, 0.12, 0.14),
-  lead(659.25, 0.14, 0.12, 0.14),
-  lead(783.99, 0.28, 0.12, 0.15),
-  lead(1046.5, 0.42, 0.28, 0.16),
-  soft(261.63, 0, 0.7, 0.08),
-  soft(329.63, 0.14, 0.56, 0.06),
-  bass(130.81, 0, 0.28),
-  bass(196, 0.42, 0.4),
-  lead(783.99, 0.85, 0.12, 0.13),
-  lead(1046.5, 0.99, 0.35, 0.15),
-];
+/** Pencils-down clock while everyone writes an answer. Original, tick-tock in a major key. */
+const thinkClock: ChipNote[] = Array.from({ length: 16 }, (_, i) => [
+  { f: i % 2 ? 1500 : 1900, t: i * 0.25, d: 0.03, wave: 'square' as const, gain: 0.06, filter: 4000 },
+  ...(i % 4 === 0
+    ? [{ f: hz(['C4', 'F4', 'G4', 'C4'][i / 4]), t: i * 0.25, d: 0.9, wave: 'triangle' as const, gain: 0.12, filter: 700 }]
+    : []),
+]).flat();
 
 export const CHIP_TUNES: Record<string, ChipNote[]> = {
-  platform_hop: platformHop,
-  mario_run: platformHop,
+  mario_run: marioRun,
   zelda_cave: zeldaCave,
   cyber_boss: cyberBoss,
   arcade_rush: arcadeRush,
   spooky_organ: spookyOrgan,
-  dusk_hum: duskHum,
-  recess_bell: recessBell,
-  dialup,
-  heart_porch: heartPorch,
-  saturday,
+  korobeiniki,
+  entertainer,
+  gran_vals: granVals,
+  toccata,
+  mountain_king: mountainKing,
+  charge,
+  ball_game: ballGame,
+  weasel,
+  cucaracha,
+  shave_haircut: shaveHaircut,
+  fur_elise: furElise,
+  birthday,
+  dial_tone: dialTone,
+  busy_signal: busySignal,
+  ringback,
+  sit_tones: sitTones,
+  howler,
+  jenny: dial('8675309'),
+  ebs: ebsTone,
+  sign_off: signOff,
+  board_fill: boardFill,
+  daily_double: dailyDouble,
+  think_clock: thinkClock,
 };
 
+export const DEFAULT_TUNE = 'mario_run';
+
 export function tuneLength(id: string): number {
-  const notes = CHIP_TUNES[id] ?? CHIP_TUNES.platform_hop;
+  const notes = CHIP_TUNES[id] ?? CHIP_TUNES[DEFAULT_TUNE];
   return notes.reduce((max, note) => Math.max(max, note.t + note.d), 0);
 }
