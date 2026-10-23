@@ -103,6 +103,19 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    build: {
+      rollupOptions: {
+        output: {
+          // Libraries in their own files: they rarely change, so returning
+          // players keep them cached across deploys and only fetch our code.
+          manualChunks: {
+            react: ['react', 'react-dom'],
+            three: ['three'],
+            r3f: ['@react-three/fiber', '@react-three/drei'],
+          },
+        },
+      },
+    },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.

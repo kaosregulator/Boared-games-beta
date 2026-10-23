@@ -1,0 +1,114 @@
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+
+interface MenuReelProps {
+  /** At full black: the room takes over underneath. */
+  onEnter: () => void;
+  /** The fade back up is finished; the menu can go. */
+  onDone: () => void;
+}
+
+/** Fade to black, hold a beat, then fade up on the room. */
+const FADE_OUT_MS = 650;
+const HOLD_MS = 180;
+const FADE_IN_MS = 900;
+
+/**
+ * The title screen: a recorded walk through the room (public/menu/reel.mp4)
+ * plays straight away while the real room loads behind it. One see-through
+ * button stops the reel and fades through black into the room.
+ */
+export function MenuReel({ onEnter, onDone }: MenuReelProps) {
+  const video = useRef<HTMLVideoElement>(null);
+  const [phase, setPhase] = useState<'reel' | 'out' | 'in'>('reel');
+  const year = new Date().getFullYear();
+
+  const play = useCallback(() => {
+    if (phase !== 'reel') return;
+    setPhase('out');
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase === 'out') {
+      const id = window.setTimeout(() => {
+        video.current?.pause();
+        onEnter();
+        window.setTimeout(() => setPhase('in'), HOLD_MS);
+      }, FADE_OUT_MS);
+      return () => window.clearTimeout(id);
+    }
+    if (phase === 'in') {
+      const id = window.setTimeout(onDone, FADE_IN_MS);
+      return () => window.clearTimeout(id);
+    }
+    // Enter or Space from the keyboard plays too.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== 'Enter' && e.code !== 'Space') return;
+      e.preventDefault();
+      play();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [phase, onEnter, onDone, play]);
+
+  return (
+    <div className="absolute inset-0 z-[80]" style={{ pointerEvents: phase === 'in' ? 'none' : 'auto' }}>
+      {phase !== 'in' && (
+        <video
+          ref={video}
+          className="absolute inset-0 h-full w-full object-cover"
+          src="/menu/reel.mp4"
+          poster="/menu/reel-poster.jpg"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          disablePictureInPicture
+          aria-hidden
+        />
+      )}
+      {/* a soft vignette so the button and footer read over any shot */}
+      {phase === 'reel' && (
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{ background: 'radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.45) 100%)' }}
+        />
+      )}
+
+      {phase === 'reel' && (
+        <div className="absolute inset-x-0 bottom-[18%] flex justify-center px-4">
+          <button
+            type="button"
+            onClick={play}
+            autoFocus
+            className="menu-play group flex items-center gap-3 rounded-full border border-white/30 bg-white/[0.08] px-7 py-3.5 text-white/90 shadow-[0_8px_40px_rgba(0,0,0,0.35)] backdrop-blur-[3px] transition hover:border-white/60 hover:bg-white/[0.16] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 active:scale-[0.98]"
+            style={{ fontFamily: '"IBM Plex Mono", ui-monospace, monospace' }}
+          >
+            <span className="grid h-8 w-8 place-items-center rounded-full border border-white/40 bg-white/10 text-[13px] transition group-hover:bg-white/25">
+              ▶
+            </span>
+            <span className="text-[13px] font-bold uppercase tracking-[0.32em] sm:text-sm">Step through time</span>
+          </button>
+        </div>
+      )}
+
+      {/* the black between the reel and the room */}
+      <div
+        className="pointer-events-none absolute inset-0 bg-black"
+        style={{
+          opacity: phase === 'reel' ? 0 : phase === 'out' ? 1 : 0,
+          transition: `opacity ${phase === 'out' ? FADE_OUT_MS : FADE_IN_MS}ms ease-in-out`,
+        }}
+      />
+
+      {phase === 'reel' && (
+        <footer
+          className="pointer-events-none absolute inset-x-0 bottom-0 px-4 pb-[max(12px,env(safe-area-inset-bottom))] text-center text-[10px] font-semibold uppercase tracking-[0.28em] text-white/55"
+          style={{ fontFamily: '"IBM Plex Mono", ui-monospace, monospace', textShadow: '0 1px 3px rgba(0,0,0,0.6)' }}
+        >
+          kaosregulator™ · © {year}
+        </footer>
+      )}
+    </div>
+  );
+}

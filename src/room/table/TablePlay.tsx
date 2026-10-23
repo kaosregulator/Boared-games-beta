@@ -1,16 +1,19 @@
-import React, { Suspense, useRef } from 'react';
+import React, { Suspense, lazy, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { GameMetadata } from '../../types';
 import { sound } from '../../utils/audio';
 import { PLAY_TABLE } from '../roomLayout';
 import { BoxUnfold } from './BoxUnfold';
-import { ConnectFourTable } from './ConnectFourTable';
-import { BattleshipTable } from './BattleshipTable';
-import { MonopolyTable } from './MonopolyTable';
-import { ChessTable } from './ChessTable';
-import { CheckersTable } from './CheckersTable';
-import { BlackjackTable } from './BlackjackTable';
+
+// Each table game loads when it's first played (warmTableGames fetches them in
+// the background once the room is up), so the room itself starts sooner.
+const ConnectFourTable = lazy(() => import('./ConnectFourTable').then(m => ({ default: m.ConnectFourTable })));
+const BattleshipTable = lazy(() => import('./BattleshipTable').then(m => ({ default: m.BattleshipTable })));
+const MonopolyTable = lazy(() => import('./MonopolyTable').then(m => ({ default: m.MonopolyTable })));
+const ChessTable = lazy(() => import('./ChessTable').then(m => ({ default: m.ChessTable })));
+const CheckersTable = lazy(() => import('./CheckersTable').then(m => ({ default: m.CheckersTable })));
+const BlackjackTable = lazy(() => import('./BlackjackTable').then(m => ({ default: m.BlackjackTable })));
 
 export { TableHudOverlay } from './tableHud';
 

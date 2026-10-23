@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
+import { PerformanceMonitor } from '@react-three/drei';
 import * as THREE from 'three';
 import { GameId, GameMetadata } from '../types';
 import { sound } from '../utils/audio';
@@ -7,6 +8,7 @@ import { RealRoomScene, type LiveProp } from './RealRoomScene';
 import { WalkController } from './WalkController';
 import { ReachRaycaster, type Aimed } from './ReachRaycaster';
 import { CaptureClock, TourCamera } from './TourCamera';
+import { FilmCamera } from './FilmCamera';
 import { LAYOUT } from './roomLayout';
 import { DESK_SLOTS, SHELF_SLOTS, SHELF_SLOTS_LOWER } from './videoRoom';
 import { MemoryFlashCard } from './MemoryFlashCard';
@@ -17,11 +19,11 @@ import { DeviceFocus } from './DeviceFocus';
 import { DeviceOverlay } from './DeviceOverlay';
 import { TvGlass } from '../tv/TvSet';
 import { ParentYell } from './ParentYell';
-import { IntroCard } from './IntroCard';
-import { neonGames } from './NeonGameWall';
+import { MenuReel } from './MenuReel';
 import { GameBoySeat } from '../devices/GameBoySeat';
 import { GameBoyGlass } from '../devices/GameBoyGlass';
 import { warmCartridges } from '../devices/cartridges';
+import { warmTableGames } from './table/tableGames';
 import { DEVICE_FROM_PROP, type DeviceId } from './devices';
 import { radio, useRadio } from '../radio/radioEngine';
 import { RoomStudio } from './RoomStudio';
@@ -63,6 +65,7 @@ function readCameraOverride() {
   if (typeof window === 'undefined') {
     return {
       tour: false,
+      film: false,
       shot: undefined as number | undefined,
       card: null as string | null,
       cam: null as { at: [number, number, number]; look: [number, number, number] } | null,
@@ -79,6 +82,7 @@ function readCameraOverride() {
     deviceRaw === 'crt' || deviceRaw === 'nes' || deviceRaw === 'boombox' ? deviceRaw : null;
   return {
     tour: params.has('tour'),
+    film: params.has('film'),
     shot: shotRaw === null ? undefined : Number.parseInt(shotRaw, 10) || 0,
     card: params.get('card'),
     cam: parseCam(params.get('cam')),
@@ -139,7 +143,7 @@ export function WalkRoom({
 }: WalkRoomProps) {
   const override = useMemo(readCameraOverride, []);
   const scripted =
-    override.tour || override.shot !== undefined || Boolean(override.card) || override.capture || Boolean(override.cam);
+    override.tour || override.film || override.shot !== undefined || Boolean(override.card) || override.capture || Boolean(override.cam);
   const [menuOpen, setMenuOpen] = useState(override.menu);
   const [mood, setMood] = useState<RoomMood>('warm-night');
   const [musicOn, setMusicOn] = useState(true);
@@ -169,6 +173,10 @@ export function WalkRoom({
       // Back after a reload: skip the title card and stand where you were.
       Boolean(resumedSession()?.engaged),
   );
+  /** Highest render resolution, eased down only while the frame rate is dropping. */
+  const [dprCap, setDprCap] = useState(1.5);
+  /** The title reel, up until its fade into the room has finished. */
+  const [menuShown, setMenuShown] = useState(() => !engaged);
   /** Bumped to rebuild the canvas after the browser drops its WebGL context. */
   const [glKey, setGlKey] = useState(0);
   const [glLost, setGlLost] = useState(false);
@@ -236,12 +244,16 @@ export function WalkRoom({
     [],
   );
 
-  // Once the room is in and quiet, get the Game Boy's emulator into the cache.
+  // Once the room is in and quiet, get the Game Boy's emulator and the games into the cache.
   useEffect(() => {
     if (!engaged) return;
     const id = window.setTimeout(() => {
-      if ('requestIdleCallback' in window) window.requestIdleCallback(() => warmCartridges(), { timeout: 5000 });
-      else warmCartridges();
+      const warm = () => {
+        warmCartridges();
+        warmTableGames();
+      };
+      if ('requestIdleCallback' in window) window.requestIdleCallback(warm, { timeout: 5000 });
+      else warm();
     }, 6000);
     return () => window.clearTimeout(id);
   }, [engaged]);
@@ -655,8 +667,10 @@ export function WalkRoom({
         style={{ touchAction: 'none' }}
         // Nothing to draw while something is held up over the whole room;
         // seated with the Game Boy, draw on demand so the emulator gets the thread.
-        frameloop={override.capture || seated ? 'demand' : holding ? 'never' : 'always'}
-        dpr={override.capture ? 1 : [1, 1.5]}
+        // Behind the title reel the room only draws when something loads in, so
+        // it's ready the moment play is pressed without burning the GPU meanwhile.
+        frameloop={override.capture || seated || (!engaged && !scripted) ? 'demand' : holding ? 'never' : 'always'}
+        dpr={override.capture ? 1 : [1, dprCap]}
         camera={{ fov: 72, near: 0.08, far: 40, position: [0.02, 1.58, 1.32] }}
         // alpha so the room TV's picture can show through the hole cut for it (RoomTvGlass)
         gl={{ antialias: true, powerPreference: 'high-performance', alpha: true }}
@@ -691,6 +705,16 @@ export function WalkRoom({
         }}
       >
         <color attach="background" args={['#2a2030']} />
+        {/* Full sharpness while the frame rate holds; if a device starts to
+            struggle, render a little softer until it recovers, then sharpen
+            back up. Never below the screen's own resolution. */}
+        {!override.capture && (
+          <PerformanceMonitor
+            flipflops={4}
+            onDecline={() => setDprCap(cap => Math.max(1, Math.round((cap - 0.25) * 100) / 100))}
+            onIncline={() => setDprCap(cap => Math.min(1.5, Math.round((cap + 0.25) * 100) / 100))}
+          />
+        )}
         <RealRoomScene
           games={games}
           hoveredId={aimed?.inReach ? aimed.id : null}
@@ -718,6 +742,8 @@ export function WalkRoom({
           <DemoPose at={override.cam.at} look={override.cam.look} />
         ) : override.card && DEMO_POSE[override.card] ? (
           <DemoPose at={DEMO_POSE[override.card].at} look={DEMO_POSE[override.card].look} />
+        ) : override.film ? (
+          <FilmCamera onShot={shot => setLightsOut(Boolean(shot.lightsOut))} />
         ) : scripted ? (
           <TourCamera staticIndex={override.shot} onWaypoint={label => setTourLabel(label)} />
         ) : (
@@ -949,14 +975,14 @@ export function WalkRoom({
         </div>
       )}
 
-      {!engaged && !scripted && !menuOpen && !overlayGame && (
-        <IntroCard
-          wallTitles={neonGames(games).map(game => game.title)}
+      {menuShown && !scripted && !overlayGame && (
+        <MenuReel
           onEnter={() => {
             setEngaged(true);
             saveEngaged();
             if (musicOn) sound.startNostalgia();
           }}
+          onDone={() => setMenuShown(false)}
         />
       )}
     </div>
