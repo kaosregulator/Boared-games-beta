@@ -230,3 +230,18 @@ body {
   from { opacity: 1; }
   to { opacity: 0; }
 }
+
+/* A parent yelling up the stairs: it lands with a shake. */
+.parent-yell {
+  animation: parent-yell 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+@keyframes parent-yell {
+  0% { transform: translateY(-14px) scale(0.92) rotate(-2deg); opacity: 0; }
+  30% { transform: translateX(-7px) scale(1.02) rotate(1.5deg); opacity: 1; }
+  50% { transform: translateX(6px) rotate(-1.5deg); }
+  70% { transform: translateX(-4px) rotate(1deg); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .parent-yell { animation: none; }
+}

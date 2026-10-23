@@ -1,4 +1,7 @@
 import { SNICK_DURATIONS, SNICK_EPISODES, epKey, snickShowAt, type SnickEpisode } from './snick';
+import { TV247_ON } from './tv247';
+import { CCF_2000, blockOnAir, type ArchiveBlock } from './lineups/archiveBlocks';
+import { PICK_CHANNEL, YT_CHANNELS, ytOnAir, ytShowAt, type YtChannel } from './lineups/youtube247';
 
 /**
  * The cable lineup. Channel 2 is SNICK, running the archived Saturday nights
@@ -78,7 +81,9 @@ export const CARTOONS: Cartoon[] = [
 
 export type Channel =
   | { number: number; call: string; kind: 'snick'; name: string }
-  | { number: number; call: string; kind: 'cartoon'; name: string; cartoon: Cartoon };
+  | { number: number; call: string; kind: 'block'; name: string; block: ArchiveBlock }
+  | { number: number; call: string; kind: 'cartoon'; name: string; cartoon: Cartoon }
+  | { number: number; call: string; kind: 'youtube'; name: string; yt: YtChannel };
 
 function callSign(c: Cartoon): string {
   const t = c.title.toUpperCase();
@@ -94,15 +99,21 @@ function callSign(c: Cartoon): string {
   return 'TOON';
 }
 
+const ytChannel = (yt: YtChannel): Channel => ({ number: yt.number, call: yt.call, kind: 'youtube', name: yt.name, yt });
+
 export const CHANNELS: Channel[] = [
+  // The 24/7 YouTube channels, only with the 24/7 switch on: channel 1 leads the dial.
+  ...(TV247_ON ? YT_CHANNELS.map(ytChannel) : []),
   { number: 2, call: 'SNICK', kind: 'snick', name: 'SNICK — Saturday Night Nickelodeon' },
+  { number: 3, call: 'CCF', kind: 'block', name: 'Cartoon Cartoon Fridays (2000)', block: CCF_2000 },
   ...CARTOONS.map((cartoon, i): Channel => ({
-    number: i + 3,
+    number: i + 4,
     call: callSign(cartoon),
     kind: 'cartoon',
     name: cartoon.title,
     cartoon,
   })),
+  ...(TV247_ON ? [ytChannel(PICK_CHANNEL)] : []),
 ];
 
 export function channelByNumber(n: number) {
@@ -136,6 +147,29 @@ export function guideRow(channel: Channel, at = nowSeconds()): { now: string; ne
       next = snickShowAt(later.episode, later.offset);
     }
     return { now, next };
+  }
+  if (channel.kind === 'block') {
+    const air = blockOnAir(channel.block, at);
+    const parts = channel.block.parts;
+    const next = parts[(air.index + 1) % parts.length];
+    const when = new Date((at + air.part.seconds - air.offset) * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return { now: air.part.title, next: `${when} ${next.title}` };
+  }
+  if (channel.kind === 'youtube') {
+    const air = ytOnAir(channel.yt, at);
+    if (!air) return { now: 'Paste a YouTube link from the menu', next: '' };
+    const links = channel.yt.links;
+    if (air.offset === null) {
+      return { now: air.link.title, next: links.length > 1 ? links[(air.index + 1) % links.length].title : '24/7 · loops all day' };
+    }
+    // the next show and the clock time it starts, from the video's timestamps or the next video
+    const show = ytShowAt(air.link, air.offset);
+    const after = links[(air.index + 1) % links.length];
+    const next = show.next
+      ? { at: at + show.next.at - air.offset, title: show.next.title }
+      : { at: at + (air.link.seconds as number) - air.offset, title: ytShowAt(after, 0).now };
+    const when = new Date(next.at * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return { now: show.now, next: `${when} ${next.title}` };
   }
   const label = `${channel.cartoon.title} (${channel.cartoon.year})`;
   return { now: label, next: `${channel.cartoon.studio} encore` };

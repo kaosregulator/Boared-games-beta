@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { SafeRoomModel } from '../room/RoomModel';
@@ -25,7 +25,8 @@ const LEAN = 0.483;
 const faceZ = (y: number) => 0.329 - (y - 0.114) * 0.525;
 const at = (x: number, y: number, out = 0.012): [number, number, number] => [x * M, y * M, (faceZ(y) + out) * M];
 
-const SCREEN = { x: 0.05, y: 0.735, w: 0.4, h: 0.25 };
+/** The screen glass, sized to cover the whole recess in the mesh so none of its rough edge shows. */
+const SCREEN = { x: 0.029, y: 0.745, w: 0.392, h: 0.277 };
 export const GB_SCREEN_PX = 320;
 
 const BUTTONS: { key: keyof typeof PAD; x: number; y: number; r: number }[] = [
@@ -68,10 +69,8 @@ function SeatRig() {
       cam.updateProjectionMatrix();
     };
   }, [camera]);
-  useFrame(({ clock }) => {
-    // a little breathing so it feels like sitting, not a fixed camera
-    const breathe = Math.sin(clock.elapsedTime * 1.1) * 0.004;
-    seat.pos.set(BEANBAG_SEAT.at[0], BEANBAG_SEAT.at[1] + breathe, BEANBAG_SEAT.at[2]);
+  useFrame(() => {
+    seat.pos.set(...BEANBAG_SEAT.at);
     camera.position.copy(seat.pos);
     camera.lookAt(...BEANBAG_SEAT.look);
     seat.quat.copy(camera.quaternion);
@@ -151,9 +150,56 @@ function HeldGameBoy() {
   );
 }
 
+/**
+ * While seated the room canvas draws on demand (see WalkRoom), so the
+ * emulator, which shares this tab's main thread, keeps its frame rate and its
+ * sound doesn't crackle. The room still redraws at full rate while you zoom,
+ * pan or resize, a frame for each button press, and a slow 15 a second for
+ * the lamps and the TV in the background.
+ */
+const IDLE_FPS = 15;
+
+function SeatTicker() {
+  const invalidate = useThree(state => state.invalidate);
+  useEffect(() => {
+    let raf = 0;
+    let last = 0;
+    let busyUntil = 0;
+    const loop = (t: number) => {
+      if (t < busyUntil || t - last >= 1000 / IDLE_FPS) {
+        last = t;
+        invalidate();
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    const busy = () => {
+      busyUntil = performance.now() + 700;
+    };
+    const once = () => invalidate();
+    const moving = ['wheel', 'touchmove', 'resize'] as const;
+    moving.forEach(e => window.addEventListener(e, busy, { passive: true }));
+    const drag = (e: PointerEvent) => {
+      if (e.buttons) busy();
+    };
+    window.addEventListener('pointermove', drag, { passive: true });
+    window.addEventListener('pointerdown', once);
+    window.addEventListener('pointerup', once);
+    raf = requestAnimationFrame(loop);
+    return () => {
+      cancelAnimationFrame(raf);
+      moving.forEach(e => window.removeEventListener(e, busy));
+      window.removeEventListener('pointermove', drag);
+      window.removeEventListener('pointerdown', once);
+      window.removeEventListener('pointerup', once);
+    };
+  }, [invalidate]);
+  return null;
+}
+
 export function GameBoySeat() {
   return (
     <>
+      <SeatTicker />
       <SeatRig />
       <HeldGameBoy />
     </>

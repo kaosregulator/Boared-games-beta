@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
 /**
@@ -49,8 +49,19 @@ function cssMatrix(m: THREE.Matrix4, mul: number[], prepend = '') {
   return prepend + out;
 }
 
-const CAMERA_MUL = [1, -1, 1, 1, 1, -1, 1, 1, 1, -1, 1, 1, 1, -1, 1, 1];
-const objectMul = (f: number) => [1 / f, 1 / f, 1 / f, 1, -1 / f, -1 / f, -1 / f, -1, 1 / f, 1 / f, 1 / f, 1, 1, 1, 1, 1];
+/**
+ * CSS pixels per metre for the 3D transforms. Scaling the whole world by the
+ * same amount leaves the picture unchanged, but metres-as-pixels put a held
+ * Game Boy's screen a fraction of a pixel from the eye, magnified thousands of
+ * times: browsers lose precision there (soft, slightly off edges) and some
+ * stop drawing the layer at all.
+ */
+const K = 1000;
+const CAMERA_MUL = [1, -1, 1, 1, 1, -1, 1, 1, 1, -1, 1, 1, K, -K, K, 1];
+const objectMul = (f: number) => {
+  const s = K / f;
+  return [s, s, s, 1, -s, -s, -s, -1, s, s, s, 1, K, K, K, 1];
+};
 
 /** DOM side. Render it as a sibling of the <Canvas>, inside the same positioned box. */
 export function GlassSurface({ id, children, zIndex = 10 }: { id: string; children: React.ReactNode; zIndex?: number }) {
@@ -66,6 +77,10 @@ export function GlassSurface({ id, children, zIndex = 10 }: { id: string; childr
     return { root, cam, obj };
   });
   const holder = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    nodes.root.style.zIndex = String(zIndex);
+  }, [nodes, zIndex]);
 
   useLayoutEffect(() => {
     holder.current?.appendChild(nodes.root);
@@ -96,11 +111,32 @@ const toCam = new THREE.Vector3();
 const here = new THREE.Vector3();
 const normal = new THREE.Vector3();
 
+/**
+ * The glass is placed from inside three's render, after it has refreshed the
+ * camera's matrices for the frame being drawn. Placing it in useFrame read the
+ * camera before the walk controller moved it, so the picture trailed the set
+ * by a frame while turning.
+ */
+const placers = new Set<() => void>();
+const hooked = new WeakSet<THREE.Scene>();
+
+function hookScene(scene: THREE.Scene) {
+  if (hooked.has(scene)) return;
+  hooked.add(scene);
+  const prev = scene.onBeforeRender;
+  scene.onBeforeRender = function (...args) {
+    prev.apply(this, args);
+    placers.forEach(place => place());
+  };
+}
+
 /** Canvas side: where the glass is. Writes the CSS transform every frame. */
 export function GlassAnchor({ id, position, rotation = [0, 0, 0], width, widthPx }: GlassAnchorProps) {
-  const { camera, size } = useThree();
+  const get = useThree(state => state.get);
+  const scene = useThree(state => state.scene);
   const anchor = useRef<THREE.Group>(null);
   const factor = widthPx / width;
+  const place = useRef<() => void>(() => {});
 
   useEffect(
     () => () => {
@@ -110,7 +146,17 @@ export function GlassAnchor({ id, position, rotation = [0, 0, 0], width, widthPx
     [id],
   );
 
-  useFrame(() => {
+  useLayoutEffect(() => {
+    hookScene(scene);
+    const run = () => place.current();
+    placers.add(run);
+    return () => {
+      placers.delete(run);
+    };
+  }, [scene]);
+
+  place.current = () => {
+    const { camera, size } = get();
     const group = anchor.current;
     const nodes = surfaces.get(id);
     if (!group || !nodes) return;
@@ -145,7 +191,7 @@ export function GlassAnchor({ id, position, rotation = [0, 0, 0], width, widthPx
     toCam.setFromMatrixPosition(cam.matrixWorld).sub(here.setFromMatrixPosition(group.matrixWorld));
     normal.set(0, 0, 1).transformDirection(group.matrixWorld);
     nodes.root.style.display = toCam.dot(normal) > 0 ? 'block' : 'none';
-  });
+  };
 
   return <group ref={anchor} position={position} rotation={rotation} />;
 }

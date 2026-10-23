@@ -56,3 +56,28 @@ export function cartridgeSrc(c: Cartridge, volume = 0.7) {
 
 /** libretro pad slots EmulatorJS understands, for the on-device buttons. */
 export const PAD = { B: 0, SELECT: 2, START: 3, UP: 4, DOWN: 5, LEFT: 6, RIGHT: 7, A: 8 } as const;
+
+let warmed = false;
+
+/**
+ * Fetch what the cartridge player needs into the browser cache while the room
+ * is idle, so sitting down with the Game Boy boots the game straight away.
+ */
+export function warmCartridges() {
+  if (warmed || typeof window === 'undefined') return;
+  const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+  if (conn?.saveData) return;
+  warmed = true;
+  // EmulatorJS takes the "-legacy" core build when there is no WebGL 2.
+  const legacy = typeof WebGL2RenderingContext === 'undefined' ? '-legacy' : '';
+  const files = [
+    '/emu/data/loader.js',
+    '/emu/data/emulator.min.js',
+    '/emu/data/emulator.min.css',
+    '/emu/data/compression/extract7z.js',
+    '/emu/data/cores/reports/gambatte.json',
+    `/emu/data/cores/gambatte${legacy}-wasm.data`,
+    ...GAME_PAKS.map(c => c.rom),
+  ];
+  for (const f of files) void fetch(f, { priority: 'low' } as RequestInit).catch(() => {});
+}

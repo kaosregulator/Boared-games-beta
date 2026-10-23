@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { mayTurnOn, watchRadio } from '../room/houseRules';
 import { startStatic, type StaticHandle } from '../tv/noise';
 import { FM_MAX, FM_MIN, STATIONS, type Station } from './stations';
 import { countClick, record, sourcesFor, type Source } from './sources';
@@ -244,6 +245,8 @@ class RadioEngine {
 
   setPower(on: boolean) {
     if (on === this.snap.power) return;
+    // not with the TV going: someone downstairs will hear about it
+    if (on && !mayTurnOn('radio')) return;
     if (on) {
       this.hiss = startStatic(this.snap.volume, 'radio');
       this.set({ power: true, error: null });
@@ -267,6 +270,7 @@ class RadioEngine {
   /** One click of the tuning knob. */
   nudge(dir: 1 | -1) {
     if (!this.snap.power) this.setPower(true);
+    if (!this.snap.power) return;
     this.stopMotion();
     this.set({ scanning: false, seeking: false });
     this.setFreq(this.snap.freq + dir * STEP);
@@ -275,6 +279,7 @@ class RadioEngine {
   /** Sweep through the static to the next station, then lock. */
   seek(dir: 1 | -1, then?: () => void) {
     if (!this.snap.power) this.setPower(true);
+    if (!this.snap.power) return;
     this.stopMotion();
     const ordered = dir > 0 ? STATIONS : [...STATIONS].reverse();
     const target =
@@ -320,6 +325,7 @@ class RadioEngine {
 }
 
 export const radio = new RadioEngine();
+watchRadio(() => radio.state.power);
 // Capture scripts drive the tuner with window.__radio (dev server only).
 if (import.meta.env.DEV && typeof window !== 'undefined') (window as unknown as { __radio: RadioEngine }).__radio = radio;
 

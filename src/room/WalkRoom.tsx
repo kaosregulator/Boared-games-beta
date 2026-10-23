@@ -16,10 +16,12 @@ import { RubikPlay } from '../devices/RubikPlay';
 import { DeviceFocus } from './DeviceFocus';
 import { DeviceOverlay } from './DeviceOverlay';
 import { TvGlass } from '../tv/TvSet';
+import { ParentYell } from './ParentYell';
 import { IntroCard } from './IntroCard';
 import { neonGames } from './NeonGameWall';
 import { GameBoySeat } from '../devices/GameBoySeat';
 import { GameBoyGlass } from '../devices/GameBoyGlass';
+import { warmCartridges } from '../devices/cartridges';
 import { DEVICE_FROM_PROP, type DeviceId } from './devices';
 import { radio, useRadio } from '../radio/radioEngine';
 import { RoomStudio } from './RoomStudio';
@@ -174,6 +176,8 @@ export function WalkRoom({
   const [aimed, setAimed] = useState<Aimed | null>(null);
   const [pulledGameId, setPulledGameId] = useState<GameId | null>(null);
   const [lampsWarm] = useState(false);
+  /** The wall switch by the door. */
+  const [lightsOut, setLightsOut] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   /** The card you opened stays up until you close it or walk away. */
   const [pinned, setPinned] = useState<Aimed | null>(null);
@@ -200,6 +204,8 @@ export function WalkRoom({
   const holding = tamagotchi || rubik;
   const emulatorOn = (device === 'crt' || device === 'nes') && tvStatus.mode === 'emulator';
   const tvOn = (device === 'crt' || device === 'nes') && !scripted;
+  // Stepping back with the set on leaves it playing on the room's TV until POWER.
+  const tvInRoom = !tvOn && !scripted && tvStatus.mode !== 'off';
   const padUp = touch && (seated || emulatorOn);
   const viewKind = seated || padUp ? 'gameboy' : tvOn ? 'tv' : device === 'boombox' ? 'radio' : null;
   const big = rig.big && (tvOn || seated);
@@ -229,6 +235,16 @@ export function WalkRoom({
     },
     [],
   );
+
+  // Once the room is in and quiet, get the Game Boy's emulator into the cache.
+  useEffect(() => {
+    if (!engaged) return;
+    const id = window.setTimeout(() => {
+      if ('requestIdleCallback' in window) window.requestIdleCallback(() => warmCartridges(), { timeout: 5000 });
+      else warmCartridges();
+    }, 6000);
+    return () => window.clearTimeout(id);
+  }, [engaged]);
 
   // The stereo and the room's background music never play over each other.
   useEffect(() => {
@@ -570,6 +586,11 @@ export function WalkRoom({
         else pinCard(target);
         return;
       }
+      if (target.id === 'light-switch') {
+        sound.playButtonClick();
+        setLightsOut(out => !out);
+        return;
+      }
       if (target.id === 'door') sound.playMoveClack();
       if (propCardFor(target.id)) pinCard(target);
     },
@@ -595,9 +616,13 @@ export function WalkRoom({
     },
     [enterDevice, sitDown],
   );
-  // Capture scripts open things with window.__cardAction (dev server only).
+  // Capture scripts open things with window.__cardAction and flip the wall
+  // switch with window.__lightsOut (dev server only).
   useEffect(() => {
-    if (import.meta.env.DEV) (window as unknown as { __cardAction?: typeof runCardAction }).__cardAction = runCardAction;
+    if (!import.meta.env.DEV) return;
+    const w = window as unknown as { __cardAction?: typeof runCardAction; __lightsOut?: (out: boolean) => void };
+    w.__cardAction = runCardAction;
+    w.__lightsOut = setLightsOut;
   }, [runCardAction]);
 
   // An old commercial on a card pauses the room music; closing it brings the music back.
@@ -623,15 +648,18 @@ export function WalkRoom({
 
 
   return (
-    <div data-room className="relative w-full h-[100dvh] overflow-hidden bg-[#140c14] select-none overscroll-none">
+    // isolate: the TV left on in the room sits just under the canvas, above this background
+    <div data-room className="relative isolate w-full h-[100dvh] overflow-hidden bg-[#140c14] select-none overscroll-none">
       <Canvas
         key={glKey}
         style={{ touchAction: 'none' }}
-        // Nothing to draw while something is held up over the whole room.
-        frameloop={override.capture ? 'demand' : holding ? 'never' : 'always'}
+        // Nothing to draw while something is held up over the whole room;
+        // seated with the Game Boy, draw on demand so the emulator gets the thread.
+        frameloop={override.capture || seated ? 'demand' : holding ? 'never' : 'always'}
         dpr={override.capture ? 1 : [1, 1.5]}
         camera={{ fov: 72, near: 0.08, far: 40, position: [0.02, 1.58, 1.32] }}
-        gl={{ antialias: true, powerPreference: 'high-performance', alpha: false }}
+        // alpha so the room TV's picture can show through the hole cut for it (RoomTvGlass)
+        gl={{ antialias: true, powerPreference: 'high-performance', alpha: true }}
         onCreated={({ gl, scene }) => {
           // If the GPU drops this context (memory pressure, a driver reset),
           // rebuild the canvas instead of leaving a dead black screen. Room
@@ -679,6 +707,8 @@ export function WalkRoom({
           onPacked={onPacked}
           onLeaveTable={packUp}
           hideGameboy={seated}
+          tvInRoom={tvInRoom}
+          lightsOut={lightsOut}
         />
         <DeviceFocus device={scripted ? null : device} />
         {seated && <GameBoySeat />}
@@ -749,7 +779,7 @@ export function WalkRoom({
       {tvOn && (touch || big) && flashPhase !== 'cover' && (
         <TvRemote landscape={vp.landscape} big={big} onBig={toggleBig} padUp={padUp} />
       )}
-      {(device === 'crt' || device === 'nes') && !scripted && <TvGlass initialMode={device === 'nes' ? 'gaming' : 'menu'} />}
+      {(tvOn || tvInRoom) && <TvGlass initialMode={device === 'nes' ? 'gaming' : 'menu'} inRoom={tvInRoom} />}
       {session && session.phase === 'play' && TABLE_GAMES.has(session.game.id) && (
         <TableHudOverlay
           crouched={crouched}
@@ -910,6 +940,7 @@ export function WalkRoom({
       )}
 
       {flashPhase !== 'idle' && <div className={`device-flash ${flashPhase}`} />}
+      <ParentYell />
       {glLost && (
         <div className="pointer-events-none absolute inset-0 z-[60] flex items-center justify-center bg-[#140c14]/80">
           <p className="rounded-full bg-black/70 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-amber-100">

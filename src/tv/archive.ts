@@ -60,7 +60,8 @@ export function resolveArchive(id: string, kind: 'video' | 'audio', hint?: strin
       const file = meta?.files ? pick(meta.files, kind, hint) : null;
       if (!file) return null;
       return {
-        url: `https://archive.org/download/${encodeURIComponent(id)}/${encodeURIComponent(file.name)}`,
+        // files can sit in folders inside the item: keep the slashes
+        url: `https://archive.org/download/${encodeURIComponent(id)}/${file.name.split('/').map(encodeURIComponent).join('/')}`,
         length: seconds(file.length),
         name: file.name,
       };

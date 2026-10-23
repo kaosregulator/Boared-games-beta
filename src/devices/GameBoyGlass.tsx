@@ -6,6 +6,8 @@ import { setGameBoyFrame } from './gameboyBus';
 
 const DOT = '#9bbc0f';
 const INK = '#0f380f';
+/** The dark frame around the picture on a real Game Boy's LCD. */
+const FRAME = '#33323b';
 
 /** What shows on the Game Boy's screen: a cartridge picker, then the game. */
 export function GameBoyGlass() {
@@ -45,12 +47,12 @@ export function GameBoyGlass() {
         style={{
           width,
           height,
-          background: DOT,
+          background: cart ? FRAME : DOT,
           color: INK,
           fontFamily: '"IBM Plex Mono", monospace',
           overflow: 'hidden',
           position: 'relative',
-          borderRadius: 4,
+          borderRadius: 3,
         }}
       >
         {cart ? (
@@ -58,7 +60,16 @@ export function GameBoyGlass() {
             ref={frame}
             title={cart.title}
             src={cartridgeSrc(cart)}
-            style={{ width: '100%', height: '100%', border: 0, background: '#000' }}
+            // the Game Boy's own 10:9 picture, centred in the LCD's dark frame
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: (width - Math.round((height * 10) / 9)) / 2,
+              width: Math.round((height * 10) / 9),
+              height,
+              border: 0,
+              background: FRAME,
+            }}
             allow="autoplay; gamepad"
           />
         ) : (
@@ -91,6 +102,16 @@ export function GameBoyGlass() {
             ))}
           </div>
         )}
+        {/* a crisp, slightly sunken edge where the glass meets the shell */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: 3,
+            pointerEvents: 'none',
+            boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.6), inset 0 3px 6px rgba(0,0,0,0.4)',
+          }}
+        />
       </div>
     </GlassSurface>
   );
