@@ -3,19 +3,20 @@ import { GameMetadata, LeaderboardEntry, UserProfile } from '../types';
 export const GAME_CATALOG: GameMetadata[] = [
   {
     id: 'trivia',
-    title: 'Jackbox Trivia Party & Murder Mystery',
-    subtitle: 'Movie Quotes, Game Consoles, Killing Floor & Custom AI Packs',
+    title: 'Throwback Trivia',
+    subtitle: 'Born 1991 · pictures, commercials, and the 8-bit boombox',
     players: '1 - 8 Players (Party, AI Bots & Co-op)',
     duration: '5 - 15 min',
     boxColor: 'from-purple-950 via-indigo-950 to-slate-900',
     boxAccent: 'border-amber-400/50 text-amber-300',
-    badge: 'Jackbox Style & AI',
-    description: 'The ultimate animated game show party pack! Features Hollywood Cinephile (quotes, "this actor starred in..."), Video Game Vault (console specs & 8-bit clues), Trivia Murder Mystery with deadly Killing Floor traps, 8-bit synthesized audio rounds, and a Make-Your-Own Pack builder powered by Google AI!',
+    badge: 'Class of 1991',
+    description: 'A throwback for the year you were born and the kids you sat next to. Pictures fade in on a timer, Internet Archive commercials play on the card, and the 8-bit cues hush the TV, the radio, and the bedroom tape so the boombox has the room.',
     rules: [
-      'Choose from 5 Game Modes: Party Mix, Hollywood Cinephile, Video Game Vault, Trivia Murder Mystery, or Name That 8-Bit Melody.',
-      'Answer fast to earn maximum speed points and multiplier streaks.',
-      'In Trivia Murder Mystery: wrong answers send you to the Killing Floor to face deadly survival traps (Poison Chalice, Wire Cut, Guillotine Blade) or become a Ghost!',
-      'Make your own custom packs or type any prompt to generate a full quiz instantly with Google AI Gemini!'
+      'Pick a stack: Throwback Mix, Fade the Picture, Saturday Clips, Cartridge Years, 8-Bit Boombox, Closet & the Porch, or After Dark.',
+      'On a sound round or a commercial, the room pauses — TV, radio, and music — and the cue plays.',
+      'Picture rounds start almost black and come into focus. Say it before they do.',
+      'After Dark still sends a miss to the Killing Floor.',
+      'Answer fast. The middle name from the porch still counts.'
     ],
     icon: 'Sparkles',
     rating: '5.0 ★★★★★'

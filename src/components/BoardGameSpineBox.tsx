@@ -319,8 +319,8 @@ export const BoardGameSpineBox: React.FC<BoardGameSpineBoxProps> = ({
           )}
           {gameId === 'trivia' && (
             <>
-              <span className="text-[9px] sm:text-[10px] font-black tracking-tight leading-none text-purple-200">JACKBOX</span>
-              <span className="text-[7px] font-bold text-amber-300 tracking-wider">PARTY</span>
+              <span className="text-[8px] sm:text-[9px] font-black tracking-tight leading-none text-amber-200">THROW</span>
+              <span className="text-[7px] font-bold text-amber-300 tracking-wider">BACK</span>
             </>
           )}
           {gameId === 'poker' && (
@@ -370,7 +370,7 @@ export const BoardGameSpineBox: React.FC<BoardGameSpineBoxProps> = ({
                   : gameId === 'connect4'
                   ? 'CONNECT 4'
                   : gameId === 'trivia'
-                  ? 'TRIVIA PARTY & MURDER MYSTERY'
+                  ? 'THROWBACK TRIVIA'
                   : gameId === 'poker'
                   ? "TEXAS HOLD'EM POKER"
                   : gameId === 'casino'
@@ -392,7 +392,7 @@ export const BoardGameSpineBox: React.FC<BoardGameSpineBoxProps> = ({
                 : gameId === 'connect4'
                 ? '✦ THE ORIGINAL VERTICAL FOUR-IN-A-ROW ✦'
                 : gameId === 'trivia'
-                ? '★ MOVIE QUOTES, GAME CONSOLES, KILLING FLOOR & CUSTOM AI PACKS ★'
+                ? '★ BORN 1991 · PICTURES, CLIPS, AND THE 8-BIT BOOMBOX ★'
                 : gameId === 'poker'
                 ? '◆ HIGH-STAKES OVAL ROOM & 5-CARD VIDEO POKER ◆'
                 : gameId === 'casino'

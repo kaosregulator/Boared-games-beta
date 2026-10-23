@@ -9,6 +9,7 @@ import { blockOnAir } from './lineups/archiveBlocks';
 import { CARTRIDGES, cartridgeSrc, type Cartridge } from '../devices/cartridges';
 import { TV247_ON } from './tv247';
 import { YouTubeTv } from './YouTubeTv';
+import { useTvQuiet } from './tvBus';
 import { PICK_NUMBER, setPick } from './lineups/youtube247';
 
 export type TvMode = 'off' | 'menu' | 'tv' | 'guide' | 'gaming' | 'emulator' | 'link';
@@ -75,6 +76,8 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
   const [lowerThird, setLowerThird] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
   const video = useRef<HTMLVideoElement>(null);
+  const quiet = useTvQuiet();
+  const videoWasPlaying = useRef(false);
   const snow = useRef<HTMLCanvasElement>(null);
   const hiss = useRef<StaticHandle | null>(null);
   const tuneToken = useRef(0);
@@ -131,6 +134,23 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
   );
 
   const watching = mode === 'tv' || mode === 'guide';
+
+  // A Throwback cue borrows the set. Resume only if this pause is the one that stopped it.
+  useEffect(() => {
+    const el = video.current;
+    if (quiet) {
+      videoWasPlaying.current = Boolean(el && !el.paused && el.src);
+      if (el && !el.paused) el.pause();
+      hiss.current?.setLevel(0, 0.05);
+      return;
+    }
+    if (videoWasPlaying.current && el?.src) {
+      videoWasPlaying.current = false;
+      void el.play().catch(() => {});
+    }
+  }, [quiet]);
+
+
 
   // Tune: snow + hiss, look the item up, seek to where the channel is "live", fade the hiss.
   useEffect(() => {
@@ -484,6 +504,7 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
           channel={current.yt}
           style={videoStyle}
           volume={volume}
+          quiet={quiet}
           onPlaying={label => ytTune.current?.onPlaying(label)}
           onFail={() => ytTune.current?.onFail()}
           onMuted={() => showOsd('MUTED — PRESS VOL +', 4000)}

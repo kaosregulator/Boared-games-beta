@@ -8,6 +8,10 @@ export type TriviaCategory =
   | 'game_systems'
   | 'chiptune_sound'
   | 'murder_mystery'
+  | 'picture'
+  | 'style'
+  | 'heart'
+  | 'laugh'
   | 'custom';
 
 export type TriviaSubMode = 
@@ -16,6 +20,8 @@ export type TriviaSubMode =
   | 'gaming_vault'
   | 'murder_mystery'
   | 'name_that_tune'
+  | 'picture_fade'
+  | 'heart_block'
   | 'custom_pack';
 
 export type MatchFormat = 
@@ -47,7 +53,7 @@ export interface HostCharacter {
 export interface TriviaQuestion {
   id: string;
   category: TriviaCategory;
-  type: 'multiple_choice' | 'quote' | 'actor_star' | 'system_guess' | 'sound_guess' | 'murder_trap';
+  type: 'multiple_choice' | 'quote' | 'actor_star' | 'system_guess' | 'sound_guess' | 'murder_trap' | 'picture_fade' | 'video_clip';
   question: string;
   options: string[];
   correctIndex: number;
@@ -56,11 +62,18 @@ export interface TriviaQuestion {
   points: number;
   timeLimitSeconds?: number;
   mediaClue?: {
-    type: 'icon' | 'badge' | 'quote_speaker' | 'retro_sprite' | 'actor_name' | 'sound_clip';
+    type: 'icon' | 'badge' | 'quote_speaker' | 'retro_sprite' | 'actor_name' | 'sound_clip' | 'photo' | 'video';
     content: string;
     subtext?: string;
   };
-  chiptuneId?: 'mario_run' | 'zelda_cave' | 'cyber_boss' | 'arcade_rush' | 'spooky_organ';
+  /** Original cue id from src/utils/chiptunes.ts. The room goes quiet while it plays. */
+  chiptuneId?: string;
+  /** Wikimedia (or other free) still. Fades in on picture rounds. */
+  photo?: { src: string; alt: string; credit: string };
+  /** Internet Archive item. Streamed, never hosted here. */
+  video?: { archiveId: string; title: string };
+  /** How long a picture takes to come into focus. */
+  fadeSeconds?: number;
 }
 
 export interface TriviaPlayer {

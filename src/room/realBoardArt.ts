@@ -592,10 +592,11 @@ function drawTrivia(ctx: CanvasRenderingContext2D) {
     ctx.arc(x, y, 88, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    fitText(ctx, ['POP', 'SCI', 'ART', 'GEO', 'HIST', 'SPORT'][i], x, y, 150, 34, '900');
+    fitText(ctx, ['PICS', 'SOUND', 'STYLE', 'HEART', 'GAMES', 'TV'][i], x, y, 150, 28, '900');
   }
   ctx.fillStyle = '#fbbf24';
-  fitText(ctx, 'TRIVIA NIGHT', S / 2, S / 2, S * 0.4, 72, '900');
+  fitText(ctx, 'THROWBACK', S / 2, S / 2 - 36, S * 0.46, 64, '900');
+  fitText(ctx, 'TRIVIA', S / 2, S / 2 + 40, S * 0.46, 72, '900');
 }
 
 /* ------------------------------ Public API -------------------------------- */

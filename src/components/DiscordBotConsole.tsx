@@ -41,7 +41,7 @@ export const DiscordBotConsole: React.FC<DiscordBotConsoleProps> = ({
         description: 'Launch any game directly in your voice channel or canvas:',
         color: '#3b82f6',
         fields: [
-          { name: '/trivia', value: 'Jackbox Trivia Party & Murder Mystery' },
+          { name: '/trivia', value: 'Throwback Trivia' },
           { name: '/poker', value: "Texas Hold'em Poker Lounge & Video Poker" },
           { name: '/casino', value: 'Lucky 777 Slots & Roulette Wheel' },
           { name: '/battleship', value: 'Naval Strike 3D Dual Radar' },
@@ -89,9 +89,9 @@ export const DiscordBotConsole: React.FC<DiscordBotConsoleProps> = ({
         avatar: '🤖',
         isBot: true,
         time: 'Just now',
-        text: 'Opening **Jackbox Trivia Party & Murder Mystery**! 🎙️👻🎮',
+        text: 'Opening **Throwback Trivia**! 📼 The streetlights are on.',
         embed: {
-          title: '🎙️ Trivia Party Royale Ready',
+          title: '📼 Throwback Trivia',
           description: 'Hollywood Cinephile, Video Game Vault, Murder Mystery Killing Floor & AI Pack Builder ready!',
           color: '#a855f7'
         }

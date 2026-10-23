@@ -146,7 +146,7 @@ export const GameBoxArtGraphic: React.FC<GameBoxArtGraphicProps> = ({
               <Sparkles className="w-6 h-6 animate-pulse" />
             </div>
             <span className="text-[10px] font-mono text-purple-200 uppercase font-bold">
-              Murder Mystery & Movie Trivia
+              Throwback · born 1991
             </span>
           </div>
         )}

@@ -2,6 +2,7 @@
  * Procedural Web Audio Sound Synthesizer for Mini Game Party Pack & Casino Poker Lounge
  * Generates tactile clicks, wood knocks, radar pings, explosions, disc drops, dice shakes, cards, chips, slots, roulette, etc.
  */
+import { CHIP_TUNES, type ChipNote } from './chiptunes';
 
 /** Room music. The first one plays unless the player picked another. */
 export const ROOM_TRACKS = [
@@ -27,7 +28,10 @@ class SoundEngine {
   /** Bedroom tape, separate from effect clicks so the slider can be loud. */
   private musicVolume = 0.92;
   private nostalgiaOn = false;
+  /** Throwback cues hush the tape, then give it back. */
+  private bedroomHeld = false;
   private nostalgiaTimer: number | null = null;
+  private tuneStops: Array<() => void> = [];
   private bedAudio: HTMLAudioElement | null = null;
   private bedFade: number | null = null;
   private bedUnlock: (() => void) | null = null;
@@ -1290,78 +1294,117 @@ class SoundEngine {
     osc.stop(t + 0.6);
   }
 
+  public stopChiptune() {
+    this.tuneStops.forEach(stop => stop());
+    this.tuneStops = [];
+  }
+
+  /** Two voices, a bass, and a real envelope. The old one-note beeps grew up. */
   public playChiptuneTrack(tuneId: string) {
     if (this.muted) return;
     this.initCtx();
     if (!this.ctx) return;
+    this.stopChiptune();
 
-    let melody: { freq: number; dur: number }[] = [];
-    if (tuneId === 'mario_run') {
-      melody = [
-        { freq: 659.25, dur: 0.12 }, { freq: 659.25, dur: 0.12 }, { freq: 0, dur: 0.1 },
-        { freq: 659.25, dur: 0.12 }, { freq: 0, dur: 0.1 }, { freq: 523.25, dur: 0.12 },
-        { freq: 659.25, dur: 0.12 }, { freq: 783.99, dur: 0.24 }, { freq: 392.00, dur: 0.24 }
-      ];
-    } else if (tuneId === 'zelda_cave') {
-      melody = [
-        { freq: 440, dur: 0.15 }, { freq: 493.88, dur: 0.15 }, { freq: 523.25, dur: 0.15 },
-        { freq: 659.25, dur: 0.3 }, { freq: 587.33, dur: 0.15 }, { freq: 523.25, dur: 0.15 },
-        { freq: 493.88, dur: 0.4 }
-      ];
-    } else if (tuneId === 'cyber_boss') {
-      melody = [
-        { freq: 110, dur: 0.1 }, { freq: 220, dur: 0.1 }, { freq: 164.81, dur: 0.1 },
-        { freq: 329.63, dur: 0.1 }, { freq: 293.66, dur: 0.15 }, { freq: 220, dur: 0.25 }
-      ];
-    } else if (tuneId === 'arcade_rush') {
-      melody = [
-        { freq: 523.25, dur: 0.08 }, { freq: 587.33, dur: 0.08 }, { freq: 659.25, dur: 0.08 },
-        { freq: 783.99, dur: 0.08 }, { freq: 880, dur: 0.08 }, { freq: 1046.5, dur: 0.2 }
-      ];
-    } else {
-      melody = [
-        { freq: 261.63, dur: 0.2 }, { freq: 311.13, dur: 0.2 }, { freq: 392.00, dur: 0.2 },
-        { freq: 466.16, dur: 0.4 }
-      ];
+    const notes = CHIP_TUNES[tuneId] ?? CHIP_TUNES.platform_hop;
+    const ctx = this.ctx;
+    const t0 = ctx.currentTime + 0.06;
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(this.volume, t0);
+    master.connect(ctx.destination);
+    this.tuneStops.push(() => {
+      try {
+        master.disconnect();
+      } catch {
+        // already torn down
+      }
+    });
+
+    notes.forEach(note => this.scheduleChip(ctx, master, t0, note));
+  }
+
+  private scheduleChip(ctx: AudioContext, dest: AudioNode, t0: number, note: ChipNote) {
+    const start = t0 + note.t;
+    const gain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(note.filter ?? 1600, start);
+    const peak = Math.max(0.0001, (note.gain ?? 0.16) * 0.9);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(peak, start + Math.min(0.03, note.d * 0.3));
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + note.d);
+    filter.connect(gain);
+    gain.connect(dest);
+
+    if (note.wave === 'noise') {
+      const length = Math.max(1, Math.ceil(ctx.sampleRate * note.d));
+      const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i += 1) data[i] = Math.random() * 2 - 1;
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      src.connect(filter);
+      src.start(start);
+      src.stop(start + note.d);
+      this.tuneStops.push(() => {
+        try {
+          src.stop();
+        } catch {
+          // already ended
+        }
+      });
+      return;
     }
 
-    let cursor = 0;
-    melody.forEach((note) => {
-      if (note.freq > 0) {
-        setTimeout(() => {
-          if (!this.ctx || this.muted) return;
-          const t = this.ctx.currentTime;
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-          osc.type = 'square';
-          osc.frequency.setValueAtTime(note.freq, t);
-          gain.gain.setValueAtTime(0.2 * this.volume, t);
-          gain.gain.exponentialRampToValueAtTime(0.005, t + note.dur);
-
-          const filter = this.ctx.createBiquadFilter();
-          filter.type = 'lowpass';
-          filter.frequency.setValueAtTime(1600, t);
-
-          osc.connect(filter);
-          filter.connect(gain);
-          gain.connect(this.ctx.destination);
-          osc.start(t);
-          osc.stop(t + note.dur);
-        }, cursor * 1000);
+    const osc = ctx.createOscillator();
+    osc.type = note.wave ?? 'square';
+    osc.frequency.setValueAtTime(Math.max(1, note.f), start);
+    if (note.slide && note.slide > 0) {
+      osc.frequency.exponentialRampToValueAtTime(note.slide, start + note.d);
+    }
+    osc.connect(filter);
+    osc.start(start);
+    osc.stop(start + note.d + 0.02);
+    this.tuneStops.push(() => {
+      try {
+        osc.stop();
+      } catch {
+        // already ended
       }
-      cursor += note.dur + 0.02;
     });
   }
 
   /**
    * Bedroom tape. Loops, fades in when you arrive, fades out for the radio.
    */
+  /** Pause the bedroom tape without forgetting that the player had it on. */
+  public holdBedroom() {
+    this.bedroomHeld = true;
+    if (this.bedFade !== null) {
+      window.clearInterval(this.bedFade);
+      this.bedFade = null;
+    }
+    this.bedAudio?.pause();
+  }
+
+  /** The tape comes back only if it was supposed to be playing. */
+  public releaseBedroom() {
+    this.bedroomHeld = false;
+    if (!this.nostalgiaOn) return;
+    const audio = this.ensureBed();
+    if (audio.paused) {
+      void audio.play().catch(() => {});
+    }
+    this.fadeBed(this.muted ? 0 : this.musicVolume);
+  }
+
   public startNostalgia() {
     this.nostalgiaOn = true;
     if (this.nostalgiaTimer !== null) {
       window.clearTimeout(this.nostalgiaTimer);
       this.nostalgiaTimer = null;
     }
+    if (this.bedroomHeld) return;
     const audio = this.ensureBed();
     const target = this.muted ? 0 : this.musicVolume;
     if (audio.paused) {

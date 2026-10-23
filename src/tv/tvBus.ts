@@ -53,3 +53,32 @@ export function useTvStatus() {
 export function getTvStatus() {
   return status;
 }
+
+/**
+ * Throwback cues hush the picture. A count, so a replay inside a question
+ * doesn't hand the TV back early.
+ */
+let quietCount = 0;
+const quietSubs = new Set<(quiet: boolean) => void>();
+
+export function holdTvPicture() {
+  quietCount += 1;
+  if (quietCount === 1) quietSubs.forEach(fn => fn(true));
+}
+
+export function releaseTvPicture() {
+  quietCount = Math.max(0, quietCount - 1);
+  if (quietCount === 0) quietSubs.forEach(fn => fn(false));
+}
+
+export function useTvQuiet() {
+  const [quiet, setQuiet] = useState(quietCount > 0);
+  useEffect(() => {
+    quietSubs.add(setQuiet);
+    setQuiet(quietCount > 0);
+    return () => {
+      quietSubs.delete(setQuiet);
+    };
+  }, []);
+  return quiet;
+}

@@ -92,14 +92,20 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
       const mortimer = TRIVIA_HOSTS.find(h => h.id === 'mortimer') || TRIVIA_HOSTS[1];
       setActiveHost(mortimer);
       triggerHostQuip(mortimer.defaultGreeting);
+    } else if (selectedMode === 'picture_fade' || selectedMode === 'cinephile') {
+      const scarlett = TRIVIA_HOSTS.find(h => h.id === 'scarlett') || TRIVIA_HOSTS[3];
+      setActiveHost(scarlett);
+      triggerHostQuip(selectedMode === 'picture_fade'
+        ? 'Let it fade in. Say it before the picture does.'
+        : 'Saturday morning. The commercial has the room.');
+    } else if (selectedMode === 'heart_block') {
+      const buzz = TRIVIA_HOSTS[0];
+      setActiveHost(buzz);
+      triggerHostQuip('The porch light is on. Some of these are going to hurt, in the good way.');
     } else if (selectedMode === 'gaming_vault' || selectedMode === 'name_that_tune') {
       const pixel8 = TRIVIA_HOSTS.find(h => h.id === 'pixel8') || TRIVIA_HOSTS[2];
       setActiveHost(pixel8);
       triggerHostQuip(pixel8.defaultGreeting);
-    } else if (selectedMode === 'cinephile') {
-      const scarlett = TRIVIA_HOSTS.find(h => h.id === 'scarlett') || TRIVIA_HOSTS[3];
-      setActiveHost(scarlett);
-      triggerHostQuip(scarlett.defaultGreeting);
     } else {
       const buzz = TRIVIA_HOSTS[0];
       setActiveHost(buzz);
@@ -115,14 +121,18 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
     let deck: TriviaQuestion[] = [];
     if (customPack) {
       deck = [...customPack.questions];
+    } else if (selectedMode === 'picture_fade') {
+      deck = TRIVIA_QUESTIONS.filter(q => q.type === 'picture_fade');
+    } else if (selectedMode === 'heart_block') {
+      deck = TRIVIA_QUESTIONS.filter(q => q.category === 'heart' || q.category === 'style' || q.category === 'laugh');
     } else if (selectedMode === 'cinephile') {
-      deck = TRIVIA_QUESTIONS.filter(q => q.category === 'movies' || q.category === 'movie_quotes' || q.category === 'actors');
+      deck = TRIVIA_QUESTIONS.filter(q => q.type === 'video_clip' || q.category === 'movies' || q.category === 'movie_quotes' || q.category === 'actors');
     } else if (selectedMode === 'gaming_vault') {
       deck = TRIVIA_QUESTIONS.filter(q => q.category === 'video_games' || q.category === 'game_systems');
     } else if (selectedMode === 'name_that_tune') {
-      deck = TRIVIA_QUESTIONS.filter(q => q.category === 'chiptune_sound');
+      deck = TRIVIA_QUESTIONS.filter(q => q.type === 'sound_guess' || q.category === 'chiptune_sound');
     } else if (selectedMode === 'murder_mystery') {
-      deck = TRIVIA_QUESTIONS.filter(q => q.category === 'murder_mystery' || q.type === 'quote' || q.category === 'movies');
+      deck = TRIVIA_QUESTIONS.filter(q => q.category === 'murder_mystery');
     } else {
       // Party Mix (All categories shuffled)
       deck = [...TRIVIA_QUESTIONS].sort(() => Math.random() - 0.5);
@@ -132,7 +142,8 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
       deck = [...TRIVIA_QUESTIONS];
     }
 
-    setQuestionDeck(deck.slice(0, 6)); // 6 dynamic rounds per party match
+    const rounds = Math.min(deck.length, selectedMode === 'party_mix' ? 8 : deck.length);
+    setQuestionDeck(deck.slice(0, rounds));
     setCurrentQIndex(0);
     setShowQuestionResults(false);
 
@@ -385,13 +396,13 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
   };
 
   return (
-    <div className="w-full min-h-[620px] bg-slate-950 text-white rounded-3xl p-4 sm:p-6 flex flex-col items-center justify-between relative overflow-hidden select-none border border-slate-800 shadow-2xl">
+    <div className="w-full text-white rounded-3xl p-3 sm:p-4 flex flex-col items-center justify-between relative select-none">
       {/* Background Ambience / Stage Lighting */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-950/40 via-slate-950 to-black pointer-events-none" />
 
       {/* Top Navigation & Host Strip */}
-      <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-4 mb-4 z-10">
-        <div className="flex items-center gap-3">
+      <div className="w-full flex flex-col items-stretch gap-3 mb-4 z-10 min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setPhase('mode_select')}
             className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-bold text-slate-300 hover:text-white transition flex items-center gap-1.5"
@@ -402,7 +413,7 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
           {/* Mode Badge */}
           <span className="bg-indigo-950/90 text-indigo-300 border border-indigo-500/40 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 shadow">
             <Sparkles className="w-3 h-3 text-amber-400" />
-            {selectedMode.replace('_', ' ')}
+            {selectedMode.replaceAll('_', ' ')}
           </span>
 
           {/* Real Match vs Bot Practice Tag */}
@@ -433,10 +444,10 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
             <div className="text-center mb-6">
               <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-pink-400 to-purple-400 flex items-center justify-center gap-2">
                 <Crown className="w-7 h-7 text-amber-400" />
-                TRIVIA PARTY ROYALE & MURDER MYSTERY
+                THROWBACK TRIVIA
               </h1>
               <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-xl mx-auto">
-                Jackbox-style theatrical game show trivia pack with animated hosts, movie quotes, video games, murder mystery traps, and custom pack builder!
+                Born in 1991. Pictures fade in, Archive commercials play, and the 8-bit cues hush the TV, the radio, and the bedroom tape.
               </p>
             </div>
 
@@ -456,14 +467,14 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
                     🎙️
                   </div>
                   <h3 className="font-black text-base text-white group-hover:text-amber-300 transition">
-                    Party Mix Showdown
+                    Throwback Mix
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
-                    Ultimate rapid-fire variety pack! Mixes movies, quotes, actors, gaming consoles, and lore.
+                    The whole block. Pictures, commercials, clothes, the porch light, and the 8-bit.
                   </p>
                 </div>
                 <div className="mt-4 text-[10px] font-mono font-bold text-amber-300 flex items-center gap-1 uppercase tracking-wider">
-                  Host: Buzz Sparkler <ArrowRight className="w-3 h-3" />
+                  Host: DJ Rewind <ArrowRight className="w-3 h-3" />
                 </div>
               </button>
 
@@ -481,10 +492,10 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
                     🎬
                   </div>
                   <h3 className="font-black text-base text-white group-hover:text-amber-300 transition">
-                    Hollywood Cinephile
+                    Saturday Clips
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
-                    "Finish the Movie Quote", "This Actor Starred In...", 3-clue film guessing, and Oscar trivia!
+                    Internet Archive commercials and the movies that raised the class of 1991.
                   </p>
                 </div>
                 <div className="mt-4 text-[10px] font-mono font-bold text-rose-300 flex items-center gap-1 uppercase tracking-wider">
@@ -506,10 +517,10 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
                     🕹️
                   </div>
                   <h3 className="font-black text-base text-white group-hover:text-amber-300 transition">
-                    Video Game Vault
+                    Cartridge Years
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
-                    NES vs PS2 specs, Guess the Game, iconic bosses, speedruns, controllers, and Easter eggs!
+                    SNES in 1991, the N64, the Dreamcast date you could chant, and the gray brick.
                   </p>
                 </div>
                 <div className="mt-4 text-[10px] font-mono font-bold text-cyan-300 flex items-center gap-1 uppercase tracking-wider">
@@ -531,10 +542,10 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
                     💀
                   </div>
                   <h3 className="font-black text-base text-white group-hover:text-rose-300 transition flex items-center gap-1.5">
-                    Trivia Murder Mystery
+                    After Dark
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
-                    Jackbox Trivia Murder Party style! Wrong answers lead to The Killing Floor traps, ghost forms, and Final Escape!
+                    The hallway after the porch light. Miss one and the Killing Floor still wants you.
                   </p>
                 </div>
                 <div className="mt-4 text-[10px] font-mono font-bold text-rose-400 flex items-center gap-1 uppercase tracking-wider">
@@ -556,18 +567,66 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
                     🎵
                   </div>
                   <h3 className="font-black text-base text-white group-hover:text-amber-300 transition">
-                    Name That 8-Bit Melody
+                    8-Bit Boombox
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
-                    Procedural retro chiptune audio synthesizer! Listen to 8-bit theme songs and buzzer-guess first!
+                    The old cues, rewritten with a bass and a second voice. The room goes quiet so you can hear them.
                   </p>
                 </div>
                 <div className="mt-4 text-[10px] font-mono font-bold text-emerald-300 flex items-center gap-1 uppercase tracking-wider">
-                  Live Chiptune Audio Synth <ArrowRight className="w-3 h-3" />
+                  Pauses TV, radio, and music <ArrowRight className="w-3 h-3" />
                 </div>
               </button>
 
-              {/* Mode 6: Custom Pack Creator */}
+              <button
+                onClick={() => {
+                  setSelectedMode('picture_fade');
+                  setPhase('lobby');
+                  sound.playButtonClick();
+                }}
+                className="bg-gradient-to-b from-amber-950/80 to-slate-950 border-2 border-amber-500/40 hover:border-amber-300 rounded-3xl p-5 text-left flex flex-col justify-between shadow-xl transition-transform hover:scale-[1.03] group"
+              >
+                <div>
+                  <div className="w-12 h-12 rounded-2xl bg-amber-600/30 border border-amber-300 flex items-center justify-center text-2xl mb-3 group-hover:rotate-6 transition-transform">
+                    📷
+                  </div>
+                  <h3 className="font-black text-base text-white group-hover:text-amber-300 transition">
+                    Fade the Picture
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Streetlights, parachute pants, the gray brick. It comes into focus. Say it before it does.
+                  </p>
+                </div>
+                <div className="mt-4 text-[10px] font-mono font-bold text-amber-200 flex items-center gap-1 uppercase tracking-wider">
+                  Wikimedia stills <ArrowRight className="w-3 h-3" />
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  setSelectedMode('heart_block');
+                  setPhase('lobby');
+                  sound.playButtonClick();
+                }}
+                className="bg-gradient-to-b from-rose-950/70 to-slate-950 border-2 border-rose-400/30 hover:border-amber-300 rounded-3xl p-5 text-left flex flex-col justify-between shadow-xl transition-transform hover:scale-[1.03] group"
+              >
+                <div>
+                  <div className="w-12 h-12 rounded-2xl bg-rose-600/20 border border-rose-300 flex items-center justify-center text-2xl mb-3 group-hover:rotate-6 transition-transform">
+                    💛
+                  </div>
+                  <h3 className="font-black text-base text-white group-hover:text-amber-300 transition">
+                    Closet & the Porch
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    JNCOs, Starter jackets, the middle name from the porch, the empty desk on Monday.
+                  </p>
+                </div>
+                <div className="mt-4 text-[10px] font-mono font-bold text-rose-200 flex items-center gap-1 uppercase tracking-wider">
+                  The ones that stay <ArrowRight className="w-3 h-3" />
+                </div>
+              </button>
+
+              {/* Custom Pack Creator */}
               <button
                 onClick={() => {
                   setPhase('creator');
@@ -602,7 +661,7 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
           <div className="w-full max-w-2xl bg-slate-900/90 border border-slate-700/80 rounded-3xl p-6 sm:p-8 text-center shadow-2xl flex flex-col items-center animate-in zoom-in duration-200">
             <h2 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-white mb-2 flex items-center gap-2">
               <Sparkles className="w-6 h-6 text-amber-400" />
-              MATCH SETUP • {selectedMode.replace('_', ' ').toUpperCase()}
+              MATCH SETUP • {selectedMode.replaceAll('_', ' ').toUpperCase()}
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 mb-6">
               Choose your match format. Real player matches track on season leaderboards, while AI matches let you train with custom bot personalities!
@@ -665,7 +724,7 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
               className="w-full max-w-sm py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-purple-600 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-white font-black text-sm uppercase tracking-widest shadow-2xl transition-transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
             >
               <Play className="w-5 h-5 text-white" />
-              START TRIVIA PARTY MATCH
+              START THROWBACK
             </button>
           </div>
         )}
@@ -714,7 +773,7 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
           <div className="w-full max-w-2xl bg-slate-900/95 border-2 border-amber-500/50 rounded-3xl p-6 sm:p-8 text-center shadow-2xl flex flex-col items-center animate-in zoom-in duration-300">
             <Trophy className="w-14 h-14 text-amber-400 animate-bounce mb-2" />
             <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-amber-400 to-rose-400 mb-1">
-              TRIVIA MATCH COMPLETED!
+              THROWBACK'S OVER
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 mb-6">
               Final Season Leaderboard Scores & Podium Standings
@@ -790,8 +849,8 @@ export const TriviaPartyGame: React.FC<TriviaPartyGameProps> = ({
 
       {/* Footer Game Tip */}
       <div className="w-full flex items-center justify-between text-[10px] font-mono text-slate-500 pt-2 border-t border-slate-900 z-10">
-        <span>Jackbox Party Trivia Pack • Procedural Sound Synthesis</span>
-        <span>Made with Google AI Gemini • 100% Anti-Cheat Ranked Tiers</span>
+        <span>Throwback Trivia · born 1991 · the room goes quiet for the 8-bit</span>
+        <span>Commons photos · Internet Archive clips</span>
       </div>
     </div>
   );

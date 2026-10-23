@@ -333,7 +333,7 @@ export const RetroBookshelfMenu: React.FC<RetroBookshelfMenuProps> = ({
   const pack1StackGames = [
     { id: 'battleship', brand: 'MB', brandSub: 'GAMES', title: 'BATTLESHIP' },
     { id: 'connect4', brand: 'MB', brandSub: 'GAMES', title: 'CONNECT 4' },
-    { id: 'trivia', brand: 'JACKBOX', brandSub: 'PARTY', title: 'TRIVIA PARTY & MURDER MYSTERY' },
+    { id: 'trivia', brand: 'THROW', brandSub: 'BACK', title: 'THROWBACK TRIVIA' },
     { id: 'poker', brand: 'ROYAL', brandSub: 'LOUNGE', title: "TEXAS HOLD'EM POKER" },
     { id: 'casino', brand: 'CASINO', brandSub: 'DELUXE', title: 'ROYAL CASINO & SLOTS' },
     { id: 'chess', brand: 'CLASSIC', brandSub: 'EDITION', title: 'CHESS & CHECKERS' }

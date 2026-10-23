@@ -14,7 +14,7 @@ export interface ShelfGameSlot {
 
 /** Playable shelf lineup for Game Room Beta (Pack 01). */
 export const SHELF_GAMES: ShelfGameSlot[] = [
-  { id: 'trivia', label: 'Trivia Party', shortLabel: 'TRIVIA', color: '#4c1d95', accent: '#fbbf24', shelfRow: 0, shelfCol: 0 },
+  { id: 'trivia', label: 'Throwback Trivia', shortLabel: 'THROWBACK', color: '#3b2148', accent: '#ffd27a', shelfRow: 0, shelfCol: 0 },
   { id: 'poker', label: "Texas Hold'em", shortLabel: 'POKER', color: '#78350f', accent: '#fcd34d', shelfRow: 0, shelfCol: 1 },
   { id: 'battleship', label: 'Battleship', shortLabel: 'SHIP', color: '#0c4a6e', accent: '#38bdf8', shelfRow: 0, shelfCol: 2 },
   { id: 'connect4', label: 'Connect Four', shortLabel: 'C4', color: '#1e3a8a', accent: '#f59e0b', shelfRow: 1, shelfCol: 0 },

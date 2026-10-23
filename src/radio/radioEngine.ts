@@ -48,6 +48,8 @@ class RadioEngine {
   private sweepTimer: number | null = null;
   private holdTimer: number | null = null;
   private raf = 0;
+  /** Throwback cues borrow the speaker. The station stays tuned. */
+  private cueHold = 0;
 
   get state() {
     return this.snap;
@@ -70,6 +72,7 @@ class RadioEngine {
       const el = document.createElement('audio');
       el.preload = 'none';
       el.setAttribute('playsinline', 'true');
+      el.setAttribute('data-room-radio', 'true');
       document.body.appendChild(el);
       this.audio = el;
     }
@@ -206,10 +209,32 @@ class RadioEngine {
     }
   }
 
+  /** The 8-bit cue gets the speaker. Power and the dial stay where they were. */
+  holdForCue() {
+    this.cueHold += 1;
+    if (this.cueHold !== 1) return;
+    this.audio?.pause();
+    this.hiss?.setLevel(0, 0.05);
+  }
+
+  releaseCue() {
+    this.cueHold = Math.max(0, this.cueHold - 1);
+    if (this.cueHold !== 0) return;
+    if (this.snap.power) {
+      void this.audio?.play().catch(() => {});
+      this.remix();
+    }
+  }
+
   /** Recompute the mix of station and hiss for the current needle position. */
   private mix = () => {
     this.raf = 0;
     if (!this.snap.power) return;
+    if (this.cueHold > 0) {
+      if (this.audio && !this.audio.paused) this.audio.pause();
+      this.hiss?.setLevel(0, 0.05);
+      return;
+    }
     const { station, dist } = this.nearest(this.snap.freq);
     const strength = station ? Math.max(0, 1 - dist / REACH) : 0;
     const wobbling = performance.now() - this.moving < 350;

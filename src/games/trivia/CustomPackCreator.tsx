@@ -198,7 +198,7 @@ export const CustomPackCreator: React.FC<CustomPackCreatorProps> = ({
 
         <h1 className="text-base sm:text-lg font-black uppercase tracking-wider text-amber-300 flex items-center gap-2">
           <Wand2 className="w-5 h-5 text-indigo-400" />
-          Make Your Own Jackbox Trivia Pack
+          Make Your Own Throwback Pack
         </h1>
 
         <div className="flex items-center gap-2">
