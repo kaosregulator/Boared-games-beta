@@ -28,7 +28,8 @@ function gameMode(id: string): 'Online ready' | 'Local / offline' {
 interface GameCardProps {
   kind: 'game';
   game: GameMetadata;
-  onPlay: () => void;
+  /** Left out for the box beside the table: that game is already being played. */
+  onPlay?: () => void;
   onRules: () => void;
   onClose: () => void;
 }
@@ -135,13 +136,19 @@ function GameBody({ game, onPlay, onRules }: GameCardProps) {
       </div>
 
       <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={onPlay}
-          className="flex-1 rounded-xl bg-gradient-to-r from-fuchsia-600 to-amber-500 px-3 py-2.5 font-display text-sm text-white shadow hover:brightness-110"
-        >
-          Play
-        </button>
+        {onPlay ? (
+          <button
+            type="button"
+            onClick={onPlay}
+            className="flex-1 rounded-xl bg-gradient-to-r from-fuchsia-600 to-amber-500 px-3 py-2.5 font-display text-sm text-white shadow hover:brightness-110"
+          >
+            Play
+          </button>
+        ) : (
+          <p className="flex flex-1 items-center justify-center rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-[11px] font-bold uppercase tracking-wider text-amber-100/80">
+            Already on the table
+          </p>
+        )}
         <button
           type="button"
           onClick={onRules}

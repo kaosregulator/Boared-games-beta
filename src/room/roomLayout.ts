@@ -70,6 +70,7 @@ const N = {
   yahtzee: [0.98, 0.846, 0.478] as [number, number, number],
   beanbag: [0.98, 0.376, 0.978] as [number, number, number],
   crate: [0.98, 0.959, 0.646] as [number, number, number],
+  hotwheels: [0.98, 0.881, 0.874] as [number, number, number],
 };
 
 const bedSize = fit(N.bed, 'y', 0.95);
@@ -107,6 +108,7 @@ const beanSize = fit(N.beanbag, 'x', 1.38);
 const beanX = -0.15;
 const beanZ = SOUTH_Z - beanSize.sz / 2 - 0.06;
 const crateSize = fit(N.crate, 'x', 1.08);
+const trackSize = fit(N.hotwheels, 'x', 0.62);
 
 /** Push the frame into the plaster so the visible wood meets the wall. */
 const flushNorth = (sz: number) => NORTH_Z + sz * 0.18;
@@ -485,6 +487,17 @@ export const LAYOUT = {
     meters: 1.08,
     ...crateSize,
   },
+  /** Built on the floor in front of the toy shelf, loop facing the room. */
+  hotwheels: {
+    id: 'hotwheels',
+    x: toyX - toySize.sz / 2 - 0.5,
+    y: 0,
+    z: toyZ - 0.3,
+    rotY: -Math.PI / 2 + 0.35,
+    axis: 'x' as const,
+    meters: 0.62,
+    ...trackSize,
+  },
 } satisfies Record<string, Placed>;
 
 /**
@@ -526,6 +539,16 @@ export const PLAY_TABLE = {
 export const TABLE_SEAT = {
   at: [PLAY_TABLE.x, 1.0, PLAY_TABLE.z + PLAY_TABLE.d / 2 + 0.31] as [number, number, number],
   look: [PLAY_TABLE.x, PLAY_TABLE.h, PLAY_TABLE.z - 0.04] as [number, number, number],
+};
+
+/**
+ * Where a game's own box stands on the floor while it is being played: by
+ * the table's left front leg, turned toward the player's seat.
+ */
+export const TABLE_SIDE_BOX = {
+  x: PLAY_TABLE.x - PLAY_TABLE.w / 2 - 0.2,
+  z: PLAY_TABLE.z + 0.12,
+  rotY: 0.55,
 };
 
 export const TABLE_COLLIDER = {
