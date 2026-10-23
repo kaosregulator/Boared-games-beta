@@ -99,6 +99,7 @@ export function ArchiveSound({
   file,
   start,
   end,
+  stopped = false,
 }: {
   archiveId: string;
   title: string;
@@ -106,6 +107,8 @@ export function ArchiveSound({
   file?: string;
   start?: number;
   end?: number;
+  /** The answer is out and the room is playing again, so the tape stays quiet. */
+  stopped?: boolean;
 }) {
   const [url, setUrl] = useState<string | null>(null);
   const [missed, setMissed] = useState(false);
@@ -129,12 +132,13 @@ export function ArchiveSound({
   useEffect(() => {
     const node = ref.current;
     if (!node || !url) return;
-    void node.play().catch(() => setPlaying(false));
-  }, [url]);
+    if (stopped) node.pause();
+    else void node.play().catch(() => setPlaying(false));
+  }, [url, stopped]);
 
   const replay = () => {
     const node = ref.current;
-    if (!node) return;
+    if (!node || stopped) return;
     node.currentTime = start ?? 0;
     void node.play().catch(() => {});
   };
@@ -162,7 +166,7 @@ export function ArchiveSound({
             {...trimHandlers(start, end)}
           />
         )}
-        <button type="button" onClick={replay} disabled={!url} className="tt-key">
+        <button type="button" onClick={replay} disabled={!url || stopped} className="tt-key">
           {missed ? 'Tape is missing' : !url ? 'Finding the tape…' : playing ? '▶ Playing' : '▶ Play it again'}
         </button>
         <p className="max-w-full truncate text-[9px] text-[#3a2a1a]/70">{credit}</p>
