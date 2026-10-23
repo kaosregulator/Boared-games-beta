@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { useFBX, useGLTF, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { pushHud } from './tableHud';
+import { followAction, setTableView, wasDrag, type Shot } from './tableCam';
 import {
   FLEET,
   SIZE,
@@ -30,6 +31,15 @@ const SEA_Y = 0.0075;
 /** Centres of the two oceans on the table (the opened case halves). */
 const MINE = new THREE.Vector3(-0.22, 0, 0);
 const THEIRS = new THREE.Vector3(0.22, 0, 0);
+
+/**
+ * Camera views. Placing: a three-quarter look down onto your own ocean, close
+ * enough to set each hull, never flat overhead. Battle: from behind your
+ * fleet, looking across both oceans to their waters.
+ */
+const PLACE_VIEW: Shot = { target: [MINE.x, 0, MINE.z + 0.01], yaw: -0.22, pitch: 0.95, dist: 0.5 };
+const BATTLE_VIEW: Shot = { target: [0.06, 0, 0], yaw: -0.38, pitch: 0.8, dist: 0.66 };
+const OVER_VIEW: Shot = { target: [0, 0, -0.02], yaw: 0, pitch: 1.0, dist: 0.8 };
 
 const cellPos = (ocean: THREE.Vector3, x: number, y: number) =>
   new THREE.Vector3(ocean.x + (x - (SIZE - 1) / 2) * CELL, SEA_Y, ocean.z + (y - (SIZE - 1) / 2) * CELL);
@@ -202,8 +212,9 @@ function Ocean({
           onHover(pick(e.point, e.eventObject.parent ?? null));
         }}
         onPointerOut={() => onHover(null)}
-        onPointerDown={e => {
+        onClick={e => {
           e.stopPropagation();
+          if (wasDrag() || e.delta > 8) return;
           const c = pick(e.point, e.eventObject.parent ?? null);
           if (c) onCell(c.x, c.y);
         }}
@@ -230,6 +241,8 @@ interface Flight {
   from: THREE.Vector3;
   to: THREE.Vector3;
   start: number;
+  /** Where the ball is now, for the camera to follow. */
+  pos: THREE.Vector3;
   done: () => void;
 }
 
@@ -264,6 +277,7 @@ function Cannonball({ flight }: { flight: Flight }) {
       const p = flight.from.clone().lerp(flight.to, k);
       p.y += Math.sin(Math.PI * k) * 0.22;
       m.current.position.copy(p);
+      flight.pos.copy(p);
     }
     if (k >= 1 && !fired.current) {
       fired.current = true;
@@ -341,14 +355,21 @@ export function BattleshipTable({ onLeave }: { onLeave: () => void }) {
     play('canonFire', 0.5);
     flightId.current += 1;
     const id = flightId.current;
+    const from = new THREE.Vector3(fromOcean.x, 0.03, fromOcean.z);
+    const to = cellPos(ocean, x, y);
+    const pos = from.clone();
+    // Follow the ball across from the side, low, then hang over the splash.
+    followAction({ target: [0, 0.08, 0], yaw: target === 'theirs' ? 0.12 : -0.12, pitch: 0.32, dist: 0.5 }, 900, () => pos);
     setFlights(f => [
       ...f,
       {
         id,
-        from: new THREE.Vector3(fromOcean.x, 0.03, fromOcean.z),
-        to: cellPos(ocean, x, y),
+        from,
+        to,
         start: clockRef.current,
+        pos,
         done: () => {
+          followAction({ target: [to.x, 0, to.z], yaw: target === 'theirs' ? 0.35 : -0.35, pitch: 0.78, dist: 0.27 }, 1400);
           setFlights(cur => cur.filter(fl => fl.id !== id));
           const fleet = target === 'theirs' ? theirs : mine;
           const ship = shipAt(fleet, x, y);
@@ -395,6 +416,10 @@ export function BattleshipTable({ onLeave }: { onLeave: () => void }) {
   useEffect(() => {
     if (winner && phase !== 'over') setPhase('over');
   }, [phase, winner]);
+
+  useEffect(() => {
+    setTableView(phase === 'place' ? PLACE_VIEW : phase === 'battle' ? BATTLE_VIEW : OVER_VIEW);
+  }, [phase]);
 
   const clickMine = (x: number, y: number) => {
     if (phase !== 'place' || nextSize === undefined) return;

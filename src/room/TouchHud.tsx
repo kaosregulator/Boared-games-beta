@@ -115,7 +115,7 @@ export function TouchHud({ quiet = false, useLabel, onUse, crouched, onCrouch }:
           {crouched ? 'Stand' : 'Duck'}
         </button>
       </div>
-      {!quiet && <p className="absolute left-1/2 top-[max(0.9rem,env(safe-area-inset-top))] -translate-x-1/2 whitespace-nowrap rounded-full bg-black/45 px-3 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-white/60">
+      {!quiet && <p className="absolute left-1/2 top-[calc(3.6rem+env(safe-area-inset-top))] -translate-x-1/2 whitespace-nowrap rounded-full bg-black/45 px-3 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-white/60">
         Drag to look · tap things
       </p>}
     </div>

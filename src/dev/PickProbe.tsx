@@ -2,6 +2,7 @@ import React, { Suspense, useEffect, useMemo } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrthographicCamera, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
+import { withKtx2 } from '../room/ktx2';
 import { LAYOUT } from '../room/roomLayout';
 import { MODEL_URL, type ModelId } from '../room/RoomModel';
 
@@ -13,7 +14,7 @@ import { MODEL_URL, type ModelId } from '../room/RoomModel';
  */
 function Model({ id, view }: { id: keyof typeof LAYOUT; view: string }) {
   const p = LAYOUT[id];
-  const { scene } = useGLTF(MODEL_URL[id as ModelId]);
+  const { scene } = useGLTF(MODEL_URL[id as ModelId], false, true, withKtx2);
   const { camera, size, gl, scene: world } = useThree();
   const fitted = useMemo(() => {
     const root = scene.clone(true);

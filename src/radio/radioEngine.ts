@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { resolveArchive } from '../tv/archive';
 import { startStatic, type StaticHandle } from '../tv/noise';
-import { FM_MAX, FM_MIN, STATIONS, streamUrls, type Station } from './stations';
+import { FM_MAX, FM_MIN, STATIONS, type Station } from './stations';
+import { countClick, record, sourcesFor, type Source } from './sources';
 
 /**
  * A tuner, not a playlist. The dial sits on a frequency; static fills the
@@ -88,43 +88,111 @@ class RadioEngine {
     return { station: best, dist };
   }
 
-  /** Point the audio element at a station, from its live position. */
+  /**
+   * Point the audio element at a station. Its own feed first; if that will
+   * not play (or stalls), the next source in its chain, without a word on
+   * the dial. Only when every source fails does the radio say so.
+   */
   private load(station: Station) {
     if (this.loadedId === station.id) return;
     const el = this.element();
     const token = ++this.loadToken;
     this.loadedId = station.id;
     el.pause();
-    if (station.source.kind === 'stream') {
-      const urls = streamUrls(station.source.mount);
-      const attempt = (i: number) => {
-        if (token !== this.loadToken) return;
-        if (i >= urls.length) {
-          this.set({ error: `${station.name} is off the air right now` });
-          return;
-        }
-        el.onerror = () => attempt(i + 1);
-        el.src = urls[i];
-        void el.play().catch(() => attempt(i + 1));
-      };
-      attempt(0);
-      return;
-    }
-    const id = station.source.id;
-    resolveArchive(id, 'audio').then(file => {
+    void this.walk(station, token);
+  }
+
+  private async walk(station: Station, token: number, skip?: string) {
+    const el = this.element();
+    let ownFailed = false;
+    for await (const src of sourcesFor(station)) {
       if (token !== this.loadToken) return;
-      if (!file) {
-        this.set({ error: `${station.call} tape did not answer` });
+      const url = await src.url().catch(() => null);
+      if (token !== this.loadToken) return;
+      if (url && url === skip) continue;
+      if (import.meta.env.DEV) console.debug('[radio]', station.id, src.key, url);
+      const result = url ? await this.tryPlay(el, url, src, token) : 'failed';
+      if (token !== this.loadToken) return;
+      if (result === 'blocked') return; // the browser wants a tap first; not the station's fault
+      if (result === 'playing') {
+        record(station.id, src, true, url ?? undefined);
+        if (src.uuid) countClick(src.uuid);
+        this.watch(station, token);
         return;
       }
-      el.onerror = () => this.set({ error: `${station.call} tape did not answer` });
-      el.src = file.url;
-      el.onloadedmetadata = () => {
-        const length = Number.isFinite(el.duration) ? el.duration : file.length ?? 0;
-        if (length > 30) el.currentTime = (Date.now() / 1000) % (length - 10);
+      // the station's own feed has several hosts; count it as one failure
+      if (src.key === 'own') ownFailed = true;
+      else record(station.id, src, false);
+    }
+    if (ownFailed) record(station.id, { key: 'own', url: async () => null }, false);
+    if (token === this.loadToken) this.set({ error: `${station.name} is off the air right now` });
+  }
+
+  /** Resolves once audio actually plays, fails, or takes too long. */
+  private tryPlay(el: HTMLAudioElement, url: string, src: Source, token: number) {
+    return new Promise<'playing' | 'failed' | 'blocked'>(resolve => {
+      let done = false;
+      const finish = (r: 'playing' | 'failed' | 'blocked') => {
+        if (done) return;
+        done = true;
+        window.clearTimeout(timer);
+        el.removeEventListener('playing', onPlaying);
+        el.removeEventListener('error', onError);
+        resolve(r);
       };
-      void el.play().catch(() => {});
+      const onPlaying = () => finish('playing');
+      const onError = () => finish('failed');
+      const timer = window.setTimeout(() => finish(token === this.loadToken ? 'failed' : 'blocked'), 6500);
+      el.addEventListener('playing', onPlaying);
+      el.addEventListener('error', onError);
+      el.onloadedmetadata = src.seekLive
+        ? () => {
+            const length = Number.isFinite(el.duration) ? el.duration : 0;
+            if (length > 30) el.currentTime = (Date.now() / 1000) % (length - 10);
+          }
+        : null;
+      el.src = url;
+      void el.play().catch((err: unknown) => {
+        if ((err as { name?: string })?.name === 'NotAllowedError') finish('blocked');
+        else finish('failed');
+      });
     });
+  }
+
+  /** A stream that dies mid-song moves on to the next source, quietly. */
+  private watch(station: Station, token: number) {
+    const el = this.element();
+    let stallTimer = 0;
+    const off = () => {
+      window.clearTimeout(stallTimer);
+      el.removeEventListener('waiting', onWait);
+      el.removeEventListener('stalled', onWait);
+      el.removeEventListener('playing', onPlay);
+      el.removeEventListener('error', onDead);
+    };
+    const onDead = () => {
+      off();
+      if (token !== this.loadToken) return;
+      const dead = el.currentSrc || el.src;
+      this.loadToken += 1;
+      void this.walk(station, this.loadToken, dead);
+    };
+    const onWait = () => {
+      window.clearTimeout(stallTimer);
+      stallTimer = window.setTimeout(onDead, 10000);
+    };
+    const onPlay = () => window.clearTimeout(stallTimer);
+    el.addEventListener('waiting', onWait);
+    el.addEventListener('stalled', onWait);
+    el.addEventListener('playing', onPlay);
+    el.addEventListener('error', onDead);
+    // stop watching when the dial moves on
+    const check = window.setInterval(() => {
+      if (token !== this.loadToken) {
+        off();
+        window.clearInterval(check);
+      }
+    }, 1000);
   }
 
   private unload() {
@@ -252,6 +320,8 @@ class RadioEngine {
 }
 
 export const radio = new RadioEngine();
+// Capture scripts drive the tuner with window.__radio (dev server only).
+if (import.meta.env.DEV && typeof window !== 'undefined') (window as unknown as { __radio: RadioEngine }).__radio = radio;
 
 export function useRadio() {
   const [snap, setSnap] = useState(radio.state);

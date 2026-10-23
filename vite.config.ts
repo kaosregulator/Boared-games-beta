@@ -4,6 +4,25 @@ import path from 'path';
 import { defineConfig, Plugin } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 
+/** The same Radio Browser lookups server.mjs makes, for the dev server. */
+function radioBrowserPlugin(): Plugin {
+  return {
+    name: 'radio-browser-api',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (!req.url?.startsWith('/api/radio/')) return next();
+        void import('./radioBrowserApi.mjs').then(({ handleRadioRequest }) =>
+          handleRadioRequest(req.url!, (status: number, body: unknown) => {
+            res.statusCode = status;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(body));
+          }),
+        );
+      });
+    },
+  };
+}
+
 function geminiTriviaPlugin(): Plugin {
   return {
     name: 'gemini-trivia-api',
@@ -78,7 +97,7 @@ function geminiTriviaPlugin(): Plugin {
 
 export default defineConfig(() => {
   return {
-    plugins: [react(), tailwindcss(), geminiTriviaPlugin()],
+    plugins: [react(), tailwindcss(), geminiTriviaPlugin(), radioBrowserPlugin()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

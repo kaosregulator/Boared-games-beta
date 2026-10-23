@@ -1,0 +1,97 @@
+Changes made to dammagotchi (https://github.com/dammafra/dammagotchi, AGPL-3.0) for the Boared Games room,
+against upstream commit 3e8683e.
+Also: Font Awesome Free (solid) is served from fontawesome/ instead of a Font Awesome kit.
+
+diff --git a/src/experience/camera.js b/src/experience/camera.js
+index c1b0a03..fbdb8df 100644
+--- a/src/experience/camera.js
++++ b/src/experience/camera.js
+@@ -58,9 +58,22 @@ export default class Camera {
+     this.controls.restThreshold = 0.25
+   }
+ 
++  // On a tall screen pull back just enough to fit the whole device (and,
++  // before it is switched on, the battery strip beside it) across the width.
++  fit() {
++    const aspect = this.sizes.aspectRatio
++    const halfWidth = Math.tan((this.instance.fov * Math.PI) / 360) * 3 * aspect
++    const unstarted = !this.experience.life.started && aspect < 1
++    const need = unstarted ? 1.3 : 0.9
++    this.controls.zoomTo(aspect < 1 ? Math.min(1, halfWidth / need) : 1, true)
++    this.controls.setFocalOffset(unstarted ? 0.3 : 0, 0, 0, true)
++  }
++
+   resize() {
+     this.instance.aspect = this.sizes.aspectRatio
+     this.instance.updateProjectionMatrix()
++    // Turning the phone refits the device, unless something else is framing it.
++    if (this.controls.enabled && this.experience.life) this.fit()
+ 
+     this.debug?.refresh()
+   }
+@@ -76,11 +89,7 @@ export default class Camera {
+   async intro(speed = 1.5) {
+     this.controls.enabled = false
+     this.controls.smoothTime = speed
+-    this.controls.zoomTo(1, true)
+-
+-    !this.experience.life.started && this.sizes.aspectRatio < 1
+-      ? this.controls.setFocalOffset(1, 0, 0.5, true)
+-      : this.controls.setFocalOffset(0, 0, 0, true)
++    this.fit()
+ 
+     await this.controls.setLookAt(0, 0, 3, 0, 0, 0, true)
+ 
+diff --git a/src/experience/utils/sizes.js b/src/experience/utils/sizes.js
+index 89520cc..b4614b5 100644
+--- a/src/experience/utils/sizes.js
++++ b/src/experience/utils/sizes.js
+@@ -15,7 +15,7 @@ export default class Sizes extends EventDispatcher {
+     this.width = window.innerWidth
+     this.height = window.innerHeight
+     this.aspectRatio = this.width / this.height
+-    this.pixelRatio = Math.min(window.devicePixelRatio, 2)
++    this.pixelRatio = Math.min(window.devicePixelRatio, matchMedia('(pointer: coarse)').matches ? 1.5 : 2)
+   }
+ 
+   resize = () => {
+diff --git a/src/index.html b/src/index.html
+index 16fcce7..58ea46d 100644
+--- a/src/index.html
++++ b/src/index.html
+@@ -24,7 +24,8 @@
+       rel="stylesheet"
+     />
+ 
+-    <script src="https://kit.fontawesome.com/7fdff1040a.js" crossorigin="anonymous"></script>
++    <link rel="stylesheet" href="fontawesome/css/fontawesome.min.css" />
++    <link rel="stylesheet" href="fontawesome/css/solid.min.css" />
+   </head>
+   <!-- workaround for Safari: tells the browser to react to touch events (triggers "active" state on buttons)  -->
+   <body>
+diff --git a/src/script.js b/src/script.js
+index 9c5caf4..0f1d588 100644
+--- a/src/script.js
++++ b/src/script.js
+@@ -1,8 +1,6 @@
+ import { createDoubleTapPreventer } from '@utils/double-tap-preventer'
+-import { inject } from '@vercel/analytics'
+ import Experience from './experience/experience'
+ 
+-inject()
+ 
+ const v = '1.3'
+ if (v !== localStorage.getItem('version')) {
+diff --git a/vite.config.js b/vite.config.js
+index 21a93c4..95cb529 100644
+--- a/vite.config.js
++++ b/vite.config.js
+@@ -13,7 +13,7 @@ export default {
+   build: {
+     outDir: '../dist', // Output in the dist/ folder
+     emptyOutDir: true, // Empty the folder first
+-    sourcemap: true, // Add sourcemap
++    sourcemap: false, // Add sourcemap
+   },
+   plugins: [
+     tailwindcss(),

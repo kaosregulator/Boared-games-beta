@@ -4,6 +4,8 @@ import * as THREE from 'three';
 import { PLAYER, WALL } from './videoRoom';
 import { ROOM_COLLIDERS, TABLE_COLLIDER } from './roomLayout';
 import { aim, emitRoomTap, fitFov, pad } from './input';
+import { resumedSession, savePose, type SavedPose } from './session';
+import { setWalkZoom, walkView, ZOOM_MAX } from './walkView';
 
 /**
  * Outside control of the walking body: the table session sets the player
@@ -16,6 +18,8 @@ export const walkRig = {
   tableActive: false,
   /** Where the player stands, for cards that close when you walk off. */
   pos: { x: 0, z: 0 },
+  /** Last full pose, so a rebuilt canvas (or a reloaded page) puts you back. */
+  lastPose: null as SavedPose | null,
   listeners: new Set<(crouched: boolean) => void>(),
   setCrouch(on: boolean) {
     if (walkRig.crouchLock === on) return;
@@ -34,7 +38,6 @@ const LOOK = new THREE.Euler(0, 0, 0, 'YXZ');
 
 /** A press that moves less than this is a click or tap, not a look-drag. */
 const TAP_SLOP = { mouse: 6, touch: 12 };
-const WALK_FOV = 72;
 
 interface WalkControllerProps {
   enabled: boolean;
@@ -77,24 +80,24 @@ export function WalkController({ enabled, engaged, onStep }: WalkControllerProps
   enabledRef.current = enabled;
 
   useEffect(() => {
+    const pose = walkRig.lastPose ?? resumedSession()?.pose ?? null;
+    if (pose) {
+      camera.position.set(...pose.p);
+      camera.quaternion.set(...pose.q);
+      return;
+    }
     camera.position.set(...PLAYER.spawn);
     camera.lookAt(...PLAYER.spawnLook);
   }, [camera]);
 
-  // Portrait phones see the room as wide as a laptop does.
-  useEffect(() => {
-    const cam = camera as THREE.PerspectiveCamera;
-    const fov = fitFov(WALK_FOV, size.width / Math.max(1, size.height));
-    if (Math.abs(cam.fov - fov) > 0.01) {
-      cam.fov = fov;
-      cam.updateProjectionMatrix();
-    }
-  }, [camera, size.width, size.height]);
+  // Remember the pose: in memory every frame, in the tab every couple of seconds.
+  const lastSave = useRef(0);
+
 
   useEffect(() => {
     const blocked = new Set([
       'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyC', 'KeyQ',
-      'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space',
+      'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Equal', 'Minus', 'NumpadAdd', 'NumpadSubtract',
     ]);
     const typing = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;
@@ -131,6 +134,13 @@ export function WalkController({ enabled, engaged, onStep }: WalkControllerProps
   useEffect(() => {
     const canvas = gl.domElement;
     let press: null | { id: number; x: number; y: number; lastX: number; lastY: number; touch: boolean; moved: boolean } = null;
+    // Two fingers on the room: pinch to zoom, like squinting across it.
+    const touches = new Map<number, { x: number; y: number }>();
+    let pinch: null | { dist: number; zoom: number } = null;
+    const spread = () => {
+      const [a, b] = [...touches.values()];
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    };
 
     const live = () => enabledRef.current && engagedRef.current;
     const setCursor = (event: PointerEvent) => {
@@ -143,6 +153,17 @@ export function WalkController({ enabled, engaged, onStep }: WalkControllerProps
 
     const down = (event: PointerEvent) => {
       const touch = event.pointerType !== 'mouse';
+      if (touch) {
+        touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        if (touches.size === 2) {
+          // The first finger was going to look around; it's a pinch now.
+          pinch = { dist: spread(), zoom: walkView.zoom };
+          press = null;
+          aim.dragging = false;
+          return;
+        }
+      }
+      if (pinch) return;
       if (touch) aim.mode = 'center';
       else {
         aim.mode = 'cursor';
@@ -152,6 +173,11 @@ export function WalkController({ enabled, engaged, onStep }: WalkControllerProps
       press = { id: event.pointerId, x: event.clientX, y: event.clientY, lastX: event.clientX, lastY: event.clientY, touch, moved: false };
     };
     const move = (event: PointerEvent) => {
+      if (touches.has(event.pointerId)) touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (pinch && touches.size >= 2) {
+        if (live()) setWalkZoom((pinch.zoom * spread()) / Math.max(1, pinch.dist));
+        return;
+      }
       if (event.pointerType === 'mouse' && !press) {
         aim.mode = 'cursor';
         setCursor(event);
@@ -174,10 +200,16 @@ export function WalkController({ enabled, engaged, onStep }: WalkControllerProps
       }
       if (!live()) return;
       // A full swipe across a phone is about a half turn; a mouse is finer.
-      const sens = press.touch ? 3.4 / Math.max(window.innerWidth, window.innerHeight) : 0.0032;
+      // Zoomed in, the same swipe turns less, so aiming stays steady.
+      const sens = (press.touch ? 3.4 / Math.max(window.innerWidth, window.innerHeight) : 0.0032) / walkView.zoom;
       turn(camera, dx * sens, dy * sens);
     };
     const up = (event: PointerEvent) => {
+      touches.delete(event.pointerId);
+      if (pinch) {
+        if (touches.size < 2) pinch = null;
+        return;
+      }
       if (!press || event.pointerId !== press.id) return;
       const tapped = !press.moved;
       press = null;
@@ -188,13 +220,18 @@ export function WalkController({ enabled, engaged, onStep }: WalkControllerProps
     const leave = (event: PointerEvent) => {
       if (event.pointerType === 'mouse' && !press) aim.mode = 'center';
     };
-    // Two-finger swipe on a trackpad (or a scroll wheel) looks around.
+    // Two-finger swipe on a trackpad (or a scroll wheel) looks around;
+    // a trackpad pinch (which browsers send as ctrl+wheel) zooms.
     const wheel = (event: WheelEvent) => {
       event.preventDefault();
-      if (event.ctrlKey || !live()) return;
+      if (!live()) return;
+      if (event.ctrlKey) {
+        setWalkZoom(walkView.zoom * Math.exp(-event.deltaY * 0.01));
+        return;
+      }
       const scale = event.deltaMode === 1 ? 16 : 1;
       const clamp = (v: number) => THREE.MathUtils.clamp(v * scale, -60, 60);
-      turn(camera, clamp(event.deltaX) * 0.0042, clamp(event.deltaY) * 0.0032);
+      turn(camera, (clamp(event.deltaX) * 0.0042) / walkView.zoom, (clamp(event.deltaY) * 0.0032) / walkView.zoom);
     };
     const menu = (event: Event) => event.preventDefault();
 
@@ -253,6 +290,17 @@ export function WalkController({ enabled, engaged, onStep }: WalkControllerProps
     }
     walkRig.pos.x = camera.position.x;
     walkRig.pos.z = camera.position.z;
+    // Only while actually walking: device close-ups and the bean bag move the camera elsewhere.
+    if (enabled && engagedRef.current && !walkRig.crouchLock) {
+      const p = camera.position;
+      const q = camera.quaternion;
+      walkRig.lastPose = { p: [p.x, eyeHeight.current, p.z], q: [q.x, q.y, q.z, q.w] };
+      const now = performance.now();
+      if (now - lastSave.current > 2000) {
+        lastSave.current = now;
+        savePose(walkRig.lastPose);
+      }
+    }
     if (!enabled || !engagedRef.current) {
       velocity.current.multiplyScalar(0.8);
       return;
@@ -271,8 +319,8 @@ export function WalkController({ enabled, engaged, onStep }: WalkControllerProps
     RIGHT.crossVectors(FORWARD, camera.up).normalize();
 
     WISH.set(0, 0, 0);
-    if (k.KeyW || k.ArrowUp) WISH.add(FORWARD);
-    if (k.KeyS || k.ArrowDown) WISH.sub(FORWARD);
+    if (k.KeyW) WISH.add(FORWARD);
+    if (k.KeyS) WISH.sub(FORWARD);
     if (k.KeyD) WISH.add(RIGHT);
     if (k.KeyA) WISH.sub(RIGHT);
     if (WISH.lengthSq() > 0) WISH.normalize().multiplyScalar(speed);
@@ -310,9 +358,25 @@ export function WalkController({ enabled, engaged, onStep }: WalkControllerProps
       camera.position.y = eyeHeight.current + Math.sin(t * 1.25) * 0.008;
     }
 
-    // Left / right arrows (and Q / E-less laptops) turn in place.
+    // Arrows look: left / right turn, up / down look up and down.
     const yaw = (k.ArrowLeft ? -1 : 0) + (k.ArrowRight ? 1 : 0);
-    if (yaw) turn(camera, yaw * 1.9 * delta, 0);
+    const pitch = (k.ArrowUp ? 1 : 0) - (k.ArrowDown ? 1 : 0);
+    if (yaw || pitch) turn(camera, (yaw * 1.9 * delta) / walkView.zoom, (-pitch * 1.3 * delta) / walkView.zoom);
+
+    // + / - hold to zoom.
+    const zoomKey = (k.Equal || k.NumpadAdd ? 1 : 0) - (k.Minus || k.NumpadSubtract ? 1 : 0);
+    if (zoomKey) setWalkZoom(Math.min(ZOOM_MAX, walkView.zoom * Math.exp(zoomKey * 1.6 * delta)));
+
+    // The lens: the player's field of view (widened for portrait screens),
+    // narrowed by the zoom. Eased so a pinch or a preset change glides.
+    const cam = camera as THREE.PerspectiveCamera;
+    const base = fitFov(walkView.fov, cam.aspect, 1.5, 120);
+    const tan = Math.tan(THREE.MathUtils.degToRad(base / 2)) / walkView.zoom;
+    const target = THREE.MathUtils.radToDeg(2 * Math.atan(tan));
+    if (Math.abs(cam.fov - target) > 0.01) {
+      cam.fov += (target - cam.fov) * Math.min(1, delta * 14);
+      cam.updateProjectionMatrix();
+    }
   });
 
   return null;

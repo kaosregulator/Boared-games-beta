@@ -6,6 +6,7 @@ import { BEANBAG_SEAT } from '../room/roomLayout';
 import { GlassAnchor } from './GlassScreen';
 import { PAD } from './cartridges';
 import { sendPad } from './gameboyBus';
+import { frameSubject, resetView, viewRig } from './viewRig';
 
 /**
  * Sitting in the bean bag with the Game Boy. The camera drops to seat height
@@ -38,22 +39,45 @@ const BUTTONS: { key: keyof typeof PAD; x: number; y: number; r: number }[] = [
   { key: 'START', x: 0.027, y: 0.256, r: 0.04 },
 ];
 
+/**
+ * Where the player's head and hands are while sitting. The Game Boy is held
+ * relative to this, not to the camera, so zooming and panning the view never
+ * moves it out of your hands.
+ */
+const seat = {
+  pos: new THREE.Vector3(),
+  quat: new THREE.Quaternion(),
+};
+const HOLD = new THREE.Vector3(0, -0.035, -0.27);
+const GB_CENTRE = new THREE.Vector3();
+/** Half the held Game Boy's width and height, metres, plus a little room. */
+const GB_HALF = { w: 0.058, h: 0.092 };
+
 function SeatRig() {
-  const { camera } = useThree();
-  const saved = useRef<{ pos: THREE.Vector3; quat: THREE.Quaternion } | null>(null);
+  const { camera, size } = useThree();
+  const saved = useRef<{ pos: THREE.Vector3; quat: THREE.Quaternion; fov: number } | null>(null);
   useLayoutEffect(() => {
-    saved.current = { pos: camera.position.clone(), quat: camera.quaternion.clone() };
+    const cam = camera as THREE.PerspectiveCamera;
+    saved.current = { pos: cam.position.clone(), quat: cam.quaternion.clone(), fov: cam.fov };
+    resetView();
     return () => {
       if (!saved.current) return;
-      camera.position.copy(saved.current.pos);
-      camera.quaternion.copy(saved.current.quat);
+      cam.position.copy(saved.current.pos);
+      cam.quaternion.copy(saved.current.quat);
+      cam.fov = saved.current.fov;
+      cam.updateProjectionMatrix();
     };
   }, [camera]);
   useFrame(({ clock }) => {
     // a little breathing so it feels like sitting, not a fixed camera
     const breathe = Math.sin(clock.elapsedTime * 1.1) * 0.004;
-    camera.position.set(BEANBAG_SEAT.at[0], BEANBAG_SEAT.at[1] + breathe, BEANBAG_SEAT.at[2]);
+    seat.pos.set(BEANBAG_SEAT.at[0], BEANBAG_SEAT.at[1] + breathe, BEANBAG_SEAT.at[2]);
+    camera.position.copy(seat.pos);
     camera.lookAt(...BEANBAG_SEAT.look);
+    seat.quat.copy(camera.quaternion);
+    // Frame the Game Boy in whatever the thumb pad leaves free, then zoom/pan.
+    GB_CENTRE.copy(HOLD).applyQuaternion(seat.quat).add(seat.pos);
+    frameSubject(camera as THREE.PerspectiveCamera, GB_CENTRE, GB_HALF, viewRig.insets, size, 1.06);
   });
   return null;
 }
@@ -98,14 +122,13 @@ function PadButton({ spec }: { spec: (typeof BUTTONS)[number] }) {
 
 /** The Game Boy held in both hands, kept in front of the camera. */
 function HeldGameBoy() {
-  const { camera } = useThree();
   const hold = useRef<THREE.Group>(null);
   useFrame(() => {
     const g = hold.current;
     if (!g) return;
-    OFFSET.set(0, -0.035, -0.27).applyQuaternion(camera.quaternion);
-    g.position.copy(camera.position).add(OFFSET);
-    g.quaternion.copy(camera.quaternion);
+    OFFSET.copy(HOLD).applyQuaternion(seat.quat);
+    g.position.copy(seat.pos).add(OFFSET);
+    g.quaternion.copy(seat.quat);
   });
   return (
     <group ref={hold}>

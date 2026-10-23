@@ -1,0 +1,10 @@
+{
+  "name": "Boared Games",
+  "short_name": "Boared Games",
+  "description": "A 90s bedroom where everything works.",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#140c14",
+  "theme_color": "#140c14"
+}

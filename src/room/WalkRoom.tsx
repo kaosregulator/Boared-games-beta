@@ -29,7 +29,15 @@ import { TouchGamepad } from '../devices/TouchGamepad';
 import { aim, isTouchDevice, pad } from './input';
 import { useTvStatus } from '../tv/tvBus';
 import { TvRemote } from '../tv/TvRemote';
+import { DeviceGestures } from '../devices/DeviceGestures';
+import { insetsFor, resetView, setBig, setInsets, useViewRig, useViewport, viewRig } from '../devices/viewRig';
+import { setGlassBig } from '../devices/GlassScreen';
+import { enterFullscreen, exitFullscreen, useFullscreen } from './immersive';
+import { ViewControls } from './ViewControls';
+import { setWalkFov, setWalkZoom, useWalkView } from './walkView';
+import { resumedSession, saveEngaged } from './session';
 import { TABLE_GAMES, TableHudOverlay, type TableSession } from './table/TablePlay';
+import { TableCameraRig } from './table/TableCameraRig';
 import { walkRig } from './WalkController';
 import { TABLE_SEAT } from './roomLayout';
 import { ANCHORS, anchorById, type Anchor } from './anchors';
@@ -140,6 +148,8 @@ export function WalkRoom({
   const sessionKey = useRef(0);
   const [crouched, setCrouched] = useState(false);
   const tableGame = session !== null;
+  /** Crouched at a 3D table game: the table camera has the view. */
+  const tableCamOn = Boolean(session && session.phase === 'play' && TABLE_GAMES.has(session.game.id) && crouched);
   const [placed, setPlaced] = useState<LiveProp[]>([]);
   const [anchorId, setAnchorId] = useState(ANCHORS[0].id);
   const [placeHeight, setPlaceHeight] = useState(0.45);
@@ -148,7 +158,18 @@ export function WalkRoom({
   const [placeName, setPlaceName] = useState('');
   const placeBytes = useRef<ArrayBuffer | null>(null);
   const placeUrl = useRef<string | null>(null);
-  const [engaged, setEngaged] = useState(scripted || Boolean(override.device) || override.seat || Boolean(queryTable));
+  const [engaged, setEngaged] = useState(
+    () =>
+      scripted ||
+      Boolean(override.device) ||
+      override.seat ||
+      Boolean(queryTable) ||
+      // Back after a reload: skip the title card and stand where you were.
+      Boolean(resumedSession()?.engaged),
+  );
+  /** Bumped to rebuild the canvas after the browser drops its WebGL context. */
+  const [glKey, setGlKey] = useState(0);
+  const [glLost, setGlLost] = useState(false);
   const [tourLabel, setTourLabel] = useState<string | null>(null);
   const [aimed, setAimed] = useState<Aimed | null>(null);
   const [pulledGameId, setPulledGameId] = useState<GameId | null>(null);
@@ -162,6 +183,13 @@ export function WalkRoom({
     if (!open) setPinned(null);
   }, []);
   const [touch] = useState(isTouchDevice);
+  const vp = useViewport();
+  const walkLens = useWalkView();
+  const fullscreen = useFullscreen();
+  /** Immersive: hints and labels off, just the room (and the thumb stick). */
+  const [immersiveOn, setImmersiveOn] = useState(false);
+  const immersive = immersiveOn || fullscreen;
+  const rig = useViewRig();
   const [padCrouch, setPadCrouch] = useState(false);
   const tvStatus = useTvStatus();
   const [device, setDevice] = useState<DeviceId | null>(override.device);
@@ -170,6 +198,11 @@ export function WalkRoom({
   const [rubik, setRubik] = useState(false);
   /** Something held up close (Tamagotchi, Rubik's Cube): the room waits behind it. */
   const holding = tamagotchi || rubik;
+  const emulatorOn = (device === 'crt' || device === 'nes') && tvStatus.mode === 'emulator';
+  const tvOn = (device === 'crt' || device === 'nes') && !scripted;
+  const padUp = touch && (seated || emulatorOn);
+  const viewKind = seated || padUp ? 'gameboy' : tvOn ? 'tv' : device === 'boombox' ? 'radio' : null;
+  const big = rig.big && (tvOn || seated);
   const [flashPhase, setFlashPhase] = useState<'idle' | 'cover' | 'reveal'>('idle');
   const radioState = useRadio();
   const tapeOn = radioState.power;
@@ -446,7 +479,9 @@ export function WalkRoom({
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       event.preventDefault();
-      standUp();
+      // Escape leaves big screen first, then stands you up.
+      if (viewRig.big) setBig(false);
+      else standUp();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -466,11 +501,63 @@ export function WalkRoom({
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       event.preventDefault();
-      exitDevice();
+      if (viewRig.big) setBig(false);
+      else exitDevice();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [device, exitDevice]);
+
+  // Frame the close-up around whatever the controls cover, for this
+  // orientation; in big screen, lay the picture flat over the free area.
+  useEffect(() => {
+    if (!viewKind) return;
+    const remoteFloats = viewKind === 'tv' && big;
+    const insets = remoteFloats
+      ? { top: 0, right: 0, bottom: 0, left: 0 }
+      : insetsFor(viewKind, touch, vp, big);
+    setInsets(insets);
+    const glassId = seated ? 'gameboy' : 'tv';
+    setGlassBig(
+      glassId,
+      big ? { x: insets.left, y: insets.top, w: vp.w - insets.left - insets.right, h: vp.h - insets.top - insets.bottom } : null,
+    );
+    return () => setGlassBig(glassId, null);
+  }, [viewKind, touch, vp, big, seated]);
+
+  // A walking zoom doesn't carry into close-ups.
+  useEffect(() => {
+    if (device || seated || holding) setWalkZoom(1);
+  }, [device, seated, holding]);
+
+  // Leaving the device always leaves big screen and real full screen.
+  useEffect(() => {
+    if (tvOn || seated) return;
+    if (viewRig.big) setBig(false);
+    resetView();
+  }, [tvOn, seated]);
+
+  const toggleBig = useCallback(
+    (on: boolean) => {
+      setBig(on);
+      if (on) void enterFullscreen(touch);
+      else void exitFullscreen();
+    },
+    [touch],
+  );
+
+  // F toggles big screen on a keyboard.
+  useEffect(() => {
+    if (!tvOn && !seated) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.code !== 'KeyF' || event.repeat) return;
+      const el = event.target as HTMLElement | null;
+      if (el?.closest('input, textarea, select')) return;
+      toggleBig(!viewRig.big);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [tvOn, seated, toggleBig]);
 
   const handleSelect = useCallback(
     (target: Aimed) => {
@@ -508,6 +595,10 @@ export function WalkRoom({
     },
     [enterDevice, sitDown],
   );
+  // Capture scripts open things with window.__cardAction (dev server only).
+  useEffect(() => {
+    if (import.meta.env.DEV) (window as unknown as { __cardAction?: typeof runCardAction }).__cardAction = runCardAction;
+  }, [runCardAction]);
 
   // An old commercial on a card pauses the room music; closing it brings the music back.
   const onCardVideo = useCallback(
@@ -528,19 +619,43 @@ export function WalkRoom({
   const cardGame = demoGame ?? aimedGame;
   const cardProp = demoProp ?? aimedProp;
   const showCard = Boolean(demoGame || demoProp) || (engaged && cardOpen && (aimedGame || aimedProp));
-  const walking = engaged && !device && !seated && !holding && !overlayGame && !pulledGameId && session?.phase !== 'unfold';
-  const emulatorOn = (device === 'crt' || device === 'nes') && tvStatus.mode === 'emulator';
+  const walking = engaged && !device && !seated && !holding && !overlayGame && !pulledGameId && session?.phase !== 'unfold' && !tableCamOn;
 
 
   return (
-    <div className="relative w-full h-[100dvh] overflow-hidden bg-[#140c14] select-none overscroll-none">
+    <div data-room className="relative w-full h-[100dvh] overflow-hidden bg-[#140c14] select-none overscroll-none">
       <Canvas
+        key={glKey}
         style={{ touchAction: 'none' }}
-        frameloop={override.capture ? 'demand' : 'always'}
+        // Nothing to draw while something is held up over the whole room.
+        frameloop={override.capture ? 'demand' : holding ? 'never' : 'always'}
         dpr={override.capture ? 1 : [1, 1.5]}
         camera={{ fov: 72, near: 0.08, far: 40, position: [0.02, 1.58, 1.32] }}
         gl={{ antialias: true, powerPreference: 'high-performance', alpha: false }}
         onCreated={({ gl, scene }) => {
+          // If the GPU drops this context (memory pressure, a driver reset),
+          // rebuild the canvas instead of leaving a dead black screen. Room
+          // state lives outside the canvas, so nothing else resets.
+          const el = gl.domElement;
+          let retry = 0;
+          // Once this canvas has asked to be replaced it is retired: the loss
+          // R3F forces on it while disposing it must not start another rebuild.
+          let retired = false;
+          const rebuild = () => {
+            if (retired) return;
+            retired = true;
+            window.clearTimeout(retry);
+            setGlKey(k => k + 1);
+          };
+          el.addEventListener('webglcontextlost', event => {
+            if (retired) return;
+            event.preventDefault();
+            setGlLost(true);
+            window.clearTimeout(retry);
+            retry = window.setTimeout(rebuild, 2500);
+          });
+          el.addEventListener('webglcontextrestored', rebuild);
+          setGlLost(false);
           gl.setClearColor('#2a2030', 1);
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.toneMappingExposure = 1.15;
@@ -567,6 +682,7 @@ export function WalkRoom({
         />
         <DeviceFocus device={scripted ? null : device} />
         {seated && <GameBoySeat />}
+        <DeviceGestures active={Boolean(device || seated) && !big && !scripted} />
         {override.capture && <CaptureClock />}
         {override.cam ? (
           <DemoPose at={override.cam.at} look={override.cam.look} />
@@ -577,10 +693,11 @@ export function WalkRoom({
         ) : (
           <>
             <WalkController
-              enabled={!pulledGameId && !device && !seated && !holding && session?.phase !== 'unfold' && !overlayGame}
+              enabled={!pulledGameId && !device && !seated && !holding && session?.phase !== 'unfold' && !overlayGame && !tableCamOn}
               engaged={engaged}
               onStep={onStep}
             />
+            <TableCameraRig active={tableCamOn} />
             <ReachRaycaster
               enabled={engaged && !pulledGameId && !device && !seated && !holding && !tableGame && !overlayGame}
               onAim={setAimed}
@@ -602,22 +719,36 @@ export function WalkRoom({
       {seated && <GameBoyGlass />}
       {seated && (
         <div data-ui="device" className="pointer-events-none absolute inset-0 z-40">
-          <button
-            type="button"
-            onClick={standUp}
-            className="pointer-events-auto absolute right-4 top-4 rounded-xl border border-white/20 bg-black/60 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-white hover:bg-black/80"
-          >
-            Stand up
-          </button>
-          {!touch && (
-            <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/75">
-              Arrows · Z = A · X = B · Enter = Start · V = Select · or press the Game Boy's buttons · Esc stands up
+          <div className={`pointer-events-auto absolute flex gap-2 ${padUp && vp.landscape ? 'left-1/2 top-2 -translate-x-1/2' : 'right-4 top-4'}`}>
+            <button
+              type="button"
+              onClick={() => toggleBig(!big)}
+              className="rounded-xl border border-cyan-200/30 bg-black/60 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-cyan-100 hover:bg-black/80"
+            >
+              {big ? '⤡ Exit big screen' : '⤢ Big screen'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (big) toggleBig(false);
+                standUp();
+              }}
+              className="rounded-xl border border-white/20 bg-black/60 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-white hover:bg-black/80"
+            >
+              Stand up
+            </button>
+          </div>
+          {!touch && !big && (
+            <p className="absolute bottom-3 left-1/2 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-center text-[11px] font-bold uppercase tracking-[0.16em] text-white/75">
+              Arrows · Z = A · X = B · Enter = Start · V = Select · scroll to zoom · F big screen · Esc stands up
             </p>
           )}
         </div>
       )}
-      {touch && (seated || emulatorOn) && <TouchGamepad tone={seated ? 'gb' : 'nes'} />}
-      {touch && (device === 'crt' || device === 'nes') && !scripted && flashPhase !== 'cover' && <TvRemote />}
+      {padUp && <TouchGamepad tone={seated ? 'gb' : 'nes'} landscape={vp.landscape} />}
+      {tvOn && (touch || big) && flashPhase !== 'cover' && (
+        <TvRemote landscape={vp.landscape} big={big} onBig={toggleBig} padUp={padUp} />
+      )}
       {(device === 'crt' || device === 'nes') && !scripted && <TvGlass initialMode={device === 'nes' ? 'gaming' : 'menu'} />}
       {session && session.phase === 'play' && TABLE_GAMES.has(session.game.id) && (
         <TableHudOverlay
@@ -646,7 +777,7 @@ export function WalkRoom({
       )}
       {touch && walking && !showCard && !menuOpen && (
         <TouchHud
-          quiet={Boolean(session)}
+          quiet={Boolean(session) || immersive}
           useLabel={!session && aimed?.inReach ? aimed.label : null}
           onUse={() => aimed?.inReach && handleSelect(aimed)}
           crouched={crouched || padCrouch}
@@ -662,7 +793,7 @@ export function WalkRoom({
       )}
 
       {/* Glass flash card — games + nostalgia props */}
-      {!overlayGame && (engaged || scripted) && (
+      {!overlayGame && (engaged || scripted) && !device && !seated && !holding && (
       <button
         type="button"
         onClick={openMenu}
@@ -677,6 +808,8 @@ export function WalkRoom({
         music={musicOn}
         musicVolume={musicVolume}
         track={track}
+        fov={walkLens.fov}
+        onFov={setWalkFov}
         onTrack={id => {
           setTrack(id);
           sound.setTrack(id);
@@ -742,12 +875,17 @@ export function WalkRoom({
         </div>
       )}
 
-      {walking && !touch && !showCard && (
+      {walking && !session && !menuOpen && (
+        <ViewControls immersive={immersiveOn} onImmersive={setImmersiveOn} />
+      )}
+
+      {walking && !touch && !showCard && !immersive && (
         <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 flex w-[calc(100%-2rem)] flex-wrap items-center justify-center gap-2 text-[10px] uppercase tracking-[0.2em] font-bold text-white/70">
           {[
-            ['W A S D / arrows', 'walk'],
-            ['Drag · 2-finger swipe', 'look'],
+            ['W A S D', 'walk'],
+            ['Arrows · drag · 2-finger swipe', 'look'],
             ['Click', 'use things'],
+            ['Pinch · + −', 'zoom'],
             ['C', 'duck'],
           ].map(([key, what]) => (
             <span key={key} className="rounded-lg bg-black/55 border border-white/10 px-2.5 py-1">
@@ -759,20 +897,33 @@ export function WalkRoom({
 
       {device && flashPhase !== 'cover' && (
         <DeviceOverlay
+          big={big}
+          onBig={tvOn ? toggleBig : undefined}
           touch={touch}
           device={device}
           radioError={radioError}
-          onBack={exitDevice}
+          onBack={() => {
+            if (big) toggleBig(false);
+            exitDevice();
+          }}
         />
       )}
 
       {flashPhase !== 'idle' && <div className={`device-flash ${flashPhase}`} />}
+      {glLost && (
+        <div className="pointer-events-none absolute inset-0 z-[60] flex items-center justify-center bg-[#140c14]/80">
+          <p className="rounded-full bg-black/70 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-amber-100">
+            Graphics hiccup — putting the room back…
+          </p>
+        </div>
+      )}
 
       {!engaged && !scripted && !menuOpen && !overlayGame && (
         <IntroCard
           wallTitles={neonGames(games).map(game => game.title)}
           onEnter={() => {
             setEngaged(true);
+            saveEngaged();
             if (musicOn) sound.startNostalgia();
           }}
         />
