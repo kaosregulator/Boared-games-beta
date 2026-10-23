@@ -49,9 +49,22 @@ This project is intentionally branded as a **public beta**, end to end.
   Internet Archive, with static, signal bleed, SEEK and SCAN.
 - **Game Boy** on the bean bag: sit down and play the owner's Game Boy Tetris.
 - **Board games**: pick any game and the card table spawns on the rug, you crouch at
-  it, and the box unfolds. Monopoly, Connect Four and Battleship play in 3D with
-  real assets (credits in `public/games/CREDITS.md`); the rest open their board over
-  the room. Space stands you up; Pack up puts it all away.
+  it, and the box unfolds. Seven games play in 3D on the table:
+  - **Monopoly** (US / Atlantic City board printed from the rules engine's data): choose
+    your silver token up close (top hat, race car, dog, battleship, thimble, cannon,
+    horse, rubber ducky, penguin) and one to three opponents; title deeds, paper money,
+    Chance and Community Chest cards lie on the table; houses and hotels go on the board.
+  - **Chess** (Tabletop Club's set) and **Checkers** (Kytric's voxel set): pick a piece up
+    and carry it, or tap it then a glowing square; the opponent's ghost hand moves its pieces.
+  - **Blackjack** with real cards and poker chips, dealt by a ghost hand.
+  - **Battleship** and **Connect Four**.
+
+  The table camera works like Tabletop Club's: drag (or two fingers) to orbit, scroll or
+  pinch to zoom, arrows/Q/E/+/- on a keyboard, V or the *Game view* button for overhead,
+  side and seat views, and *Follow action* swings the camera to each roll, shot and
+  move. The other games open their board over the room. Space stands you up; Pack up
+  puts it all away. Asset credits are in `public/games/CREDITS.md`.
+- **Posters**: seven on the walls, in `src/room/WallPosters.tsx` (one line each to swap).
 - **Neon wall**: the smaller games hang on the east wall as neon signs.
 
 Capture links: `?cam=x,y,z,lx,ly,lz`, `?device=crt|nes|boombox`, `?seat=gameboy`,
