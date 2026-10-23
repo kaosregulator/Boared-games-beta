@@ -21,7 +21,7 @@ import { Tamagotchi } from './Tamagotchi';
 import { LAVA, LavaLamp } from './LavaLamp';
 import { LOW_POWER } from './input';
 import type { GameMetadata } from '../types';
-import { LAYOUT, SOUTH_WINDOW, WALL_SHELF } from './roomLayout';
+import { LAYOUT, SOUTH_WINDOW, TABLE_SIDE_BOX, WALL_SHELF } from './roomLayout';
 import { PlayTable, type TableSession } from './table/TablePlay';
 import { NeonGameWall } from './NeonGameWall';
 import { WallPosters } from './WallPosters';
@@ -300,6 +300,44 @@ function GameShelf({ hoveredId }: { hoveredId: string | null }) {
   );
 }
 
+/** Each game's real box model; it only comes out while that game is on the table. */
+const GAME_BOX_MODEL: Partial<Record<string, keyof typeof LAYOUT>> = {
+  monopoly: 'board',
+  battleship: 'battleship',
+  clue: 'clue',
+  life: 'life',
+  yahtzee: 'yahtzee',
+};
+
+/** Prefix for the box beside the table: its card opens, but it can't start a game. */
+export const TABLE_BOX_PREFIX = 'tablebox:';
+
+/**
+ * The box of the game being played stands on the floor by the table and
+ * goes away when the game is packed up. Its card shows the box's info, with
+ * no Play button: the game is already out.
+ */
+function TableSideBox({ session, hoveredId }: { session: TableSession | null; hoveredId: string | null }) {
+  if (!session || session.phase === 'pack') return null;
+  const model = GAME_BOX_MODEL[session.game.id];
+  if (!model) return null;
+  return (
+    <PlacedModel
+      key={session.key}
+      id={model}
+      hoveredId={hoveredId}
+      at={TABLE_SIDE_BOX}
+      interactable={{
+        id: `${TABLE_BOX_PREFIX}${session.game.id}`,
+        kind: 'game',
+        gameId: session.game.id,
+        label: session.game.title,
+        hint: 'Inspect · already playing',
+      }}
+    />
+  );
+}
+
 /** A whole prop's own memory card, if it has one. */
 function cardTarget(cardId: string, hint = 'Memory card'): HoverTarget | undefined {
   const card = propCardFor(cardId);
@@ -311,6 +349,7 @@ function PlacedModel({
   hoveredId,
   interactable,
   card,
+  at,
   children,
 }: {
   id: keyof typeof LAYOUT;
@@ -318,9 +357,11 @@ function PlacedModel({
   interactable?: HoverTarget;
   /** Card id for the whole prop. */
   card?: string;
+  /** Stand it somewhere other than its spot in the layout (on the floor). */
+  at?: { x: number; z: number; rotY: number };
   children?: React.ReactNode;
 }) {
-  const p = LAYOUT[id];
+  const p = at ? { ...LAYOUT[id], ...at, y: 0 } : LAYOUT[id];
   const lava = id in LAVA ? [LAVA[id as keyof typeof LAVA]] : undefined;
   const target = interactable ?? (card ? cardTarget(card) : undefined);
   return (
@@ -529,6 +570,7 @@ export function RealRoomScene({
       <NeonGameWall games={games} hoveredId={hoveredId} pulledId={pulledGameId} />
       <WallPosters />
       <PlacedModel id="beanbag" hoveredId={hoveredId} card="beanbag" />
+      <TableSideBox session={session} hoveredId={hoveredId} />
       <PlayTable
         session={session}
         onUnfolded={onUnfolded ?? (() => {})}
@@ -548,11 +590,6 @@ export function RealRoomScene({
         {!lightsOut && <DeskLampGlow at={[0.43, 0.86, -0.13]} />}
       </PlacedModel>
       <PlacedModel
-        id="clue"
-        hoveredId={hoveredId}
-        interactable={{ id: 'box-clue', kind: 'game', gameId: 'clue', label: 'Clue', hint: 'Inspect · play' }}
-      />
-      <PlacedModel
         id="army"
         hoveredId={hoveredId}
         card="army"
@@ -562,32 +599,6 @@ export function RealRoomScene({
         {!lightsOut && <DeskLampGlow at={[0.09, 0.93, -0.22]} />}
       </PlacedModel>
       <PlacedModel id="books" hoveredId={hoveredId} card="books" />
-      <PlacedModel
-        id="board"
-        hoveredId={hoveredId}
-        interactable={{ id: 'box-monopoly', kind: 'game', gameId: 'monopoly', label: 'Monopoly', hint: 'Inspect · play' }}
-      />
-      <PlacedModel
-        id="battleship"
-        hoveredId={hoveredId}
-        interactable={{
-          id: 'box-battleship',
-          kind: 'game',
-          gameId: 'battleship',
-          label: 'Battleship',
-          hint: 'Inspect · play',
-        }}
-      />
-      <PlacedModel
-        id="life"
-        hoveredId={hoveredId}
-        interactable={{ id: 'box-life', kind: 'game', gameId: 'life', label: 'The Game of Life', hint: 'Inspect · play' }}
-      />
-      <PlacedModel
-        id="yahtzee"
-        hoveredId={hoveredId}
-        interactable={{ id: 'box-yahtzee', kind: 'game', gameId: 'yahtzee', label: 'Yahtzee', hint: 'Inspect · play' }}
-      />
       <PlacedModel
         id="hotpockets"
         hoveredId={hoveredId}
@@ -603,6 +614,7 @@ export function RealRoomScene({
         hoveredId={hoveredId}
         card="car"
       />
+      <PlacedModel id="hotwheels" hoveredId={hoveredId} card="hotwheels" />
 
       <PlacedModel
         id="boombox"

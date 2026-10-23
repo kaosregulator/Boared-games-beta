@@ -24,7 +24,7 @@ const SPINE_COLOR: Record<string, { color: string; accent: string }> = {
   casino: { color: '#0e3b32', accent: '#d4ffe8' },
 };
 
-/** These already have a real box on the floor or desk. */
+/** These have a real box on the game shelf (and beside the table while they're played). */
 const FLOOR_BOX_GAMES = new Set(['monopoly', 'battleship', 'clue', 'life', 'yahtzee']);
 
 const ORDER = ['connect4', 'chess', 'checkers', 'pawnrush', 'trivia', 'poker', 'blackjack', 'casino', 'gofish', 'liarsdice'];

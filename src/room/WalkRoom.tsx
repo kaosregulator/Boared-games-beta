@@ -4,7 +4,7 @@ import { PerformanceMonitor } from '@react-three/drei';
 import * as THREE from 'three';
 import { GameId, GameMetadata } from '../types';
 import { sound } from '../utils/audio';
-import { RealRoomScene, type LiveProp } from './RealRoomScene';
+import { RealRoomScene, TABLE_BOX_PREFIX, type LiveProp } from './RealRoomScene';
 import { WalkController } from './WalkController';
 import { ReachRaycaster, type Aimed } from './ReachRaycaster';
 import { CaptureClock, TourCamera } from './TourCamera';
@@ -369,6 +369,11 @@ export function WalkRoom({
     sound.playButtonClick();
   }, []);
 
+  // Packing up takes the box away from the table, and its card with it.
+  useEffect(() => {
+    if (pinned?.id.startsWith(TABLE_BOX_PREFIX) && session?.phase !== 'play') setPinned(null);
+  }, [pinned, session?.phase]);
+
   // Walking off closes the card; so does Escape.
   useEffect(() => {
     if (!pinned) return;
@@ -603,7 +608,8 @@ export function WalkRoom({
         const game = byId.get(target.gameId as GameId);
         if (!game) return;
         // First press opens the box's card; pressing the same box again plays it.
-        if (pinned?.id === target.id) playGame(game);
+        // The box beside the table only opens its card: that game is already out.
+        if (pinned?.id === target.id && !target.id.startsWith(TABLE_BOX_PREFIX)) playGame(game);
         else pinCard(target);
         return;
       }
@@ -657,6 +663,7 @@ export function WalkRoom({
 
   const aimedGame =
     pinned?.kind === 'game' && pinned.gameId ? byId.get(pinned.gameId as GameId) ?? null : null;
+  const cardPlayable = !pinned?.id.startsWith(TABLE_BOX_PREFIX);
   const aimedProp = pinned && pinned.kind === 'prop' ? propCardFor(pinned.id) : null;
   const demoCardId = override.card;
   const demoPropId = demoCardId === 'vhs' ? 'vhs-stack' : demoCardId && propCardFor(demoCardId) ? demoCardId : null;
@@ -765,7 +772,12 @@ export function WalkRoom({
             <TableCameraRig active={tableCamOn} />
             <TriviaTableCam active={overlayGame?.id === 'trivia' && session?.phase === 'play'} />
             <ReachRaycaster
-              enabled={engaged && !pulledGameId && !device && !seated && !holding && !tableGame && !overlayGame}
+              // Mid-game, only the game's own box beside the table can be picked.
+              enabled={
+                engaged && !pulledGameId && !device && !seated && !holding && !overlayGame && !tableCamOn &&
+                (!tableGame || session?.phase === 'play')
+              }
+              accept={tableGame ? target => target.id.startsWith(TABLE_BOX_PREFIX) : undefined}
               onAim={setAimed}
               onSelect={handleSelect}
               onTooFar={target => flash(`Walk closer to the ${target.label.toLowerCase()}`)}
@@ -838,13 +850,13 @@ export function WalkRoom({
         </div>
       )}
 
-      {walking && !session && (
-        <AimReticle aimed={showCard ? null : aimed} showDot touch={touch} />
+      {walking && (!session || aimed) && (
+        <AimReticle aimed={showCard ? null : aimed} showDot={!session} touch={touch} />
       )}
       {touch && walking && !showCard && !menuOpen && (
         <TouchHud
           quiet={Boolean(session) || immersive}
-          useLabel={!session && aimed?.inReach ? aimed.label : null}
+          useLabel={aimed?.inReach ? aimed.label : null}
           onUse={() => aimed?.inReach && handleSelect(aimed)}
           crouched={crouched || padCrouch}
           onCrouch={() => {
@@ -916,7 +928,7 @@ export function WalkRoom({
             <MemoryFlashCard
               kind="game"
               game={cardGame}
-              onPlay={() => playGame(cardGame)}
+              onPlay={cardPlayable ? () => playGame(cardGame) : undefined}
               onRules={() => {
                 document.exitPointerLock?.();
                 onOpenRulesForGame?.(cardGame);

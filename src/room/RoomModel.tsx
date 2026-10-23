@@ -40,7 +40,8 @@ export type ModelId =
   | 'life'
   | 'yahtzee'
   | 'beanbag'
-  | 'crate';
+  | 'crate'
+  | 'hotwheels';
 
 export const MODEL_URL: Record<ModelId, string> = {
   bed: '/models/bed.glb',
@@ -76,6 +77,7 @@ export const MODEL_URL: Record<ModelId, string> = {
   yahtzee: '/models/yahtzee.glb',
   beanbag: '/models/beanbag.glb',
   crate: '/models/crate.glb',
+  hotwheels: '/models/hotwheels.glb',
 };
 
 /**

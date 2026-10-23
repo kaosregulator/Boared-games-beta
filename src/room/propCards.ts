@@ -90,6 +90,8 @@ const P = {
   tmnt: wm('Teenage Mutant Ninja Turtles (5234965966).jpg', 'Calvin Walton, CC BY-SA 2.0', 'Teenage Mutant Ninja Turtles figures'),
   pokemon: wm('Pokemon cards and sets.jpg', 'Fernando Martello, CC BY-SA 4.0', 'Pokémon cards and sets'),
   skate: wm('Hainerberg Skate Park Now Open (6317086).jpg', 'U.S. Army / Lisa Bishop, public domain', 'Kids at a skate park'),
+  hwCollection: wm('Hot Wheels collection.jpg', 'Matt, CC BY 2.0', 'A whole wall of Hot Wheels cars'),
+  hwFleet: wm('The Hot Wheels fleet.jpg', 'Jake Spurlock, CC BY 2.0', 'A fleet of Hot Wheels cars'),
   clock: wm('2010-07-20 Black windup alarm clock face.jpg', 'Sun Ladder, CC BY-SA 3.0', 'An alarm clock face'),
 };
 
@@ -944,6 +946,20 @@ const CARDS: PropCard[] = [
     story:
       'Christmas morning: three RC trucks and zero batteries in the whole house. Had to wait till the store opened on the 26th. Then they drove under the bed and never came out for three years.',
     memories: ['The remotes used the same frequency, so racing friends was chaos.'],
+  },
+  {
+    id: 'hotwheels',
+    title: 'Hot Wheels track',
+    era: '1968 · Mattel · orange track forever',
+    story:
+      'It started as one loop. Then the track went off the toy shelf, under the bed, across the hallway and down the stairs, held together with tape and a dictionary for the jump. Every car got launched off it at least once. Only the slow, ugly station wagon ever made it all the way through the loop.',
+    memories: [
+      'The orange track doubled as a sword, a whip and the thing Mom swore she\'d throw out.',
+      'Zero to sixty in one flick of the finger. Sixty to under the couch forever.',
+      'Somebody always said their car was "the fastest" and then it flew off the first curve.',
+    ],
+    photos: [P.hwCollection, P.hwFleet],
+    video: V('videoplayback_20240819_1919', 'Hot Wheels Criss Cross Crash commercial, 1999'),
   },
   {
     id: 'army',

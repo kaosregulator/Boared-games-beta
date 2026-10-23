@@ -37,6 +37,8 @@ interface ReachRaycasterProps {
   onSelect: (aimed: Aimed) => void;
   /** A click or tap that reached something too far away. */
   onTooFar?: (aimed: Aimed) => void;
+  /** Only these targets can be picked; anything else is looked straight through. */
+  accept?: (target: HoverTarget) => boolean;
 }
 
 /**
@@ -45,13 +47,15 @@ interface ReachRaycasterProps {
  * touch screen. A click or tap uses whatever is under it; E or Enter uses
  * what is aimed at.
  */
-export function ReachRaycaster({ enabled, onAim, onSelect, onTooFar }: ReachRaycasterProps) {
+export function ReachRaycaster({ enabled, onAim, onSelect, onTooFar, accept }: ReachRaycasterProps) {
   const { camera, scene, gl } = useThree();
   const current = useRef<Aimed | null>(null);
   const lastKey = useRef<string | null>(null);
   const lastPose = useRef({ pose: '', at: 0 });
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
+  const acceptRef = useRef(accept);
+  acceptRef.current = accept;
   const handlers = useRef({ onSelect, onTooFar });
   handlers.current = { onSelect, onTooFar };
 
@@ -79,7 +83,7 @@ export function ReachRaycaster({ enabled, onAim, onSelect, onTooFar }: ReachRayc
     let first = Infinity;
     for (const hit of hits) {
       const found = readTarget(hit.object);
-      if (!found) continue;
+      if (!found || (acceptRef.current && !acceptRef.current(found.target))) continue;
       if (first === Infinity) first = hit.distance;
       if (hit.distance > first + NESTED_DEPTH) break;
       if (!best || found.volume < best.volume) best = { ...found, distance: hit.distance };
