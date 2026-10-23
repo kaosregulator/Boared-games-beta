@@ -9,11 +9,12 @@ import { ConnectFourTable } from './ConnectFourTable';
 import { BattleshipTable } from './BattleshipTable';
 import { MonopolyTable } from './MonopolyTable';
 import { ChessTable } from './ChessTable';
+import { CheckersTable } from './CheckersTable';
 
 export { TableHudOverlay } from './tableHud';
 
-export type TableGameId = 'monopoly' | 'connect4' | 'battleship' | 'chess';
-export const TABLE_GAMES = new Set<string>(['monopoly', 'connect4', 'battleship', 'chess']);
+export type TableGameId = 'monopoly' | 'connect4' | 'battleship' | 'chess' | 'checkers';
+export const TABLE_GAMES = new Set<string>(['monopoly', 'connect4', 'battleship', 'chess', 'checkers']);
 
 /**
  * unfold — the table has spawned and the box is opening
@@ -122,6 +123,7 @@ export function PlayTable({
               {game.id === 'battleship' && <BattleshipTable onLeave={onLeave} />}
               {game.id === 'monopoly' && <MonopolyTable onLeave={onLeave} />}
               {game.id === 'chess' && <ChessTable onLeave={onLeave} />}
+              {game.id === 'checkers' && <CheckersTable onLeave={onLeave} />}
             </Suspense>
           </group>
         )}

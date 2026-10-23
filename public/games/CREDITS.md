@@ -50,3 +50,7 @@ Cast in pewter in the game; packed, simplified and meshopt-compressed.
 - `duck` — Khronos glTF sample "Duck", SCEA Shared Source License 1.0 —
   https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Duck
 - The top hat and thimble are turned (lathed) in code from the real token profiles.
+
+## Kytric's Voxel Board Games — `tabletop/checkers.glb`
+"Voxel Board Games" by Kytric, CC0 — https://kytric.itch.io/board-game-assets
+The brown and tan checkers board with the red and black men (v1), packed into one file.
