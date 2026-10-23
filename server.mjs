@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
+import { handleRadioRequest } from './radioBrowserApi.mjs';
 
 dotenv.config();
 
@@ -63,6 +64,11 @@ app.post('/api/generate-trivia', async (req, res) => {
     console.error('Trivia generation error:', err);
     res.status(500).json({ error: 'Failed to generate trivia pack' });
   }
+});
+
+// The radio's backup source: Radio Browser, looked up here with a proper User-Agent.
+app.all(/^\/api\/radio\//, (req, res) => {
+  void handleRadioRequest(req.originalUrl, (status, body) => res.status(status).json(body));
 });
 
 app.use(express.static(distDir, { maxAge: '1h', index: false }));
