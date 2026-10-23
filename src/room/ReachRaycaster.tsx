@@ -49,15 +49,32 @@ export function ReachRaycaster({ enabled, onAim, onSelect, onTooFar }: ReachRayc
   const { camera, scene, gl } = useThree();
   const current = useRef<Aimed | null>(null);
   const lastKey = useRef<string | null>(null);
+  const lastPose = useRef({ pose: '', at: 0 });
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
   const handlers = useRef({ onSelect, onTooFar });
   handlers.current = { onSelect, onTooFar };
 
+  // Only the things you can use, not every triangle in the room: walls and
+  // plain props never stop the aim anyway. Re-listed once a second, since
+  // games and props come and go.
+  const usable = useRef<{ list: THREE.Object3D[]; at: number }>({ list: [], at: -Infinity });
+  const usableNow = () => {
+    const now = performance.now();
+    if (now - usable.current.at > 1000) {
+      const list: THREE.Object3D[] = [];
+      scene.traverse(o => {
+        if ((o as THREE.Mesh).isMesh && readTarget(o)) list.push(o);
+      });
+      usable.current = { list, at: now };
+    }
+    return usable.current.list;
+  };
+
   const pick = (ndc: THREE.Vector2): Aimed | null => {
     raycaster.setFromCamera(ndc, camera);
     raycaster.far = PLAYER.reach + 4;
-    const hits = raycaster.intersectObjects(scene.children, true);
+    const hits = raycaster.intersectObjects(usableNow(), false);
     let best: { target: HoverTarget; volume: number; distance: number } | null = null;
     let first = Infinity;
     for (const hit of hits) {
@@ -112,6 +129,13 @@ export function ReachRaycaster({ enabled, onAim, onSelect, onTooFar }: ReachRayc
 
     // Hold the last aim while dragging the view so labels don't flicker.
     if (aim.dragging) return;
+    // Nothing moved since the last look: the answer can't have changed
+    // (a fresh look at least twice a second for things that move by themselves).
+    const e = camera.matrixWorld.elements;
+    const now = performance.now();
+    const pose = `${aim.mode}:${aim.ndc.x.toFixed(4)}:${aim.ndc.y.toFixed(4)}:${e[12].toFixed(4)}:${e[13].toFixed(4)}:${e[14].toFixed(4)}:${e[8].toFixed(4)}:${e[9].toFixed(4)}:${e[10].toFixed(4)}`;
+    if (pose === lastPose.current.pose && now - lastPose.current.at < 500) return;
+    lastPose.current = { pose, at: now };
     const next = pick(aim.mode === 'cursor' ? POINT.set(aim.ndc.x, aim.ndc.y) : CENTRE);
     current.current = next;
     gl.domElement.style.cursor = aim.mode === 'cursor' && next?.inReach ? 'pointer' : '';

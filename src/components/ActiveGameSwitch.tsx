@@ -1,19 +1,24 @@
+import React, { Suspense, lazy } from 'react';
 import { GameMetadata, UserProfile, ViewMode } from '../types';
-import { BattleshipGame } from '../games/battleship/BattleshipGame';
-import { BlackjackGame } from '../games/blackjack/BlackjackGame';
-import { CasinoLoungeGame } from '../games/casino/CasinoLoungeGame';
-import { CheckersGame } from '../games/checkers/CheckersGame';
-import { ChessGame } from '../games/chess/ChessGame';
-import { ClueGame } from '../games/clue/ClueGame';
-import { Connect4Game } from '../games/connect4/Connect4Game';
-import { GoFishGame } from '../games/gofish/GoFishGame';
-import { LiarsDiceGame } from '../games/liarsdice/LiarsDiceGame';
-import { LifeGame } from '../games/life/LifeGame';
-import { MonopolyGame } from '../games/monopoly/MonopolyGame';
-import { PawnRushGame } from '../games/pawnrush/PawnRushGame';
-import { PokerGame } from '../games/poker/PokerGame';
-import { TriviaPartyGame } from '../games/trivia/TriviaPartyGame';
-import { YahtzeeGame } from '../games/yahtzee/YahtzeeGame';
+
+// Each board is its own download, fetched when it's opened (or warmed in the
+// background once the room is up), so opening one game never pulls in all fifteen.
+const BattleshipGame = lazy(() => import('../games/battleship/BattleshipGame').then(m => ({ default: m.BattleshipGame })));
+const BlackjackGame = lazy(() => import('../games/blackjack/BlackjackGame').then(m => ({ default: m.BlackjackGame })));
+const CasinoLoungeGame = lazy(() => import('../games/casino/CasinoLoungeGame').then(m => ({ default: m.CasinoLoungeGame })));
+const CheckersGame = lazy(() => import('../games/checkers/CheckersGame').then(m => ({ default: m.CheckersGame })));
+const ChessGame = lazy(() => import('../games/chess/ChessGame').then(m => ({ default: m.ChessGame })));
+const ClueGame = lazy(() => import('../games/clue/ClueGame').then(m => ({ default: m.ClueGame })));
+const Connect4Game = lazy(() => import('../games/connect4/Connect4Game').then(m => ({ default: m.Connect4Game })));
+const GoFishGame = lazy(() => import('../games/gofish/GoFishGame').then(m => ({ default: m.GoFishGame })));
+const LiarsDiceGame = lazy(() => import('../games/liarsdice/LiarsDiceGame').then(m => ({ default: m.LiarsDiceGame })));
+const LifeGame = lazy(() => import('../games/life/LifeGame').then(m => ({ default: m.LifeGame })));
+const MonopolyGame = lazy(() => import('../games/monopoly/MonopolyGame').then(m => ({ default: m.MonopolyGame })));
+const PawnRushGame = lazy(() => import('../games/pawnrush/PawnRushGame').then(m => ({ default: m.PawnRushGame })));
+const PokerGame = lazy(() => import('../games/poker/PokerGame').then(m => ({ default: m.PokerGame })));
+const TriviaPartyGame = lazy(() => import('../games/trivia/TriviaPartyGame').then(m => ({ default: m.TriviaPartyGame })));
+const YahtzeeGame = lazy(() => import('../games/yahtzee/YahtzeeGame').then(m => ({ default: m.YahtzeeGame })));
+
 
 export function ActiveGameSwitch({
   activeGame,
@@ -39,7 +44,7 @@ export function ActiveGameSwitch({
   onGameOver: (winnerName: string, isRealMatch: boolean) => void;
 }) {
   return (
-    <>
+    <Suspense fallback={null}>
       {activeGame.id === 'trivia' && <TriviaPartyGame onGameOver={onGameOver} onExitToShelf={onExit} />}
       {activeGame.id === 'poker' && (
         <PokerGame viewMode={viewMode} onToggleViewMode={onToggleViewMode} onOpenRules={onOpenRules} onBackToShelf={onExit} onUpdateUserChips={onUpdateChips} />
@@ -75,6 +80,6 @@ export function ActiveGameSwitch({
       {activeGame.id === 'monopoly' && (
         <MonopolyGame onBackToShelf={onExit} onGameOver={onGameOver} playerName={userProfile.name} />
       )}
-    </>
+    </Suspense>
   );
 }
