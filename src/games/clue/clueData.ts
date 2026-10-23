@@ -146,6 +146,52 @@ export function corridorDistance(from: [number, number], to: [number, number]): 
   return null;
 }
 
+/**
+ * The corridor tiles from one tile to another, both ends included, along a
+ * shortest route, so a piece can walk the real way round. Tiles in `avoid` are
+ * stepped round when there is another way. Null if there is no route.
+ */
+export function corridorPath(
+  from: [number, number],
+  to: [number, number],
+  avoid: Set<string> = new Set(),
+): [number, number][] | null {
+  const key = (x: number, y: number) => `${x},${y}`;
+  const goal = key(to[0], to[1]);
+  if (key(from[0], from[1]) === goal) return [from];
+  const back = new Map<string, string>([[key(from[0], from[1]), '']]);
+  let frontier: [number, number][] = [from];
+  while (frontier.length > 0) {
+    const next: [number, number][] = [];
+    for (const [x, y] of frontier) {
+      for (const [dx, dy] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ] as const) {
+        const nx = x + dx;
+        const ny = y + dy;
+        const k = key(nx, ny);
+        if (back.has(k) || !isCorridor(nx, ny)) continue;
+        if (k !== goal && avoid.has(k)) continue;
+        back.set(k, key(x, y));
+        if (k === goal) {
+          const out: [number, number][] = [];
+          for (let at = k; at; at = back.get(at)!) {
+            const [px, py] = at.split(',').map(Number);
+            out.unshift([px, py]);
+          }
+          return out;
+        }
+        next.push([nx, ny]);
+      }
+    }
+    frontier = next;
+  }
+  return avoid.size > 0 ? corridorPath(from, to) : null;
+}
+
 /** Starting corridor tiles for the six suspects, as printed on the board. */
 export const START_TILES: Record<Suspect, [number, number]> = {
   Scarlett: [10, 4],

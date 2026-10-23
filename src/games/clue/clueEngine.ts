@@ -41,7 +41,25 @@ export interface CluePlayer {
   at: [number, number];
   room: RoomName | null;
   outOfGame: boolean;
+  /** Pulled into a room by someone else's suggestion since their last move. */
+  pulled?: boolean;
   detective: ClueDetective;
+}
+
+/** A suspect nobody is playing: their piece still stands on the board. */
+export interface ClueBystander {
+  suspect: Suspect;
+  at: [number, number];
+  room: RoomName | null;
+}
+
+export interface ClueOptions {
+  /** Which suspect the player is. Defaults to Miss Scarlett. */
+  me?: Suspect;
+  /** 3 to 6 seats. Defaults to the classic four. */
+  seats?: number;
+  /** A human refuter picks which matching card to show. */
+  refuterChooses?: boolean;
 }
 
 export interface ClueState {
@@ -52,7 +70,12 @@ export interface ClueState {
   weaponRooms: Record<Weapon, RoomName>;
   die: number;
   stepsLeft: number;
-  stage: 'roll' | 'move' | 'suggest' | 'reveal' | 'over';
+  stage: 'roll' | 'move' | 'suggest' | 'refute' | 'reveal' | 'over';
+  /** Unplayed suspects, still on the board so a suggestion can call them in. */
+  bystanders: ClueBystander[];
+  refuterChooses: boolean;
+  /** A human refuter holding more than one match, choosing which to show. */
+  pendingRefute: { by: number; options: Card[] } | null;
   lastSuggestion: (Suggestion & { by: number }) | null;
   /** Who refuted and, if the viewer is entitled to see it, with what. */
   lastRefutation: { by: number; card: Card | null; hidden: boolean } | null;
@@ -75,7 +98,10 @@ const say = (s: ClueState, line: string) => {
   s.log = [line, ...s.log].slice(0, 40);
 };
 
-export function newClueGame(playerName: string): ClueState {
+/** Classic turn order: Miss Scarlett always goes first, then round the table. */
+const TURN_ORDER: Suspect[] = ['Scarlett', 'Mustard', 'White', 'Green', 'Peacock', 'Plum'];
+
+export function newClueGame(playerName: string, opts: ClueOptions = {}): ClueState {
   const solution: Suggestion = {
     suspect: pick(SUSPECTS).id,
     weapon: pick(WEAPONS).id,
@@ -91,12 +117,23 @@ export function newClueGame(playerName: string): ClueState {
     ),
   );
 
-  const seats: { suspect: Suspect; name: string; isAI: boolean }[] = [
+  const fullName = (id: Suspect) => SUSPECTS.find(x => x.id === id)!.full;
+  let seats: { suspect: Suspect; name: string; isAI: boolean }[] = [
     { suspect: 'Scarlett', name: playerName, isAI: false },
     { suspect: 'Mustard', name: 'Colonel Mustard', isAI: true },
     { suspect: 'Peacock', name: 'Mrs. Peacock', isAI: true },
     { suspect: 'Plum', name: 'Professor Plum', isAI: true },
   ];
+  if (opts.me || opts.seats) {
+    const me = opts.me ?? 'Scarlett';
+    const count = Math.max(3, Math.min(6, opts.seats ?? 4));
+    const others = shuffle(TURN_ORDER.filter(id => id !== me)).slice(0, count - 1);
+    seats = TURN_ORDER.filter(id => id === me || others.includes(id)).map(id => ({
+      suspect: id,
+      name: id === me ? playerName : fullName(id),
+      isAI: id !== me,
+    }));
+  }
 
   const players: CluePlayer[] = seats.map((seat, i) => ({
     id: i,
@@ -118,11 +155,20 @@ export function newClueGame(playerName: string): ClueState {
     return acc;
   }, {} as Record<Weapon, RoomName>);
 
+  const bystanders: ClueBystander[] = TURN_ORDER.filter(id => !seats.some(seat => seat.suspect === id)).map(id => ({
+    suspect: id,
+    at: START_TILES[id],
+    room: null,
+  }));
+
   return {
     players,
     turn: 0,
     solution,
     weaponRooms,
+    bystanders,
+    refuterChooses: Boolean(opts.refuterChooses),
+    pendingRefute: null,
     die: 0,
     stepsLeft: 0,
     stage: 'roll',
@@ -141,6 +187,8 @@ const clone = (s: ClueState): ClueState => ({
     detective: { cleared: new Set(p.detective.cleared), maybes: p.detective.maybes.map(m => ({ ...m, cards: [...m.cards] })) },
   })),
   weaponRooms: { ...s.weaponRooms },
+  bystanders: (s.bystanders ?? []).map(b => ({ ...b })),
+  pendingRefute: s.pendingRefute ? { ...s.pendingRefute, options: [...s.pendingRefute.options] } : null,
 });
 
 /** Tiles (and room doors) the active player can reach with the steps they have. */
@@ -148,9 +196,10 @@ export function reachable(s: ClueState, steps: number) {
   const p = s.players[s.turn];
   const tiles: { x: number; y: number; cost: number }[] = [];
   const rooms: { room: RoomName; cost: number }[] = [];
-  const occupied = new Set(
-    s.players.filter(o => o.id !== p.id && !o.room).map(o => `${o.at[0]},${o.at[1]}`),
-  );
+  const occupied = new Set([
+    ...s.players.filter(o => o.id !== p.id && !o.room).map(o => `${o.at[0]},${o.at[1]}`),
+    ...(s.bystanders ?? []).filter(b => !b.room).map(b => `${b.at[0]},${b.at[1]}`),
+  ]);
 
   const origins: [number, number][] = p.room ? doorsOf(p.room) : [p.at];
 
@@ -189,11 +238,12 @@ export function reachable(s: ClueState, steps: number) {
   return { tiles, rooms };
 }
 
-export function rollClueDie(state: ClueState): ClueState {
+/** Roll two dice; the 3D table passes in what its thrown dice show. */
+export function rollClueDie(state: ClueState, values?: [number, number]): ClueState {
   const s = clone(state);
   if (s.stage !== 'roll') return state;
-  const a = 1 + Math.floor(Math.random() * 6);
-  const b = 1 + Math.floor(Math.random() * 6);
+  const a = values?.[0] ?? 1 + Math.floor(Math.random() * 6);
+  const b = values?.[1] ?? 1 + Math.floor(Math.random() * 6);
   s.die = a + b;
   s.stepsLeft = s.die;
   s.stage = 'move';
@@ -212,6 +262,7 @@ export function moveToTile(state: ClueState, x: number, y: number): ClueState {
   if (!hit) return state;
   p.at = [x, y];
   p.room = null;
+  p.pulled = false;
   s.stepsLeft = 0;
   s.stage = 'roll';
   s.turn = nextSeat(s, s.turn);
@@ -227,6 +278,7 @@ export function moveToRoom(state: ClueState, room: RoomName): ClueState {
   const secret = p.room ? SECRET_PASSAGES[p.room] : undefined;
   if (!rooms.some(r => r.room === room) && secret !== room) return state;
   p.room = room;
+  p.pulled = false;
   const door = doorsOf(room)[0];
   p.at = [door[0], door[1]];
   s.stepsLeft = 0;
@@ -242,6 +294,37 @@ function nextSeat(s: ClueState, from: number) {
     if (!s.players[next].outOfGame) break;
   }
   return next;
+}
+
+/** Take the secret passage out of this room instead of rolling. */
+export function takePassage(state: ClueState): ClueState {
+  if (state.stage !== 'roll') return state;
+  const p = state.players[state.turn];
+  const to = p.room ? SECRET_PASSAGES[p.room] : undefined;
+  if (!to) return state;
+  const s = clone(state);
+  const me = s.players[s.turn];
+  me.room = to;
+  me.pulled = false;
+  const door = doorsOf(to)[0];
+  me.at = [door[0], door[1]];
+  s.stage = 'suggest';
+  s.lastSuggestion = null;
+  s.lastRefutation = null;
+  say(s, `${me.name} takes the secret passage to the ${to}.`);
+  return s;
+}
+
+/** Called into a room by someone else's suggestion: suggest there without moving. */
+export function suggestHere(state: ClueState): ClueState {
+  const p = state.players[state.turn];
+  if (state.stage !== 'roll' || !p.pulled || !p.room) return state;
+  const s = clone(state);
+  s.players[s.turn].pulled = false;
+  s.stage = 'suggest';
+  s.lastSuggestion = null;
+  s.lastRefutation = null;
+  return s;
 }
 
 export function skipSuggestion(state: ClueState): ClueState {
@@ -262,10 +345,16 @@ export function suggest(state: ClueState, suggestion: Suggestion): ClueState {
 
   s.weaponRooms[suggestion.weapon] = suggestion.room;
   const accused = s.players.find(p => p.suspect === suggestion.suspect);
+  const door = doorsOf(suggestion.room)[0];
   if (accused) {
+    if (accused.id !== asker.id && accused.room !== suggestion.room) accused.pulled = true;
     accused.room = suggestion.room;
-    const door = doorsOf(suggestion.room)[0];
     accused.at = [door[0], door[1]];
+  }
+  const bystander = s.bystanders.find(b => b.suspect === suggestion.suspect);
+  if (bystander) {
+    bystander.room = suggestion.room;
+    bystander.at = [door[0], door[1]];
   }
 
   say(
@@ -291,19 +380,15 @@ export function suggest(state: ClueState, suggestion: Suggestion): ClueState {
       say(s, `${responder.name} cannot disprove it.`);
       continue;
     }
-    // An AI shows the card it has already revealed most often; a human seat
-    // shows the first match. Either way the asker learns it.
-    const shown = matches[0];
-    asker.detective.cleared.add(cardKey(shown));
-    s.lastRefutation = { by: responder.id, card: shown, hidden: asker.isAI };
-    say(
-      s,
-      asker.isAI
-        ? `${responder.name} shows ${asker.name} a card.`
-        : `${responder.name} shows you the ${shown.value}.`,
-    );
-    s.stage = 'reveal';
-    return s;
+    // A human seat at the table picks which match to show; otherwise the
+    // first match goes. Either way the asker learns it.
+    if (s.refuterChooses && !responder.isAI && matches.length > 1) {
+      s.pendingRefute = { by: responder.id, options: matches };
+      s.stage = 'refute';
+      say(s, `${responder.name} can disprove it and is choosing a card.`);
+      return s;
+    }
+    return reveal(s, responder.id, matches[0]);
   }
 
   // Nobody could refute: everyone learns the whole suggestion is live.
@@ -315,6 +400,30 @@ export function suggest(state: ClueState, suggestion: Suggestion): ClueState {
   say(s, 'Nobody could disprove that suggestion.');
   s.stage = 'reveal';
   return s;
+}
+
+function reveal(s: ClueState, by: number, shown: Card): ClueState {
+  const asker = s.players[s.turn];
+  const responder = s.players[by];
+  asker.detective.cleared.add(cardKey(shown));
+  s.lastRefutation = { by, card: shown, hidden: asker.isAI };
+  s.pendingRefute = null;
+  say(
+    s,
+    asker.isAI
+      ? `${responder.name} shows ${asker.name} a card.`
+      : `${responder.name} shows you the ${shown.value}.`,
+  );
+  s.stage = 'reveal';
+  return s;
+}
+
+/** The human refuter's pick from their matching cards. */
+export function showCard(state: ClueState, card: Card): ClueState {
+  if (state.stage !== 'refute' || !state.pendingRefute) return state;
+  if (!state.pendingRefute.options.some(c => cardKey(c) === cardKey(card))) return state;
+  const s = clone(state);
+  return reveal(s, s.pendingRefute!.by, card);
 }
 
 export function closeReveal(state: ClueState): ClueState {
@@ -388,6 +497,17 @@ export function aiShouldAccuse(s: ClueState): Suggestion | null {
   if (open.suspects.length === 1 && open.weapons.length === 1 && open.rooms.length === 1) {
     return { suspect: open.suspects[0], weapon: open.weapons[0], room: open.rooms[0] };
   }
+  return null;
+}
+
+/** Before rolling: take a passage, or suggest where they were pulled, if it helps. */
+export function aiBeforeRoll(s: ClueState): 'passage' | 'suggest' | null {
+  const p = s.players[s.turn];
+  if (!p.room) return null;
+  const open = openCards(p).rooms;
+  if (p.pulled && open.includes(p.room)) return 'suggest';
+  const to = SECRET_PASSAGES[p.room];
+  if (to && open.includes(to)) return 'passage';
   return null;
 }
 

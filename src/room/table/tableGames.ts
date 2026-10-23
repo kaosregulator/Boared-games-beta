@@ -15,6 +15,7 @@ export function warmTableGames() {
     () => import('./ChessTable'),
     () => import('./CheckersTable'),
     () => import('./BlackjackTable'),
+    () => import('./ClueTable'),
     () => import('../../components/ActiveGameSwitch'),
     () => import('../../components/RulesModal'),
     () => import('../../games/battleship/BattleshipGame'),
