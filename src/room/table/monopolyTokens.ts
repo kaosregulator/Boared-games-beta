@@ -37,25 +37,33 @@ export const TOKEN_DEFS: TokenDef[] = [
 let envTex: THREE.Texture | null = null;
 let pewterMat: THREE.MeshStandardMaterial | null = null;
 
-/** One shared metal: a studio reflection so it reads as silver even in a dark bedroom. */
-export function usePewter() {
+/** A soft studio reflection for table pieces, so polish reads even in a dark bedroom. */
+export function useStudioEnv() {
   const gl = useThree(s => s.gl);
   return useMemo(() => {
-    if (pewterMat) return pewterMat;
     if (!envTex) {
       const pm = new THREE.PMREMGenerator(gl);
       envTex = pm.fromScene(new RoomEnvironment(), 0.04).texture;
       pm.dispose();
     }
+    return envTex;
+  }, [gl]);
+}
+
+/** One shared metal: the studio reflection makes it read as silver. */
+export function usePewter() {
+  const env = useStudioEnv();
+  return useMemo(() => {
+    if (pewterMat) return pewterMat;
     pewterMat = new THREE.MeshStandardMaterial({
       color: '#d4d8de',
       metalness: 1,
       roughness: 0.28,
-      envMap: envTex,
+      envMap: env,
       envMapIntensity: 1.15,
     });
     return pewterMat;
-  }, [gl]);
+  }, [env]);
 }
 
 function lathe(points: [number, number][], segments = 40) {
