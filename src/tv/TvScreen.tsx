@@ -5,8 +5,14 @@ import { resolveArchive } from './archive';
 import { channelClick, paintSnow, startStatic, type StaticHandle } from './noise';
 import { snickShowAt } from './snick';
 import { CARTRIDGES, cartridgeSrc, type Cartridge } from '../devices/cartridges';
+import { TV247_ON } from './tv247';
+import { YouTubeTv } from './YouTubeTv';
+import { PICK_NUMBER, setPick } from './lineups/youtube247';
 
-export type TvMode = 'off' | 'menu' | 'tv' | 'guide' | 'gaming' | 'emulator';
+export type TvMode = 'off' | 'menu' | 'tv' | 'guide' | 'gaming' | 'emulator' | 'link';
+
+/** WATCH TV, GAMING, and (with the 24/7 switch on) PLAY A YOUTUBE LINK. */
+const MENU_COUNT = TV247_ON ? 3 : 2;
 
 export interface TvCommand {
   /** Bumped on every press so the same button twice still fires. */
@@ -66,6 +72,10 @@ export function TvScreen({ width, height, command, initialMode, onStatus }: TvSc
   const osdTimer = useRef<number | null>(null);
   const guideList = useRef<HTMLDivElement>(null);
   const emu = useRef<HTMLIFrameElement>(null);
+  /** The YouTube channel reports back through here: locked on, or nothing plays. */
+  const ytTune = useRef<{ onPlaying: (label: string) => void; onFail: () => void } | null>(null);
+  const [linkText, setLinkText] = useState('');
+  const [linkError, setLinkError] = useState<string | null>(null);
 
   const showOsd = (text: string, ms = 2600) => {
     setOsd(text);
@@ -128,6 +138,46 @@ export function TvScreen({ width, height, command, initialMode, onStatus }: TvSc
     showOsd(`CH ${String(ch.number).padStart(2, '0')}  ${ch.call}`);
     const tunedAt = performance.now();
 
+    if (ch.kind === 'youtube') {
+      // The YouTube player (rendered below) does the playing; the set just waits for it to lock.
+      el.pause();
+      el.removeAttribute('src');
+      let ytGiveUp = window.setTimeout(() => {
+        if (token !== tuneToken.current) return;
+        setTuning(false);
+        setSignal('none');
+        hiss.current?.setLevel(volume * 0.45);
+      }, 20000);
+      ytTune.current = {
+        onPlaying: label => {
+          if (token !== tuneToken.current) return;
+          const wait = Math.max(0, 650 - (performance.now() - tunedAt));
+          window.setTimeout(() => {
+            if (token !== tuneToken.current) return;
+            window.clearTimeout(ytGiveUp);
+            setTuning(false);
+            setSignal('ok');
+            hiss.current?.stop(0.25);
+            hiss.current = null;
+            setLowerThird(label);
+            window.setTimeout(() => setLowerThird(cur => (cur === label ? null : cur)), 4200);
+          }, wait);
+        },
+        onFail: () => {
+          if (token !== tuneToken.current) return;
+          window.clearTimeout(ytGiveUp);
+          setTuning(false);
+          setSignal('none');
+          hiss.current?.setLevel(volume * 0.45);
+        },
+      };
+      return () => {
+        window.clearTimeout(ytGiveUp);
+        ytGiveUp = 0;
+      };
+    }
+    ytTune.current = null;
+
     const lookup =
       ch.kind === 'snick'
         ? (() => {
@@ -136,8 +186,10 @@ export function TvScreen({ width, height, command, initialMode, onStatus }: TvSc
               file ? { file, offset: air.offset, label: snickShowAt(air.episode, air.offset) } : null,
             );
           })()
-        : resolveArchive(ch.cartoon.id, 'video').then(file =>
-            file ? { file, offset: file.length ? nowSeconds() % file.length : -1, label: ch.cartoon.title } : null,
+        : resolveArchive((ch as Extract<Channel, { kind: 'cartoon' }>).cartoon.id, 'video').then(file =>
+            file
+              ? { file, offset: file.length ? nowSeconds() % file.length : -1, label: (ch as Extract<Channel, { kind: 'cartoon' }>).cartoon.title }
+              : null,
           );
 
     let giveUp = window.setTimeout(() => {
@@ -229,7 +281,24 @@ export function TvScreen({ width, height, command, initialMode, onStatus }: TvSc
 
   const pickMenu = (index: number) => {
     if (index === 0) setMode('tv');
-    else setMode('gaming');
+    else if (index === 1) setMode('gaming');
+    else {
+      setLinkError(null);
+      setMode('link');
+    }
+  };
+
+  /** Paste-a-link: put it on the "Your pick" channel and tune there. */
+  const playLink = () => {
+    if (!setPick(linkText)) {
+      setLinkError("That isn't a YouTube video link.");
+      return;
+    }
+    setLinkError(null);
+    setChannel(PICK_NUMBER);
+    setGuideIndex(Math.max(0, CHANNELS.findIndex(c => c.number === PICK_NUMBER)));
+    setRetune(r => r + 1);
+    setMode('tv');
   };
 
   const insert = (c: Cartridge) => {
@@ -273,7 +342,7 @@ export function TvScreen({ width, height, command, initialMode, onStatus }: TvSc
       case 'chUp':
       case 'chDown': {
         const dir = command.key === 'chUp' ? 1 : -1;
-        if (mode === 'menu') setMenuIndex(i => (i + 2 + dir) % 2);
+        if (mode === 'menu') setMenuIndex(i => (i + MENU_COUNT + dir) % MENU_COUNT);
         else if (mode === 'guide') setGuideIndex(i => (i - dir + CHANNELS.length) % CHANNELS.length);
         else if (mode === 'gaming') setCartIndex(i => (i + CARTRIDGES.length + dir) % CARTRIDGES.length);
         else if (mode === 'tv') stepChannel(dir);
@@ -285,6 +354,7 @@ export function TvScreen({ width, height, command, initialMode, onStatus }: TvSc
           setChannel(CHANNELS[guideIndex].number);
           setMode('tv');
         } else if (mode === 'gaming') insert(CARTRIDGES[cartIndex]);
+        else if (mode === 'link') playLink();
         break;
       case 'back':
         setMode(m => (m === 'emulator' ? 'gaming' : m === 'off' ? m : 'menu'));
@@ -296,18 +366,18 @@ export function TvScreen({ width, height, command, initialMode, onStatus }: TvSc
 
   // Keyboard on the TV: arrows = channel/selection, Enter = OK, G = guide, M = menu.
   useEffect(() => {
-    if (mode === 'emulator' || mode === 'off') return;
+    if (mode === 'emulator' || mode === 'off' || mode === 'link') return;
     const onKey = (e: KeyboardEvent) => {
       if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
         e.preventDefault();
         const dir = e.code === 'ArrowUp' ? 1 : -1;
-        if (mode === 'menu') setMenuIndex(i => (i + 2 + dir) % 2);
+        if (mode === 'menu') setMenuIndex(i => (i + MENU_COUNT + dir) % MENU_COUNT);
         else if (mode === 'guide') setGuideIndex(i => (i - dir + CHANNELS.length) % CHANNELS.length);
         else if (mode === 'gaming') setCartIndex(i => (i + CARTRIDGES.length - dir) % CARTRIDGES.length);
         else if (mode === 'tv') stepChannel(dir);
       } else if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') {
         if (mode === 'gaming') setCartIndex(i => (i + CARTRIDGES.length + (e.code === 'ArrowRight' ? 1 : -1)) % CARTRIDGES.length);
-        if (mode === 'menu') setMenuIndex(e.code === 'ArrowRight' ? 1 : 0);
+        if (mode === 'menu') setMenuIndex(i => (i + MENU_COUNT + (e.code === 'ArrowRight' ? 1 : -1)) % MENU_COUNT);
       } else if (e.code === 'Enter') {
         if (mode === 'menu') pickMenu(menuIndex);
         else if (mode === 'guide') {
@@ -361,7 +431,7 @@ export function TvScreen({ width, height, command, initialMode, onStatus }: TvSc
         ref={video}
         playsInline
         preload="auto"
-        style={{ ...videoStyle, visibility: watching ? 'visible' : 'hidden', background: '#000' }}
+        style={{ ...videoStyle, visibility: watching && current.kind !== 'youtube' ? 'visible' : 'hidden', background: '#000' }}
         onEnded={() => {
           // SNICK rolls straight into the next archived Saturday.
           if (current.kind === 'snick') setRetune(r => r + 1);
@@ -371,6 +441,18 @@ export function TvScreen({ width, height, command, initialMode, onStatus }: TvSc
           }
         }}
       />
+
+      {watching && current.kind === 'youtube' && (
+        <YouTubeTv
+          key={`${current.number}-${retune}`}
+          channel={current.yt}
+          style={videoStyle}
+          volume={volume}
+          onPlaying={label => ytTune.current?.onPlaying(label)}
+          onFail={() => ytTune.current?.onFail()}
+          onMuted={() => showOsd('MUTED — PRESS VOL +', 4000)}
+        />
+      )}
 
       {watching && (tuning || signal === 'none') && (
         <canvas
@@ -421,8 +503,8 @@ export function TvScreen({ width, height, command, initialMode, onStatus }: TvSc
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 40%, #12305a, #050a18 70%)', padding: 34 }}>
           <p style={{ fontSize: 22, letterSpacing: 4, color: '#9fe7ff' }}>CHANNEL MASTER · INPUT</p>
           <p style={{ fontSize: 15, color: '#9fe7ff', opacity: 0.75, marginTop: 4 }}>{clockLabel(now)}</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 22, marginTop: height * 0.12 }}>
-            {['WATCH TV', 'GAMING'].map((label, i) => (
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${MENU_COUNT}, 1fr)`, gap: 22, marginTop: height * 0.12 }}>
+            {['WATCH TV', 'GAMING', 'YOUTUBE LINK'].slice(0, MENU_COUNT).map((label, i) => (
               <button
                 key={label}
                 type="button"
@@ -438,14 +520,14 @@ export function TvScreen({ width, height, command, initialMode, onStatus }: TvSc
                   background: menuIndex === i ? '#173f6b' : '#0b2340',
                   color: menuIndex === i ? '#ffe45c' : '#9fe7ff',
                   fontFamily: OSD_FONT,
-                  fontSize: 34,
+                  fontSize: MENU_COUNT > 2 ? 28 : 34,
                   fontWeight: 700,
                   cursor: 'pointer',
                 }}
               >
                 {label}
                 <span style={{ display: 'block', fontSize: 15, marginTop: 10, opacity: 0.8 }}>
-                  {i === 0 ? `${CHANNELS.length} cable channels` : 'NES cartridges'}
+                  {i === 0 ? `${CHANNELS.length} cable channels` : i === 1 ? 'NES cartridges' : 'Paste a link, it plays 24/7'}
                 </span>
               </button>
             ))}
@@ -454,6 +536,55 @@ export function TvScreen({ width, height, command, initialMode, onStatus }: TvSc
             CH ▲▼ to choose · OK on the cable box · or click
           </p>
         </div>
+      )}
+
+      {mode === 'link' && (
+        <form
+          onSubmit={e => {
+            e.preventDefault();
+            playLink();
+          }}
+          style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 40%, #5a1212, #180505 70%)', padding: 34, color: '#ffe0e0' }}
+        >
+          <p style={{ fontSize: 22, letterSpacing: 4, color: '#ff9f9f' }}>YOUTUBE · YOUR PICK</p>
+          <p style={{ fontSize: 15, opacity: 0.8, marginTop: 4 }}>Paste a YouTube link. It plays on channel {PICK_NUMBER}, all day, like a real channel.</p>
+          <input
+            value={linkText}
+            onChange={e => setLinkText(e.target.value)}
+            placeholder="https://www.youtube.com/watch?v=…"
+            autoFocus
+            inputMode="url"
+            spellCheck={false}
+            style={{
+              marginTop: height * 0.1,
+              width: '100%',
+              height: 64,
+              fontSize: 24,
+              fontFamily: OSD_FONT,
+              padding: '0 16px',
+              borderRadius: 12,
+              border: '4px solid #ffe45c',
+              background: '#1a0606',
+              color: '#fff',
+            }}
+          />
+          {linkError && <p style={{ fontSize: 18, color: '#ffd166', marginTop: 10 }}>{linkError}</p>}
+          <div style={{ display: 'flex', gap: 16, marginTop: 22 }}>
+            <button
+              type="submit"
+              style={{ flex: 1, height: 64, borderRadius: 12, border: 0, background: '#ffe45c', color: '#3a0a0a', fontFamily: OSD_FONT, fontSize: 26, fontWeight: 800, cursor: 'pointer' }}
+            >
+              ▶ PLAY ON CH {PICK_NUMBER}
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('menu')}
+              style={{ width: 160, height: 64, borderRadius: 12, border: '3px solid #ff9f9f', background: 'transparent', color: '#ffe0e0', fontFamily: OSD_FONT, fontSize: 20, fontWeight: 700, cursor: 'pointer' }}
+            >
+              BACK
+            </button>
+          </div>
+        </form>
       )}
 
       {mode === 'guide' && (
