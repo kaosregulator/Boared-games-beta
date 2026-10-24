@@ -20,7 +20,7 @@ export interface CardVideo {
   title: string;
 }
 
-export type CardAction = 'tv' | 'nes' | 'radio' | 'gameboy' | 'tamagotchi' | 'rubik';
+export type CardAction = 'tv' | 'nes' | 'radio' | 'gameboy' | 'tamagotchi' | 'rubik' | 'hotwheels';
 
 export interface PropCard {
   id: string;
@@ -960,6 +960,7 @@ const CARDS: PropCard[] = [
     ],
     photos: [P.hwCollection, P.hwFleet],
     video: V('videoplayback_20240819_1919', 'Hot Wheels Criss Cross Crash commercial, 1999'),
+    action: { kind: 'hotwheels', label: 'Shrink down & race' },
   },
   {
     id: 'army',

@@ -43,6 +43,7 @@ import { resumedSession, saveEngaged } from './session';
 import { TABLE_GAMES, TableHudOverlay, type TableSession } from './table/TablePlay';
 import { TableCameraRig } from './table/TableCameraRig';
 import { TriviaTableCam } from './table/TriviaTableCam';
+import { HotWheelsHud, HotWheelsWorld } from './hotwheels/HotWheelsRace';
 import { walkRig } from './WalkController';
 import { TABLE_SEAT } from './roomLayout';
 import { ANCHORS, anchorById, type Anchor } from './anchors';
@@ -151,6 +152,12 @@ export function WalkRoom({
   const [musicVolume, setMusicVolume] = useState(() => sound.getMusicVolume());
   const [track, setTrack] = useState(() => sound.getTrack());
   const queryTable = useMemo(() => tableFromQuery(games), [games]);
+  const raceBoot = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('race') !== 'hotwheels') return null;
+    return { spot: params.get('spot') };
+  }, []);
   const [session, setSession] = useState<TableSession | null>(null);
   const sessionKey = useRef(0);
   const [crouched, setCrouched] = useState(false);
@@ -171,6 +178,7 @@ export function WalkRoom({
       Boolean(override.device) ||
       override.seat ||
       Boolean(queryTable) ||
+      Boolean(raceBoot) ||
       // Back after a reload: skip the title card and stand where you were.
       Boolean(resumedSession()?.engaged),
   );
@@ -209,6 +217,7 @@ export function WalkRoom({
   const [seated, setSeated] = useState(override.seat);
   const [tamagotchi, setTamagotchi] = useState(false);
   const [rubik, setRubik] = useState(false);
+  const [racing, setRacing] = useState(Boolean(raceBoot));
   /** Something held up close (Tamagotchi, Rubik's Cube): the room waits behind it. */
   const holding = tamagotchi || rubik;
   const emulatorOn = (device === 'crt' || device === 'nes') && tvStatus.mode === 'emulator';
@@ -639,6 +648,10 @@ export function WalkRoom({
         setPinned(null);
         sound.playButtonClick();
         setRubik(true);
+      } else if (kind === 'hotwheels') {
+        setPinned(null);
+        sound.playButtonClick();
+        setRacing(true);
       }
     },
     [enterDevice, sitDown],
@@ -672,7 +685,7 @@ export function WalkRoom({
   const cardGame = demoGame ?? aimedGame;
   const cardProp = demoProp ?? aimedProp;
   const showCard = Boolean(demoGame || demoProp) || (engaged && cardOpen && (aimedGame || aimedProp));
-  const walking = engaged && !device && !seated && !holding && !overlayGame && !pulledGameId && session?.phase !== 'unfold' && !tableCamOn;
+  const walking = engaged && !device && !seated && !holding && !overlayGame && !pulledGameId && session?.phase !== 'unfold' && !tableCamOn && !racing;
 
 
   return (
@@ -765,16 +778,17 @@ export function WalkRoom({
         ) : (
           <>
             <WalkController
-              enabled={!pulledGameId && !device && !seated && !holding && session?.phase !== 'unfold' && !overlayGame && !tableCamOn}
+              enabled={!pulledGameId && !device && !seated && !holding && session?.phase !== 'unfold' && !overlayGame && !tableCamOn && !racing}
               engaged={engaged}
               onStep={onStep}
             />
             <TableCameraRig active={tableCamOn} />
             <TriviaTableCam active={overlayGame?.id === 'trivia' && session?.phase === 'play'} />
+            {racing && <HotWheelsWorld spot={raceBoot?.spot ?? null} skipCountdown={Boolean(raceBoot)} />}
             <ReachRaycaster
               // Mid-game, only the game's own box beside the table can be picked.
               enabled={
-                engaged && !pulledGameId && !device && !seated && !holding && !overlayGame && !tableCamOn &&
+                engaged && !pulledGameId && !device && !seated && !holding && !overlayGame && !tableCamOn && !racing &&
                 (!tableGame || session?.phase === 'play')
               }
               accept={tableGame ? target => target.id.startsWith(TABLE_BOX_PREFIX) : undefined}
@@ -794,6 +808,7 @@ export function WalkRoom({
         />
       )}
       {rubik && <RubikPlay onClose={() => setRubik(false)} />}
+      {racing && <HotWheelsHud onExit={() => setRacing(false)} />}
       {seated && <GameBoyGlass />}
       {seated && (
         <div data-ui="device" className="pointer-events-none absolute inset-0 z-40">
@@ -871,7 +886,7 @@ export function WalkRoom({
       )}
 
       {/* Glass flash card — games + nostalgia props */}
-      {!overlayGame && (engaged || scripted) && !device && !seated && !holding && (
+      {!racing && !overlayGame && (engaged || scripted) && !device && !seated && !holding && (
       <button
         type="button"
         onClick={openMenu}
