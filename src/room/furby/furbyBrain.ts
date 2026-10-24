@@ -228,7 +228,7 @@ export class FurbyBrain {
     say({ furbish, english, who: this.name, at: performance.now() });
     this.voice?.stop();
     this.voice = this.voiced ? speak(tag ?? pickTag(SOUND[key]), { pitch: this.pitch, volume: this.volume, maxDur }) : null;
-    if (this.voiced) motorWhirr(0.035 * this.volume);
+    if (this.voiced) motorWhirr(0.16 * this.volume, this.voice ? this.voice.clip.dur : 0.6);
   }
 
   /** Something happened to the Furby. Returns false if it ignored it. */

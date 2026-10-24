@@ -6,7 +6,7 @@ import { pushHud } from '../table/tableHud';
 import { FurbyPuppet } from './FurbyPuppet';
 import { anchorPose, furbyAnchors, setFurby, tableBrain, useFurby } from './furbyStore';
 import { motorWhirr } from './furbyAudio';
-import { HoldArms, applyHand, newHandPose } from './HoldArms';
+import { HoldArms, applyHand, newHandPose, type GripShape } from './HoldArms';
 
 /**
  * The Furbies at the card table. The grey 1998 Furby comes in the user's
@@ -167,6 +167,10 @@ export function FurbyTable({
   // One hand does the pulling; the other stays out of shot.
   const pull = useMemo(newHandPose, []);
   const idle = useMemo(newHandPose, []);
+  const pullGrip = useMemo<GripShape>(
+    () => ({ inverse: new THREE.Matrix4(), center: new THREE.Vector3(0, 0.068, 0.003), radii: new THREE.Vector3(0.066, 0.072, 0.06) }),
+    [],
+  );
 
   useEffect(() => {
     clock.current = 0;
@@ -230,7 +234,7 @@ export function FurbyTable({
       // Wiggles in the box, gets pulled up out of the top, hops down to you.
       cue('hello', 0.7, () => tableBrain.act('hello'));
       cue('pull', 1.6, () => {
-        motorWhirr(0.06, 0.6);
+        motorWhirr(0.24, 1.1);
         tableBrain.act('flip');
       });
       cue('land', 3.5, () => tableBrain.act('putdown'));
@@ -289,14 +293,24 @@ export function FurbyTable({
       reach = ease((t - 0.05) / 0.5) * (1 - ease((t - 2.35) / 0.5));
       grip = ease((t - 0.45) / 0.15) * (1 - ease((t - 2.3) / 0.15));
     }
-    // HoldArms sits beside the Furby in this group, so its "world" is the table top.
-    const furAt = g.position;
+    // HoldArms sits beside the Furby in this group, so its "world" is the
+    // table top. The hand comes down over the top of its head, palm down,
+    // fingers closing round the back of its head until they touch.
+    g.updateMatrix();
+    const lift = (1 - reach) * 0.3;
     pull.shown = reach > 0.01 ? 1 : 0;
-    pull.wrist.set(furAt.x + 0.012, furAt.y + 0.29 + (1 - reach) * 0.3, furAt.z + 0.035);
-    pull.fingers.set(-0.12, -1, -0.22);
-    pull.palm.set(0.25, 0, -1);
-    pull.curl = 0.25 + grip * 0.5;
-    pull.elbow.set(pull.wrist.x + 0.12, pull.wrist.y + 0.3, pull.wrist.z + 0.18);
+    pull.fingers.set(0.1, -0.35, -1).normalize().transformDirection(g.matrix);
+    pull.palm.set(0, -1, 0.15).transformDirection(g.matrix);
+    pull.wrist
+      .set(0, 0.162 + lift, 0.0)
+      .addScaledVector(new THREE.Vector3(0.1, -0.35, -1).normalize(), -0.05)
+      .add(new THREE.Vector3(0, 0.012, 0))
+      .applyMatrix4(g.matrix);
+    pull.curl = grip;
+    g.updateWorldMatrix(true, false);
+    pullGrip.inverse.copy(g.matrixWorld).invert();
+    pull.grip = grip > 0.05 ? pullGrip : null;
+    pull.elbow.set(pull.wrist.x + 0.06, pull.wrist.y + 0.3, pull.wrist.z + 0.04);
     applyHand(pull);
     applyHand(idle);
   });
