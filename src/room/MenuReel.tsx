@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { setControlPreset, useControlSettings, type ControlPreset } from './controls';
 
 interface MenuReelProps {
   /** At full black: the room takes over underneath. */
@@ -17,9 +18,17 @@ const FADE_IN_MS = 900;
  * plays straight away while the real room loads behind it. One see-through
  * button stops the reel and fades through black into the room.
  */
+const MENU_DEVICES: { id: Exclude<ControlPreset, 'custom'>; label: string }[] = [
+  { id: 'desktop', label: 'Desktop' },
+  { id: 'laptop', label: 'Laptop' },
+  { id: 'tablet', label: 'Tablet' },
+  { id: 'phone', label: 'Phone' },
+];
+
 export function MenuReel({ onEnter, onDone }: MenuReelProps) {
   const video = useRef<HTMLVideoElement>(null);
   const [phase, setPhase] = useState<'reel' | 'out' | 'in'>('reel');
+  const controls = useControlSettings();
   const year = new Date().getFullYear();
 
   const play = useCallback(() => {
@@ -73,6 +82,27 @@ export function MenuReel({ onEnter, onDone }: MenuReelProps) {
           className="pointer-events-none absolute inset-0"
           style={{ background: 'radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.45) 100%)' }}
         />
+      )}
+
+      {phase === 'reel' && (
+        <div className="absolute inset-x-0 bottom-[calc(18%+4.6rem)] z-[81] flex flex-wrap justify-center gap-1.5 px-3">
+          {MENU_DEVICES.map(preset => (
+            <button
+              key={preset.id}
+              type="button"
+              aria-pressed={controls.preset === preset.id}
+              onClick={() => setControlPreset(preset.id)}
+              className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] backdrop-blur-sm ${
+                controls.preset === preset.id
+                  ? 'border-amber-100 bg-black/70 text-amber-50'
+                  : 'border-white/35 bg-black/45 text-white/80'
+              }`}
+              style={{ fontFamily: '"IBM Plex Mono", ui-monospace, monospace' }}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
       )}
 
       {phase === 'reel' && (

@@ -351,8 +351,11 @@ function step(car: CarState, input: DriveInput, dt: number, events: SimEvent[]) 
     }
     // Over the cap (downhill, after a booster) you bleed it off, harder the faster.
     if (car.speed > cap) car.speed = Math.max(cap, car.speed - (0.9 + 2.5 * (car.speed - cap)) * dt);
-    // Steering bites with speed, eases off when flat out.
-    const grip = Math.min(1, Math.abs(car.speed) / 0.22) * (1 - 0.25 * Math.min(1, Math.abs(car.speed) / 1.3));
+    // A stopped toy can still pivot. Grip used to be zero at rest, so a car
+    // scrubbing a wall or sitting at the start could not turn its nose.
+    const crawl = 0.45;
+    const speedGrip = crawl + (1 - crawl) * Math.min(1, Math.abs(car.speed) / 0.22);
+    const grip = speedGrip * (1 - 0.25 * Math.min(1, Math.abs(car.speed) / 1.3));
     car.heading += input.steer * T.turnRate * grip * Math.sign(car.speed || 1) * dt;
   }
 

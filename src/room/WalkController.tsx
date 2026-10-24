@@ -3,6 +3,8 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { PLAYER, WALL } from './videoRoom';
 import { ROOM_COLLIDERS, TABLE_COLLIDER } from './roomLayout';
+import { controlSettings, lookTurn } from './controls';
+import { crouchKeyAction } from './crouch';
 import { aim, emitRoomTap, fitFov, pad } from './input';
 import { resumedSession, savePose, type SavedPose } from './session';
 import { setWalkZoom, walkView, ZOOM_MAX } from './walkView';
@@ -100,16 +102,24 @@ export function WalkController({ enabled, engaged, onStep }: WalkControllerProps
       'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Equal', 'Minus', 'NumpadAdd', 'NumpadSubtract',
     ]);
     const typing = (e: KeyboardEvent) => {
-      const el = e.target as HTMLElement | null;
+      const el = e.target instanceof Element ? e.target : null;
       return Boolean(el?.closest('input, textarea, select, iframe, [data-ui="studio"], [data-ui="table"]'));
     };
     const down = (e: KeyboardEvent) => {
       if (typing(e)) return;
-      // Space or C gets up from the crouch the table put you in.
-      if (walkRig.crouchLock && (e.code === 'Space' || e.code === 'KeyC') && !e.repeat) {
-        walkRig.setCrouch(false);
-        e.preventDefault();
-        return;
+      // C toggles a crouch. Space only stands. Ignored while a game owns the keys.
+      if (enabledRef.current && engagedRef.current) {
+        const crouch = crouchKeyAction(walkRig.crouchLock, e.code, e.repeat);
+        if (crouch === 'stand') {
+          walkRig.setCrouch(false);
+          e.preventDefault();
+          return;
+        }
+        if (crouch === 'toggle') {
+          walkRig.setCrouch(!walkRig.crouchLock);
+          e.preventDefault();
+          return;
+        }
       }
       keys.current[e.code] = true;
       if (e.code.startsWith('Arrow')) aim.mode = 'center';
@@ -201,8 +211,9 @@ export function WalkController({ enabled, engaged, onStep }: WalkControllerProps
       if (!live()) return;
       // A full swipe across a phone is about a half turn; a mouse is finer.
       // Zoomed in, the same swipe turns less, so aiming stays steady.
-      const sens = (press.touch ? 3.4 / Math.max(window.innerWidth, window.innerHeight) : 0.0032) / walkView.zoom;
-      turn(camera, dx * sens, dy * sens);
+      const base = (press.touch ? 3.4 / Math.max(window.innerWidth, window.innerHeight) : 0.0032) / walkView.zoom;
+      const look = lookTurn(dx, dy, base, controlSettings);
+      turn(camera, look.yaw, look.pitch);
     };
     const up = (event: PointerEvent) => {
       touches.delete(event.pointerId);
@@ -307,7 +318,7 @@ export function WalkController({ enabled, engaged, onStep }: WalkControllerProps
     }
 
     const k = keys.current;
-    const crouching = k.ControlLeft || k.ControlRight || k.KeyC || pad.crouch || walkRig.crouchLock;
+    const crouching = walkRig.crouchLock;
     const targetEye = crouching ? PLAYER.crouchHeight : PLAYER.height;
     eyeHeight.current += (targetEye - eyeHeight.current) * Math.min(1, delta * 9);
 

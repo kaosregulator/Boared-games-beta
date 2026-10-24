@@ -1,0 +1,26 @@
+# Gameplay ledger
+
+This is the running record for the room and the mini-games. A row stays here until the same steps have been run again after the change.
+
+## Fixed in this pass
+
+| Area | What was wrong | Root cause | Fix | How it was checked |
+| --- | --- | --- | --- | --- |
+| Room crouch | C and Ctrl crouched only while held. | `WalkController` treated those keys as a held button. The on-screen Duck button used a second flag, so the two could disagree. | C toggles one latch. Space stands. The Duck button uses the same latch. Ctrl is left alone so shortcuts still work. Hot Wheels and Army Men still use C for their cameras, because the walker ignores C while those modes own the keys. | `tests/room/controls.test.ts`. Browser: enter the room, press C, `data-crouch` stays `1` after the key is released, press C again and it returns to `0`. |
+| Look settings | Sensitivity and invert were not settings. The menu had no device choice. | Look speed was a constant in the drag handler. | Desktop, Laptop, Tablet, and Phone presets set a look-speed multiplier and save it in `room-controls`. The slider and invert checkboxes in Room studio apply on the next drag. WASD is unchanged. | `tests/room/controls.test.ts` for the math and the save. Browser: the title reel shows the four presets and the pressed one is saved. |
+| Hot Wheels steering | A stopped car, or a car scrubbing a wall, barely turned. | Steering grip was `speed / 0.22`, so it was zero at rest. A head-on bump holds speed near zero, so the nose never came off the wall. | Grip keeps a 0.45 floor, then rises to the old curve once the car is moving. High-speed easing is unchanged. No teleport. | `tests/room/carSteer.test.ts`. Before the change a half-second of full steer at rest left heading at 0, and 1.5 s pinned on the dresser turned only 0.07 rad. After the change both assertions pass. |
+
+## Still open
+
+| Area | Expected | Actual | Next step |
+| --- | --- | --- | --- |
+| Hot Wheels, every mode | The same route in each mode, with a count of successful turns and recoveries. | Only the steering-at-rest and dresser-pin cases were simulated. The orange loop, the bed gap, and a full lap were not driven in a browser. | Drive one fixed route per mode and compare. |
+| Army Men | Existing waves and cameras stay. Aim lines up. An endless Easy/Medium/Hard mode and a soldier tutorial are still to be built. | Not changed in this pass. | Reproduce aim error at two distances before editing. |
+| Clue cards | Cards stay up long enough to read, with a short typewriter. | Not measured in this pass. | Time the current card, then slow that one timer. |
+| Table open | The box always unfolds from the same click. | A later Furby change already repaired the Furby table button. Other boxes were not re-tried here. | Click each table box once and record which ones fail. |
+| Phone, tablet, and a 2x laptop | Layouts and the new presets match the device. | This environment is one desktop browser with device pixel ratio 1. | Repeat the crouch and preset checks on a phone and a tablet. |
+| Performance | Frame time before and after on the same scene. | Not measured. The pixel-ratio work from the engine layer is unchanged. | Sample the same bedroom view before further rendering changes. |
+
+## Left alone on purpose
+
+The other agent's offline server and 24/7 show work was not on `main` when this branch started. TV archive code was not edited. Game cameras, models, and rules were not replaced.
