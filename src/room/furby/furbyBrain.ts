@@ -210,6 +210,8 @@ export class FurbyBrain {
   private motorRuns: [number, number][] = [];
   /** How hard the motor is running now (eased 0-1), and how far the cam has turned. */
   private motor = 0;
+  /** Stops the gearbox sound of the line playing now. */
+  private stopMotor: () => void = () => {};
   private cam = 0;
   /** Set from outside each frame. */
   dark = false;
@@ -234,22 +236,13 @@ export class FurbyBrain {
     const [furbish, english] = lines[Math.floor(Math.random() * lines.length)];
     say({ furbish, english, who: this.name, at: performance.now() });
     this.voice?.stop();
+    this.stopMotor();
     this.voice = this.voiced ? speak(tag ?? pickTag(SOUND[key]), { pitch: this.pitch, volume: this.volume, maxDur }) : null;
-    // The motor moves the body through the line; its gearbox is heard with it.
+    // The motor moves the body through the line; its gearbox is heard with it
+    // (from now if the voice is still loading and the line is mimed).
     const plan = motorPlan(this.voice ? this.voice.clip.dur : 1.2);
     this.motorRuns = plan.map(([a, b]) => [this.time + 0.02 + a, this.time + 0.02 + b]);
-    const voice = this.voice;
-    if (voice) {
-      const stopMotor = motorPlay(voice.at, plan, 0.3 * this.volume);
-      const stopVoice = voice.stop;
-      voice.stop = () => {
-        stopVoice();
-        stopMotor();
-      };
-    } else if (this.voiced) {
-      // The voice is still loading and the line is mimed; the gearbox isn't.
-      motorPlay(voiceTime() + 0.02, plan, 0.3 * this.volume);
-    }
+    if (this.voiced) this.stopMotor = motorPlay(this.voice ? this.voice.at : voiceTime() + 0.02, plan, 0.3 * this.volume);
   }
 
   /** Something happened to the Furby. Returns false if it ignored it. */
@@ -562,5 +555,6 @@ export class FurbyBrain {
 
   dispose() {
     this.voice?.stop();
+    this.stopMotor();
   }
 }
