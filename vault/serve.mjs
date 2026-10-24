@@ -1,7 +1,7 @@
 import fs from 'fs';
 import http from 'http';
 import path from 'path';
-import { episodesFromDb } from './db.mjs';
+import { db, episodesFromDb, sidecarRow, upsertEpisode } from './db.mjs';
 import { SHOWS, VAULT_DIR, humanBytes, readSidecars } from './lib.mjs';
 
 /**
@@ -21,22 +21,24 @@ const host = process.env.VAULT_HOST ?? '0.0.0.0';
 
 const TYPES = { '.webm': 'video/webm', '.vtt': 'text/vtt; charset=utf-8', '.jpg': 'image/jpeg', '.json': 'application/json' };
 
-/** Catalog from Postgres when it's up, else from the files on disk; refreshed every minute. */
+/**
+ * The feed comes from the sidecar files on the drive, which every finished
+ * episode has. Any episode Postgres is missing (it was down when that episode
+ * finished) is written back into it here, so the two never drift apart for long.
+ * Refreshed every minute.
+ */
 const catalogs = new Map();
 async function catalog(show) {
   const hit = catalogs.get(show);
   if (hit && Date.now() - hit.at < 60_000) return hit.rows;
-  let rows = null;
-  try {
-    const fromDb = await episodesFromDb(show);
-    if (fromDb?.length) {
-      rows = fromDb.map(r => ({ key: r.key, season: r.season, from: r.ep_from, to: r.ep_to, title: r.title, label: r.label, seconds: r.seconds, file: r.file, bytes: Number(r.bytes), subtitles: r.subtitles, thumb: r.thumb }));
-    }
-  } catch {
-    // fall back to the sidecars
-  }
-  rows ??= readSidecars(show);
+  const rows = readSidecars(show);
   catalogs.set(show, { at: Date.now(), rows });
+  try {
+    const inDb = new Set(((await episodesFromDb(show)) ?? []).map(r => r.key));
+    if (await db()) for (const s of rows) if (!inDb.has(s.key)) await upsertEpisode(sidecarRow(s));
+  } catch (err) {
+    console.warn(`Catalog sync to Postgres skipped: ${err.message}`);
+  }
   return rows;
 }
 
