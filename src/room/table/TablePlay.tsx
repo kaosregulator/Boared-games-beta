@@ -14,12 +14,13 @@ const MonopolyTable = lazy(() => import('./MonopolyTable').then(m => ({ default:
 const ChessTable = lazy(() => import('./ChessTable').then(m => ({ default: m.ChessTable })));
 const CheckersTable = lazy(() => import('./CheckersTable').then(m => ({ default: m.CheckersTable })));
 const ClueTable = lazy(() => import('./ClueTable').then(m => ({ default: m.ClueTable })));
+const FurbyTable = lazy(() => import('../furby/FurbyTable').then(m => ({ default: m.FurbyTable })));
 const BlackjackTable = lazy(() => import('./BlackjackTable').then(m => ({ default: m.BlackjackTable })));
 
 export { TableHudOverlay } from './tableHud';
 
-export type TableGameId = 'monopoly' | 'connect4' | 'battleship' | 'chess' | 'checkers' | 'blackjack' | 'clue';
-export const TABLE_GAMES = new Set<string>(['monopoly', 'connect4', 'battleship', 'chess', 'checkers', 'blackjack', 'clue']);
+export type TableGameId = 'monopoly' | 'connect4' | 'battleship' | 'chess' | 'checkers' | 'blackjack' | 'clue' | 'furby';
+export const TABLE_GAMES = new Set<string>(['monopoly', 'connect4', 'battleship', 'chess', 'checkers', 'blackjack', 'clue', 'furby']);
 
 /**
  * unfold — the table has spawned and the box is opening
@@ -113,15 +114,24 @@ export function PlayTable({
       <SpawnedTable leaving={false}>
         <TableWood />
         <pointLight position={[0, 1.25, 0.1]} color="#ffe2c2" intensity={1.6} distance={3.4} decay={2} />
-        <Suspense fallback={null}>
-          <BoxUnfold
-            key={`${session.key}-${phase === 'pack' ? 'pack' : 'open'}`}
-            game={game}
-            mode={phase === 'pack' ? 'pack' : 'open'}
-            onComplete={phase === 'pack' ? onPacked : onUnfolded}
-          />
-        </Suspense>
-        {phase === 'play' && (
+        {game.id === 'furby' ? (
+          // The Furbies bring their own boxes: no board to unfold.
+          <group position={[0, PLAY_TABLE.h, 0]}>
+            <Suspense fallback={null}>
+              <FurbyTable key={session.key} phase={phase} onUnfolded={onUnfolded} onPacked={onPacked} onLeave={onLeave} />
+            </Suspense>
+          </group>
+        ) : (
+          <Suspense fallback={null}>
+            <BoxUnfold
+              key={`${session.key}-${phase === 'pack' ? 'pack' : 'open'}`}
+              game={game}
+              mode={phase === 'pack' ? 'pack' : 'open'}
+              onComplete={phase === 'pack' ? onPacked : onUnfolded}
+            />
+          </Suspense>
+        )}
+        {phase === 'play' && game.id !== 'furby' && (
           <group position={[0, PLAY_TABLE.h, 0]}>
             <Suspense fallback={null}>
               {game.id === 'connect4' && <ConnectFourTable onLeave={onLeave} />}

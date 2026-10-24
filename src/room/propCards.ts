@@ -20,7 +20,7 @@ export interface CardVideo {
   title: string;
 }
 
-export type CardAction = 'tv' | 'nes' | 'radio' | 'gameboy' | 'tamagotchi' | 'rubik' | 'hotwheels' | 'army';
+export type CardAction = 'tv' | 'nes' | 'radio' | 'gameboy' | 'tamagotchi' | 'rubik' | 'hotwheels' | 'army' | 'furby';
 
 export interface PropCard {
   id: string;
@@ -69,6 +69,7 @@ const P = {
   viewmaster: wm('View-Master Model G.jpg', 'ThePassenger, CC BY-SA 3.0', 'A View-Master viewer'),
   jordans: wm('Nike Air Jordan I.jpg', 'Osyffar, CC0', 'Nike Air Jordan I sneakers'),
   army: wm('Green army plastic soldiers.jpg', 'A S Morton, CC BY 2.0', 'Green plastic army men'),
+  furbies: wm('Furbies?.jpg', 'danieljordahl, CC BY 2.0', 'A pile of Furbies'),
   hotPocket: wm('Hot pocket.jpg', 'Schuym1, CC BY-SA 3.0', 'A Hot Pocket'),
   hotPocketBox: wm('Hot Pocket Pepperoni Pizzeria.jpg', 'Lenin and McCarthy, CC BY-SA 3.0', 'Pepperoni Hot Pocket'),
   pizzaRolls: wm("Totino's Pizza Rolls, May 2019.jpg", 'Thomson200, CC0', "Totino's Pizza Rolls"),
@@ -971,6 +972,22 @@ const CARDS: PropCard[] = [
     memories: ['Stepping on one barefoot is worse than Lego. Fight us.'],
     photos: [P.army],
     action: { kind: 'army', label: 'Send the troops!' },
+  },
+  {
+    id: 'furby',
+    title: 'Furby',
+    era: '1998 · the Christmas everyone fought over',
+    story:
+      'Mom stood in line at Toys"R"Us at 6 a.m. for this one, and a lady in the next aisle offered her a hundred dollars for it. It speaks Furbish, it learns English the longer you keep it, and it has no off switch. None. The only way to shut it up is to take the batteries out with a screwdriver, and it wakes up in the middle of the night anyway to say "me sleepy" in a dark closet.',
+    memories: [
+      'The NSA actually banned Furbies from its offices in 1999 in case they were recording secrets. They weren\'t. They were just saying "kah may-may".',
+      'Two Furbies in the same room will talk to each other forever. Nobody knows what they\'re planning.',
+      'Feed it too much and it gets sick. Turn it upside down and it screams. Turn off the light and it snores. Basically a little brother.',
+      'Somebody at school swore you could make it say a bad word. You could not.',
+    ],
+    photos: [P.furbies],
+    video: V('90s-childhood-throwbacks-nostalgia-1080p', '90s throwback reel, with the 1998 Furby ad: "The GigaPet you really pet"'),
+    action: { kind: 'furby', label: 'Pick it up' },
   },
   {
     id: 'armor',
