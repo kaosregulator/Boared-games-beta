@@ -1,6 +1,7 @@
 import { SNICK_DURATIONS, SNICK_EPISODES, epKey, snickShowAt, type SnickEpisode } from './snick';
 import { TV247_ON } from './tv247';
 import { CCF_2000, CN_TAPES, FOX_KIDS, KIDS_WB_2001, NICK_CN_2003, blockOnAir, segmentAt, showTitleAt, type ArchiveBlock } from './lineups/archiveBlocks';
+import { ARTHUR } from './lineups/arthur';
 import { PICK_CHANNEL, YT_CHANNELS, ytOnAir, ytShowAt, type YtChannel } from './lineups/youtube247';
 
 /**
@@ -110,8 +111,9 @@ export const CHANNELS: Channel[] = [
   { number: 5, call: 'NICK', kind: 'block', name: 'Nickelodeon & Cartoon Network (Aug 2003)', block: NICK_CN_2003 },
   { number: 6, call: 'FOXK', kind: 'block', name: 'Fox Kids (2000–2001)', block: FOX_KIDS },
   { number: 7, call: 'KWB', kind: 'block', name: "Kids' WB (Feb 2001)", block: KIDS_WB_2001 },
+  { number: 8, call: 'PBS', kind: 'block', name: 'Arthur 24/7 — every season (1996–2022)', block: ARTHUR },
   ...CARTOONS.map((cartoon, i): Channel => ({
-    number: i + 8,
+    number: i + 9,
     call: callSign(cartoon),
     kind: 'cartoon',
     name: cartoon.title,

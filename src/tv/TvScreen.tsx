@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { setPadFrame } from '../devices/gameboyBus';
 import { CHANNELS, guideRow, nowSeconds, snickOnAir, type Channel } from './channels';
 import { resolveArchive } from './archive';
+import { forgetVault, isVaultUrl, resolveVault } from './vault';
 import { channelClick, paintSnow, startStatic, type StaticHandle } from './noise';
 import { snickShowAt } from './snick';
 import { mayTurnOn } from '../room/houseRules';
@@ -224,7 +225,8 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
         : ch.kind === 'block'
         ? (() => {
             const air = blockOnAir(ch.block, nowSeconds());
-            return resolveArchive(air.part.id ?? ch.block.id, 'video', air.part.file).then(file =>
+            const fromVault = ch.block.vaultShow && air.part.vault ? resolveVault(ch.block.vaultShow, air.part.vault) : Promise.resolve(null);
+            return fromVault.then(local => local ?? resolveArchive(air.part.id ?? ch.block.id, 'video', air.part.file)).then(file =>
               file ? { file, offset: air.offset, label: showTitleAt(air.part, air.offset) } : null,
             );
           })()
@@ -274,6 +276,13 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
       };
       const onError = () => {
         if (token !== tuneToken.current) return;
+        if (isVaultUrl(found.file.url)) {
+          // The home vault went away mid-session: tune again and take archive.org's copy.
+          window.clearTimeout(giveUp);
+          forgetVault();
+          setRetune(r => r + 1);
+          return;
+        }
         window.clearTimeout(giveUp);
         setTuning(false);
         setSignal('none');

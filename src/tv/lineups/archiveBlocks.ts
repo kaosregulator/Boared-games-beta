@@ -14,6 +14,8 @@ export interface ArchivePart {
   /** Runtime from archive.org's metadata. */
   seconds: number;
   title: string;
+  /** Episode key in the home vault (vault/), when the block's show is collected there. */
+  vault?: string;
   /** What airs inside the tape, from its captions: each entry runs until the next. */
   segments?: Segment[];
 }
@@ -29,6 +31,8 @@ export interface Segment {
 export interface ArchiveBlock {
   /** archive.org item id. */
   id: string;
+  /** Show name in the home vault; parts with a `vault` key play from there when it has them. */
+  vaultShow?: string;
   parts: ArchivePart[];
 }
 
