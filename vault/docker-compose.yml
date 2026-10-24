@@ -1,0 +1,31 @@
+# Plug in a drive, point VAULT_DATA at it, then:
+#   docker compose up -d                                  catalog + player on http://localhost:8088
+#   docker compose run --rm vault node vault.mjs all      download and shrink every episode
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vault
+      POSTGRES_PASSWORD: vault
+      POSTGRES_DB: vault
+    volumes:
+      - ${VAULT_DATA:-./data}/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vault"]
+      interval: 5s
+      retries: 10
+
+  vault:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://vault:vault@db:5432/vault
+      VAULT_DIR: /vault/data
+    volumes:
+      - ${VAULT_DATA:-./data}:/vault/data
+    ports:
+      - "8088:8088"

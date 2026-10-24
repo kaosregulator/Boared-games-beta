@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home Vault</title>
+<style>
+  :root { --bg: #14100f; --panel: #1f1917; --ink: #f4ede4; --dim: #b7a99a; --accent: #f2c14e; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4 system-ui, sans-serif; }
+  header { padding: 14px 16px; display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+  h1 { margin: 0; font-size: 20px; }
+  header span { color: var(--dim); }
+  main { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; padding: 0 16px 16px; }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+  video { width: 100%; aspect-ratio: 4 / 3; background: #000; border-radius: 8px; }
+  #now { margin: 8px 0 0; font-weight: 600; }
+  button { background: var(--panel); color: var(--ink); border: 1px solid #3a302b; border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+  button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+  ol { list-style: none; margin: 0; padding: 0; max-height: 75vh; overflow: auto; background: var(--panel); border-radius: 8px; }
+  li { display: flex; gap: 10px; padding: 8px; cursor: pointer; border-bottom: 1px solid #2c2421; }
+  li:hover, li.on { background: #2c2421; }
+  li img { width: 96px; height: 72px; object-fit: cover; border-radius: 4px; background: #000; flex: none; }
+  li small { color: var(--dim); display: block; }
+  .season { padding: 8px; color: var(--accent); font-weight: 700; background: var(--bg); position: sticky; top: 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Home Vault</h1>
+  <span id="stats">loading…</span>
+  <button id="live" aria-pressed="false">24/7 mode</button>
+</header>
+<main>
+  <section>
+    <video id="v" controls preload="metadata" crossorigin="anonymous"></video>
+    <p id="now"></p>
+  </section>
+  <ol id="list"></ol>
+</main>
+<script>
+  const show = new URLSearchParams(location.search).get('show') || 'arthur';
+  const v = document.getElementById('v');
+  const list = document.getElementById('list');
+  let eps = [];
+  let index = -1;
+  let live = false;
+
+  // The same clock as the game's TV: the loop starts at 6 AM local and carries on day to day.
+  function onAir() {
+    const total = eps.reduce((a, e) => a + e.seconds, 0);
+    const at = Date.now() / 1000;
+    const local = at - new Date(at * 1000).getTimezoneOffset() * 60 - 6 * 3600;
+    const day = 86400;
+    const into = ((local % day) + day) % day;
+    let t = total <= day ? into % total : (Math.floor(local / day) * day + into) % total;
+    for (let i = 0; i < eps.length; i++) {
+      if (t < eps[i].seconds) return { i, offset: t };
+      t -= eps[i].seconds;
+    }
+    return { i: 0, offset: 0 };
+  }
+
+  function play(i, offset = 0) {
+    index = i;
+    const ep = eps[i];
+    v.innerHTML = '';
+    v.src = ep.url;
+    if (ep.subtitles) {
+      const track = document.createElement('track');
+      Object.assign(track, { kind: 'subtitles', src: ep.subtitles, srclang: 'en', label: 'English' });
+      v.appendChild(track);
+    }
+    v.addEventListener('loadedmetadata', () => { if (offset > 0) v.currentTime = offset; }, { once: true });
+    v.play().catch(() => {});
+    document.getElementById('now').textContent = ep.label || ep.title;
+    for (const li of list.querySelectorAll('li')) li.classList.toggle('on', Number(li.dataset.i) === i);
+  }
+
+  v.addEventListener('ended', () => {
+    if (!eps.length) return;
+    if (live) { const a = onAir(); play(a.i, a.offset); } else play((index + 1) % eps.length);
+  });
+
+  document.getElementById('live').addEventListener('click', e => {
+    live = !live;
+    e.currentTarget.setAttribute('aria-pressed', String(live));
+    if (live && eps.length) { const a = onAir(); play(a.i, a.offset); }
+  });
+
+  fetch(`/vault/channels/${show}`).then(r => r.json()).then(data => {
+    eps = data.episodes;
+    const hours = eps.reduce((a, e) => a + e.seconds, 0) / 3600;
+    fetch('/vault/health').then(r => r.json()).then(h => {
+      document.getElementById('stats').textContent = `${data.name}: ${eps.length} episodes, ${hours.toFixed(1)} hours, ${h.size} on disk`;
+    });
+    let season = null;
+    eps.forEach((ep, i) => {
+      if (ep.season !== season) {
+        season = ep.season;
+        const head = document.createElement('div');
+        head.className = 'season';
+        head.textContent = season === 0 ? 'Specials' : `Season ${season}`;
+        list.appendChild(head);
+      }
+      const li = document.createElement('li');
+      li.dataset.i = i;
+      const img = document.createElement('img');
+      if (ep.thumb) img.src = ep.thumb;
+      img.alt = '';
+      img.loading = 'lazy';
+      const text = document.createElement('div');
+      text.textContent = ep.title;
+      const small = document.createElement('small');
+      small.textContent = `${ep.key.toUpperCase()} · ${Math.round(ep.seconds / 60)} min`;
+      text.appendChild(small);
+      li.append(img, text);
+      li.addEventListener('click', () => { live = false; document.getElementById('live').setAttribute('aria-pressed', 'false'); play(i); });
+      list.appendChild(li);
+    });
+    if (!eps.length) document.getElementById('stats').textContent = 'The vault is empty. Run: node vault/vault.mjs all';
+  });
+</script>
+</body>
+</html>

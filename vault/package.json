@@ -1,0 +1,15 @@
+{
+  "name": "home-vault",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Downloads a show from the Internet Archive, shrinks it to AV1 + Opus, keeps a Postgres catalog, and serves it offline.",
+  "scripts": {
+    "list": "node vault.mjs list",
+    "all": "node vault.mjs all",
+    "serve": "node vault.mjs serve",
+    "verify": "node vault.mjs verify"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": { "pg": "^8.23.1" }
+}
