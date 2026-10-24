@@ -27,7 +27,7 @@ import { RoomStudio } from './RoomStudio';
 import { TouchHud } from './TouchHud';
 import { AimReticle } from './AimReticle';
 import { TouchGamepad } from '../devices/TouchGamepad';
-import { aim, isTouchDevice, pad } from './input';
+import { aim, isTouchDevice } from './input';
 import { useTvStatus } from '../tv/tvBus';
 import { TvRemote } from '../tv/TvRemote';
 import { DeviceGestures } from '../devices/DeviceGestures';
@@ -47,7 +47,7 @@ import { FurbyHold } from './furby/FurbyHold';
 import { FurbyQuiet } from './furby/FurbyQuiet';
 import { furbyMuteAvailable } from './furby/furbyQuiet';
 import { FurbyBubble, FurbyHoldHud } from './furby/FurbyHud';
-import { anchorPose, furbyGesture, setFurby, useFurby } from './furby/furbyStore';
+import { anchorPose, requestFurbyPutdown, setFurby, useFurby } from './furby/furbyStore';
 import { FURBY_GAME } from './furby/furbyGame';
 import { TABLE_SEAT } from './roomLayout';
 import { ANCHORS, anchorById, type Anchor } from './anchors';
@@ -236,7 +236,6 @@ export function WalkRoom({
   const [immersiveOn, setImmersiveOn] = useState(false);
   const immersive = immersiveOn || fullscreen;
   const rig = useViewRig();
-  const [padCrouch, setPadCrouch] = useState(false);
   const tvStatus = useTvStatus();
   const [device, setDevice] = useState<DeviceId | null>(override.device);
   const [seated, setSeated] = useState(override.seat);
@@ -470,16 +469,9 @@ export function WalkRoom({
   }, []);
 
   useEffect(() => {
-    if (!furbyToTable) return;
-    if (!furbyHeld) {
-      setFurbyToTable(false);
-      if (!session) startTable(FURBY_GAME);
-      return;
-    }
-    // It flies back to the bed in well under a second; if it hasn't (a
-    // stalled frame loop, a missed put-down), take it out of your hands.
-    const id = window.setTimeout(() => setFurby({ held: null, from: null }), 1500);
-    return () => window.clearTimeout(id);
+    if (!furbyToTable || furbyHeld) return;
+    setFurbyToTable(false);
+    if (!session) startTable(FURBY_GAME);
   }, [furbyToTable, furbyHeld, session, startTable]);
 
   const playGame = useCallback(
@@ -792,7 +784,7 @@ export function WalkRoom({
 
   return (
     // isolate: the TV left on in the room sits just under the canvas, above this background
-    <div data-room data-dpr={gfx.dpr} data-graphics={gfx.effective} className="relative isolate w-full h-[100dvh] overflow-hidden bg-[#140c14] select-none overscroll-none">
+    <div data-room data-crouch={crouched ? '1' : '0'} data-dpr={gfx.dpr} data-graphics={gfx.effective} className="relative isolate w-full h-[100dvh] overflow-hidden bg-[#140c14] select-none overscroll-none">
       <Canvas
         key={glKey}
         style={{ touchAction: 'none' }}
@@ -914,8 +906,10 @@ export function WalkRoom({
             session || furbyToTable
               ? undefined
               : () => {
-                  furbyGesture('putdown');
+                  // Ask for the table first. The put-down is what lets it start,
+                  // and a throw inside the gesture must not drop the request.
                   setFurbyToTable(true);
+                  requestFurbyPutdown();
                 }
           }
         />
@@ -1001,15 +995,8 @@ export function WalkRoom({
           quiet={Boolean(session) || immersive}
           useLabel={aimed?.inReach ? aimed.label : null}
           onUse={() => aimed?.inReach && handleSelect(aimed)}
-          crouched={crouched || padCrouch}
-          onCrouch={() => {
-            if (walkRig.crouchLock) {
-              walkRig.setCrouch(false);
-              return;
-            }
-            pad.crouch = !pad.crouch;
-            setPadCrouch(pad.crouch);
-          }}
+          crouched={crouched}
+          onCrouch={() => walkRig.setCrouch(!walkRig.crouchLock)}
         />
       )}
 
@@ -1107,7 +1094,7 @@ export function WalkRoom({
             ['Arrows · drag · 2-finger swipe', 'look'],
             ['Click', 'use things'],
             ['Pinch · + −', 'zoom'],
-            ['C', 'duck'],
+            ['C', 'duck or stand'],
           ].map(([key, what]) => (
             <span key={key} className="rounded-lg bg-black/55 border border-white/10 px-2.5 py-1">
               <span className="text-amber-200">{key}</span> {what}

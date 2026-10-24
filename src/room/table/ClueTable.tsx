@@ -601,7 +601,7 @@ export function ClueTable({ onLeave }: { onLeave: () => void }) {
   /* ------------------------------------ HUD ----------------------------------- */
   useEffect(() => {
     if (intro) {
-      pushHud({ title: 'Clue', note: 'The mansion is popping up out of the board…', onLeave, actions: [] });
+      pushHud({ title: 'Clue', note: 'The mansion is popping up out of the board…', onLeave, actions: [], typed: true });
       return;
     }
     if (setup) {
@@ -612,6 +612,7 @@ export function ClueTable({ onLeave }: { onLeave: () => void }) {
         note: `${fullName(id)}. Tap a figure on the board or step through them.`,
         detail: `${setup.opponents} opponent${setup.opponents > 1 ? 's' : ''} · Miss Scarlett moves first`,
         onLeave,
+        typed: true,
         actions: [
           { label: '◀', onClick: () => step(-1), tone: 'ghost' },
           { label: '▶', onClick: () => step(1), tone: 'ghost' },
@@ -662,6 +663,7 @@ export function ClueTable({ onLeave }: { onLeave: () => void }) {
       note,
       detail: state.players.map(p => `${p.isAI ? p.name : `You (${fullName(p.suspect)})`}${p.outOfGame ? ' · out' : ''}`).join('  ·  '),
       onLeave,
+      typed: true,
       actions,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -737,7 +739,7 @@ export function ClueTable({ onLeave }: { onLeave: () => void }) {
         </>
       )}
       {picker && fanCards.length > 0 && <CardFan key={`${picker.mode}${picker.suspect ?? ''}${picker.weapon ?? ''}`} cards={fanCards} from={deckFrom} onPick={pick} title={fanTitle} />}
-      {shown && <CameraCard key={cardKey(shown)} card={shown} from={deckFrom} x={-0.03} y={-0.005} dist={0.16} faceUp />}
+      {shown && <CameraCard key={cardKey(shown)} card={shown} from={deckFrom} x={0} y={0.02} dist={0.125} scale={1.65} faceUp />}
     </group>
   );
 }

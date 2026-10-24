@@ -22,9 +22,26 @@ interface FurbyState {
 export type Gesture = 'pet' | 'tickle' | 'feed' | 'hug' | 'flip' | 'shake' | 'sing' | 'bedtime' | 'putdown';
 
 const gestureSubs = new Set<(g: Gesture) => void>();
+/** The table button asked for a put-down. The hands take it on their next frame, even if the click landed before they were listening. */
+let release = false;
+
 /** From the HUD's buttons and keys to the hands in the scene. */
 export function furbyGesture(g: Gesture) {
   gestureSubs.forEach(fn => fn(g));
+}
+
+/** Put the Furby down so the new ones can come out at the table. */
+export function requestFurbyPutdown() {
+  release = true;
+  furbyGesture('putdown');
+}
+
+export function furbyReleasePending() {
+  return release;
+}
+
+export function clearFurbyRelease() {
+  release = false;
 }
 export function onFurbyGesture(fn: (g: Gesture) => void) {
   gestureSubs.add(fn);

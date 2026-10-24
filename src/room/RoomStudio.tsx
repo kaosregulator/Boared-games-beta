@@ -1,5 +1,6 @@
 import React from 'react';
 import { ANCHORS } from './anchors';
+import { setControlPreset, setInvertLook, setLookSensitivity, useControlSettings, type ControlPreset } from './controls';
 import { MOOD_LABEL, type RoomMood } from './moods';
 import { ROOM_TRACKS, type RoomTrackId } from '../utils/audio';
 
@@ -35,7 +36,15 @@ interface RoomStudioProps {
 }
 
 /** Pause menu: mood, music, and anchored GLB placement. */
+const DEVICE_PRESETS: { id: Exclude<ControlPreset, 'custom'>; label: string }[] = [
+  { id: 'desktop', label: 'Desktop' },
+  { id: 'laptop', label: 'Laptop' },
+  { id: 'tablet', label: 'Tablet' },
+  { id: 'phone', label: 'Phone' },
+];
+
 export function RoomStudio(props: RoomStudioProps) {
+  const controls = useControlSettings();
   if (!props.open) return null;
   return (
     <div data-ui="studio" className="absolute left-4 top-16 z-40 max-h-[calc(100dvh-5rem)] w-[min(22rem,calc(100vw-2rem))] overflow-y-auto overscroll-contain rounded-3xl border border-white/25 bg-[#140c14]/75 text-white shadow-2xl backdrop-blur-2xl">
@@ -75,6 +84,49 @@ export function RoomStudio(props: RoomStudioProps) {
           />
           <span className="text-[10px] text-white/40">Wider sees more of the room; narrower feels closer. Pinch to zoom any time.</span>
         </label>
+
+        <div className="flex flex-col gap-2">
+          <span className="text-[10px] uppercase tracking-[0.18em] text-white/50 font-bold">
+            Controls {controls.preset === 'custom' ? '· custom' : ''}
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {DEVICE_PRESETS.map(preset => (
+              <button
+                key={preset.id}
+                type="button"
+                aria-pressed={controls.preset === preset.id}
+                onClick={() => setControlPreset(preset.id)}
+                className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ${
+                  controls.preset === preset.id ? 'border-amber-200/80 bg-amber-200/20 text-amber-50' : 'border-white/20 text-white/75'
+                }`}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] uppercase tracking-[0.18em] text-white/50 font-bold">
+              Look sensitivity {controls.sensitivity.toFixed(2)}
+            </span>
+            <input
+              type="range"
+              min={0.4}
+              max={2}
+              step={0.05}
+              value={controls.sensitivity}
+              onChange={e => setLookSensitivity(Number(e.target.value))}
+            />
+          </label>
+          <label className="flex items-center justify-between gap-3 rounded-xl bg-black/30 border border-white/10 px-3 py-2">
+            <span>Invert look left / right</span>
+            <input type="checkbox" checked={controls.invertX} onChange={e => setInvertLook('x', e.target.checked)} />
+          </label>
+          <label className="flex items-center justify-between gap-3 rounded-xl bg-black/30 border border-white/10 px-3 py-2">
+            <span>Invert look up / down</span>
+            <input type="checkbox" checked={controls.invertY} onChange={e => setInvertLook('y', e.target.checked)} />
+          </label>
+          <span className="text-[10px] text-white/40">C ducks and stands. WASD still walks. A preset sets look speed and leaves the keys on.</span>
+        </div>
 
         <label className="flex items-center justify-between gap-3 rounded-xl bg-black/30 border border-white/10 px-3 py-2">
           <span>Bedroom music</span>

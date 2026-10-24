@@ -13,7 +13,7 @@ export const pad = {
   /** Thumb stick, -1..1. y is forward. */
   x: 0,
   y: 0,
-  /** Crouch toggled from the on-screen button. */
+  /** Unused. Crouch is the walker's latch now, shared by the C key and the Duck button. */
   crouch: false,
 };
 
