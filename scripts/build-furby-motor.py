@@ -10,12 +10,12 @@ and gives each a loop in its steady middle so a burst can run as long as the
 Furby's mouth does. Written as one sprite, public/audio/furby/motor.mp3, with
 each burst's times in motor.json.
 
-    python3 -I scripts/build-furby-motor.py /mnt/project-files/furby/furby_1998_motor.mp3 public/audio/furby \
-        [video-split/furby-video-motor.wav video-split/furby-video-voice.wav]
+    python3 -I scripts/build-furby-motor.py /mnt/project-files/furby/furby_1998_motor.mp3 public/audio/furby
 
-With the two tracks scripts/separate-furby-video.py splits the user's video
-into, it adds that Furby's motor too: every stretch of 0.25 s or more where
-the motor track runs and the voice track is quiet, so no voice comes along.
+The motor track scripts/separate-furby-video.py pulls out of the user's video
+can be added too (pass it and the voice track after the output folder), but
+those bursts come out smeared by the separation and sound muffled, so the
+shipped sprite is the recording alone.
 """
 import json, os, subprocess, sys, tempfile, wave
 import numpy as np
@@ -54,7 +54,9 @@ def denoise(x):
     # The quietest fifth of the frames is the room and the recorder: the hiss.
     quiet = level <= np.percentile(level[level > 0], 20)
     noise = mag[quiet & (level > 0)].mean(axis=0)
-    gain = np.maximum(1 - 1.8 * noise / np.maximum(mag, 1e-12), 0.06)
+    # Gentle: subtracting harder takes the gear clicks with the hiss and
+    # leaves a dull, watery whirr.
+    gain = np.maximum(1 - 1.2 * noise / np.maximum(mag, 1e-12), 0.15)
     # Smooth the mask over time so the leftover hiss doesn't warble.
     for k in range(1, len(gain)):
         gain[k] = np.maximum(gain[k], gain[k - 1] * 0.6)
@@ -140,7 +142,10 @@ def main(src, out_dir, video_motor=None, video_voice=None):
             f.setsampwidth(2)
             f.setframerate(SR)
             f.writeframes(pcm.tobytes())
-        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', wav, '-b:a', '96k', os.path.join(out_dir, 'motor.mp3')], check=True)
+        # The recording's low end is the table and the mic, not the gearbox:
+        # cut it, and bring up the whine of the little motor a touch.
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', wav, '-af', 'highpass=f=200:poles=2,highpass=f=200:poles=2,equalizer=f=3200:t=q:w=1.2:g=3',
+                        '-b:a', '128k', os.path.join(out_dir, 'motor.mp3')], check=True)
     with open(os.path.join(out_dir, 'motor.json'), 'w') as f:
         json.dump({'bursts': index}, f)
     print(len(index), 'bursts,', round(t, 2), 's')

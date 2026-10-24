@@ -23,8 +23,6 @@ export const PIVOT = {
   ear: new THREE.Vector3(0.2, 0.6, 0.03),
   jaw: new THREE.Vector3(0, 0.405, 0.24),
   tuft: new THREE.Vector3(0, 0.74, -0.04),
-  /** The tummy, which the cam pulls in a little as the motor runs. */
-  belly: new THREE.Vector3(0, 0.24, 0.3),
 };
 /** The painted eyes, centre of each iris. */
 export const EYE = { x: 0.087, y: 0.516, r: 0.05 };
@@ -40,7 +38,6 @@ export interface FurbyRig {
     earR: THREE.Bone;
     jaw: THREE.Bone;
     tuft: THREE.Bone;
-    belly: THREE.Bone;
   };
   eyes: { ball: THREE.Object3D; lid: THREE.Object3D; lower: THREE.Object3D }[];
   /** Fur material, shared by every copy of this rig. */
@@ -146,7 +143,6 @@ export function buildFurbyRig(source: THREE.Object3D, tint?: THREE.ColorRepresen
     earR: new THREE.Bone(),
     jaw: new THREE.Bone(),
     tuft: new THREE.Bone(),
-    belly: new THREE.Bone(),
   };
   bones.root.name = 'root';
   bones.waist.position.copy(PIVOT.waist);
@@ -159,10 +155,8 @@ export function buildFurbyRig(source: THREE.Object3D, tint?: THREE.ColorRepresen
   bones.jaw.position.copy(PIVOT.jaw).sub(PIVOT.head);
   bones.tuft.position.copy(PIVOT.tuft).sub(PIVOT.head);
   bones.head.add(bones.earL, bones.earR, bones.jaw, bones.tuft);
-  bones.belly.position.copy(PIVOT.belly).sub(PIVOT.waist);
-  bones.waist.add(bones.belly);
-  const list = [bones.root, bones.waist, bones.head, bones.earL, bones.earR, bones.jaw, bones.tuft, bones.belly];
-  const B = { root: 0, waist: 1, head: 2, earL: 3, earR: 4, jaw: 5, tuft: 6, belly: 7 };
+  const list = [bones.root, bones.waist, bones.head, bones.earL, bones.earR, bones.jaw, bones.tuft];
+  const B = { root: 0, waist: 1, head: 2, earL: 3, earR: 4, jaw: 5, tuft: 6 };
 
   const skinIndex = new Uint16Array(n * 4);
   const skinWeight = new Float32Array(n * 4);
@@ -185,9 +179,6 @@ export function buildFurbyRig(source: THREE.Object3D, tint?: THREE.ColorRepresen
     } else if (y > 0.72) {
       bone = B.tuft;
       special = smooth(0.72, 0.84, y);
-    } else if (p === PART.body && z > 0.12) {
-      bone = B.belly;
-      special = smooth(0.2, 0.06, Math.hypot(x, y - PIVOT.belly.y)) * smooth(0.12, 0.26, z);
     }
     const rem = 1 - special;
     const head = rem * nod;
