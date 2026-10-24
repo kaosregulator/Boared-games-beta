@@ -40,9 +40,19 @@ async function catalog(show) {
   return rows;
 }
 
-function cors(res) {
-  // The game runs on its own origin (or the deployed site) and tunes in from there.
-  res.setHeader('Access-Control-Allow-Origin', '*');
+/**
+ * Which other sites may read the vault: the game on localhost (any port) and
+ * whatever VAULT_ORIGINS lists, e.g. "https://my-game.example,http://192.168.1.20:3000".
+ * Any other page gets no CORS headers, so it can't read the episode list.
+ */
+const ALLOWED = new Set((process.env.VAULT_ORIGINS ?? '').split(',').map(o => o.trim().replace(/\/+$/, '')).filter(Boolean));
+const LOCAL = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
+
+function cors(req, res) {
+  const origin = req.headers.origin;
+  if (!origin || !(LOCAL.test(origin) || ALLOWED.has(origin))) return;
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Headers', 'Range');
   res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
   // Chrome asks before a public page reaches a server on your own network.
@@ -82,7 +92,7 @@ function sendFile(req, res, file) {
 const mediaUrl = (show, rel) => (rel ? `/vault/media/${show}/${path.basename(rel)}` : null);
 
 async function handle(req, res) {
-  cors(res);
+  cors(req, res);
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
     res.end();

@@ -119,7 +119,11 @@ archive.org's `.mp4` otherwise.
 
 The TV looks for the vault at `http://localhost:8088`. To use another machine,
 run `localStorage.setItem('vault-url', 'http://192.168.1.20:8088')` in the
-browser console (or build with `VITE_VAULT_URL`). Browsers block plain `http`
+browser console (or build with `VITE_VAULT_URL`), and start the vault with
+`VAULT_ORIGINS` set to the game's address (for example
+`VAULT_ORIGINS=https://your-game.example`). The vault only lets the game on
+`localhost` and the sites in `VAULT_ORIGINS` read it, so other web pages can't
+look through your archive. Browsers block plain `http`
 from an `https` page unless it's `localhost`, so a vault on another machine works
 with the game running locally (`npm run dev`) or behind your own HTTPS.
 
