@@ -28,6 +28,7 @@ import {
   pushOut,
 } from './town';
 import { armySfx, rotorLevel, rotorOff, rotorOn, wakeArmyAudio } from './armyAudio';
+import { SHOT_RANGE, chestPoint, muzzlePoint, pickAlongBarrel, shotPoint } from './aim';
 import { openMiniGame } from '../../engine/lifecycle';
 
 /**
@@ -361,7 +362,8 @@ function useTracers() {
       lines,
       fire(a: THREE.Vector3, b: THREE.Vector3) {
         pos.set([a.x, a.y, a.z, b.x, b.y, b.z], next * 6);
-        life[next] = 0.07;
+        // Long enough to see the streak. 0.07 s was gone in a single slow frame.
+        life[next] = 0.16;
         next = (next + 1) % MAX_TRACERS;
         geo.attributes.position.needsUpdate = true;
       },
@@ -840,8 +842,20 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
         p.cooldown -= dt;
         if ((k.Space || touch.fire) && p.cooldown <= 0) {
           p.cooldown = 0.33;
-          const target = nearestEnemy(p, 0.75, 0.45);
-          fire(p, target, 0.85);
+          const live = tans.filter(o => o.active && o.fall === 0 && !o.falling && o.root.visible);
+          const pick = pickAlongBarrel(
+            p.pos,
+            p.heading,
+            live.map(o => ({ x: o.pos.x, y: o.pos.y, z: o.pos.z })),
+          );
+          const gun = muzzlePoint(p.pos, p.heading);
+          _a.set(gun.x, gun.y, gun.z);
+          const foe = pick ? live[pick.index] : null;
+          const end = foe ? chestPoint(foe.pos) : shotPoint(p.pos, p.heading, SHOT_RANGE);
+          _b.set(end.x, end.y, end.z);
+          tracers.fire(_a, _b);
+          if (foe) knockDown(foe);
+          armySfx.pop(camera.position.distanceTo(p.pos));
         }
       } else {
         p.speed = 0;
