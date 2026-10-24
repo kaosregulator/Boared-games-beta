@@ -16,13 +16,13 @@ that drives the beak, so the mouth moves with the words like the real toy.
     python3 -I scripts/split-furby-audio.py rip1.m4a rip2.m4a rip3.m4a public/audio/furby \
         --library FurbSounds/
 
---video adds sounds from the user's video of a 1998 Furby talking
-(Furby_1998_video.mp3, the audio of youtu.be/wUOAdC8lewk). Its gearbox is
-audible under the voice, so each phrase is cleaned by spectral subtraction
-against the moments where only the motor runs. VIDEO lists the phrases that
-are plainly one thing in a spectrogram (held stepped notes: singing; pulsed
-wobbling "ha"s: laughing; arching cries: whee); the rest of the video is
-ordinary Furbish, which the rips already cover.
+--video adds every sound in the user's video of a 1998 Furby talking,
+taken from its voice track (scripts/separate-furby-video.py splits the video
+into voice and motor first, so none of the gearbox comes along). The voice
+track is cut at its gaps like the rips; VIDEO_TAGS says what each sound is,
+read off its spectrogram: stepped held notes are singing, wobbling pulsed
+arcs laughing, big rising-falling arcs whee, long low falling tones yawns,
+and anything under 0.6 s a chirp. The rest is Furbish chatter.
 
 --library adds a folder of single, named 1998 Furby sounds (FurbSounds.zip,
 ripped from the "Big Fun in Furbyland" CD-ROM). Their file names say what
@@ -89,18 +89,16 @@ LIBRARY = {
 }
 LIBRARY = {name: tag for tag, names in LIBRARY.items() for name in names.split()}
 LIBRARY_SKIP = {'credits', 'SFX_PHONE', 'SFX_BEEP', 'SFX_RAP1', 'SFX_RAP2', 'ILL_BE_BACK', 'credits'}
-# Video phrase (start, end in seconds) -> tag.
-VIDEO = {
-    (10.11, 11.95): 'sing',
-    (12.20, 14.29): 'sing',
-    (14.57, 18.56): 'sing',
-    (27.64, 28.55): 'sing',
-    (77.89, 79.77): 'laugh',
-    (80.32, 82.50): 'laugh',
-    (83.09, 85.22): 'laugh',
-    (19.12, 19.84): 'whee',
-    (85.80, 89.13): 'whee',
+# Video sound, by where it starts in the video (tenths of a second) -> tag.
+VIDEO_TAGS = {
+    10.2: 'sing', 12.4: 'sing', 14.9: 'sing', 27.2: 'sing',
+    19.1: 'whee', 22.6: 'whee', 86.0: 'whee', 103.0: 'whee',
+    36.9: 'yawn', 39.7: 'yawn', 96.0: 'yawn',
+    78.1: 'laugh', 80.5: 'laugh', 83.3: 'laugh',
+    57.9: 'story',
 }
+# Clicks and hiss with no voice in them.
+VIDEO_SKIP = {68.3, 105.0}
 MAX_TALK = 8.0
 # Enough variety without a huge download: the rest of the talk is cut.
 CAP = {'talk': 14, 'story': 1, 'sing-long': 1, 'laugh-long': 2}
@@ -138,26 +136,31 @@ def envelope(y):
     return ''.join(str(int(v)) for v in np.clip((db + 50) / 34 * 9, 0, 9))
 
 
-def demotor(x):
-    """The video with its motor taken out: spectral subtraction, the noise
-    profile taken where the motor whirrs (loud above 8 kHz) but no one talks."""
-    n, hop = 1024, 256
-    win = np.hanning(n)
-    S = np.fft.rfft(np.array([x[i:i + n] * win for i in range(0, len(x) - n, hop)]), axis=1)
-    mag = np.abs(S)
-    f = np.fft.rfftfreq(n, 1 / SR)
-    hi = mag[:, f > 8000].mean(1) if SR > 16000 else mag[:, f > 6000].mean(1)
-    voice = mag[:, (f > 300) & (f < 3000)].mean(1)
-    motor_only = (hi > np.percentile(hi, 60)) & (voice < np.percentile(voice, 35))
-    noise = mag[motor_only].mean(0)
-    gain = np.maximum(1 - 2.0 * noise / np.maximum(mag, 1e-9), 0.05)
-    # The voice chip has little up there; what's left is motor speckle.
-    gain[:, f > 7000] *= 0.15
-    y, norm = np.zeros(len(x)), np.zeros(len(x))
-    for k, frame in enumerate(np.fft.irfft(S * gain, n=n, axis=1)):
-        y[k * hop:k * hop + n] += frame * win
-        norm[k * hop:k * hop + n] += win * win
-    return (y / np.maximum(norm, 1e-3)).astype(np.float32)
+def voice_segments(x):
+    """Sounds in the video's voice track: runs above its 40th-percentile level,
+    split where it stays below for 0.18 s. A run that comes out over 6 s
+    (sounds close together) is split again against its own level."""
+    hop = SR // 100
+    n = len(x) // hop
+    db = 20 * np.log10(np.sqrt((x[: n * hop].reshape(n, hop) ** 2).mean(1)) + 1e-9)
+
+    def runs(lo, hi, threshold):
+        out, start, last = [], None, 0
+        for i in range(lo, hi + 1):
+            v = i < hi and db[i] > threshold
+            if v:
+                start = i if start is None else start
+                last = i
+            elif start is not None and (i - last > 18 or i == hi):
+                if last + 1 - start > 600 and threshold < db[start:last + 1].max() - 6:
+                    out += runs(start, last + 1, np.percentile(db[start:last + 1], 45))
+                else:
+                    out.append((start / 100, (last + 1) / 100))
+                start = None
+        return out
+
+    # The first 3.5 s is the video's intro, before the Furby starts.
+    return [(a, b) for a, b in runs(0, n, np.percentile(db, 40)) if b - a >= 0.25 and a > 3.5]
 
 
 def main():
@@ -221,9 +224,13 @@ def main():
             pieces += [y, pad]
             cursor += (len(y) + len(pad)) / SR
     if video:
-        x = demotor(load(video))
-        for (a, b), tag in VIDEO.items():
-            y = x[int((a - 0.03) * SR): int((b + 0.05) * SR)].copy()
+        x = load(video)
+        for a, b in voice_segments(x):
+            dur = b - a
+            if dur > MAX_TALK or round(a, 1) in VIDEO_SKIP:
+                continue
+            tag = VIDEO_TAGS.get(round(a, 1)) or ('chirp' if dur < 0.6 else 'talk')
+            y = x[int(max(0, a - 0.03) * SR): int((b + 0.05) * SR)].copy()
             y *= 0.8 / max(1e-6, np.abs(y).max())
             fade = min(len(y), int(SR * 0.01))
             y[:fade] *= np.linspace(0, 1, fade)

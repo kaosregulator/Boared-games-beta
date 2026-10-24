@@ -10,7 +10,12 @@ and gives each a loop in its steady middle so a burst can run as long as the
 Furby's mouth does. Written as one sprite, public/audio/furby/motor.mp3, with
 each burst's times in motor.json.
 
-    python3 -I scripts/build-furby-motor.py /mnt/project-files/furby/furby_1998_motor.mp3 public/audio/furby
+    python3 -I scripts/build-furby-motor.py /mnt/project-files/furby/furby_1998_motor.mp3 public/audio/furby \
+        [video-split/furby-video-motor.wav video-split/furby-video-voice.wav]
+
+With the two tracks scripts/separate-furby-video.py splits the user's video
+into, it adds that Furby's motor too: every stretch of 0.25 s or more where
+the motor track runs and the voice track is quiet, so no voice comes along.
 """
 import json, os, subprocess, sys, tempfile, wave
 import numpy as np
@@ -74,14 +79,39 @@ def bursts(x, quiet):
     return [(a * hop / SR, b * hop / SR) for a, b in runs if (b - a) * hop / SR >= 0.25]
 
 
-def main(src, out_dir):
+def video_bursts(motor, voice):
+    """Stretches of the video's motor track at least 6 dB over the voice
+    track, joined across blips under 30 ms; the motor between words."""
+    hop = int(SR * 0.01)
+    n = min(len(motor), len(voice)) // hop
+    level = lambda y: 20 * np.log10(np.sqrt((y[:n * hop].reshape(n, hop) ** 2).mean(1)) + 1e-9)
+    m, v = level(motor), level(voice)
+    on = (m > np.percentile(m, 40)) & (v < m - 6)
+    out, start, last = [], None, 0
+    for i, o in enumerate(np.append(on, False)):
+        if o:
+            start = i if start is None else start
+            last = i
+        elif start is not None and i - last > 3:
+            # Long enough for a loop of at least 0.12 s between spin-up and spin-down.
+            if last + 1 - start >= 26:
+                out.append((start / 100, (last + 1) / 100))
+            start = None
+    return out
+
+
+def main(src, out_dir, video_motor=None, video_voice=None):
     x = load(src)
     clean, quiet = denoise(x)
+    cuts = [(clean, a, b) for a, b in bursts(clean, quiet)]
+    if video_motor:
+        vm, vv = load(video_motor), load(video_voice)
+        cuts += [(vm, a + 0.01, b - 0.02) for a, b in video_bursts(vm, vv) if a > 3.5]
     parts, index, t = [], [], 0.0
     gap = np.zeros(int(SR * 0.05))
-    for a, b in bursts(clean, quiet):
+    for x, a, b in cuts:
         a, b = max(0, a - 0.01), min(len(x) / SR, b + 0.02)
-        seg = clean[int(a * SR):int(b * SR)].copy()
+        seg = x[int(a * SR):int(b * SR)].copy()
         body = seg[int(ATTACK * SR):len(seg) - int(RELEASE * SR)]
         seg *= 10 ** (-18 / 20) / max(np.sqrt(np.mean(body ** 2)), 1e-6)
         seg *= min(1, 0.89 / np.abs(seg).max())
@@ -117,4 +147,4 @@ def main(src, out_dir):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1], sys.argv[2])
+    main(*sys.argv[1:5])
