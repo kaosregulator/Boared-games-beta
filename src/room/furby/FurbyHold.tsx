@@ -112,7 +112,8 @@ export function FurbyHold() {
     () =>
       onFurbyGesture(g => {
         const s = st.current;
-        if (!brain || s.leaving || s.fly < 1) return;
+        if (!brain || s.leaving) return;
+        // Putting it down works even while it's still flying into your hands.
         if (g === 'putdown') {
           s.leaving = true;
           s.gesture = null;
@@ -120,6 +121,7 @@ export function FurbyHold() {
           brain.act('putdown');
           return;
         }
+        if (s.fly < 1) return;
         if (g === 'bedtime') {
           brain.act(brain.asleep ? 'wake' : 'sleep');
           return;

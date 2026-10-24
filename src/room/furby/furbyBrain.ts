@@ -43,7 +43,7 @@ export interface Pose {
   lookY: number;
   hop: number;
   squash: number;
-  /** The tummy pulled in by the cam, 0-1. */
+  /** The tummy pulled in by the motor, 0-1. */
   belly: number;
 }
 
@@ -208,11 +208,10 @@ export class FurbyBrain {
   private tuftV = new THREE.Vector2();
   /** When the motor runs, in this brain's time: [start, end] pairs. */
   private motorRuns: [number, number][] = [];
-  /** How hard the motor is running now (eased 0-1), and how far the cam has turned. */
+  /** How hard the motor is running now, eased 0-1. */
   private motor = 0;
   /** Stops the gearbox sound of the line playing now. */
   private stopMotor: () => void = () => {};
-  private cam = 0;
   /** Set from outside each frame. */
   dark = false;
   /** Talk on its own only when someone is around (held, nearby, at the table). */
@@ -242,7 +241,7 @@ export class FurbyBrain {
     // (from now if the voice is still loading and the line is mimed).
     const plan = motorPlan(this.voice ? this.voice.clip.dur : 1.2);
     this.motorRuns = plan.map(([a, b]) => [this.time + 0.02 + a, this.time + 0.02 + b]);
-    if (this.voiced) this.stopMotor = motorPlay(this.voice ? this.voice.at : voiceTime() + 0.02, plan, 0.3 * this.volume);
+    if (this.voiced) this.stopMotor = motorPlay(this.voice ? this.voice.at : voiceTime() + 0.02, plan, 0.22 * this.volume);
   }
 
   /** Something happened to the Furby. Returns false if it ignored it. */
@@ -380,21 +379,18 @@ export class FurbyBrain {
       }
     }
 
-    // One motor turns one cam that moves everything: while it runs the ears
-    // pump, the body rocks, the eyes go wide and the tummy pulls in; when it
-    // stops, everything stays where the cam left it.
+    // While talking the motor runs: ears pump, body rocks, eyes go wide.
+    if (talk > 0.05 && !this.asleep) {
+      w.earL += Math.sin(t * 5) * 0.2;
+      w.earR += Math.sin(t * 5) * 0.2;
+      w.lean += Math.sin(t * 2.6) * 0.06;
+      w.lid = Math.min(w.lid, 0);
+    }
+    // The tummy pulls in a little with each burst of the gearbox.
     const running = this.motorRuns.some(([a, b]) => t >= a && t < b);
     this.motor += ((running ? 1 : 0) - this.motor) * (1 - Math.exp(-dt * 30));
-    this.cam += dt * this.motor * 7;
     if (this.motorRuns.length && t > this.motorRuns[this.motorRuns.length - 1][1]) this.motorRuns = [];
-    if (!this.asleep) {
-      w.earL += Math.sin(this.cam) * 0.22;
-      w.earR += Math.sin(this.cam) * 0.22;
-      w.lean += Math.sin(this.cam * 0.5) * 0.05;
-      w.nod += Math.sin(this.cam * 0.7 + 1) * 0.03;
-      if (this.motor > 0.3) w.lid = Math.min(w.lid, 0);
-      w.belly = this.motor * (0.65 + 0.35 * Math.sin(this.cam * 2));
-    }
+    if (!this.asleep) w.belly = this.motor * (0.65 + 0.35 * Math.sin(t * 14));
     w.jaw = talk;
 
     const a = this.anim;

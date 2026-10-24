@@ -237,6 +237,8 @@ export function WalkRoom({
   /** The Furby in your hands: the room keeps drawing behind it, you just can't walk off. */
   const furbyState = useFurby();
   const furbyHeld = furbyState.held !== null;
+  /** "Open the new ones at the table" was pressed: the table opens once the Furby is out of your hands. */
+  const [furbyToTable, setFurbyToTable] = useState(false);
   const emulatorOn = (device === 'crt' || device === 'nes') && tvStatus.mode === 'emulator';
   const tvOn = (device === 'crt' || device === 'nes') && !scripted;
   // Stepping back with the set on leaves it playing on the room's TV until POWER.
@@ -435,6 +437,12 @@ export function WalkRoom({
     walkRig.teleport = { at: TABLE_SEAT.at, look: TABLE_SEAT.look };
     setSession({ game, phase: 'unfold', key: sessionKey.current });
   }, []);
+
+  useEffect(() => {
+    if (!furbyToTable || furbyHeld) return;
+    setFurbyToTable(false);
+    if (!session) startTable(FURBY_GAME);
+  }, [furbyToTable, furbyHeld, session, startTable]);
 
   const playGame = useCallback(
     (game: GameMetadata) => {
@@ -857,11 +865,11 @@ export function WalkRoom({
       {furbyHeld && (
         <FurbyHoldHud
           onTable={
-            session
+            session || furbyToTable
               ? undefined
               : () => {
                   furbyGesture('putdown');
-                  window.setTimeout(() => startTable(FURBY_GAME), 900);
+                  setFurbyToTable(true);
                 }
           }
         />
