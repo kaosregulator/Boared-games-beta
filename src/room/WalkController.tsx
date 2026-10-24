@@ -47,6 +47,8 @@ interface WalkControllerProps {
   engaged: boolean;
   /** Fires when the player's footfall lands, for step audio. */
   onStep?: () => void;
+  /** Crouched at a 3D table: walking is off, but Space or C still stands. */
+  atTable?: boolean;
 }
 
 function turn(camera: THREE.Camera, yaw: number, pitch: number) {
@@ -69,7 +71,7 @@ function turn(camera: THREE.Camera, yaw: number, pitch: number) {
  * pushing out along whichever axis has the smaller overlap so you slide along
  * the bed and the dresser instead of sticking to them.
  */
-export function WalkController({ enabled, engaged, onStep }: WalkControllerProps) {
+export function WalkController({ enabled, engaged, onStep, atTable = false }: WalkControllerProps) {
   const { camera, gl, size } = useThree();
   const keys = useRef<Record<string, boolean>>({});
   const velocity = useRef(new THREE.Vector3());
@@ -80,6 +82,8 @@ export function WalkController({ enabled, engaged, onStep }: WalkControllerProps
   engagedRef.current = engaged;
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
+  const atTableRef = useRef(atTable);
+  atTableRef.current = atTable;
 
   useEffect(() => {
     const pose = walkRig.lastPose ?? resumedSession()?.pose ?? null;
@@ -107,6 +111,12 @@ export function WalkController({ enabled, engaged, onStep }: WalkControllerProps
     };
     const down = (e: KeyboardEvent) => {
       if (typing(e)) return;
+      // The table camera has the view, so the HUD's "Stand up (Space)" is handled here.
+      if (atTableRef.current && walkRig.crouchLock && (e.code === 'Space' || e.code === 'KeyC') && !e.repeat) {
+        walkRig.setCrouch(false);
+        e.preventDefault();
+        return;
+      }
       // C toggles a crouch. Space only stands. Ignored while a game owns the keys.
       if (enabledRef.current && engagedRef.current) {
         const crouch = crouchKeyAction(walkRig.crouchLock, e.code, e.repeat);

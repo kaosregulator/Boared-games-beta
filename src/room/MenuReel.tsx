@@ -52,6 +52,9 @@ export function MenuReel({ onEnter, onDone }: MenuReelProps) {
     // Enter or Space from the keyboard plays too.
     const onKey = (e: KeyboardEvent) => {
       if (e.code !== 'Enter' && e.code !== 'Space') return;
+      // A focused preset button keeps its own Enter/Space; the play button plays either way.
+      const el = e.target instanceof Element ? e.target : null;
+      if (el?.closest('button, input, select, textarea, a')) return;
       e.preventDefault();
       play();
     };

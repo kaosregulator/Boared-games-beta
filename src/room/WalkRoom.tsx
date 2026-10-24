@@ -872,6 +872,7 @@ export function WalkRoom({
               enabled={!pulledGameId && !device && !seated && !holding && !furbyHeld && session?.phase !== 'unfold' && !overlayGame && !tableCamOn && !toyMode}
               engaged={engaged}
               onStep={onStep}
+              atTable={tableCamOn}
             />
             <TableCameraRig active={tableCamOn} />
             <TriviaTableCam active={overlayGame?.id === 'trivia' && session?.phase === 'play'} />

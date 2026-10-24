@@ -13,7 +13,7 @@ import {
 import { noteContextLoss, noteContextRestored, resetRecoveryForTests } from '../../src/engine/recovery.ts';
 import { resetLogForTests } from '../../src/engine/log.ts';
 
-test('high preset caps pixel ratio at 2 and does not drop on its own', () => {
+test('high preset caps pixel ratio at 2 and, with adaptive off, does not drop', () => {
   resetLogForTests();
   resetGraphicsForTests();
   resetRecoveryForTests();
@@ -22,7 +22,8 @@ test('high preset caps pixel ratio at 2 and does not drop on its own', () => {
   assert.equal(dprForPreset('balanced', 3), 1.5);
   assert.equal(dprForPreset('low', 3), 1);
   assert.equal(currentGraphics().preset, 'high');
-  assert.equal(currentGraphics().adaptive, false);
+  assert.equal(currentGraphics().adaptive, true);
+  setAdaptive(false);
   assert.equal(currentGraphics().dpr, 2);
   noteFrameRate(10, 0);
   noteFrameRate(10, 10_000);
@@ -52,6 +53,27 @@ test('adaptive steps only after a sustained frame rate, then restores on request
   setAdaptive(false);
   assert.equal(currentGraphics().effective, 'high');
   assert.equal(currentGraphics().dpr, 2);
+});
+
+test('a level that could not hold 40 fps is not climbed back to', () => {
+  resetLogForTests();
+  resetGraphicsForTests();
+  setMeasuredDevicePixelRatio(2);
+  // A dip while the room is still warming up can be climbed back from.
+  noteFrameRate(30, 0);
+  noteFrameRate(30, 3000);
+  assert.equal(currentGraphics().effective, 'balanced');
+  for (let t = 11_000; t <= 23_500; t += 500) noteFrameRate(60, t);
+  assert.equal(currentGraphics().effective, 'high');
+  // After warmup, High failing again is remembered.
+  noteFrameRate(30, 40_000);
+  noteFrameRate(30, 43_000);
+  assert.equal(currentGraphics().effective, 'balanced');
+  for (let t = 51_000; t < 100_000; t += 500) noteFrameRate(60, t);
+  assert.equal(currentGraphics().effective, 'balanced');
+  // Picking a preset again clears the memory.
+  setGraphicsPreset('high');
+  assert.equal(currentGraphics().effective, 'high');
 });
 
 test('frame-rate flicker does not change the preset', () => {
@@ -84,7 +106,7 @@ test('a saved choice is explicit and a missing save stays high', () => {
   Object.defineProperty(globalThis, 'localStorage', { value: storage, configurable: true });
   hydrateGraphicsFromStorage();
   assert.equal(currentGraphics().preset, 'high');
-  assert.equal(currentGraphics().adaptive, false);
+  assert.equal(currentGraphics().adaptive, true);
   resetGraphicsForTests();
   memory.set('engine:graphics-preset', 'balanced');
   memory.set('engine:graphics-adaptive', '0');
