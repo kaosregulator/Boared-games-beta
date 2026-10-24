@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
+import { typeCharMs, typedCount } from './cluePace';
 import { PRESET_LABEL, cyclePreset, resetUserView, setFollow, useTableCam } from './tableCam';
 
 /**
@@ -19,6 +20,8 @@ export interface HudModel {
   actions: HudAction[];
   /** Small print under the note, e.g. cash on hand. */
   detail?: string;
+  /** Clue types the note. Other tables leave it off. */
+  typed?: boolean;
 }
 
 let hudModel: HudModel | null = null;
@@ -27,6 +30,30 @@ const hudSubs = new Set<(model: HudModel | null) => void>();
 export function pushHud(next: HudModel | null) {
   hudModel = next;
   hudSubs.forEach(fn => fn(next));
+}
+
+/** About 0.7 s for a whole line. A short line does not crawl. Reduced motion shows it at once. */
+function TypedLine({ text, typed }: { text: string; typed?: boolean }) {
+  // Start empty when the line will type, so the first paint is not the whole sentence.
+  const [count, setCount] = useState(() => (typed ? 0 : text.length));
+  useLayoutEffect(() => {
+    const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!typed || reduce || typeCharMs(text.length) === 0) {
+      setCount(text.length);
+      return;
+    }
+    setCount(0);
+    const step = typeCharMs(text.length);
+    const started = performance.now();
+    let id = 0;
+    id = window.setInterval(() => {
+      const n = typedCount(performance.now() - started, text.length);
+      setCount(n);
+      if (n >= text.length) window.clearInterval(id);
+    }, step);
+    return () => window.clearInterval(id);
+  }, [text, typed]);
+  return <>{text.slice(0, count)}</>;
 }
 
 export function TableHudOverlay({
@@ -60,7 +87,9 @@ export function TableHudOverlay({
               <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-200">
                 {model.title} <span className="text-white/40">{open ? '▾' : '▸'}</span>
               </p>
-              <p className={`mt-1 text-sm text-white/90 ${open ? '' : 'line-clamp-1'}`}>{model.note}</p>
+              <p className={`mt-1 text-sm leading-snug text-white/90 ${open ? '' : 'line-clamp-2'}`}>
+                <TypedLine text={model.note} typed={model.typed} />
+              </p>
               {open && model.detail && <p className="mt-1 text-[11px] text-white/60">{model.detail}</p>}
             </button>
             <button

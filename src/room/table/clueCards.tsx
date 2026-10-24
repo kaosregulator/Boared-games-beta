@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { ROOMS, SUSPECTS, WEAPONS, cardKey, type Card } from '../../games/clue/clueData';
 import type { CluePlayer } from '../../games/clue/clueEngine';
 import { CLUE_CARD, clueCardTexture } from './clueArt';
+import { CARD_RISE_S, fanCardDelay } from './cluePace';
 import { wasDrag } from './tableCam';
 
 /**
@@ -74,7 +75,7 @@ export function CameraCard({
     const n = g.current;
     if (!n || !n.parent) return;
     const dt = Math.min(dtRaw, 0.05);
-    k.current = Math.min(1, k.current + dt / 0.45);
+    k.current = Math.min(1, k.current + dt / CARD_RISE_S);
     const kk = Math.max(0, k.current);
     const e = 1 - (1 - kk) ** 3;
     const fwd = camera.getWorldDirection(tmpV.set(0, 0, 0)).clone();
@@ -136,9 +137,11 @@ export function CardFan({ cards, from, onPick, title }: { cards: Card[]; from: T
   const viewW = viewH * (size.width / Math.max(1, size.height));
   const rows = cards.length > 6 ? 2 : 1;
   const perRow = Math.ceil(cards.length / rows);
-  // leave the right edge clear for the status panel
-  const usable = viewW * 0.66;
-  const scale = Math.min(1.1, usable / (perRow * CLUE_CARD.w * 1.12), (viewH * 0.36) / (rows * CLUE_CARD.h * 1.1));
+  // A phone is tall, so the fan can use more of the width. A wide window
+  // still leaves the right side for the status card.
+  const narrow = size.width < size.height;
+  const usable = viewW * (narrow ? 0.9 : 0.72);
+  const scale = Math.min(1.15, usable / (perRow * CLUE_CARD.w * 1.12), (viewH * (narrow ? 0.44 : 0.38)) / (rows * CLUE_CARD.h * 1.15));
   const step = CLUE_CARD.w * 1.12 * scale;
   const left = -viewW * 0.12;
   return (
@@ -157,7 +160,7 @@ export function CardFan({ cards, from, onPick, title }: { cards: Card[]; from: T
             y={-viewH * 0.12 - (row - (rows - 1) / 2) * CLUE_CARD.h * scale * 1.1}
             dist={dist}
             scale={scale}
-            delay={i * 0.05}
+            delay={fanCardDelay(i)}
             onClick={() => onPick(c)}
           />
         );
