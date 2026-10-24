@@ -64,6 +64,13 @@ This project is intentionally branded as a **public beta**, end to end.
   side and seat views, and *Follow action* swings the camera to each roll, shot and
   move. The other games open their board over the room. Space stands you up; Pack up
   puts it all away. Asset credits are in `public/games/CREDITS.md`.
+- **Army men**: click the army men tin: "We're under attack! Send the troops!" shrinks you into a
+  toy town on the road rug (`src/room/army/`). Green plastic patrols, a drill squad, guards and a
+  tower lookout run the town; the tan army attacks in three waves from behind a wall of books, and
+  hit soldiers tip over like real toys. Walk as a green soldier (W/S, A/D turn, Shift run, Space
+  fire), or press F at the helipad for the toy helicopter: a ten-ring course round the room, or free
+  flight (W/S, A/D, Space up, Shift down, Q/E slide, Tab boost, drag to turn). C switches third
+  person, first person and bird's-eye. Test links: `?army=1`, `?army=heli&ring=N`, `&calm=1`, `&armyCam=birdseye`.
 - **Posters**: seven on the walls, in `src/room/WallPosters.tsx` (one line each to swap).
 - **Neon wall**: the smaller games hang on the east wall as neon signs.
 

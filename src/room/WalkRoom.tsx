@@ -44,6 +44,7 @@ import { TABLE_GAMES, TableHudOverlay, type TableSession } from './table/TablePl
 import { TableCameraRig } from './table/TableCameraRig';
 import { TriviaTableCam } from './table/TriviaTableCam';
 import { HotWheelsHud, HotWheelsWorld } from './hotwheels/HotWheelsRace';
+import { ArmyAlert, ArmyHud, ArmyTownWorld, readArmyBoot } from './army/ArmyTown';
 import { walkRig } from './WalkController';
 import { TABLE_SEAT } from './roomLayout';
 import { ANCHORS, anchorById, type Anchor } from './anchors';
@@ -158,6 +159,7 @@ export function WalkRoom({
     if (params.get('race') !== 'hotwheels') return null;
     return { spot: params.get('spot') };
   }, []);
+  const armyBoot = useMemo(readArmyBoot, []);
   const [session, setSession] = useState<TableSession | null>(null);
   const sessionKey = useRef(0);
   const [crouched, setCrouched] = useState(false);
@@ -179,6 +181,7 @@ export function WalkRoom({
       override.seat ||
       Boolean(queryTable) ||
       Boolean(raceBoot) ||
+      Boolean(armyBoot) ||
       // Back after a reload: skip the title card and stand where you were.
       Boolean(resumedSession()?.engaged),
   );
@@ -218,6 +221,12 @@ export function WalkRoom({
   const [tamagotchi, setTamagotchi] = useState(false);
   const [rubik, setRubik] = useState(false);
   const [racing, setRacing] = useState(Boolean(raceBoot));
+  /** Shrunk down in the army town on the floor. */
+  const [armyOn, setArmyOn] = useState(Boolean(armyBoot));
+  /** The "we're under attack" radio call, holding the tin you picked. */
+  const [armyAlert, setArmyAlert] = useState<Aimed | null>(null);
+  /** A shrink-down toy mode has the controls and the camera. */
+  const toyMode = racing || armyOn || armyAlert !== null;
   /** Something held up close (Tamagotchi, Rubik's Cube): the room waits behind it. */
   const holding = tamagotchi || rubik;
   const emulatorOn = (device === 'crt' || device === 'nes') && tvStatus.mode === 'emulator';
@@ -628,6 +637,11 @@ export function WalkRoom({
         return;
       }
       if (target.id === 'door') sound.playMoveClack();
+      if (target.id === 'army') {
+        setPinned(null);
+        setArmyAlert(target);
+        return;
+      }
       if (propCardFor(target.id)) pinCard(target);
     },
     [byId, pinCard, pinned, playGame],
@@ -652,6 +666,10 @@ export function WalkRoom({
         setPinned(null);
         sound.playButtonClick();
         setRacing(true);
+      } else if (kind === 'army') {
+        setPinned(null);
+        sound.playButtonClick();
+        setArmyOn(true);
       }
     },
     [enterDevice, sitDown],
@@ -685,7 +703,7 @@ export function WalkRoom({
   const cardGame = demoGame ?? aimedGame;
   const cardProp = demoProp ?? aimedProp;
   const showCard = Boolean(demoGame || demoProp) || (engaged && cardOpen && (aimedGame || aimedProp));
-  const walking = engaged && !device && !seated && !holding && !overlayGame && !pulledGameId && session?.phase !== 'unfold' && !tableCamOn && !racing;
+  const walking = engaged && !device && !seated && !holding && !overlayGame && !pulledGameId && session?.phase !== 'unfold' && !tableCamOn && !toyMode;
 
 
   return (
@@ -778,17 +796,18 @@ export function WalkRoom({
         ) : (
           <>
             <WalkController
-              enabled={!pulledGameId && !device && !seated && !holding && session?.phase !== 'unfold' && !overlayGame && !tableCamOn && !racing}
+              enabled={!pulledGameId && !device && !seated && !holding && session?.phase !== 'unfold' && !overlayGame && !tableCamOn && !toyMode}
               engaged={engaged}
               onStep={onStep}
             />
             <TableCameraRig active={tableCamOn} />
             <TriviaTableCam active={overlayGame?.id === 'trivia' && session?.phase === 'play'} />
             {racing && <HotWheelsWorld spot={raceBoot?.spot ?? null} skipCountdown={Boolean(raceBoot)} />}
+            {armyOn && <ArmyTownWorld boot={armyBoot} />}
             <ReachRaycaster
               // Mid-game, only the game's own box beside the table can be picked.
               enabled={
-                engaged && !pulledGameId && !device && !seated && !holding && !overlayGame && !tableCamOn && !racing &&
+                engaged && !pulledGameId && !device && !seated && !holding && !overlayGame && !tableCamOn && !toyMode &&
                 (!tableGame || session?.phase === 'play')
               }
               accept={tableGame ? target => target.id.startsWith(TABLE_BOX_PREFIX) : undefined}
@@ -809,6 +828,20 @@ export function WalkRoom({
       )}
       {rubik && <RubikPlay onClose={() => setRubik(false)} />}
       {racing && <HotWheelsHud onExit={() => setRacing(false)} />}
+      {armyOn && <ArmyHud onExit={() => setArmyOn(false)} />}
+      {armyAlert && (
+        <ArmyAlert
+          onSend={() => {
+            setArmyAlert(null);
+            setArmyOn(true);
+          }}
+          onLook={() => {
+            const target = armyAlert;
+            setArmyAlert(null);
+            pinCard(target);
+          }}
+        />
+      )}
       {seated && <GameBoyGlass />}
       {seated && (
         <div data-ui="device" className="pointer-events-none absolute inset-0 z-40">
@@ -886,7 +919,7 @@ export function WalkRoom({
       )}
 
       {/* Glass flash card — games + nostalgia props */}
-      {!racing && !overlayGame && (engaged || scripted) && !device && !seated && !holding && (
+      {!toyMode && !overlayGame && (engaged || scripted) && !device && !seated && !holding && (
       <button
         type="button"
         onClick={openMenu}

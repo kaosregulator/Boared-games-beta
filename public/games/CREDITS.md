@@ -61,3 +61,9 @@ Promotional art used as bedroom decor; all rights belong to their owners.
 - Jurassic Park (Universal, 1993) and Toy Story (Disney/Pixar, 1995) one-sheets — scans from IMP Awards (impawards.com).
 - Super Mario 64 and The Legend of Zelda: Ocarina of Time box art (Nintendo), Street Fighter II flyer (Capcom),
   Nirvana "Nevermind" (DGC) and 2Pac "All Eyez on Me" (Death Row) covers — from their Wikipedia file pages.
+
+## Army men — `../models/army-man.glb`
+The soldier from three.js's examples (`examples/models/gltf/Soldier.glb`, Mixamo character and
+animations), shipped in the three.js repo under the MIT licence — https://github.com/mrdoob/three.js.
+Slimmed with `scripts/slim-soldier.mjs` (textures and T-pose dropped) and painted plastic green or tan in code.
+The army town, the helicopter and everything else in `src/room/army/` are built from primitives in code.
