@@ -41,3 +41,17 @@ test('pinned and shared resources are not disposed', () => {
   assert.equal(disposed, 1);
   assert.deepEqual(dropped, ['blob:toy']);
 });
+
+test('a disposer that still needs the resource does not drop the cache entry', () => {
+  resetCacheForTests();
+  const dropped: string[] = [];
+  attachResourceCache({
+    lookup: () => ({ id: 'scene' }),
+    drop: url => {
+      dropped.push(url);
+    },
+    dispose: () => false,
+  });
+  assert.equal(disposeIfUnshared('blob:kept'), false);
+  assert.deepEqual(dropped, []);
+});

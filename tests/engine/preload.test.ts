@@ -63,3 +63,30 @@ test('preload cancels an in-flight job and retries a failed one', async () => {
   await retryFailed();
   assert.equal(preloadSnapshot().jobs.find(job => job.id === 'needs-retry')?.state, 'ready');
 });
+
+test('a cancelled preload cannot overwrite the run that replaced it', async () => {
+  reset();
+  defineAsset({ id: 'race', url: 'module:race', kind: 'optional', priority: 1, optional: true });
+  let started = 0;
+  let rejectFirst: (err: unknown) => void = () => {};
+  let resolveSecond: () => void = () => {};
+  const first = enqueuePreload('race', 'optional', () => {
+    started += 1;
+    if (started === 1) {
+      return new Promise<void>((_resolve, reject) => {
+        rejectFirst = reject;
+      });
+    }
+    return new Promise<void>(resolve => {
+      resolveSecond = resolve;
+    });
+  });
+  cancelPreloads();
+  const retried = retryFailed();
+  resolveSecond();
+  await retried;
+  rejectFirst(new DOMException('The operation was aborted.', 'AbortError'));
+  await first;
+  assert.equal(started, 2);
+  assert.equal(preloadSnapshot().jobs.find(job => job.id === 'race')?.state, 'ready');
+});

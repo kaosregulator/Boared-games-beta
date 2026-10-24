@@ -29,6 +29,7 @@ let lowSince: number | null = null;
 let highSince: number | null = null;
 let cooldownUntil = 0;
 let persistWrites = true;
+let hydrated = false;
 const listeners = new Set<(snap: GraphicsSnapshot) => void>();
 
 export function dprForPreset(preset: GraphicsPreset, devicePixelRatio: number): number {
@@ -74,6 +75,8 @@ export function setMeasuredDevicePixelRatio(n: number | null) {
 }
 
 export function hydrateGraphicsFromStorage() {
+  if (hydrated) return;
+  hydrated = true;
   const preset = readEnginePref('graphics-preset');
   const adaptive = readEnginePref('graphics-adaptive');
   if (preset === 'low' || preset === 'balanced' || preset === 'high') userPreset = preset;
@@ -156,5 +159,6 @@ export function resetGraphicsForTests() {
   highSince = null;
   cooldownUntil = 0;
   persistWrites = false;
+  hydrated = false;
   listeners.clear();
 }

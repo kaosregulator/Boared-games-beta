@@ -93,6 +93,7 @@ function write(entry) {
  * @param {Record<string, unknown>} [fields]
  */
 export function log(level, message, fields = {}) {
+  const safeMessage = redactString(message);
   const err = fields.err instanceof Error ? fields.err : fields.error instanceof Error ? fields.error : undefined;
   const stack =
     typeof fields.stack === 'string'
@@ -100,13 +101,13 @@ export function log(level, message, fields = {}) {
       : err?.stack
         ? redactString(err.stack)
         : level === 'error'
-          ? redactString(new Error(String(message)).stack ?? '')
+          ? redactString(new Error(safeMessage).stack ?? '')
           : undefined;
   const { err: _err, error: _error, stack: _stack, source, gameId, asset, ...rest } = fields;
   const entry = {
     ts: new Date().toISOString(),
     level,
-    message: bound(message),
+    message: safeMessage,
     correlationId,
     source: typeof source === 'string' ? source : 'app',
     gameId: typeof gameId === 'string' ? gameId : undefined,

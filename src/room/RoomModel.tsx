@@ -4,7 +4,8 @@ import { useThree } from '@react-three/fiber';
 import { withKtx2 } from './ktx2';
 import * as THREE from 'three';
 import { setAssetState } from '../engine/assets';
-import { noteCacheLookup, release, retain } from '../engine/cache';
+import { leaseResource, noteCacheLookup, release, retain, unleaseResource } from '../engine/cache';
+import { collectGpuResources } from '../engine/gltfCache';
 import { log } from '../engine/log';
 import type { HoverTarget } from './Interactable';
 import type { Hotspot } from './hotspots';
@@ -283,11 +284,6 @@ export function RoomModel({
   const gl = useThree(state => state.gl);
   const maxAnisotropy = gl.capabilities.getMaxAnisotropy();
   const { scene } = useGLTF(url, false, true, withKtx2);
-  useEffect(() => {
-    setAssetState(`model:${id}`, 'ready');
-    retain(url);
-    return () => release(url);
-  }, [id, url]);
   const root = useMemo(() => {
     const clone = scene.clone(true);
     finishMaterials(clone, new THREE.Color('#7a5a52'), tintAmount, maxAnisotropy);
@@ -299,6 +295,16 @@ export function RoomModel({
     });
     return clone;
   }, [scene, tintAmount, castShadow, receiveShadow, maxAnisotropy]);
+  useEffect(() => {
+    setAssetState(`model:${id}`, 'ready');
+    retain(url);
+    const shared = collectGpuResources(root);
+    for (const resource of shared) leaseResource(resource);
+    return () => {
+      for (const resource of shared) unleaseResource(resource);
+      release(url);
+    };
+  }, [id, url, root]);
 
   const fitted = useMemo(() => {
     const box = new THREE.Box3().setFromObject(root);

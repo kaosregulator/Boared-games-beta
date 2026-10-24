@@ -1,36 +1,46 @@
 import { clear, peek } from 'suspend-react';
 import { GLTFLoader } from 'three-stdlib';
 import * as THREE from 'three';
-import { attachResourceCache } from './cache';
+import { attachResourceCache, resourceLeased } from './cache';
 
 const MAPS = ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap', 'alphaMap'] as const;
 
-function disposeGltf(value: unknown) {
-  const scene = (value as { scene?: THREE.Object3D } | null)?.scene;
-  if (!scene) return;
-  const seen = new Set<THREE.BufferGeometry | THREE.Material | THREE.Texture>();
-  scene.traverse(obj => {
+/** Geometries, materials, and textures a scene uses. A clone shares these objects. */
+export function collectGpuResources(root: THREE.Object3D): object[] {
+  const seen = new Set<object>();
+  const out: object[] = [];
+  const add = (value: object | null | undefined) => {
+    if (!value || seen.has(value)) return;
+    seen.add(value);
+    out.push(value);
+  };
+  root.traverse(obj => {
     const mesh = obj as THREE.Mesh;
     if (!mesh.isMesh) return;
-    if (mesh.geometry && !seen.has(mesh.geometry)) {
-      seen.add(mesh.geometry);
-      mesh.geometry.dispose();
-    }
+    add(mesh.geometry);
     const materials = Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : [];
     for (const material of materials) {
-      if (!material || seen.has(material)) continue;
-      seen.add(material);
+      add(material);
       const mat = material as THREE.MeshStandardMaterial;
-      for (const key of MAPS) {
-        const tex = mat[key] as THREE.Texture | null | undefined;
-        if (tex && !seen.has(tex)) {
-          seen.add(tex);
-          tex.dispose();
-        }
-      }
-      material.dispose();
+      for (const key of MAPS) add(mat[key] ?? undefined);
     }
   });
+  return out;
+}
+
+/**
+ * Disposes a cached GLTF. Returns false, and disposes nothing, when a mounted
+ * clone still leases any of its shared GPU resources.
+ */
+export function disposeCachedGltf(value: unknown): boolean {
+  const scene = (value as { scene?: THREE.Object3D } | null)?.scene;
+  if (!scene) return true;
+  const resources = collectGpuResources(scene);
+  if (resources.some(resource => resourceLeased(resource))) return false;
+  for (const resource of resources) {
+    (resource as { dispose?: () => void }).dispose?.();
+  }
+  return true;
 }
 
 let attached = false;
@@ -44,6 +54,6 @@ export function attachGltfCache() {
     drop: url => {
       clear([GLTFLoader, url]);
     },
-    dispose: disposeGltf,
+    dispose: disposeCachedGltf,
   });
 }

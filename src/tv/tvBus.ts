@@ -41,6 +41,9 @@ export function useTvCommand() {
 export function useTvStatus() {
   const [s, setS] = useState<TvStatus>(status);
   useEffect(() => {
+    // The picture publishes from a child effect, which runs before this
+    // subscription. Pick up that status or the set looks off until the next press.
+    setS(status);
     statusSubs.add(setS);
     return () => {
       statusSubs.delete(setS);

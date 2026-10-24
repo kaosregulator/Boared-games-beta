@@ -44,6 +44,8 @@ import { HotWheelsHud, HotWheelsWorld } from './hotwheels/HotWheelsRace';
 import { ArmyAlert, ArmyHud, ArmyTownWorld, readArmyBoot } from './army/ArmyTown';
 import { walkRig } from './WalkController';
 import { FurbyHold } from './furby/FurbyHold';
+import { FurbyQuiet } from './furby/FurbyQuiet';
+import { furbyMuteAvailable } from './furby/furbyQuiet';
 import { FurbyBubble, FurbyHoldHud } from './furby/FurbyHud';
 import { anchorPose, furbyGesture, setFurby, useFurby } from './furby/furbyStore';
 import { FURBY_GAME } from './furby/furbyGame';
@@ -204,6 +206,8 @@ export function WalkRoom({
   );
   /** Pixel ratio from the graphics preset. High is the default and stays there. */
   const gfx = useGraphics();
+  const gfxRef = useRef(gfx);
+  gfxRef.current = gfx;
   const [diagOn] = useState(diagnosticsEnabled);
   /** The title reel, up until its fade into the room has finished. */
   const [menuShown, setMenuShown] = useState(() => !engaged);
@@ -795,6 +799,7 @@ export function WalkRoom({
         // alpha so the room TV's picture can show through the hole cut for it (RoomTvGlass)
         gl={{ antialias: true, powerPreference: 'high-performance', alpha: true }}
         onCreated={({ gl, scene }) => {
+          gl.setPixelRatio(override.capture ? 1 : gfxRef.current.dpr);
           // If the GPU drops this context (memory pressure, a driver reset),
           // rebuild the canvas instead of leaving a dead black screen. Room
           // state lives outside the canvas, so nothing else resets.
@@ -958,6 +963,7 @@ export function WalkRoom({
         <TvRemote landscape={vp.landscape} big={big} onBig={toggleBig} padUp={padUp} />
       )}
       {(tvOn || tvInRoom) && <TvGlass initialMode={device === 'nes' ? 'gaming' : 'menu'} inRoom={tvInRoom} />}
+      {furbyMuteAvailable({ tvMode: tvStatus.mode, atTelevision: tvOn || tvInRoom, radioOn: tapeOn }) && <FurbyQuiet />}
       {session && session.phase === 'play' && TABLE_GAMES.has(session.game.id) && (
         <TableHudOverlay
           crouched={crouched}

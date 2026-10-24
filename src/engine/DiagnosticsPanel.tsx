@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { buildDiagnosticsReport } from './report';
-import { setAdaptive, setGraphicsPreset, type GraphicsPreset } from './graphics';
+import { currentGraphics, setAdaptive, setGraphicsPreset, type GraphicsPreset } from './graphics';
+import { useGraphics } from './useGraphics';
 
 function download(report: unknown) {
   const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
@@ -17,6 +18,7 @@ function download(report: unknown) {
  * otherwise. Adaptive is off until that choice is made here.
  */
 export function DiagnosticsPanel() {
+  const gfx = useGraphics();
   const [open, setOpen] = useState(false);
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -39,17 +41,28 @@ export function DiagnosticsPanel() {
         <div className="mt-2 max-h-[42vh] overflow-auto rounded-lg border border-white/20 bg-black/80 p-3 leading-relaxed">
           <p>game {report.games.map(game => `${game.id}:${game.phase}`).join(', ') || 'room'}</p>
           <p>
-            graphics {report.graphics.preset} effective {report.graphics.effective} dpr {report.graphics.dpr} adaptive{' '}
-            {report.graphics.adaptive ? 'on' : 'off'}
+            graphics showing {gfx.effective}
+            {gfx.effective !== gfx.preset ? ` (choice ${gfx.preset})` : ''} dpr {gfx.dpr} adaptive {gfx.adaptive ? 'on' : 'off'}
           </p>
           <p className="flex flex-wrap gap-1">
             {(['high', 'balanced', 'low'] as GraphicsPreset[]).map(preset => (
-              <button key={preset} type="button" className="rounded border border-white/30 px-2 py-0.5" onClick={() => setGraphicsPreset(preset)}>
+              <button
+                key={preset}
+                type="button"
+                aria-pressed={preset === gfx.effective}
+                className={`rounded border px-2 py-0.5 ${preset === gfx.effective ? 'border-white bg-white/20' : 'border-white/30'}`}
+                onClick={() => setGraphicsPreset(preset)}
+              >
                 {preset}
               </button>
             ))}
-            <button type="button" className="rounded border border-white/30 px-2 py-0.5" onClick={() => setAdaptive(!report.graphics.adaptive)}>
-              adaptive {report.graphics.adaptive ? 'on' : 'off'}
+            <button
+              type="button"
+              aria-pressed={gfx.adaptive}
+              className="rounded border border-white/30 px-2 py-0.5"
+              onClick={() => setAdaptive(!currentGraphics().adaptive)}
+            >
+              adaptive {gfx.adaptive ? 'on' : 'off'}
             </button>
           </p>
           <p>

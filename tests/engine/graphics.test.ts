@@ -10,7 +10,7 @@ import {
   setGraphicsPreset,
   setMeasuredDevicePixelRatio,
 } from '../../src/engine/graphics.ts';
-import { noteContextLoss, resetRecoveryForTests } from '../../src/engine/recovery.ts';
+import { noteContextLoss, noteContextRestored, resetRecoveryForTests } from '../../src/engine/recovery.ts';
 import { resetLogForTests } from '../../src/engine/log.ts';
 
 test('high preset caps pixel ratio at 2 and does not drop on its own', () => {
@@ -85,6 +85,7 @@ test('a saved choice is explicit and a missing save stays high', () => {
   hydrateGraphicsFromStorage();
   assert.equal(currentGraphics().preset, 'high');
   assert.equal(currentGraphics().adaptive, false);
+  resetGraphicsForTests();
   memory.set('engine:graphics-preset', 'balanced');
   memory.set('engine:graphics-adaptive', '0');
   hydrateGraphicsFromStorage();
@@ -92,4 +93,43 @@ test('a saved choice is explicit and a missing save stays high', () => {
   assert.equal(currentGraphics().effective, 'balanced');
   assert.equal(currentGraphics().adaptive, false);
   setGraphicsPreset('high');
+});
+
+test('a second hydrate leaves an adaptive step in place', () => {
+  resetLogForTests();
+  resetGraphicsForTests();
+  setMeasuredDevicePixelRatio(2);
+  const memory = new Map<string, string>([
+    ['engine:graphics-preset', 'high'],
+    ['engine:graphics-adaptive', '1'],
+  ]);
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: {
+      getItem: (key: string) => memory.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        memory.set(key, value);
+      },
+      removeItem: (key: string) => {
+        memory.delete(key);
+      },
+      clear: () => memory.clear(),
+      key: () => null,
+      length: 0,
+    },
+    configurable: true,
+  });
+  hydrateGraphicsFromStorage();
+  noteFrameRate(30, 0);
+  noteFrameRate(30, 3000);
+  assert.equal(currentGraphics().preset, 'high');
+  assert.equal(currentGraphics().effective, 'balanced');
+  assert.equal(currentGraphics().dpr, 1.5);
+  hydrateGraphicsFromStorage();
+  assert.equal(currentGraphics().effective, 'balanced');
+  assert.equal(currentGraphics().dpr, 1.5);
+  noteContextLoss();
+  noteContextRestored();
+  assert.equal(currentGraphics().effective, 'balanced');
+  assert.equal(currentGraphics().preset, 'high');
+  assert.equal(currentGraphics().dpr, 1.5);
 });

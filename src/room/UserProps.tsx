@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo } from 'react';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
-import { noteCacheLookup, release, retain } from '../engine/cache';
+import { leaseResource, noteCacheLookup, release, retain, unleaseResource } from '../engine/cache';
+import { collectGpuResources } from '../engine/gltfCache';
 
 interface DynamicModelProps {
   url: string;
@@ -16,10 +17,6 @@ interface DynamicModelProps {
 export function DynamicModel({ url, position, rotY, height }: DynamicModelProps) {
   noteCacheLookup(url);
   const { scene } = useGLTF(url);
-  useEffect(() => {
-    retain(url);
-    return () => release(url);
-  }, [url]);
   const root = useMemo(() => {
     const clone = scene.clone(true);
     clone.traverse(obj => {
@@ -39,6 +36,15 @@ export function DynamicModel({ url, position, rotY, height }: DynamicModelProps)
     });
     return clone;
   }, [scene]);
+  useEffect(() => {
+    retain(url);
+    const shared = collectGpuResources(root);
+    for (const resource of shared) leaseResource(resource);
+    return () => {
+      for (const resource of shared) unleaseResource(resource);
+      release(url);
+    };
+  }, [url, root]);
 
   const { fitScale, offset } = useMemo(() => {
     const box = new THREE.Box3().setFromObject(root);

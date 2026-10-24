@@ -4,7 +4,9 @@
  * second time beside the parsed GLTF.
  *
  * disposeIfUnshared refuses anything that is not a blob: URL, anything pinned,
- * and anything still retained. Room models are pinned and are not blob URLs.
+ * and anything still retained. A disposer that returns false keeps the entry,
+ * which is how a leased geometry shared with a mounted clone stays alive.
+ * Room models are pinned and are not blob URLs.
  */
 
 export interface CacheSnapshot {
@@ -16,7 +18,8 @@ export interface CacheSnapshot {
 
 type Lookup = (url: string) => unknown;
 type Drop = (url: string) => void;
-type Disposer = (value: unknown) => void;
+/** Return false when a mounted clone still uses a shared GPU resource. */
+type Disposer = (value: unknown) => boolean | void;
 
 let lookup: Lookup = () => undefined;
 let drop: Drop = () => {};
@@ -24,6 +27,8 @@ let disposeValue: Disposer = () => {};
 const pins = new Set<string>();
 const refs = new Map<string, number>();
 const noted = new Set<string>();
+/** How many mounted clones still use each geometry, material, or texture. */
+const leases = new Map<object, number>();
 let hits = 0;
 let misses = 0;
 
@@ -51,6 +56,21 @@ export function refcount(url: string) {
   return refs.get(url) ?? 0;
 }
 
+/** A mounted clone is using this shared geometry, material, or texture. */
+export function leaseResource(resource: object) {
+  leases.set(resource, (leases.get(resource) ?? 0) + 1);
+}
+
+export function unleaseResource(resource: object) {
+  const next = (leases.get(resource) ?? 0) - 1;
+  if (next <= 0) leases.delete(resource);
+  else leases.set(resource, next);
+}
+
+export function resourceLeased(resource: object) {
+  return (leases.get(resource) ?? 0) > 0;
+}
+
 /** First time a URL is asked for. Later calls do not move the counters. */
 export function noteCacheLookup(url: string) {
   if (noted.has(url)) return;
@@ -72,7 +92,7 @@ export function disposeIfUnshared(url: string): boolean {
   if ((refs.get(url) ?? 0) > 0) return false;
   if (!url.startsWith('blob:')) return false;
   const value = lookup(url);
-  if (value != null) disposeValue(value);
+  if (value != null && disposeValue(value) === false) return false;
   drop(url);
   return true;
 }
@@ -81,6 +101,7 @@ export function resetCacheForTests() {
   pins.clear();
   refs.clear();
   noted.clear();
+  leases.clear();
   hits = 0;
   misses = 0;
   lookup = () => undefined;
