@@ -90,11 +90,18 @@ LIBRARY = {
 LIBRARY = {name: tag for tag, names in LIBRARY.items() for name in names.split()}
 LIBRARY_SKIP = {'credits', 'SFX_PHONE', 'SFX_BEEP', 'SFX_RAP1', 'SFX_RAP2', 'ILL_BE_BACK', 'credits'}
 # Video sound, by where it starts in the video (tenths of a second) -> tag.
+# Shapes from the spectrogram; the ones marked "heard" were confirmed or
+# named by Whisper (normal and 5-semitones-down passes, kept only where the
+# words are real English, not its guesses at Furbish).
 VIDEO_TAGS = {
-    10.2: 'sing', 12.4: 'sing', 14.9: 'sing', 27.2: 'sing',
-    19.1: 'whee', 22.6: 'whee', 86.0: 'whee', 103.0: 'whee',
-    36.9: 'yawn', 39.7: 'yawn', 96.0: 'yawn',
-    78.1: 'laugh', 80.5: 'laugh', 83.3: 'laugh',
+    10.2: 'sing', 12.4: 'sing', 14.9: 'sing', 27.2: 'sing',  # heard "la la la"
+    19.1: 'whee', 22.6: 'whee', 103.0: 'whee',
+    29.8: 'whee',  # heard "wow!"
+    36.9: 'yawn', 39.7: 'yawn', 96.0: 'yawn',  # heard "ahhh"
+    78.1: 'laugh', 80.5: 'laugh', 83.3: 'laugh',  # heard "ha ha ha"
+    69.2: 'hello', 86.0: 'hello',  # heard "hey!", "oh, hey, hey, hey!"
+    94.8: 'happy',  # heard "yes!"
+    89.6: 'kiss',  # heard "mwah"
     57.9: 'story',
 }
 # Clicks and hiss with no voice in them.
