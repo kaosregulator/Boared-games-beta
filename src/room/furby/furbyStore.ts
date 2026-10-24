@@ -83,6 +83,12 @@ export function brainFor(from: HeldFrom) {
   return from === 'bed' ? bedBrain : tableBrain;
 }
 
+/** The wall switch. Both toys read it, including the one in your hands. */
+export function setFurbyDark(dark: boolean) {
+  bedBrain.dark = dark;
+  tableBrain.dark = dark;
+}
+
 /** Where each Furby sits in the room, so picking one up can fly it from there. */
 export const furbyAnchors: Partial<Record<HeldFrom, THREE.Object3D>> = {};
 

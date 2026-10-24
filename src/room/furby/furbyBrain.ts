@@ -307,7 +307,7 @@ export class FurbyBrain {
     if (this.dark && !this.asleep && !this.anim) {
       this.start('dark', 1.6);
       this.speakLine('dark');
-      window.setTimeout(() => {
+      globalThis.setTimeout(() => {
         if (this.dark && !this.asleep) this.act('sleep');
       }, 1800);
     }

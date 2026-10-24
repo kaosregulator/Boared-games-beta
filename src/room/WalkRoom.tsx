@@ -914,7 +914,7 @@ export function WalkRoom({
           }
         />
       )}
-      {(furbyHeld || session?.game.id === 'furby') && <FurbyBubble />}
+      {engaged && !armyOn && !racing && !seated && !device && (!session || session.game.id === 'furby') && <FurbyBubble />}
       {racing && <HotWheelsHud onExit={() => setRacing(false)} />}
       {armyOn && <ArmyHud onExit={() => setArmyOn(false)} />}
       {armyAlert && (
