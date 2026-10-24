@@ -126,7 +126,28 @@ export const FOX_KIDS: ArchiveBlock = {
  */
 export const KIDS_WB_2001: ArchiveBlock = {
   id: 'kids-wb-10-feb-2k-1_202005',
-  parts: [{ file: "Kids' WB 10 Feb 2k1.mp4", seconds: 2711, title: "Kids' WB · Feb 10 2001" }],
+  parts: [
+    {
+      file: "Kids' WB 10 Feb 2k1.mp4",
+      seconds: 2711,
+      title: "Kids' WB · Feb 10 2001",
+      // From the tape's captions, matched to episode transcripts; breaks land on its black frames.
+      segments: [
+        { at: 0, kind: 'show', title: 'Pokémon: The Johto Journeys · Foul Weather Friends' },
+        { at: 58, kind: 'ads', title: "L'Oréal Kids, Max Steel, Froot Loops, LEGO Star Wars" },
+        { at: 210, kind: 'bumper', title: "Kids' WB: The Zeta Project, all new, coming up next" },
+        { at: 234, kind: 'show', title: 'Pokémon: The Johto Journeys · Foul Weather Friends' },
+        { at: 818, kind: 'ads', title: 'See Spot Run, Max Steel, Oreos for breakfast, Static Shock promo' },
+        { at: 1012, kind: 'show', title: 'Pokémon: The Johto Journeys · Foul Weather Friends' },
+        { at: 1650, kind: 'ads', title: 'Batman Beyond and Max Steel promos, Fruit Roll-Ups' },
+        { at: 1785, kind: 'show', title: 'Pokémon Karaoke · My Best Friends' },
+        { at: 1836, kind: 'bumper', title: "Kids' WB: the Poké Read-A-Rama contest" },
+        { at: 1879, kind: 'show', title: 'The Zeta Project · Remote Control' },
+        { at: 2348, kind: 'ads', title: 'Recess: School’s Out, Tang, Power Rangers Time Force, Happy Meal' },
+        { at: 2517, kind: 'show', title: 'The Zeta Project · Remote Control' },
+      ],
+    },
+  ],
 };
 /** The segment airing `offset` seconds into a part, and the next show after it. */
 export function segmentAt(part: ArchivePart, offset: number): { now: Segment | null; nextShow: Segment | null } {
