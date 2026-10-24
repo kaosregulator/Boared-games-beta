@@ -66,3 +66,16 @@ export function resolveVault(show: string, key: string): Promise<ArchiveFile | n
     return ep?.url ? { url: ep.url, length: ep.seconds, name: `${show}/${key}.webm` } : null;
   });
 }
+
+/** Whether a URL is one of the vault's own episode files. */
+export function isVaultUrl(url: string) {
+  return url.startsWith(`${vaultBase()}/vault/media/`);
+}
+
+/**
+ * The vault's file failed to play (it stopped, or the episode went missing):
+ * treat the vault as off for a while so the next tune falls back to archive.org.
+ */
+export function forgetVault() {
+  for (const show of feeds.keys()) feeds.set(show, { at: Date.now(), job: Promise.resolve(null) });
+}

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { setPadFrame } from '../devices/gameboyBus';
 import { CHANNELS, guideRow, nowSeconds, snickOnAir, type Channel } from './channels';
 import { resolveArchive } from './archive';
-import { resolveVault } from './vault';
+import { forgetVault, isVaultUrl, resolveVault } from './vault';
 import { channelClick, paintSnow, startStatic, type StaticHandle } from './noise';
 import { snickShowAt } from './snick';
 import { mayTurnOn } from '../room/houseRules';
@@ -276,6 +276,13 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
       };
       const onError = () => {
         if (token !== tuneToken.current) return;
+        if (isVaultUrl(found.file.url)) {
+          // The home vault went away mid-session: tune again and take archive.org's copy.
+          window.clearTimeout(giveUp);
+          forgetVault();
+          setRetune(r => r + 1);
+          return;
+        }
         window.clearTimeout(giveUp);
         setTuning(false);
         setSignal('none');
