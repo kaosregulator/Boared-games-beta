@@ -144,8 +144,9 @@ async function fetchAll() {
       console.error(err.message);
     }
   }
-  saveExtras(meta);
+  await saveExtras(meta);
   console.log(failed ? `${failed} downloads failed; run again to retry them.` : 'All downloads done.');
+  if (failed) process.exitCode = 1;
 }
 
 /** The item's own catalog, torrent and artwork, kept beside the episodes. */
@@ -274,6 +275,7 @@ async function shrinkAll() {
   const { eps } = await episodes();
   const todo = eps.filter(ep => !isReady(ep));
   let done = 0;
+  let failed = 0;
   for (let i = 0; i < todo.length; i += 1) {
     const ep = todo[i];
     const file = sourceOf(ep);
@@ -283,11 +285,13 @@ async function shrinkAll() {
       await shrinkEpisode(ep, src, file, i + 1, todo.length);
       done += 1;
     } catch (err) {
+      failed += 1;
       console.error(`${ep.key}: ${err.message}`);
       await upsertEpisode({ show: cfg.name, key: ep.key, season: ep.season, ep_from: ep.from, ep_to: ep.to, title: ep.title, status: 'failed', error: err.message });
     }
   }
-  console.log(`Shrunk ${done} episodes.`);
+  console.log(`Shrunk ${done} episodes.${failed ? ` ${failed} failed.` : ''}`);
+  if (failed) process.exitCode = 1;
 }
 
 /**
@@ -335,6 +339,7 @@ async function all() {
   const ready = readSidecars(cfg.name);
   const bytes = ready.reduce((a, s) => a + s.bytes, 0);
   console.log(`\nVault holds ${ready.length} episodes in ${humanBytes(bytes)}.${failed ? ` ${failed} failed; run again to retry them.` : ''}`);
+  if (failed) process.exitCode = 1;
 }
 
 // ── verify / reindex ──────────────────────────────────────────────────────────
