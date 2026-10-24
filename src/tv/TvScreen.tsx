@@ -5,7 +5,7 @@ import { resolveArchive } from './archive';
 import { channelClick, paintSnow, startStatic, type StaticHandle } from './noise';
 import { snickShowAt } from './snick';
 import { mayTurnOn } from '../room/houseRules';
-import { blockOnAir } from './lineups/archiveBlocks';
+import { blockOnAir, showTitleAt } from './lineups/archiveBlocks';
 import { CARTRIDGES, cartridgeSrc, type Cartridge } from '../devices/cartridges';
 import { TV247_ON } from './tv247';
 import { YouTubeTv } from './YouTubeTv';
@@ -224,8 +224,8 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
         : ch.kind === 'block'
         ? (() => {
             const air = blockOnAir(ch.block, nowSeconds());
-            return resolveArchive(ch.block.id, 'video', air.part.file).then(file =>
-              file ? { file, offset: air.offset, label: air.part.title } : null,
+            return resolveArchive(air.part.id ?? ch.block.id, 'video', air.part.file).then(file =>
+              file ? { file, offset: air.offset, label: showTitleAt(air.part, air.offset) } : null,
             );
           })()
         : resolveArchive((ch as Extract<Channel, { kind: 'cartoon' }>).cartoon.id, 'video').then(file =>

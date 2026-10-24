@@ -1,6 +1,6 @@
 import { SNICK_DURATIONS, SNICK_EPISODES, epKey, snickShowAt, type SnickEpisode } from './snick';
 import { TV247_ON } from './tv247';
-import { CCF_2000, blockOnAir, type ArchiveBlock } from './lineups/archiveBlocks';
+import { CCF_2000, CN_TAPES, FOX_KIDS, KIDS_WB_2001, NICK_CN_2003, blockOnAir, segmentAt, showTitleAt, type ArchiveBlock } from './lineups/archiveBlocks';
 import { PICK_CHANNEL, YT_CHANNELS, ytOnAir, ytShowAt, type YtChannel } from './lineups/youtube247';
 
 /**
@@ -106,8 +106,12 @@ export const CHANNELS: Channel[] = [
   ...(TV247_ON ? YT_CHANNELS.map(ytChannel) : []),
   { number: 2, call: 'SNICK', kind: 'snick', name: 'SNICK — Saturday Night Nickelodeon' },
   { number: 3, call: 'CCF', kind: 'block', name: 'Cartoon Cartoon Fridays (2000)', block: CCF_2000 },
+  { number: 4, call: 'CN', kind: 'block', name: 'Cartoon Network (1999–2003 tapes)', block: CN_TAPES },
+  { number: 5, call: 'NICK', kind: 'block', name: 'Nickelodeon & Cartoon Network (Aug 2003)', block: NICK_CN_2003 },
+  { number: 6, call: 'FOXK', kind: 'block', name: 'Fox Kids (2000–2001)', block: FOX_KIDS },
+  { number: 7, call: 'KWB', kind: 'block', name: "Kids' WB (Feb 2001)", block: KIDS_WB_2001 },
   ...CARTOONS.map((cartoon, i): Channel => ({
-    number: i + 4,
+    number: i + 8,
     call: callSign(cartoon),
     kind: 'cartoon',
     name: cartoon.title,
@@ -151,9 +155,11 @@ export function guideRow(channel: Channel, at = nowSeconds()): { now: string; ne
   if (channel.kind === 'block') {
     const air = blockOnAir(channel.block, at);
     const parts = channel.block.parts;
-    const next = parts[(air.index + 1) % parts.length];
-    const when = new Date((at + air.part.seconds - air.offset) * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-    return { now: air.part.title, next: `${when} ${next.title}` };
+    const clock = (t: number) => new Date(t * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const { nextShow } = segmentAt(air.part, air.offset);
+    if (nextShow) return { now: showTitleAt(air.part, air.offset), next: `${clock(at + nextShow.at - air.offset)} ${nextShow.title}` };
+    const after = parts[(air.index + 1) % parts.length];
+    return { now: showTitleAt(air.part, air.offset), next: `${clock(at + air.part.seconds - air.offset)} ${showTitleAt(after, 0)}` };
   }
   if (channel.kind === 'youtube') {
     const air = ytOnAir(channel.yt, at);
