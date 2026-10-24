@@ -18,6 +18,7 @@ import {
 import { CAR, ceilingAt, groundAt, newCar, placeCar, refillNitro, stepCar, TUNING, type CarState } from './carSim';
 import { BED_BOUNDS, BED_CLEAR, BLOCKS, DESK, ROOM, zoneAt, type ZoneId } from './world';
 import { motorSpeed, raceSfx, startMotor, stopRaceAudio, wakeRaceAudio } from './raceAudio';
+import { openMiniGame } from '../../engine/lifecycle';
 
 export type HwCam = 'chase' | 'hood' | 'birdseye';
 type Phase = 'countdown' | 'racing' | 'roam';
@@ -546,6 +547,11 @@ export function HotWheelsWorld({ spot, skipCountdown }: { spot: string | null; s
 
   useLayoutEffect(() => {
     if (head.current && headTarget.current) head.current.target = headTarget.current;
+  }, []);
+
+  useEffect(() => {
+    const life = openMiniGame('hotwheels');
+    return () => life.close();
   }, []);
 
   useEffect(() => {

@@ -57,20 +57,12 @@ export function cartridgeSrc(c: Cartridge, volume = 0.7) {
 /** libretro pad slots EmulatorJS understands, for the on-device buttons. */
 export const PAD = { B: 0, SELECT: 2, START: 3, UP: 4, DOWN: 5, LEFT: 6, RIGHT: 7, A: 8 } as const;
 
-let warmed = false;
+let warmPromise: Promise<void> | null = null;
+const cartridgeDone = new Set<string>();
 
-/**
- * Fetch what the cartridge player needs into the browser cache while the room
- * is idle, so sitting down with the Game Boy boots the game straight away.
- */
-export function warmCartridges() {
-  if (warmed || typeof window === 'undefined') return;
-  const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
-  if (conn?.saveData) return;
-  warmed = true;
-  // EmulatorJS takes the "-legacy" core build when there is no WebGL 2.
+export function cartridgeWarmList() {
   const legacy = typeof WebGL2RenderingContext === 'undefined' ? '-legacy' : '';
-  const files = [
+  return [
     '/emu/data/loader.js',
     '/emu/data/emulator.min.js',
     '/emu/data/emulator.min.css',
@@ -79,5 +71,59 @@ export function warmCartridges() {
     `/emu/data/cores/gambatte${legacy}-wasm.data`,
     ...GAME_PAKS.map(c => c.rom),
   ];
-  for (const f of files) void fetch(f, { priority: 'low' } as RequestInit).catch(() => {});
+}
+
+/** Files from `files` that have not been fetched successfully yet. */
+export function cartridgesStillCold(files: readonly string[], done: ReadonlySet<string>) {
+  return files.filter(file => !done.has(file));
+}
+
+/**
+ * Fetch what the cartridge player needs into the browser cache while the room
+ * is idle, so sitting down with the Game Boy boots the game straight away.
+ * A file that already arrived is not requested again.
+ */
+export function warmCartridges(signal?: AbortSignal): Promise<void> {
+  if (typeof window === 'undefined') return Promise.resolve();
+  const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+  if (conn?.saveData) {
+    warmPromise = Promise.resolve();
+    return warmPromise;
+  }
+  if (warmPromise) return warmPromise;
+  const pending = cartridgesStillCold(cartridgeWarmList(), cartridgeDone);
+  if (pending.length === 0) {
+    warmPromise = Promise.resolve();
+    return warmPromise;
+  }
+  let incomplete = false;
+  warmPromise = Promise.all(
+    pending.map(file => {
+      if (signal?.aborted) return Promise.reject(new DOMException('The operation was aborted.', 'AbortError'));
+      return fetch(file, { priority: 'low', signal } as RequestInit).then(
+        res => {
+          if (res.ok) cartridgeDone.add(file);
+          else incomplete = true;
+        },
+        err => {
+          if (signal?.aborted || (err instanceof DOMException && err.name === 'AbortError')) throw err;
+          incomplete = true;
+        },
+      );
+    }),
+  )
+    .then(() => {
+      if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
+      if (incomplete) throw new Error('cartridge warm incomplete');
+    })
+    .catch(err => {
+      warmPromise = null;
+      throw err;
+    });
+  return warmPromise;
+}
+
+export function resetCartridgeWarmForTests() {
+  warmPromise = null;
+  cartridgeDone.clear();
 }

@@ -60,6 +60,24 @@ export interface Voice {
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
+/** Master gain stays at this unless the room mute is on. Brains keep their own volume. */
+const MASTER_GAIN = 0.9;
+let audible = true;
+
+function applyMasterGain() {
+  if (!master || !ctx) return;
+  master.gain.setTargetAtTime(audible ? MASTER_GAIN : 0, ctx.currentTime, 0.03);
+}
+
+/** Cuts the Furby's speaker and motor while a TV or the radio is on. Distance and lines stay as they are. */
+export function setFurbyAudible(on: boolean) {
+  audible = on;
+  applyMasterGain();
+}
+
+export function furbyAudible() {
+  return audible;
+}
 let buffer: AudioBuffer | null = null;
 let clips: Clip[] = [];
 let loading: Promise<void> | null = null;
@@ -71,7 +89,7 @@ function audio() {
     if (!Ctx) return null;
     ctx = new Ctx();
     master = ctx.createGain();
-    master.gain.value = 0.9;
+    master.gain.value = audible ? MASTER_GAIN : 0;
     master.connect(ctx.destination);
   }
   if (ctx?.state === 'suspended') void ctx.resume();

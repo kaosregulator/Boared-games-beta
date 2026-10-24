@@ -1,6 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { PerformanceMonitor } from '@react-three/drei';
 import * as THREE from 'three';
 import { GameId, GameMetadata } from '../types';
 import { sound } from '../utils/audio';
@@ -22,8 +21,6 @@ import { ParentYell } from './ParentYell';
 import { MenuReel } from './MenuReel';
 import { GameBoySeat } from '../devices/GameBoySeat';
 import { GameBoyGlass } from '../devices/GameBoyGlass';
-import { warmCartridges } from '../devices/cartridges';
-import { warmTableGames } from './table/tableGames';
 import { DEVICE_FROM_PROP, type DeviceId } from './devices';
 import { radio, useRadio } from '../radio/radioEngine';
 import { RoomStudio } from './RoomStudio';
@@ -47,13 +44,27 @@ import { HotWheelsHud, HotWheelsWorld } from './hotwheels/HotWheelsRace';
 import { ArmyAlert, ArmyHud, ArmyTownWorld, readArmyBoot } from './army/ArmyTown';
 import { walkRig } from './WalkController';
 import { FurbyHold } from './furby/FurbyHold';
+import { FurbyQuiet } from './furby/FurbyQuiet';
+import { furbyMuteAvailable } from './furby/furbyQuiet';
 import { FurbyBubble, FurbyHoldHud } from './furby/FurbyHud';
 import { anchorPose, furbyGesture, setFurby, useFurby } from './furby/furbyStore';
 import { FURBY_GAME } from './furby/furbyGame';
 import { TABLE_SEAT } from './roomLayout';
 import { ANCHORS, anchorById, type Anchor } from './anchors';
 import { deletePlacement, loadPlacements, savePlacement, type SavedPlacement } from './userPlacements';
+import { registerRoomCatalog } from '../engine/registerRoom';
+import { bootOptionalContent } from '../engine/preload';
+import { useGraphics } from '../engine/useGraphics';
+import { EngineBridge } from '../engine/EngineBridge';
+import { diagnosticsEnabled } from '../engine/diagGate';
+import { noteContextLoss, noteContextRestored } from '../engine/recovery';
+import { disposeIfUnshared } from '../engine/cache';
+import { openMiniGame, setMiniGamePhase } from '../engine/lifecycle';
 import type { RoomMood } from './moods';
+
+const DiagnosticsPanel = lazy(() => import('../engine/DiagnosticsPanel').then(m => ({ default: m.DiagnosticsPanel })));
+
+registerRoomCatalog();
 
 /**
  * `?tour=1` runs a hands-off dolly through the room and `?shot=N` parks the
@@ -172,6 +183,8 @@ export function WalkRoom({
   /** Crouched at a 3D table game: the table camera has the view. */
   const tableCamOn = Boolean(session && session.phase === 'play' && TABLE_GAMES.has(session.game.id) && crouched);
   const [placed, setPlaced] = useState<LiveProp[]>([]);
+  const placedRef = useRef(placed);
+  placedRef.current = placed;
   const [anchorId, setAnchorId] = useState(ANCHORS[0].id);
   const [placeHeight, setPlaceHeight] = useState(0.45);
   const [placeLift, setPlaceLift] = useState(0);
@@ -179,6 +192,7 @@ export function WalkRoom({
   const [placeName, setPlaceName] = useState('');
   const placeBytes = useRef<ArrayBuffer | null>(null);
   const placeUrl = useRef<string | null>(null);
+  const droppedUrls = useRef<string[]>([]);
   const [engaged, setEngaged] = useState(
     () =>
       scripted ||
@@ -190,8 +204,11 @@ export function WalkRoom({
       // Back after a reload: skip the title card and stand where you were.
       Boolean(resumedSession()?.engaged),
   );
-  /** Highest render resolution, eased down only while the frame rate is dropping. */
-  const [dprCap, setDprCap] = useState(1.5);
+  /** Pixel ratio from the graphics preset. High is the default and stays there. */
+  const gfx = useGraphics();
+  const gfxRef = useRef(gfx);
+  gfxRef.current = gfx;
+  const [diagOn] = useState(diagnosticsEnabled);
   /** The title reel, up until its fade into the room has finished. */
   const [menuShown, setMenuShown] = useState(() => !engaged);
   /** Bumped to rebuild the canvas after the browser drops its WebGL context. */
@@ -278,8 +295,7 @@ export function WalkRoom({
     if (!engaged) return;
     const id = window.setTimeout(() => {
       const warm = () => {
-        warmCartridges();
-        warmTableGames();
+        bootOptionalContent();
       };
       if ('requestIdleCallback' in window) window.requestIdleCallback(warm, { timeout: 5000 });
       else warm();
@@ -375,9 +391,24 @@ export function WalkRoom({
   }, [commitPlace, placeName]);
 
   const removePlaced = useCallback((id: string) => {
+    const prev = placedRef.current;
+    const gone = prev.find(item => item.placement.id === id);
+    const next = prev.filter(item => item.placement.id !== id);
+    if (gone && !next.some(item => item.url === gone.url) && placeUrl.current !== gone.url) {
+      droppedUrls.current.push(gone.url);
+    }
+    setPlaced(next);
     deletePlacement(id).catch(() => {});
-    setPlaced(prev => prev.filter(item => item.placement.id !== id));
   }, []);
+
+  useEffect(() => {
+    if (!droppedUrls.current.length) return;
+    const urls = droppedUrls.current.splice(0);
+    for (const url of urls) {
+      if (placeUrl.current === url) continue;
+      if (disposeIfUnshared(url)) URL.revokeObjectURL(url);
+    }
+  });
 
   const ghost = useMemo(() => {
     const anchor = anchorById(anchorId);
@@ -480,6 +511,18 @@ export function WalkRoom({
     walkRig.tableActive = false;
     walkRig.setCrouch(false);
   }, []);
+
+  useEffect(() => {
+    if (!session) return;
+    const life = openMiniGame(session.game.id);
+    return () => life.close();
+  }, [session?.key, session?.game.id]);
+
+  useEffect(() => {
+    if (!session) return;
+    const phase = session.phase === 'unfold' ? 'load' : session.phase === 'play' ? 'start' : 'pause';
+    setMiniGamePhase(session.game.id, phase);
+  }, [session?.key, session?.game.id, session?.phase]);
 
   // Closing a 2D board packs its box back up on the table.
   const hadOverlay = useRef(false);
@@ -749,7 +792,7 @@ export function WalkRoom({
 
   return (
     // isolate: the TV left on in the room sits just under the canvas, above this background
-    <div data-room className="relative isolate w-full h-[100dvh] overflow-hidden bg-[#140c14] select-none overscroll-none">
+    <div data-room data-dpr={gfx.dpr} data-graphics={gfx.effective} className="relative isolate w-full h-[100dvh] overflow-hidden bg-[#140c14] select-none overscroll-none">
       <Canvas
         key={glKey}
         style={{ touchAction: 'none' }}
@@ -758,11 +801,12 @@ export function WalkRoom({
         // Behind the title reel the room only draws when something loads in, so
         // it's ready the moment play is pressed without burning the GPU meanwhile.
         frameloop={override.capture || seated || (!engaged && !scripted) ? 'demand' : holding ? 'never' : 'always'}
-        dpr={override.capture ? 1 : [1, dprCap]}
+        dpr={override.capture ? 1 : gfx.dpr}
         camera={{ fov: 72, near: 0.08, far: 40, position: [0.02, 1.58, 1.32] }}
         // alpha so the room TV's picture can show through the hole cut for it (RoomTvGlass)
         gl={{ antialias: true, powerPreference: 'high-performance', alpha: true }}
         onCreated={({ gl, scene }) => {
+          gl.setPixelRatio(override.capture ? 1 : gfxRef.current.dpr);
           // If the GPU drops this context (memory pressure, a driver reset),
           // rebuild the canvas instead of leaving a dead black screen. Room
           // state lives outside the canvas, so nothing else resets.
@@ -780,11 +824,15 @@ export function WalkRoom({
           el.addEventListener('webglcontextlost', event => {
             if (retired) return;
             event.preventDefault();
+            noteContextLoss();
             setGlLost(true);
             window.clearTimeout(retry);
             retry = window.setTimeout(rebuild, 2500);
           });
-          el.addEventListener('webglcontextrestored', rebuild);
+          el.addEventListener('webglcontextrestored', () => {
+            noteContextRestored();
+            rebuild();
+          });
           setGlLost(false);
           gl.setClearColor('#2a2030', 1);
           gl.toneMapping = THREE.ACESFilmicToneMapping;
@@ -793,16 +841,7 @@ export function WalkRoom({
         }}
       >
         <color attach="background" args={['#2a2030']} />
-        {/* Full sharpness while the frame rate holds; if a device starts to
-            struggle, render a little softer until it recovers, then sharpen
-            back up. Never below the screen's own resolution. */}
-        {!override.capture && (
-          <PerformanceMonitor
-            flipflops={4}
-            onDecline={() => setDprCap(cap => Math.max(1, Math.round((cap - 0.25) * 100) / 100))}
-            onIncline={() => setDprCap(cap => Math.min(1.5, Math.round((cap + 0.25) * 100) / 100))}
-          />
-        )}
+        <EngineBridge />
         <RealRoomScene
           games={games}
           hoveredId={aimed?.inReach ? aimed.id : null}
@@ -931,6 +970,7 @@ export function WalkRoom({
         <TvRemote landscape={vp.landscape} big={big} onBig={toggleBig} padUp={padUp} />
       )}
       {(tvOn || tvInRoom) && <TvGlass initialMode={device === 'nes' ? 'gaming' : 'menu'} inRoom={tvInRoom} />}
+      {furbyMuteAvailable({ tvMode: tvStatus.mode, atTelevision: tvOn || tvInRoom, radioOn: tapeOn }) && <FurbyQuiet />}
       {session && session.phase === 'play' && TABLE_GAMES.has(session.game.id) && (
         <TableHudOverlay
           crouched={crouched}
@@ -1109,6 +1149,11 @@ export function WalkRoom({
           }}
           onDone={() => setMenuShown(false)}
         />
+      )}
+      {diagOn && (
+        <Suspense fallback={null}>
+          <DiagnosticsPanel />
+        </Suspense>
       )}
     </div>
   );

@@ -1,6 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
+import { leaseResource, noteCacheLookup, release, retain, unleaseResource } from '../engine/cache';
+import { collectGpuResources } from '../engine/gltfCache';
 
 interface DynamicModelProps {
   url: string;
@@ -13,6 +15,7 @@ interface DynamicModelProps {
 
 /** A user-uploaded GLB, fitted by height and sat on `position`. */
 export function DynamicModel({ url, position, rotY, height }: DynamicModelProps) {
+  noteCacheLookup(url);
   const { scene } = useGLTF(url);
   const root = useMemo(() => {
     const clone = scene.clone(true);
@@ -28,12 +31,20 @@ export function DynamicModel({ url, position, rotY, height }: DynamicModelProps)
         if (!mat || !('metalness' in mat)) return;
         mat.metalness = 0;
         mat.metalnessMap = null;
-        mat.roughness = 0.86;
         mat.needsUpdate = true;
       });
     });
     return clone;
   }, [scene]);
+  useEffect(() => {
+    retain(url);
+    const shared = collectGpuResources(root);
+    for (const resource of shared) leaseResource(resource);
+    return () => {
+      for (const resource of shared) unleaseResource(resource);
+      release(url);
+    };
+  }, [url, root]);
 
   const { fitScale, offset } = useMemo(() => {
     const box = new THREE.Box3().setFromObject(root);

@@ -102,6 +102,8 @@ Deploy steps:
 3. Optional: set `GEMINI_API_KEY` for trivia pack generation
 4. Deploy — open the public URL for the demo site
 
+The server writes JSON logs to stdout (`logCore.mjs`). Build logs are not visible to that process. For deploy, HTTP, and build logs together, the [intermodal](https://railway.com/deploy/intermodal) Railway template is the add-on to attach; it is not wired from this repo. See `docs/ENGINE.md`.
+
 ```bash
 npm run build
 npm start

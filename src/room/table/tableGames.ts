@@ -3,12 +3,10 @@
  * the room is in and quiet, fetch them all in the background so opening any
  * game is still instant.
  */
-let warmed = false;
+let warmPromise: Promise<void> | null = null;
+let warmCursor = 0;
 
-export function warmTableGames() {
-  if (warmed) return;
-  warmed = true;
-  const loads: (() => Promise<unknown>)[] = [
+const TABLE_LOADS: (() => Promise<unknown>)[] = [
     () => import('./ConnectFourTable'),
     () => import('./BattleshipTable'),
     () => import('./MonopolyTable'),
@@ -32,8 +30,47 @@ export function warmTableGames() {
     () => import('../../games/pawnrush/PawnRushGame'),
     () => import('../../games/poker/PokerGame'),
     () => import('../../games/trivia/TriviaPartyGame'),
-    () => import('../../games/yahtzee/YahtzeeGame'),
-  ];
+  () => import('../../games/yahtzee/YahtzeeGame'),
+];
+
+/**
+ * Runs `loads` from `cursor.index`, one at a time. A load that already finished
+ * is not started again. An in-flight import cannot be cancelled; the next one
+ * waits until that import settles, then stops if `signal` has aborted.
+ */
+export async function continueWarm(
+  loads: Array<() => Promise<unknown>>,
+  cursor: { index: number },
+  signal?: AbortSignal,
+): Promise<void> {
+  for (let i = cursor.index; i < loads.length; i++) {
+    if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
+    await loads[i]().then(
+      () => undefined,
+      () => undefined,
+    );
+    cursor.index = i + 1;
+    if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
+  }
+}
+
+export function warmTableGames(signal?: AbortSignal): Promise<void> {
+  if (warmPromise) return warmPromise;
+  const cursor = { index: warmCursor };
   // one at a time, so it never competes with what the player is doing
-  void loads.reduce<Promise<unknown>>((chain, load) => chain.then(() => load().catch(() => {})), Promise.resolve());
+  warmPromise = continueWarm(TABLE_LOADS, cursor, signal)
+    .then(() => {
+      warmCursor = cursor.index;
+    })
+    .catch(err => {
+      warmCursor = cursor.index;
+      warmPromise = null;
+      throw err;
+    });
+  return warmPromise;
+}
+
+export function resetTableWarmForTests() {
+  warmPromise = null;
+  warmCursor = 0;
 }

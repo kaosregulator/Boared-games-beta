@@ -1,7 +1,12 @@
-import React, { Component, Suspense, useMemo } from 'react';
+import React, { Component, Suspense, useEffect, useMemo } from 'react';
 import { useGLTF } from '@react-three/drei';
+import { useThree } from '@react-three/fiber';
 import { withKtx2 } from './ktx2';
 import * as THREE from 'three';
+import { setAssetState } from '../engine/assets';
+import { leaseResource, noteCacheLookup, release, retain, unleaseResource } from '../engine/cache';
+import { collectGpuResources } from '../engine/gltfCache';
+import { log } from '../engine/log';
 import type { HoverTarget } from './Interactable';
 import type { Hotspot } from './hotspots';
 import type { LavaSpec } from './LavaLamp';
@@ -85,8 +90,12 @@ export const MODEL_URL: Record<ModelId, string> = {
  * hundreds of thousands of triangles. Fully metallic surfaces ignore the
  * base color unless an environment map is present, so the furniture renders
  * black. Raycasting those meshes every frame freezes the tab.
+ *
+ * Metalness is cleared so the baked color shows. Roughness and roughnessMap
+ * stay as authored — flattening them made the teddy, the desk, and the rest
+ * look chalky. Anisotropy uses the renderer's own max so the maps stay sharp.
  */
-function finishMaterials(root: THREE.Object3D, tint: THREE.Color, amount: number) {
+function finishMaterials(root: THREE.Object3D, tint: THREE.Color, amount: number, maxAnisotropy: number) {
   root.traverse(obj => {
     const mesh = obj as THREE.Mesh;
     if (!mesh.isMesh) return;
@@ -97,14 +106,20 @@ function finishMaterials(root: THREE.Object3D, tint: THREE.Color, amount: number
     mats.forEach(m => {
       const mat = m as THREE.MeshStandardMaterial;
       if (!mat || !('color' in mat)) return;
-      if (amount > 0) mat.color.lerp(tint, amount);
+      if (amount > 0 && !mat.userData.roomTinted) {
+        mat.color.lerp(tint, amount);
+        mat.userData.roomTinted = true;
+      }
       mat.metalness = 0;
       mat.metalnessMap = null;
-      mat.roughness = 0.86;
-      mat.roughnessMap = null;
       mat.envMapIntensity = 0.15;
       const physical = mat as THREE.MeshPhysicalMaterial;
       if (physical.transmission) physical.transmission = 0;
+      if (maxAnisotropy > 1) {
+        for (const map of [mat.map, mat.normalMap, mat.roughnessMap, mat.aoMap, mat.emissiveMap]) {
+          if (map && map.anisotropy !== maxAnisotropy) map.anisotropy = maxAnisotropy;
+        }
+      }
       mat.needsUpdate = true;
     });
   });
@@ -265,10 +280,13 @@ export function RoomModel({
   lava,
 }: RoomModelProps) {
   const url = MODEL_URL[id];
+  noteCacheLookup(url);
+  const gl = useThree(state => state.gl);
+  const maxAnisotropy = gl.capabilities.getMaxAnisotropy();
   const { scene } = useGLTF(url, false, true, withKtx2);
   const root = useMemo(() => {
     const clone = scene.clone(true);
-    finishMaterials(clone, new THREE.Color('#7a5a52'), tintAmount);
+    finishMaterials(clone, new THREE.Color('#7a5a52'), tintAmount, maxAnisotropy);
     clone.traverse(obj => {
       const mesh = obj as THREE.Mesh;
       if (!mesh.isMesh) return;
@@ -276,7 +294,17 @@ export function RoomModel({
       mesh.receiveShadow = receiveShadow;
     });
     return clone;
-  }, [scene, tintAmount, castShadow, receiveShadow]);
+  }, [scene, tintAmount, castShadow, receiveShadow, maxAnisotropy]);
+  useEffect(() => {
+    setAssetState(`model:${id}`, 'ready');
+    retain(url);
+    const shared = collectGpuResources(root);
+    for (const resource of shared) leaseResource(resource);
+    return () => {
+      for (const resource of shared) unleaseResource(resource);
+      release(url);
+    };
+  }, [id, url, root]);
 
   const fitted = useMemo(() => {
     const box = new THREE.Box3().setFromObject(root);
@@ -345,11 +373,20 @@ export function RoomModel({
   );
 }
 
-class ModelBoundary extends Component<{ children: React.ReactNode }, { failed: boolean }> {
+class ModelBoundary extends Component<{ id: ModelId; children: React.ReactNode }, { failed: boolean }> {
   state = { failed: false };
 
   static getDerivedStateFromError() {
     return { failed: true };
+  }
+
+  componentDidCatch(error: Error) {
+    setAssetState(`model:${this.props.id}`, 'failed', error.message);
+    log.error('room model failed', {
+      source: 'RoomModel',
+      asset: MODEL_URL[this.props.id],
+      stack: error.stack,
+    });
   }
 
   render() {
@@ -361,7 +398,7 @@ class ModelBoundary extends Component<{ children: React.ReactNode }, { failed: b
 /** One prop failing or still downloading must not blank the rest of the room. */
 export function SafeRoomModel(props: RoomModelProps) {
   return (
-    <ModelBoundary>
+    <ModelBoundary id={props.id}>
       <Suspense fallback={null}>
         <RoomModel {...props} />
       </Suspense>
