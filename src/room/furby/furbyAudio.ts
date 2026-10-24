@@ -77,6 +77,7 @@ function audio() {
 }
 
 export function loadFurbyVoice() {
+  void loadMotor();
   if (loading) return loading;
   const ac = audio();
   if (!ac) return Promise.resolve();
@@ -182,8 +183,82 @@ export function chomp(volume = 0.25) {
   src.start(t);
 }
 
-/** The faint whirr-click of the motor under the fur. */
-export function motorWhirr(volume = 0.05, seconds = 0.35) {
+interface MotorSample {
+  buffer: AudioBuffer;
+  loopStart: number;
+  loopEnd: number;
+  stopAt: number;
+}
+
+let motor: MotorSample | null = null;
+let motorLoading: Promise<void> | null = null;
+
+/**
+ * The gearbox sample from scripts/make-furby-motor.py: a cam-switch click and
+ * spin-up, a steady whirr that loops, then the spin-down and the click as the
+ * cam parks.
+ */
+function loadMotor() {
+  if (motorLoading) return motorLoading;
+  const ac = audio();
+  if (!ac) return Promise.resolve();
+  motorLoading = Promise.all([
+    fetch('/audio/furby/motor.json').then(r => r.json() as Promise<Omit<MotorSample, 'buffer'>>),
+    fetch('/audio/furby/motor.mp3')
+      .then(r => r.arrayBuffer())
+      .then(bytes => ac.decodeAudioData(bytes)),
+  ])
+    .then(([marks, decoded]) => {
+      motor = { ...marks, buffer: decoded };
+    })
+    .catch(() => {
+      motorLoading = null;
+    });
+  return motorLoading;
+}
+
+/**
+ * The motor under the fur running for `seconds`, the way the real toy's
+ * single motor turned the cam shaft for every word and wiggle. `volume` is
+ * relative to the voice.
+ */
+export function motorWhirr(volume = 0.18, seconds = 0.6) {
+  void loadMotor();
+  const ac = audio();
+  if (!ac || !master) return;
+  if (!motor) {
+    synthWhirr(volume * 0.25, Math.min(seconds, 0.5));
+    return;
+  }
+  const t = ac.currentTime + 0.01;
+  // Each run sounds a little different: battery level, which cam lobe, fur.
+  const rate = 0.94 + Math.random() * 0.12;
+  const run = Math.max(seconds, motor.loopStart + 0.05);
+  const spin = ac.createBufferSource();
+  spin.buffer = motor.buffer;
+  spin.loop = true;
+  spin.loopStart = motor.loopStart;
+  spin.loopEnd = motor.loopEnd;
+  spin.playbackRate.value = rate;
+  const g = ac.createGain();
+  g.gain.value = volume;
+  spin.connect(g).connect(master);
+  spin.start(t, 0);
+  g.gain.setValueAtTime(volume, t + run);
+  g.gain.linearRampToValueAtTime(0, t + run + 0.05);
+  spin.stop(t + run + 0.06);
+
+  const park = ac.createBufferSource();
+  park.buffer = motor.buffer;
+  park.playbackRate.value = rate;
+  const pg = ac.createGain();
+  pg.gain.value = volume;
+  park.connect(pg).connect(master);
+  park.start(t + run, motor.stopAt);
+}
+
+/** Stand-in until the sample loads. */
+function synthWhirr(volume: number, seconds: number) {
   const ac = audio();
   if (!ac || !master) return;
   const t = ac.currentTime;

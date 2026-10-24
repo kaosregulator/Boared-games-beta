@@ -69,7 +69,9 @@ const P = {
   viewmaster: wm('View-Master Model G.jpg', 'ThePassenger, CC BY-SA 3.0', 'A View-Master viewer'),
   jordans: wm('Nike Air Jordan I.jpg', 'Osyffar, CC0', 'Nike Air Jordan I sneakers'),
   army: wm('Green army plastic soldiers.jpg', 'A S Morton, CC BY 2.0', 'Green plastic army men'),
-  furbies: wm('Furbies?.jpg', 'danieljordahl, CC BY 2.0', 'A pile of Furbies'),
+  // No free photo of a 1998 Furby exists, so these are renders of the room's own.
+  furby: { src: '/cards/furby-1998.jpg', credit: 'The Furby from this room', alt: 'A grey spotted 1998 Furby' },
+  furbyBoxed: { src: '/cards/furby-1998-boxed.jpg', credit: 'The Furby from this room', alt: 'A 1998 Furby in its window box' },
   hotPocket: wm('Hot pocket.jpg', 'Schuym1, CC BY-SA 3.0', 'A Hot Pocket'),
   hotPocketBox: wm('Hot Pocket Pepperoni Pizzeria.jpg', 'Lenin and McCarthy, CC BY-SA 3.0', 'Pepperoni Hot Pocket'),
   pizzaRolls: wm("Totino's Pizza Rolls, May 2019.jpg", 'Thomson200, CC0', "Totino's Pizza Rolls"),
@@ -985,8 +987,8 @@ const CARDS: PropCard[] = [
       'Feed it too much and it gets sick. Turn it upside down and it screams. Turn off the light and it snores. Basically a little brother.',
       'Somebody at school swore you could make it say a bad word. You could not.',
     ],
-    photos: [P.furbies],
-    video: V('90s-childhood-throwbacks-nostalgia-1080p', '90s throwback reel, with the 1998 Furby ad: "The GigaPet you really pet"'),
+    photos: [P.furby, P.furbyBoxed],
+    video: V('youtube-ouh2Q_-pYLQ', 'Tiger Electronics Furby TV commercial'),
     action: { kind: 'furby', label: 'Pick it up' },
   },
   {
