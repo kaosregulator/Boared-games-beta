@@ -234,7 +234,7 @@ export function FurbyTable({
       // Wiggles in the box, gets pulled up out of the top, hops down to you.
       cue('hello', 0.7, () => tableBrain.act('hello'));
       cue('pull', 1.6, () => {
-        motorWhirr(0.24, 1.1);
+        motorWhirr(0.35, 1.1);
         tableBrain.act('flip');
       });
       cue('land', 3.5, () => tableBrain.act('putdown'));

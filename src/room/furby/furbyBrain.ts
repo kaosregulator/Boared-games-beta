@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { FurbyRig } from './furbyRig';
-import { chomp, motorWhirr, mouth, speak, voiceOver, type FurbyTag, type Voice } from './furbyAudio';
+import { chomp, motorFollow, mouth, speak, voiceOver, type FurbyTag, type Voice } from './furbyAudio';
 
 /**
  * How a 1998 Furby behaves, as a little state machine per toy. It reads
@@ -228,7 +228,7 @@ export class FurbyBrain {
     say({ furbish, english, who: this.name, at: performance.now() });
     this.voice?.stop();
     this.voice = this.voiced ? speak(tag ?? pickTag(SOUND[key]), { pitch: this.pitch, volume: this.volume, maxDur }) : null;
-    if (this.voiced) motorWhirr(0.16 * this.volume, this.voice ? this.voice.clip.dur : 0.6);
+    motorFollow(this.voice, 0.3 * this.volume);
   }
 
   /** Something happened to the Furby. Returns false if it ignored it. */
