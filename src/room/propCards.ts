@@ -20,7 +20,7 @@ export interface CardVideo {
   title: string;
 }
 
-export type CardAction = 'tv' | 'nes' | 'radio' | 'gameboy' | 'tamagotchi' | 'rubik' | 'hotwheels' | 'army' | 'furby';
+export type CardAction = 'tv' | 'nes' | 'radio' | 'gameboy' | 'tamagotchi' | 'rubik' | 'hotwheels' | 'army' | 'furby' | 'ispy';
 
 export interface PropCard {
   id: string;
@@ -974,6 +974,21 @@ const CARDS: PropCard[] = [
     memories: ['Stepping on one barefoot is worse than Lego. Fight us.'],
     photos: [P.army],
     action: { kind: 'army', label: 'Send the troops!' },
+  },
+  {
+    id: 'ispy-book',
+    title: 'I Spy',
+    era: '1992 · Scholastic · picture riddles by Jean Marzollo & Walter Wick',
+    story:
+      'Every Scholastic book fair it was right there on the front table, shrink-wrapped, $12.95, and you had exactly 85 cents and a pencil topper. So you checked it out from the school library instead. Then you checked it out again. Then it just sort of... lived under your bed. This copy still has the library pocket glued in the front. The due date says October 1998. The librarian has not forgotten.',
+    memories: [
+      'Somebody always circled the answers in pen, so every library copy was already half solved.',
+      'Walter Wick built every page with real toys and photographed it. No computers. Just a guy with a LOT of marbles.',
+      'The riddles rhyme, so you read them in a sing-song voice whether you wanted to or not.',
+      'Late fee is ten cents a day. It has been a while. The librarian is now playing I Spy with YOU, and you are the missing book.',
+    ],
+    video: V('how-i-spy-books-are-made', "How 'I Spy' books are made"),
+    action: { kind: 'ispy', label: 'Open the book' },
   },
   {
     id: 'furby',

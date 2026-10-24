@@ -32,6 +32,7 @@ import type { SavedPlacement } from './userPlacements';
 import { RoomTvGlass } from '../tv/TvSet';
 import { LightSwitch, TvGlow } from './LightSwitch';
 import { BedFurby, FURBY_CARD } from './furby/BedFurby';
+import { ISpyBookProp } from './ispy/ISpyGame';
 
 function MoodFog({ color }: { color: string }) {
   const { scene } = useThree();
@@ -414,6 +415,10 @@ export interface RealRoomSceneProps {
   tvInRoom?: boolean;
   /** Wall switch off: only the TV, the lava lamps and the shelf's string lights glow. */
   lightsOut?: boolean;
+  /** I Spy page: only the furniture stays; the loose stuff and the rug go. */
+  clearFloor?: boolean;
+  /** The I Spy book is open (the game draws its own copy). */
+  ispyOpen?: boolean;
 }
 
 /**
@@ -437,6 +442,8 @@ export function RealRoomScene({
   hideGameboy = false,
   tvInRoom = false,
   lightsOut = false,
+  clearFloor = false,
+  ispyOpen = false,
 }: RealRoomSceneProps) {
   const lights = MOODS[mood];
   /** Room lights (ceiling, lamps, fill) scaled by the wall switch. */
@@ -498,32 +505,38 @@ export function RealRoomScene({
 
 <PlacedModel id="bed" hoveredId={hoveredId} card="bed">
         {/* Left on the quilt by the foot of the bed, screen up. */}
-        <Tamagotchi position={[-0.25, 0.538, 0.3]} rotation={[-Math.PI / 2 + 0.1, 0, 0.55]} active={hoveredId === 'tamagotchi'} />
+        {!clearFloor && <Tamagotchi position={[-0.25, 0.538, 0.3]} rotation={[-Math.PI / 2 + 0.1, 0, 0.55]} active={hoveredId === 'tamagotchi'} />}
         {/* Sat up by the pillow, looking out at the room. */}
-        <BedFurby position={BED_FURBY.position} rotation={BED_FURBY.rotation} hovered={hoveredId === FURBY_CARD} dark={lightsOut} />
+        {!clearFloor && <BedFurby position={BED_FURBY.position} rotation={BED_FURBY.rotation} hovered={hoveredId === FURBY_CARD} dark={lightsOut} />}
       </PlacedModel>
+      {!clearFloor && (
       <PlacedModel
         id="backpack"
         hoveredId={hoveredId}
         card="backpack"
       />
+      )}
       <PlacedModel id="teddy" hoveredId={hoveredId} card="south-shelf">
         <LavaLamp spec={LAVA.teddy} light={!LOW_POWER} />
       </PlacedModel>
       <PlacedModel id="nightstand" hoveredId={hoveredId} card="nightstand">
         <LavaLamp spec={LAVA.nightstand} light={!LOW_POWER} />
       </PlacedModel>
+      {!clearFloor && (
       <PlacedModel
         id="gushers"
         hoveredId={hoveredId}
         card="gushers"
       />
+      )}
+      {!clearFloor && (
       <PlacedModel
         id="cards"
         hoveredId={hoveredId}
         card="cards"
       />
-      {!hideGameboy && (
+      )}
+      {!hideGameboy && !clearFloor && (
         <PlacedModel
           id="gameboy"
           hoveredId={hoveredId}
@@ -543,21 +556,27 @@ export function RealRoomScene({
       <PlacedModel id="toyshelf" hoveredId={hoveredId} card="toyshelf">
         <LavaLamp spec={LAVA.toyshelf} light={!LOW_POWER} />
       </PlacedModel>
+      {!clearFloor && (
       <PlacedModel
         id="nes"
         hoveredId={hoveredId}
         card="nes"
       />
+      )}
+      {!clearFloor && (
       <PlacedModel
         id="armor"
         hoveredId={hoveredId}
         card="armor"
       />
+      )}
+      {!clearFloor && (
       <PlacedModel
         id="rubik"
         hoveredId={hoveredId}
         card="rubik"
       />
+      )}
       <pointLight
         position={[LAYOUT.dresser.x, LAYOUT.dresser.sy + 0.35, LAYOUT.dresser.z + 0.55]}
         color="#7ec8ff"
@@ -595,32 +614,46 @@ export function RealRoomScene({
       <PlacedModel id="desk" hoveredId={hoveredId} card="desk">
         {!lightsOut && <DeskLampGlow at={[0.43, 0.86, -0.13]} />}
       </PlacedModel>
+      {!clearFloor && (
       <PlacedModel
         id="army"
         hoveredId={hoveredId}
         card="army"
       />
+      )}
       <PlacedModel id="clutterdesk" hoveredId={hoveredId} card="clutterdesk">
         <LavaLamp spec={LAVA.clutterdesk} />
         {!lightsOut && <DeskLampGlow at={[0.09, 0.93, -0.22]} />}
       </PlacedModel>
+      {!clearFloor && (
       <PlacedModel id="books" hoveredId={hoveredId} card="books" />
+      )}
+      {!clearFloor && (
       <PlacedModel
         id="hotpockets"
         hoveredId={hoveredId}
         card="hotpockets"
       />
+      )}
+      {!clearFloor && (
       <PlacedModel
         id="jordans"
         hoveredId={hoveredId}
         card="jordans"
       />
+      )}
+      {!clearFloor && (
       <PlacedModel
         id="car"
         hoveredId={hoveredId}
         card="car"
       />
+      )}
+      {!clearFloor && (
       <PlacedModel id="hotwheels" hoveredId={hoveredId} card="hotwheels" />
+      )}
+
+      {!clearFloor && (
 
       <PlacedModel
         id="boombox"
@@ -632,6 +665,8 @@ export function RealRoomScene({
           hint: tapeOn ? 'Radio on · lean in' : 'Lean in',
         }}
       />
+
+      )}
       {tapeOn && (
         <pointLight
           position={[LAYOUT.boombox.x, 0.25, LAYOUT.boombox.z]}
@@ -641,22 +676,29 @@ export function RealRoomScene({
           decay={2}
         />
       )}
+      {!clearFloor && (
       <PlacedModel
         id="vhs_stack"
         hoveredId={hoveredId}
         card="vhs-stack"
       />
+      )}
+      {!clearFloor && (
       <PlacedModel id="vhs_loose" hoveredId={hoveredId} card="vhs-loose" />
+      )}
 
-      <mesh position={[0.15, 0.004, -0.15]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <circleGeometry args={[1.28, 48]} />
-        <meshStandardMaterial map={rugTexture()} transparent roughness={1} />
-      </mesh>
+      {!clearFloor && (
+        <mesh position={[0.15, 0.004, -0.15]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+          <circleGeometry args={[1.28, 48]} />
+          <meshStandardMaterial map={rugTexture()} transparent roughness={1} />
+        </mesh>
+      )}
+      <ISpyBookProp hovered={hoveredId === 'ispy-book'} hidden={ispyOpen} />
 
       <pointLight position={[0.1, WALL.height - 0.45, 0.2]} color={lights.ceil} intensity={lights.ceilI * 0.45 * on} distance={8} decay={2} />
       <pointLight position={[-1.6, 1.9, -0.2]} color="#e7b08a" intensity={(mood === 'afternoon' ? 0.35 : 0.5) * on} distance={4} decay={2} />
 
-      {placed.map(item => (
+      {!clearFloor && placed.map(item => (
         <Suspense key={item.placement.id} fallback={null}>
           <DynamicModel
             url={item.url}

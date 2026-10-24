@@ -42,6 +42,7 @@ import { TableCameraRig } from './table/TableCameraRig';
 import { TriviaTableCam } from './table/TriviaTableCam';
 import { HotWheelsHud, HotWheelsWorld } from './hotwheels/HotWheelsRace';
 import { ArmyAlert, ArmyHud, ArmyTownWorld, readArmyBoot } from './army/ArmyTown';
+import { ISpyHud, ISpyWorld, readISpyBoot, useISpyRoom } from './ispy/ISpyGame';
 import { walkRig } from './WalkController';
 import { FurbyHold } from './furby/FurbyHold';
 import { FurbyQuiet } from './furby/FurbyQuiet';
@@ -176,6 +177,7 @@ export function WalkRoom({
     return { spot: params.get('spot') };
   }, []);
   const armyBoot = useMemo(readArmyBoot, []);
+  const ispyBoot = useMemo(readISpyBoot, []);
   const [session, setSession] = useState<TableSession | null>(null);
   const sessionKey = useRef(0);
   const [crouched, setCrouched] = useState(false);
@@ -201,6 +203,7 @@ export function WalkRoom({
       Boolean(queryTable) ||
       Boolean(raceBoot) ||
       Boolean(armyBoot) ||
+      Boolean(ispyBoot) ||
       // Back after a reload: skip the title card and stand where you were.
       Boolean(resumedSession()?.engaged),
   );
@@ -247,7 +250,13 @@ export function WalkRoom({
   /** The "we're under attack" radio call, holding the tin you picked. */
   const [armyAlert, setArmyAlert] = useState<Aimed | null>(null);
   /** A shrink-down toy mode has the controls and the camera. */
-  const toyMode = racing || armyOn || armyAlert !== null;
+  /** The I Spy book is open: on the rug, or shrunk down on its carpet. */
+  const [ispyOn, setIspyOn] = useState(Boolean(ispyBoot));
+  const ispyRoom = useISpyRoom();
+  /** Eyes shut or playing: everything but the furniture is off the floor. */
+  const ispyPage = ispyOn && ispyRoom.page;
+  const ispyDim = ispyOn && ispyRoom.dim;
+  const toyMode = racing || armyOn || armyAlert !== null || ispyOn;
   /** Something held up close (Tamagotchi, Rubik's Cube): the room waits behind it. */
   const holding = tamagotchi || rubik;
   /** The Furby in your hands: the room keeps drawing behind it, you just can't walk off. */
@@ -740,6 +749,10 @@ export function WalkRoom({
         setPinned(null);
         sound.playButtonClick();
         setArmyOn(true);
+      } else if (kind === 'ispy') {
+        setPinned(null);
+        sound.playButtonClick();
+        setIspyOn(true);
       } else if (kind === 'furby') {
         const from = anchorPose('bed');
         if (!from) return;
@@ -851,7 +864,9 @@ export function WalkRoom({
           onLeaveTable={packUp}
           hideGameboy={seated}
           tvInRoom={tvInRoom}
-          lightsOut={lightsOut}
+          lightsOut={lightsOut || ispyDim}
+          clearFloor={ispyPage}
+          ispyOpen={ispyOn}
         />
         <FurbyHold />
         <DeviceFocus device={scripted ? null : device} />
@@ -878,6 +893,7 @@ export function WalkRoom({
             <TriviaTableCam active={overlayGame?.id === 'trivia' && session?.phase === 'play'} />
             {racing && <HotWheelsWorld spot={raceBoot?.spot ?? null} skipCountdown={Boolean(raceBoot)} />}
             {armyOn && <ArmyTownWorld boot={armyBoot} />}
+            {ispyOn && <ISpyWorld boot={ispyBoot} />}
             <ReachRaycaster
               // Mid-game, only the game's own box beside the table can be picked.
               enabled={
@@ -915,9 +931,10 @@ export function WalkRoom({
           }
         />
       )}
-      {engaged && !armyOn && !racing && !seated && !device && (!session || session.game.id === 'furby') && <FurbyBubble />}
+      {engaged && !armyOn && !racing && !ispyOn && !seated && !device && (!session || session.game.id === 'furby') && <FurbyBubble />}
       {racing && <HotWheelsHud onExit={() => setRacing(false)} />}
       {armyOn && <ArmyHud onExit={() => setArmyOn(false)} />}
+      {ispyOn && <ISpyHud onExit={() => setIspyOn(false)} />}
       {armyAlert && (
         <ArmyAlert
           onSend={() => {
