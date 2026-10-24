@@ -1,3 +1,5 @@
+import { TAPE_SEGMENTS } from './tapeSegments';
+
 /**
  * Whole recorded broadcasts on the Internet Archive that play as one channel,
  * part after part, looping on the shared clock like SNICK. Each part streams
@@ -149,9 +151,12 @@ export const KIDS_WB_2001: ArchiveBlock = {
     },
   ],
 };
+/** A part's segments: written by hand on the part, else from the generated tape sheets. */
+const segmentsOf = (part: ArchivePart): Segment[] => part.segments ?? TAPE_SEGMENTS[part.file] ?? [];
+
 /** The segment airing `offset` seconds into a part, and the next show after it. */
 export function segmentAt(part: ArchivePart, offset: number): { now: Segment | null; nextShow: Segment | null } {
-  const segs = part.segments ?? [];
+  const segs = segmentsOf(part);
   let now: Segment | null = null;
   let nextShow: Segment | null = null;
   for (const seg of segs) {
@@ -167,7 +172,7 @@ export function segmentAt(part: ArchivePart, offset: number): { now: Segment | n
 /** What the guide calls the current stretch of a part: the show it belongs to, not the ad. */
 export function showTitleAt(part: ArchivePart, offset: number): string {
   let title = part.title;
-  for (const seg of part.segments ?? []) {
+  for (const seg of segmentsOf(part)) {
     if (seg.at > offset) break;
     if (seg.kind === 'show') title = seg.title;
   }
