@@ -22,9 +22,26 @@ interface FurbyState {
 export type Gesture = 'pet' | 'tickle' | 'feed' | 'hug' | 'flip' | 'shake' | 'sing' | 'bedtime' | 'putdown';
 
 const gestureSubs = new Set<(g: Gesture) => void>();
+/** The table button asked for a put-down. The hands take it on their next frame, even if the click landed before they were listening. */
+let release = false;
+
 /** From the HUD's buttons and keys to the hands in the scene. */
 export function furbyGesture(g: Gesture) {
   gestureSubs.forEach(fn => fn(g));
+}
+
+/** Put the Furby down so the new ones can come out at the table. */
+export function requestFurbyPutdown() {
+  release = true;
+  furbyGesture('putdown');
+}
+
+export function furbyReleasePending() {
+  return release;
+}
+
+export function clearFurbyRelease() {
+  release = false;
 }
 export function onFurbyGesture(fn: (g: Gesture) => void) {
   gestureSubs.add(fn);
@@ -64,6 +81,12 @@ export const tableBrain = new FurbyBrain('New Furby', { pitch: 1.06 });
 
 export function brainFor(from: HeldFrom) {
   return from === 'bed' ? bedBrain : tableBrain;
+}
+
+/** The wall switch. Both toys read it, including the one in your hands. */
+export function setFurbyDark(dark: boolean) {
+  bedBrain.dark = dark;
+  tableBrain.dark = dark;
 }
 
 /** Where each Furby sits in the room, so picking one up can fly it from there. */

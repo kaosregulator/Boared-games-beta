@@ -3,7 +3,8 @@ import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { HoldArms, applyHand, newHandPose, type GripShape, type HandPose } from './HoldArms';
 import { FURBY_SOLID, FurbyPuppet } from './FurbyPuppet';
-import { brainFor, furbyGesture, onFurbyGesture, setFurby, useFurby, type Gesture } from './furbyStore';
+import { scriptedStep } from './scriptClock';
+import { brainFor, clearFurbyRelease, furbyGesture, furbyReleasePending, onFurbyGesture, setFurby, useFurby, type Gesture } from './furbyStore';
 
 /**
  * The Furby in your hands. It flies up from wherever it was sitting, your
@@ -95,6 +96,7 @@ export function FurbyHold() {
   const hands = useMemo(() => ({ left: newHandPose(), right: newHandPose() }), []);
   const want = useMemo(() => ({ left: target(), right: target() }), []);
   const st = useRef({ fly: 0, leaving: false, gesture: null as Gesture | null, t: 0, acted: false });
+  const flyMark = useRef<number | null>(null);
   const start = useMemo(() => ({ pos: new THREE.Vector3(), quat: new THREE.Quaternion(), scale: 1 }), []);
   const gripShape = useMemo<GripShape>(() => ({ inverse: new THREE.Matrix4(), parts: FURBY_SOLID }), []);
 
@@ -102,6 +104,7 @@ export function FurbyHold() {
   useEffect(() => {
     if (!held || !from) return;
     st.current = { fly: 0, leaving: false, gesture: null, t: 0, acted: false };
+    flyMark.current = null;
     start.pos.copy(from.position);
     start.quat.copy(from.quaternion);
     start.scale = from.scale;
@@ -139,6 +142,18 @@ export function FurbyHold() {
     const dt = Math.min(dtRaw, 0.05);
     const s = st.current;
     brain.attentive = true;
+    // The table button sets this even when the click beat the gesture listener.
+    if (furbyReleasePending()) {
+      clearFurbyRelease();
+      if (!s.leaving) {
+        s.leaving = true;
+        s.gesture = null;
+        brain.finger = false;
+        brain.act('putdown');
+      }
+    }
+    const flyStep = scriptedStep(flyMark.current, performance.now(), 0.5);
+    flyMark.current = flyStep.at;
 
     // Where it's held: in front of you, closer while hugging, wobbling when shaken.
     const g = s.gesture;
@@ -155,8 +170,9 @@ export function FurbyHold() {
     if (g === 'hug') holdQuat.multiply(qRoll.setFromAxisAngle(Z, Math.sin(s.t * 2.2) * 0.12 * on));
 
     // Fly in from the bed (or the box), and back out when put down.
-    if (s.leaving) s.fly = Math.max(0, s.fly - dt / FLY);
-    else s.fly = Math.min(1, s.fly + dt / FLY);
+    // Real time, so a slow frame still lands the toy and the table can open.
+    if (s.leaving) s.fly = Math.max(0, s.fly - flyStep.dt / FLY);
+    else if (s.fly < 1) s.fly = Math.min(1, s.fly + flyStep.dt / FLY);
     const f = ease(s.fly);
     h.position.lerpVectors(start.pos, holdPos, f);
     h.position.y += Math.sin(f * Math.PI) * 0.12;
@@ -164,6 +180,7 @@ export function FurbyHold() {
     h.scale.setScalar(THREE.MathUtils.lerp(start.scale, 1, f));
     h.updateMatrixWorld(true);
     if (s.leaving && s.fly <= 0) {
+      clearFurbyRelease();
       setFurby({ held: null, from: null });
       return;
     }

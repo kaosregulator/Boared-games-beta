@@ -28,6 +28,19 @@ import {
   pushOut,
 } from './town';
 import { armySfx, rotorLevel, rotorOff, rotorOn, wakeArmyAudio } from './armyAudio';
+import { SHOT_RANGE, chestPoint, muzzlePoint, pickAlongBarrel, shotPoint } from './aim';
+import { advanceTip, tutorialLine, type Tip } from './tutorial';
+import {
+  STORY_WAVES,
+  TAN_POOL,
+  betweenWaves,
+  invaderAim,
+  invaderMarch,
+  invaderRange,
+  storyOver,
+  waveSize,
+  type Siege,
+} from './waves';
 import { openMiniGame } from '../../engine/lifecycle';
 
 /**
@@ -41,7 +54,6 @@ import { openMiniGame } from '../../engine/lifecycle';
 const MODEL_URL = '/models/army-man.glb';
 /** The soldier mesh faces -z; turn it so +z (our forward) is its front. */
 const MODEL_YAW = Math.PI;
-const WAVES = [5, 7, 9];
 const BEST_KEY = 'army-rings-best';
 
 export type ArmyCam = 'chase' | 'first' | 'birdseye';
@@ -53,6 +65,11 @@ export const army = {
   cam: 'chase' as ArmyCam,
   wave: 0,
   waveState: 'incoming' as WaveState,
+  siege: 'story' as Siege,
+  /** Story coach. Null on a calm or helicopter boot. Done sends him back to the parade. */
+  tip: null as Tip | null,
+  /** True once that soldier has walked up close enough to talk. */
+  coachNear: false,
   invadersLeft: 0,
   toppled: 0,
   nearChopper: false,
@@ -115,6 +132,7 @@ const touch = { fwd: false, back: false, left: false, right: false, up: false, d
 const controls = {
   board: null as null | (() => void),
   againWaves: null as null | (() => void),
+  startSiege: null as null | ((level: Exclude<Siege, 'story'>) => void),
   resetHeli: null as null | (() => void),
   quitCourse: null as null | (() => void),
 };
@@ -152,6 +170,10 @@ interface Man {
   cooldown: number;
   hitChance: number;
   range: number;
+  /** How fast an invader walks. Story leaves this at 0.08. */
+  march: number;
+  /** The one green soldier who walks over and explains the controls. */
+  guide: boolean;
 }
 
 interface Kit {
@@ -239,6 +261,8 @@ function makeMan(kit: Kit, team: Man['team'], role: Role, mat: THREE.Material, w
     cooldown: 1 + Math.random() * 2,
     hitChance: team === 'green' ? 0.32 : 0.24,
     range: 0.5,
+    march: 0.08,
+    guide: false,
   };
 }
 
@@ -361,7 +385,8 @@ function useTracers() {
       lines,
       fire(a: THREE.Vector3, b: THREE.Vector3) {
         pos.set([a.x, a.y, a.z, b.x, b.y, b.z], next * 6);
-        life[next] = 0.07;
+        // Long enough to see the streak. 0.07 s was gone in a single slow frame.
+        life[next] = 0.16;
         next = (next + 1) % MAX_TRACERS;
         geo.attributes.position.needsUpdate = true;
       },
@@ -487,13 +512,14 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
       m.wp = 1;
       m.pos.set(PARADE[0][0], 0, PARADE[0][1] + dz);
       m.heading = Math.PI / 2;
+      m.guide = i === 0;
       list.push(m);
     }
     // Hand out foxholes to everyone who defends (drill squad and the north patrol).
     let hole = 0;
     for (const m of list) if (m.role === 'drill' || m.role === 'defender') m.slot = hole++ % FOXHOLES.length;
     // The tan army, waiting off stage.
-    for (let i = 0; i < Math.max(...WAVES); i++) {
+    for (let i = 0; i < TAN_POOL; i++) {
       const t = makeMan(kit, 'tan', 'invader', tanMat, false);
       t.active = false;
       t.root.visible = false;
@@ -529,6 +555,9 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
     army.cam = boot?.cam ?? 'chase';
     army.wave = 0;
     army.waveState = 'incoming';
+    army.siege = 'story';
+    army.tip = boot?.calm || boot?.mode === 'heli' ? null : 'move';
+    army.coachNear = false;
     army.toppled = 0;
     army.invadersLeft = 0;
     army.course = { active: false, next: 0, time: 0, best: readBest(), last: null };
@@ -552,9 +581,13 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
   }, []);
 
   function startWave(n: number) {
+    const count = waveSize(army.siege, n);
+    if (count === null) return;
     army.wave = n;
     army.waveState = 'attack';
-    const count = WAVES[n - 1];
+    const march = invaderMarch(army.siege, n);
+    const aim = invaderAim(army.siege, n);
+    const range = invaderRange(army.siege, n);
     tans.forEach((t, i) => {
       t.active = i < count;
       t.root.visible = t.active;
@@ -569,13 +602,37 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
       t.cooldown = 1.5 + Math.random() * 2.5;
       t.route = [[s.x + (Math.random() - 0.5) * 0.08, -0.9 - Math.random() * 0.05]];
       t.speed = 0;
+      t.march = march;
+      t.hitChance = aim;
+      t.range = range;
     });
     army.invadersLeft = count;
     armySfx.wave();
-    banner(`Wave ${n}`, `${count} tan soldiers incoming`, 2.2);
+    const label = army.siege === 'story' ? `Wave ${n}` : `${army.siege} · wave ${n}`;
+    banner(label, `${count} tan soldiers incoming`, 2.2);
+  }
+
+  function startSiege(level: Exclude<Siege, 'story'>) {
+    army.siege = level;
+    army.tip = 'done';
+    army.coachNear = false;
+    army.wave = 0;
+    army.waveState = 'incoming';
+    waveTimer.current = 2.2;
+    army.toppled = 0;
+    for (const t of tans) {
+      t.active = false;
+      t.root.visible = false;
+      t.fall = 0;
+      t.falling = false;
+    }
+    const name = level === 'easy' ? 'Easy' : level === 'medium' ? 'Medium' : 'Hard';
+    banner(name, 'They keep coming. Clear a wave and the next one steps out.', 2.4);
+    emit();
   }
 
   function againWaves() {
+    army.siege = 'story';
     army.wave = 0;
     army.waveState = 'incoming';
     waveTimer.current = 2.5;
@@ -675,9 +732,10 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
     window.addEventListener('pointercancel', pUp);
     controls.board = board;
     controls.againWaves = againWaves;
+    controls.startSiege = startSiege;
     controls.resetHeli = resetHeli;
     controls.quitCourse = quitCourse;
-    if (import.meta.env.DEV) (window as unknown as { __army: unknown }).__army = { army, heli, men, keys: keys.current, board, startWave };
+    if (import.meta.env.DEV) (window as unknown as { __army: unknown }).__army = { army, heli, men, keys: keys.current, board, startWave, startSiege };
     return () => {
       window.removeEventListener('keydown', down);
       window.removeEventListener('keyup', up);
@@ -688,6 +746,7 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
       window.removeEventListener('pointercancel', pUp);
       controls.board = null;
       controls.againWaves = null;
+      controls.startSiege = null;
       controls.resetHeli = null;
       controls.quitCourse = null;
     };
@@ -794,7 +853,7 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
     if (army.waveState === 'incoming' || army.waveState === 'cleared') {
       waveTimer.current -= dt;
       if (waveTimer.current <= 0) {
-        if (army.waveState === 'cleared' && army.wave >= WAVES.length) {
+        if (army.waveState === 'cleared' && storyOver(army.siege, army.wave)) {
           army.waveState = 'won';
           armySfx.victory();
           banner('Town saved!', 'The tan army is flat on the carpet. Go fly the chopper!', 4);
@@ -805,10 +864,10 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
       }
     } else if (army.waveState === 'attack' && army.invadersLeft === 0) {
       army.waveState = 'cleared';
-      waveTimer.current = army.wave >= WAVES.length ? 1.2 : 5;
-      if (army.wave < WAVES.length) {
+      waveTimer.current = betweenWaves(army.siege, army.wave);
+      if (!storyOver(army.siege, army.wave)) {
         armySfx.radio();
-        banner(`Wave ${army.wave} cleared`, 'Reload. More coming…', 2.4);
+        banner(`Wave ${army.wave} cleared`, army.siege === 'story' ? 'Reload. More coming…' : 'Reload. The next wave is already on its way.', 2.4);
       }
     } else if (army.waveState === 'won' && waveTimer.current > 0) {
       waveTimer.current -= dt;
@@ -819,7 +878,7 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
         }
       }
     }
-    const fighting = army.waveState === 'attack' || (army.waveState === 'cleared' && army.wave < WAVES.length);
+    const fighting = army.waveState === 'attack' || (army.waveState === 'cleared' && !storyOver(army.siege, army.wave));
 
     // --- Player on foot ----------------------------------------------------
     const fwdIn = (k.KeyW || k.ArrowUp || touch.fwd ? 1 : 0) - (k.KeyS || k.ArrowDown || touch.back ? 1 : 0);
@@ -837,11 +896,34 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
         const c = Math.cos(p.heading);
         p.pos.x += s * p.speed * dt - c * strafe * 0.06 * dt;
         p.pos.z += c * p.speed * dt + s * strafe * 0.06 * dt;
+        if (army.tip && army.tip !== 'done' && army.coachNear) {
+          const next = advanceTip(army.tip, {
+            moved: fwdIn !== 0 || strafe !== 0,
+            turned: turnIn !== 0 || nudge !== 0,
+            shot: Boolean(k.Space || touch.fire),
+          });
+          if (next !== army.tip) {
+            army.tip = next;
+            emit();
+          }
+        }
         p.cooldown -= dt;
         if ((k.Space || touch.fire) && p.cooldown <= 0) {
           p.cooldown = 0.33;
-          const target = nearestEnemy(p, 0.75, 0.45);
-          fire(p, target, 0.85);
+          const live = tans.filter(o => o.active && o.fall === 0 && !o.falling && o.root.visible);
+          const pick = pickAlongBarrel(
+            p.pos,
+            p.heading,
+            live.map(o => ({ x: o.pos.x, y: o.pos.y, z: o.pos.z })),
+          );
+          const gun = muzzlePoint(p.pos, p.heading);
+          _a.set(gun.x, gun.y, gun.z);
+          const foe = pick ? live[pick.index] : null;
+          const end = foe ? chestPoint(foe.pos) : shotPoint(p.pos, p.heading, SHOT_RANGE);
+          _b.set(end.x, end.y, end.z);
+          tracers.fire(_a, _b);
+          if (foe) knockDown(foe);
+          armySfx.pop(camera.position.distanceTo(p.pos));
         }
       } else {
         p.speed = 0;
@@ -931,6 +1013,21 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
         m.speed = 0;
         continue;
       }
+      if (m.guide && army.tip && army.tip !== 'done' && army.siege === 'story' && army.mode === 'ground') {
+        const dx = player.pos.x - m.pos.x;
+        const dz = player.pos.z - m.pos.z;
+        const near = Math.hypot(dx, dz) <= 0.11;
+        if (army.coachNear !== near) {
+          army.coachNear = near;
+          emit();
+        }
+        if (!near) walkTo(m, player.pos.x, player.pos.z, 0.09, dt);
+        else {
+          m.speed = 0;
+          turnToward(m, Math.atan2(dx, dz), 6, dt);
+        }
+        continue;
+      }
       m.cooldown -= dt;
       const shootAt = (foe: Man | null) => {
         if (!foe) return false;
@@ -995,7 +1092,7 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
           const foe = nearestEnemy(m, m.range);
           if (!shootAt(foe)) {
             const [x, z] = m.route[0];
-            if (walkTo(m, x, z, 0.08, dt) < 0.02) turnToward(m, Math.PI * 0, 3, dt);
+            if (walkTo(m, x, z, m.march, dt) < 0.02) turnToward(m, Math.PI * 0, 3, dt);
           }
           break;
         }
@@ -1240,6 +1337,12 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
             Send another attack
           </button>
         )}
+        {(a.waveState === 'won' || (a.wave === 0 && a.waveState === 'incoming')) && !flying &&
+          (['easy', 'medium', 'hard'] as const).map(level => (
+            <button key={level} type="button" onClick={() => controls.startSiege?.(level)} className={`${btn} text-amber-100`}>
+              {level}
+            </button>
+          ))}
       </div>
 
       <div className="absolute right-4 top-4 min-w-[150px] rounded-2xl border border-lime-300/30 bg-black/55 px-4 py-2 text-right">
@@ -1264,7 +1367,13 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
         ) : (
           <>
             <p className="text-[10px] font-black uppercase tracking-[0.22em] text-lime-200">
-              {a.waveState === 'won' ? 'Town saved' : a.wave === 0 ? 'Under attack' : `Wave ${a.wave}/${WAVES.length}`}
+              {a.waveState === 'won'
+                ? 'Town saved'
+                : a.siege !== 'story'
+                  ? `${a.siege}${a.wave ? ` · wave ${a.wave}` : ''}`
+                  : a.wave === 0
+                    ? 'Under attack'
+                    : `Wave ${a.wave}/${STORY_WAVES.length}`}
             </p>
             <p className="font-mono text-2xl font-black tabular-nums">{a.toppled}</p>
             <p className="text-[10px] font-bold uppercase tracking-wider text-white/70">
@@ -1274,6 +1383,12 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
         )}
       </div>
 
+      {a.tip && a.tip !== 'done' && a.coachNear && !flying && (
+        <div className="pointer-events-none absolute bottom-24 left-1/2 z-10 w-[min(22rem,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border border-lime-300/50 bg-black/80 px-4 py-3 text-center shadow-2xl">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-lime-200">Green army</p>
+          <p className="mt-1 text-sm font-bold leading-snug text-white">{tutorialLine(a.tip, isTouch)}</p>
+        </div>
+      )}
       {a.banner && (
         <div className="absolute left-1/2 top-[26%] -translate-x-1/2 text-center">
           <p className="whitespace-nowrap text-4xl font-black uppercase italic text-lime-300 drop-shadow-[0_3px_0_rgba(0,0,0,0.75)] sm:text-5xl">

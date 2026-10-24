@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { HoverTarget } from '../Interactable';
 import { FurbyPuppet, FURBY_HEIGHT } from './FurbyPuppet';
-import { bedBrain, furbyAnchors, useFurby } from './furbyStore';
+import { bedBrain, furbyAnchors, setFurbyDark, useFurby } from './furbyStore';
 
 export const FURBY_CARD = 'furby';
 
@@ -41,7 +41,7 @@ export function BedFurby({
   }, []);
 
   useFrame(({ camera, clock }) => {
-    bedBrain.dark = dark;
+    setFurbyDark(dark);
     if (!away && anchor.current) {
       anchor.current.getWorldPosition(world);
       bedBrain.attentive = camera.position.distanceTo(world) < 2.2;

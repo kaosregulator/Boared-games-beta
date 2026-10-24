@@ -29,16 +29,18 @@ export function DiagnosticsPanel() {
   void tick;
 
   return (
-    <div className="pointer-events-auto absolute top-3 left-1/2 z-[70] w-[min(28rem,calc(100vw-1.5rem))] -translate-x-1/2 font-mono text-[11px] text-white">
+    // Shrink to the button. A wide box here used to cover the Furby actions
+    // even while it looked empty, so "Open the new ones" never received the click.
+    <div className="pointer-events-none absolute top-3 left-1/2 z-[70] flex w-max -translate-x-1/2 flex-col items-center font-mono text-[11px] text-white">
       <button
         type="button"
-        className="rounded-full border border-white/30 bg-black/70 px-3 py-1"
+        className="pointer-events-auto rounded-full border border-white/30 bg-black/70 px-3 py-1"
         onClick={() => setOpen(value => !value)}
       >
         {open ? 'Hide engine' : 'Engine'}
       </button>
       {report && (
-        <div className="mt-2 max-h-[42vh] overflow-auto rounded-lg border border-white/20 bg-black/80 p-3 leading-relaxed">
+        <div className="pointer-events-auto mt-2 max-h-[42vh] w-[min(28rem,calc(100vw-1.5rem))] overflow-auto rounded-lg border border-white/20 bg-black/80 p-3 leading-relaxed">
           <p>game {report.games.map(game => `${game.id}:${game.phase}`).join(', ') || 'room'}</p>
           <p>
             graphics showing {gfx.effective}

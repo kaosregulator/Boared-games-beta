@@ -20,14 +20,21 @@ const STEP_UP_FPS = 55;
 const DOWN_HOLD_MS = 3000;
 const UP_HOLD_MS = 12000;
 const COOLDOWN_MS = 8000;
+/** Shader compiles and first uploads stall the opening seconds; a dip then is not remembered. */
+const WARMUP_MS = 10000;
 
 let userPreset: GraphicsPreset = 'high';
-let adaptiveOn = false;
+// On by default: High stays sharp where the device keeps up, and a slow phone or
+// laptop steps its pixel ratio down instead of being stuck at 2x with no fallback.
+let adaptiveOn = true;
 let effective: GraphicsPreset = 'high';
+/** Highest preset adaptive may climb back to. A level that could not hold 40 fps is not retried. */
+let ceiling: GraphicsPreset = 'high';
 let measuredDpr: number | null = null;
 let lowSince: number | null = null;
 let highSince: number | null = null;
 let cooldownUntil = 0;
+let firstSample: number | null = null;
 let persistWrites = true;
 let hydrated = false;
 const listeners = new Set<(snap: GraphicsSnapshot) => void>();
@@ -83,6 +90,7 @@ export function hydrateGraphicsFromStorage() {
   if (adaptive === '1') adaptiveOn = true;
   if (adaptive === '0') adaptiveOn = false;
   effective = userPreset;
+  ceiling = userPreset;
   lowSince = null;
   highSince = null;
   cooldownUntil = 0;
@@ -91,6 +99,7 @@ export function hydrateGraphicsFromStorage() {
 export function setGraphicsPreset(preset: GraphicsPreset) {
   userPreset = preset;
   effective = preset;
+  ceiling = preset;
   lowSince = null;
   highSince = null;
   cooldownUntil = 0;
@@ -102,6 +111,7 @@ export function setAdaptive(on: boolean) {
   adaptiveOn = on;
   if (!on) {
     effective = userPreset;
+    ceiling = userPreset;
     lowSince = null;
     highSince = null;
     cooldownUntil = 0;
@@ -112,7 +122,11 @@ export function setAdaptive(on: boolean) {
 
 function step(dir: -1 | 1, now: number) {
   const idx = ORDER.indexOf(effective);
-  const next = ORDER[Math.min(ORDER.length - 1, Math.max(0, idx + dir))];
+  const top = ORDER.indexOf(ceiling);
+  const next = ORDER[Math.min(top, Math.max(0, idx + dir))];
+  // Stepping down remembers the level that failed, so the room does not bounce
+  // High -> Balanced -> High every 20 seconds and reallocate the canvas each time.
+  if (dir < 0 && idx > 0 && firstSample !== null && now - firstSample >= WARMUP_MS) ceiling = ORDER[idx - 1];
   lowSince = null;
   highSince = null;
   cooldownUntil = now + COOLDOWN_MS;
@@ -131,8 +145,12 @@ function step(dir: -1 | 1, now: number) {
  * low or high. It is off unless the player turns it on. Calling this with
  * adaptive off does not move quality.
  */
-export function noteFrameRate(fps: number, now = globalThis.performance?.now?.() ?? Date.now()) {
+export function noteFrameRate(fps: number, at?: number) {
+  // Not a default parameter: the minifier rewrote `performance?.now?.()` there into
+  // code that referenced an out-of-scope variable and threw every sample in production.
+  const now = at ?? (typeof performance !== 'undefined' ? performance.now() : Date.now());
   if (!adaptiveOn || !Number.isFinite(fps) || !Number.isFinite(now)) return;
+  if (firstSample === null) firstSample = now;
   if (now < cooldownUntil) return;
   if (fps < STEP_DOWN_FPS) {
     highSince = null;
@@ -152,8 +170,10 @@ export function noteFrameRate(fps: number, now = globalThis.performance?.now?.()
 
 export function resetGraphicsForTests() {
   userPreset = 'high';
-  adaptiveOn = false;
+  adaptiveOn = true;
   effective = 'high';
+  ceiling = 'high';
+  firstSample = null;
   measuredDpr = null;
   lowSince = null;
   highSince = null;

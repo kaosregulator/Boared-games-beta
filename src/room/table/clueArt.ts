@@ -900,58 +900,89 @@ function weaponArt(g: CanvasRenderingContext2D, w: string, cx: number, cy: numbe
   g.restore();
 }
 
-/** A Clue card: suspect portrait, weapon or room, on cream card. Null is the back. */
+/**
+ * A Clue card in the classic deck layout: a coloured border, the picture in
+ * the middle, the name in black on a cream plaque. Drawn from the portraits,
+ * weapons and room floors already in this file. Null is the back.
+ * The canvas is 1.5× the old card so the plaque stays sharp when the card is held up.
+ */
 export function clueCardTexture(card: Card | null) {
   const id = card ? `${card.kind}:${card.value}` : 'back';
   const hit = CARD_CACHE.get(id);
   if (hit) return hit;
-  const { c, g } = canvas(240, 360);
+  const { c, g } = canvas(360, 540);
+  g.scale(1.5, 1.5);
   if (!card) {
     g.fillStyle = '#14532d';
     g.fillRect(0, 0, 240, 360);
     g.strokeStyle = '#e8d9a0';
+    g.lineWidth = 4;
+    for (let y = 18; y < 342; y += 22) {
+      for (let x = 18; x < 222; x += 22) {
+        g.beginPath();
+        g.moveTo(x + 8, y);
+        g.lineTo(x + 16, y + 8);
+        g.lineTo(x + 8, y + 16);
+        g.lineTo(x, y + 8);
+        g.closePath();
+        g.stroke();
+      }
+    }
     g.lineWidth = 6;
     g.strokeRect(14, 14, 212, 332);
     g.fillStyle = '#e8d9a0';
     g.font = '900 64px Georgia, serif';
     g.textAlign = 'center';
     g.textBaseline = 'middle';
-    g.fillText('?', 120, 180);
+    g.fillText('?', 120, 168);
     g.font = '700 28px Georgia, serif';
-    g.fillText('CLUE', 120, 290);
+    g.fillText('CLUE', 120, 250);
   } else {
-    g.fillStyle = '#f4ecd8';
+    const border = card.kind === 'suspect' ? SUSPECTS.find(s => s.id === card.value)!.colour : card.kind === 'weapon' ? '#3e4654' : '#1d4e32';
+    const inkOnBorder = card.kind === 'suspect' && card.value === 'White' ? '#1a140c' : '#fffaf1';
+    g.fillStyle = border;
     g.fillRect(0, 0, 240, 360);
-    const band = card.kind === 'suspect' ? SUSPECTS.find(s => s.id === card.value)!.colour : card.kind === 'weapon' ? '#4a4a52' : '#14532d';
-    g.fillStyle = band;
-    g.fillRect(0, 0, 240, 56);
-    g.fillRect(0, 316, 240, 44);
-    g.fillStyle = card.kind === 'suspect' && card.value === 'White' ? '#222' : '#fff';
-    g.font = '700 22px Georgia, serif';
+    g.fillStyle = '#f7f1e4';
+    g.fillRect(14, 14, 212, 332);
+    g.strokeStyle = '#c6a15a';
+    g.lineWidth = 2;
+    g.strokeRect(20, 20, 200, 320);
+    g.fillStyle = inkOnBorder;
+    g.font = '700 13px Georgia, serif';
     g.textAlign = 'center';
     g.textBaseline = 'middle';
-    g.fillText(card.kind.toUpperCase(), 120, 30);
+    // The category sits in the coloured margin, above the cream.
+    g.save();
+    g.beginPath();
+    g.rect(0, 0, 240, 16);
+    g.clip();
+    g.fillStyle = border;
+    g.fillRect(0, 0, 240, 16);
+    g.fillStyle = inkOnBorder;
+    g.fillText(card.kind.toUpperCase(), 120, 8);
+    g.restore();
+    g.fillStyle = '#efe6d2';
+    g.fillRect(32, 28, 176, 228);
     if (card.kind === 'suspect') {
       const s = SUSPECTS.find(x => x.id === card.value)!;
-      g.fillStyle = '#d9cfb5';
-      g.fillRect(30, 72, 180, 220);
-      suspectFace(g, s.id, s.colour, 120, 170, 60);
+      suspectFace(g, s.id, s.colour, 120, 132, 62);
     } else if (card.kind === 'weapon') {
-      g.fillStyle = '#d9cfb5';
-      g.fillRect(30, 72, 180, 220);
-      weaponArt(g, card.value, 120, 182);
+      weaponArt(g, card.value, 120, 140);
     } else {
-      g.fillStyle = '#d9cfb5';
-      g.fillRect(30, 72, 180, 220);
       const floor = floorTexture(card.value, 3, 3).image as HTMLCanvasElement;
-      g.drawImage(floor, 34, 76, 172, 212);
+      g.drawImage(floor, 36, 32, 168, 220);
     }
     const name = card.kind === 'suspect' ? SUSPECTS.find(x => x.id === card.value)!.full : card.value;
-    g.fillStyle = card.kind === 'suspect' && card.value === 'White' ? '#222' : '#fff';
-    g.font = `700 ${name.length > 12 ? 22 : 26}px Georgia, serif`;
-    g.fillText(name, 120, 338);
+    g.fillStyle = '#fffaf1';
+    g.fillRect(28, 268, 184, 64);
+    g.strokeStyle = border;
+    g.lineWidth = 3;
+    g.strokeRect(28, 268, 184, 64);
+    g.fillStyle = '#1a140c';
+    g.font = `700 ${name.length > 14 ? 16 : 20}px Georgia, serif`;
+    g.fillText(name, 120, 300);
   }
-  g.strokeStyle = 'rgba(0,0,0,0.35)';
+  g.strokeStyle = 'rgba(0,0,0,0.4)';
   g.lineWidth = 4;
   g.strokeRect(2, 2, 236, 356);
   const t = tex(c);
