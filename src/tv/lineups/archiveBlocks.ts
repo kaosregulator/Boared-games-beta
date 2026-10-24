@@ -157,11 +157,12 @@ const segmentsOf = (part: ArchivePart): Segment[] => part.segments ?? TAPE_SEGME
 /** The segment airing `offset` seconds into a part, and the next show after it. */
 export function segmentAt(part: ArchivePart, offset: number): { now: Segment | null; nextShow: Segment | null } {
   const segs = segmentsOf(part);
+  const showing = showTitleAt(part, offset);
   let now: Segment | null = null;
   let nextShow: Segment | null = null;
   for (const seg of segs) {
     if (seg.at <= offset) now = seg;
-    else if (seg.kind === 'show' && seg.title !== now?.title) {
+    else if (seg.kind === 'show' && seg.title !== showing) {
       nextShow = seg;
       break;
     }
