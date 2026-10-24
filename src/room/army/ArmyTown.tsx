@@ -29,6 +29,7 @@ import {
 } from './town';
 import { armySfx, rotorLevel, rotorOff, rotorOn, wakeArmyAudio } from './armyAudio';
 import { SHOT_RANGE, chestPoint, muzzlePoint, pickAlongBarrel, shotPoint } from './aim';
+import { advanceTip, tutorialLine, type Tip } from './tutorial';
 import {
   STORY_WAVES,
   TAN_POOL,
@@ -65,6 +66,10 @@ export const army = {
   wave: 0,
   waveState: 'incoming' as WaveState,
   siege: 'story' as Siege,
+  /** Story coach. Null on a calm or helicopter boot. Done sends him back to the parade. */
+  tip: null as Tip | null,
+  /** True once that soldier has walked up close enough to talk. */
+  coachNear: false,
   invadersLeft: 0,
   toppled: 0,
   nearChopper: false,
@@ -167,6 +172,8 @@ interface Man {
   range: number;
   /** How fast an invader walks. Story leaves this at 0.08. */
   march: number;
+  /** The one green soldier who walks over and explains the controls. */
+  guide: boolean;
 }
 
 interface Kit {
@@ -255,6 +262,7 @@ function makeMan(kit: Kit, team: Man['team'], role: Role, mat: THREE.Material, w
     hitChance: team === 'green' ? 0.32 : 0.24,
     range: 0.5,
     march: 0.08,
+    guide: false,
   };
 }
 
@@ -504,6 +512,7 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
       m.wp = 1;
       m.pos.set(PARADE[0][0], 0, PARADE[0][1] + dz);
       m.heading = Math.PI / 2;
+      m.guide = i === 0;
       list.push(m);
     }
     // Hand out foxholes to everyone who defends (drill squad and the north patrol).
@@ -547,6 +556,8 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
     army.wave = 0;
     army.waveState = 'incoming';
     army.siege = 'story';
+    army.tip = boot?.calm || boot?.mode === 'heli' ? null : 'move';
+    army.coachNear = false;
     army.toppled = 0;
     army.invadersLeft = 0;
     army.course = { active: false, next: 0, time: 0, best: readBest(), last: null };
@@ -603,6 +614,8 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
 
   function startSiege(level: Exclude<Siege, 'story'>) {
     army.siege = level;
+    army.tip = 'done';
+    army.coachNear = false;
     army.wave = 0;
     army.waveState = 'incoming';
     waveTimer.current = 2.2;
@@ -883,6 +896,17 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
         const c = Math.cos(p.heading);
         p.pos.x += s * p.speed * dt - c * strafe * 0.06 * dt;
         p.pos.z += c * p.speed * dt + s * strafe * 0.06 * dt;
+        if (army.tip && army.tip !== 'done' && army.coachNear) {
+          const next = advanceTip(army.tip, {
+            moved: fwdIn !== 0 || strafe !== 0,
+            turned: turnIn !== 0 || nudge !== 0,
+            shot: Boolean(k.Space || touch.fire),
+          });
+          if (next !== army.tip) {
+            army.tip = next;
+            emit();
+          }
+        }
         p.cooldown -= dt;
         if ((k.Space || touch.fire) && p.cooldown <= 0) {
           p.cooldown = 0.33;
@@ -987,6 +1011,21 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
       if (m === player) continue;
       if (m.fall > 0 || m.falling) {
         m.speed = 0;
+        continue;
+      }
+      if (m.guide && army.tip && army.tip !== 'done' && army.siege === 'story' && army.mode === 'ground') {
+        const dx = player.pos.x - m.pos.x;
+        const dz = player.pos.z - m.pos.z;
+        const near = Math.hypot(dx, dz) <= 0.11;
+        if (army.coachNear !== near) {
+          army.coachNear = near;
+          emit();
+        }
+        if (!near) walkTo(m, player.pos.x, player.pos.z, 0.09, dt);
+        else {
+          m.speed = 0;
+          turnToward(m, Math.atan2(dx, dz), 6, dt);
+        }
         continue;
       }
       m.cooldown -= dt;
@@ -1344,6 +1383,12 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
         )}
       </div>
 
+      {a.tip && a.tip !== 'done' && a.coachNear && !flying && (
+        <div className="pointer-events-none absolute bottom-24 left-1/2 z-10 w-[min(22rem,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border border-lime-300/50 bg-black/80 px-4 py-3 text-center shadow-2xl">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-lime-200">Green army</p>
+          <p className="mt-1 text-sm font-bold leading-snug text-white">{tutorialLine(a.tip, isTouch)}</p>
+        </div>
+      )}
       {a.banner && (
         <div className="absolute left-1/2 top-[26%] -translate-x-1/2 text-center">
           <p className="whitespace-nowrap text-4xl font-black uppercase italic text-lime-300 drop-shadow-[0_3px_0_rgba(0,0,0,0.75)] sm:text-5xl">
