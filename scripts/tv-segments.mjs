@@ -13,6 +13,7 @@ import { join } from 'node:path';
 const [dir, out] = process.argv.slice(2);
 
 function title(row) {
+  if (/unidentified/i.test(row.episode ?? '')) row = { ...row, episode: null };
   if (row.kind === 'commercial') return 'Commercial break';
   if (row.kind === 'promo') return row.show ? `Promo: ${row.show}` : 'Promo';
   // some sheets already spell the show inside the episode ("Show · Episode")
