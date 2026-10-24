@@ -20,7 +20,7 @@ export interface CardVideo {
   title: string;
 }
 
-export type CardAction = 'tv' | 'nes' | 'radio' | 'gameboy' | 'tamagotchi' | 'rubik' | 'hotwheels';
+export type CardAction = 'tv' | 'nes' | 'radio' | 'gameboy' | 'tamagotchi' | 'rubik' | 'hotwheels' | 'army';
 
 export interface PropCard {
   id: string;
@@ -970,6 +970,7 @@ const CARDS: PropCard[] = [
       'Hundreds of them. Whole battles across the carpet, the bed, the bathtub. The guy with the bazooka was the most valuable soldier. The guy lying down with the rifle could never stand up for anything.',
     memories: ['Stepping on one barefoot is worse than Lego. Fight us.'],
     photos: [P.army],
+    action: { kind: 'army', label: 'Send the troops!' },
   },
   {
     id: 'armor',
