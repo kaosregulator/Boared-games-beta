@@ -13,7 +13,8 @@ export type GameId =
   | 'yahtzee'
   | 'clue'
   | 'life'
-  | 'monopoly';
+  | 'monopoly'
+  | 'furby';
 
 export * from './trivia';
 

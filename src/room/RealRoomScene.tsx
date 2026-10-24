@@ -31,6 +31,7 @@ import { MOODS, type RoomMood } from './moods';
 import type { SavedPlacement } from './userPlacements';
 import { RoomTvGlass } from '../tv/TvSet';
 import { LightSwitch, TvGlow } from './LightSwitch';
+import { BedFurby, FURBY_CARD } from './furby/BedFurby';
 
 function MoodFog({ color }: { color: string }) {
   const { scene } = useThree();
@@ -300,6 +301,9 @@ function GameShelf({ hoveredId }: { hoveredId: string | null }) {
   );
 }
 
+/** Bed-local: the bed is turned a quarter, so local +z faces into the room. */
+const BED_FURBY = { position: [-0.33, 0.56, -0.36] as [number, number, number], rotation: [0, -0.35, 0] as [number, number, number] };
+
 /** Each game's real box model; it only comes out while that game is on the table. */
 const GAME_BOX_MODEL: Partial<Record<string, keyof typeof LAYOUT>> = {
   monopoly: 'board',
@@ -495,6 +499,8 @@ export function RealRoomScene({
 <PlacedModel id="bed" hoveredId={hoveredId} card="bed">
         {/* Left on the quilt by the foot of the bed, screen up. */}
         <Tamagotchi position={[-0.25, 0.538, 0.3]} rotation={[-Math.PI / 2 + 0.1, 0, 0.55]} active={hoveredId === 'tamagotchi'} />
+        {/* Sat up by the pillow, looking out at the room. */}
+        <BedFurby position={BED_FURBY.position} rotation={BED_FURBY.rotation} hovered={hoveredId === FURBY_CARD} dark={lightsOut} />
       </PlacedModel>
       <PlacedModel
         id="backpack"

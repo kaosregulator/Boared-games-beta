@@ -46,6 +46,10 @@ import { TriviaTableCam } from './table/TriviaTableCam';
 import { HotWheelsHud, HotWheelsWorld } from './hotwheels/HotWheelsRace';
 import { ArmyAlert, ArmyHud, ArmyTownWorld, readArmyBoot } from './army/ArmyTown';
 import { walkRig } from './WalkController';
+import { FurbyHold } from './furby/FurbyHold';
+import { FurbyBubble, FurbyHoldHud } from './furby/FurbyHud';
+import { anchorPose, furbyGesture, setFurby, useFurby } from './furby/furbyStore';
+import { FURBY_GAME } from './furby/furbyGame';
 import { TABLE_SEAT } from './roomLayout';
 import { ANCHORS, anchorById, type Anchor } from './anchors';
 import { deletePlacement, loadPlacements, savePlacement, type SavedPlacement } from './userPlacements';
@@ -135,6 +139,7 @@ function tableFromQuery(games: GameMetadata[]): GameMetadata | null {
   const game = params.get('game');
   const id = params.get('play') ?? (game && TABLE_GAMES.has(game) ? game : null);
   if (!id) return null;
+  if (id === 'furby') return FURBY_GAME;
   return games.find(g => g.id === id) ?? null;
 }
 
@@ -229,6 +234,9 @@ export function WalkRoom({
   const toyMode = racing || armyOn || armyAlert !== null;
   /** Something held up close (Tamagotchi, Rubik's Cube): the room waits behind it. */
   const holding = tamagotchi || rubik;
+  /** The Furby in your hands: the room keeps drawing behind it, you just can't walk off. */
+  const furbyState = useFurby();
+  const furbyHeld = furbyState.held !== null;
   const emulatorOn = (device === 'crt' || device === 'nes') && tvStatus.mode === 'emulator';
   const tvOn = (device === 'crt' || device === 'nes') && !scripted;
   // Stepping back with the set on leaves it playing on the room's TV until POWER.
@@ -284,7 +292,7 @@ export function WalkRoom({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [radioState.power]);
 
-  blockSelect.current = flashPhase !== 'idle' || device !== null || seated || holding;
+  blockSelect.current = flashPhase !== 'idle' || device !== null || seated || holding || furbyHeld;
 
   useEffect(() => {
     let cancelled = false;
@@ -474,6 +482,18 @@ export function WalkRoom({
     return () => {
       walkRig.listeners.delete(fn);
     };
+  }, []);
+
+  // ?furby=hold boots straight into holding the bed Furby (for testing).
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('furby') !== 'hold') return;
+    const id = window.setInterval(() => {
+      const from = anchorPose('bed');
+      if (!from) return;
+      window.clearInterval(id);
+      setFurby({ held: 'bed', from });
+    }, 300);
+    return () => window.clearInterval(id);
   }, []);
 
   useEffect(() => {
@@ -670,6 +690,12 @@ export function WalkRoom({
         setPinned(null);
         sound.playButtonClick();
         setArmyOn(true);
+      } else if (kind === 'furby') {
+        const from = anchorPose('bed');
+        if (!from) return;
+        setPinned(null);
+        document.exitPointerLock?.();
+        setFurby({ held: 'bed', from });
       }
     },
     [enterDevice, sitDown],
@@ -703,7 +729,7 @@ export function WalkRoom({
   const cardGame = demoGame ?? aimedGame;
   const cardProp = demoProp ?? aimedProp;
   const showCard = Boolean(demoGame || demoProp) || (engaged && cardOpen && (aimedGame || aimedProp));
-  const walking = engaged && !device && !seated && !holding && !overlayGame && !pulledGameId && session?.phase !== 'unfold' && !tableCamOn && !toyMode;
+  const walking = engaged && !device && !seated && !holding && !furbyHeld && !overlayGame && !pulledGameId && session?.phase !== 'unfold' && !tableCamOn && !toyMode;
 
 
   return (
@@ -781,6 +807,7 @@ export function WalkRoom({
           tvInRoom={tvInRoom}
           lightsOut={lightsOut}
         />
+        <FurbyHold />
         <DeviceFocus device={scripted ? null : device} />
         {seated && <GameBoySeat />}
         <DeviceGestures active={Boolean(device || seated) && !big && !scripted} />
@@ -796,7 +823,7 @@ export function WalkRoom({
         ) : (
           <>
             <WalkController
-              enabled={!pulledGameId && !device && !seated && !holding && session?.phase !== 'unfold' && !overlayGame && !tableCamOn && !toyMode}
+              enabled={!pulledGameId && !device && !seated && !holding && !furbyHeld && session?.phase !== 'unfold' && !overlayGame && !tableCamOn && !toyMode}
               engaged={engaged}
               onStep={onStep}
             />
@@ -807,7 +834,7 @@ export function WalkRoom({
             <ReachRaycaster
               // Mid-game, only the game's own box beside the table can be picked.
               enabled={
-                engaged && !pulledGameId && !device && !seated && !holding && !overlayGame && !tableCamOn && !toyMode &&
+                engaged && !pulledGameId && !device && !seated && !holding && !furbyHeld && !overlayGame && !tableCamOn && !toyMode &&
                 (!tableGame || session?.phase === 'play')
               }
               accept={tableGame ? target => target.id.startsWith(TABLE_BOX_PREFIX) : undefined}
@@ -827,6 +854,19 @@ export function WalkRoom({
         />
       )}
       {rubik && <RubikPlay onClose={() => setRubik(false)} />}
+      {furbyHeld && (
+        <FurbyHoldHud
+          onTable={
+            session
+              ? undefined
+              : () => {
+                  furbyGesture('putdown');
+                  window.setTimeout(() => startTable(FURBY_GAME), 900);
+                }
+          }
+        />
+      )}
+      {(furbyHeld || session?.game.id === 'furby') && <FurbyBubble />}
       {racing && <HotWheelsHud onExit={() => setRacing(false)} />}
       {armyOn && <ArmyHud onExit={() => setArmyOn(false)} />}
       {armyAlert && (
@@ -919,7 +959,7 @@ export function WalkRoom({
       )}
 
       {/* Glass flash card — games + nostalgia props */}
-      {!toyMode && !overlayGame && (engaged || scripted) && !device && !seated && !holding && (
+      {!toyMode && !overlayGame && (engaged || scripted) && !device && !seated && !holding && !furbyHeld && (
       <button
         type="button"
         onClick={openMenu}
