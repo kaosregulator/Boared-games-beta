@@ -282,33 +282,27 @@ export function motorWhirr(volume = 0.3, seconds = 0.6) {
 }
 
 /**
- * The motor under a line of speech. In the real toy one motor turns the cam
- * that opens the beak, so it runs while the mouth moves and stops in the
- * pauses: each stretch of the clip's mouth envelope gets its own burst.
+ * When the motor runs during a line `seconds` long, as [start, end] pairs
+ * from the start of the line. Measured off a real 1998 Furby talking (the
+ * user's video): the motor isn't tied to the syllables but to the
+ * movements. It kicks in with the first word, runs in bursts of about a
+ * fifth to half a second with short stops between, and its last burst ends
+ * with the line.
  */
-export function motorFollow(voice: Voice | null, volume = 0.3) {
-  if (!voice) return;
-  const env = voice.clip.env;
-  const frame = 1 / 50 / voice.rate;
-  const runs: [number, number][] = [];
-  let from = -1;
-  for (let i = 0; i <= env.length; i++) {
-    const open = i < env.length && Number(env[i]) >= 2;
-    if (open && from < 0) from = i;
-    if (!open && from >= 0) {
-      // Short pauses between syllables don't stop the motor.
-      const last = runs[runs.length - 1];
-      if (last && from - last[1] < 5) last[1] = i;
-      else runs.push([from, i]);
-      from = -1;
-    }
+export function motorPlan(seconds: number): [number, number][] {
+  const plan: [number, number][] = [];
+  let at = -0.03;
+  while (at < seconds - 0.12) {
+    const end = Math.min(at + 0.15 + Math.random() * 0.35, seconds + 0.05);
+    plan.push([at, end]);
+    at = end + 0.08 + Math.random() * 0.3;
   }
-  const stops = runs
-    .filter(([a, b]) => b - a >= 3)
-    .map(([a, b]) => motorRun(voice.at + a * frame, (b - a) * frame, volume));
-  const stopVoice = voice.stop;
-  voice.stop = () => {
-    stopVoice();
-    for (const stop of stops) stop();
-  };
+  return plan;
+}
+
+/** Plays a motor plan from audio time `at`. Returns a stop. */
+export function motorPlay(at: number, plan: [number, number][], volume = 0.3) {
+  void loadMotor();
+  const stops = plan.map(([a, b]) => motorRun(at + Math.max(0, a), b - Math.max(0, a), volume));
+  return () => stops.forEach(stop => stop());
 }

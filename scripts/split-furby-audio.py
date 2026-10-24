@@ -16,6 +16,14 @@ that drives the beak, so the mouth moves with the words like the real toy.
     python3 -I scripts/split-furby-audio.py rip1.m4a rip2.m4a rip3.m4a public/audio/furby \
         --library FurbSounds/
 
+--video adds sounds from the user's video of a 1998 Furby talking
+(Furby_1998_video.mp3, the audio of youtu.be/wUOAdC8lewk). Its gearbox is
+audible under the voice, so each phrase is cleaned by spectral subtraction
+against the moments where only the motor runs. VIDEO lists the phrases that
+are plainly one thing in a spectrogram (held stepped notes: singing; pulsed
+wobbling "ha"s: laughing; arching cries: whee); the rest of the video is
+ordinary Furbish, which the rips already cover.
+
 --library adds a folder of single, named 1998 Furby sounds (FurbSounds.zip,
 ripped from the "Big Fun in Furbyland" CD-ROM). Their file names say what
 each one is (YUM, SFX_LAUGH_3, me_hungry...), so LIBRARY maps them onto the
@@ -81,6 +89,18 @@ LIBRARY = {
 }
 LIBRARY = {name: tag for tag, names in LIBRARY.items() for name in names.split()}
 LIBRARY_SKIP = {'credits', 'SFX_PHONE', 'SFX_BEEP', 'SFX_RAP1', 'SFX_RAP2', 'ILL_BE_BACK', 'credits'}
+# Video phrase (start, end in seconds) -> tag.
+VIDEO = {
+    (10.11, 11.95): 'sing',
+    (12.20, 14.29): 'sing',
+    (14.57, 18.56): 'sing',
+    (27.64, 28.55): 'sing',
+    (77.89, 79.77): 'laugh',
+    (80.32, 82.50): 'laugh',
+    (83.09, 85.22): 'laugh',
+    (19.12, 19.84): 'whee',
+    (85.80, 89.13): 'whee',
+}
 MAX_TALK = 8.0
 # Enough variety without a huge download: the rest of the talk is cut.
 CAP = {'talk': 14, 'story': 1, 'sing-long': 1, 'laugh-long': 2}
@@ -118,12 +138,38 @@ def envelope(y):
     return ''.join(str(int(v)) for v in np.clip((db + 50) / 34 * 9, 0, 9))
 
 
+def demotor(x):
+    """The video with its motor taken out: spectral subtraction, the noise
+    profile taken where the motor whirrs (loud above 8 kHz) but no one talks."""
+    n, hop = 1024, 256
+    win = np.hanning(n)
+    S = np.fft.rfft(np.array([x[i:i + n] * win for i in range(0, len(x) - n, hop)]), axis=1)
+    mag = np.abs(S)
+    f = np.fft.rfftfreq(n, 1 / SR)
+    hi = mag[:, f > 8000].mean(1) if SR > 16000 else mag[:, f > 6000].mean(1)
+    voice = mag[:, (f > 300) & (f < 3000)].mean(1)
+    motor_only = (hi > np.percentile(hi, 60)) & (voice < np.percentile(voice, 35))
+    noise = mag[motor_only].mean(0)
+    gain = np.maximum(1 - 2.0 * noise / np.maximum(mag, 1e-9), 0.05)
+    # The voice chip has little up there; what's left is motor speckle.
+    gain[:, f > 7000] *= 0.15
+    y, norm = np.zeros(len(x)), np.zeros(len(x))
+    for k, frame in enumerate(np.fft.irfft(S * gain, n=n, axis=1)):
+        y[k * hop:k * hop + n] += frame * win
+        norm[k * hop:k * hop + n] += win * win
+    return (y / np.maximum(norm, 1e-3)).astype(np.float32)
+
+
 def main():
     args = sys.argv[1:]
-    library = None
+    library = video = None
     if '--library' in args:
         i = args.index('--library')
         library = args[i + 1]
+        del args[i:i + 2]
+    if '--video' in args:
+        i = args.index('--video')
+        video = args[i + 1]
         del args[i:i + 2]
     *rips, outdir = args
     os.makedirs(outdir, exist_ok=True)
@@ -172,6 +218,17 @@ def main():
             y[:fade] *= np.linspace(0, 1, fade)
             y[-fade:] *= np.linspace(1, 0, fade)
             kept.append({'id': stem, 'tag': tag, 'start': round(cursor, 3), 'dur': round(len(y) / SR, 3), 'env': envelope(y)})
+            pieces += [y, pad]
+            cursor += (len(y) + len(pad)) / SR
+    if video:
+        x = demotor(load(video))
+        for (a, b), tag in VIDEO.items():
+            y = x[int((a - 0.03) * SR): int((b + 0.05) * SR)].copy()
+            y *= 0.8 / max(1e-6, np.abs(y).max())
+            fade = min(len(y), int(SR * 0.01))
+            y[:fade] *= np.linspace(0, 1, fade)
+            y[-fade:] *= np.linspace(1, 0, fade)
+            kept.append({'id': f'v-{a:05.1f}', 'tag': tag, 'start': round(cursor, 3), 'dur': round(len(y) / SR, 3), 'env': envelope(y)})
             pieces += [y, pad]
             cursor += (len(y) + len(pad)) / SR
     sprite = np.concatenate(pieces)
