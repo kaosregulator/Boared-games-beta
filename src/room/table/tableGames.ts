@@ -3,11 +3,10 @@
  * the room is in and quiet, fetch them all in the background so opening any
  * game is still instant.
  */
-let warmed = false;
+let warmPromise: Promise<void> | null = null;
 
-export function warmTableGames() {
-  if (warmed) return;
-  warmed = true;
+export function warmTableGames(signal?: AbortSignal): Promise<void> {
+  if (warmPromise) return warmPromise;
   const loads: (() => Promise<unknown>)[] = [
     () => import('./ConnectFourTable'),
     () => import('./BattleshipTable'),
@@ -35,5 +34,14 @@ export function warmTableGames() {
     () => import('../../games/yahtzee/YahtzeeGame'),
   ];
   // one at a time, so it never competes with what the player is doing
-  void loads.reduce<Promise<unknown>>((chain, load) => chain.then(() => load().catch(() => {})), Promise.resolve());
+  warmPromise = loads
+    .reduce<Promise<void>>((chain, load) => chain.then(() => {
+      if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
+      return load().then(() => undefined, () => undefined);
+    }), Promise.resolve())
+    .catch(err => {
+      warmPromise = null;
+      throw err;
+    });
+  return warmPromise;
 }

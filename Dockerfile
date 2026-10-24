@@ -12,6 +12,7 @@ COPY package.json package-lock.json* bun.lock* ./
 RUN npm install --omit=dev
 COPY --from=build /app/dist ./dist
 COPY server.mjs ./server.mjs
+COPY logCore.mjs ./logCore.mjs
 COPY radioBrowserApi.mjs ./radioBrowserApi.mjs
 EXPOSE 3000
 CMD ["node", "server.mjs"]

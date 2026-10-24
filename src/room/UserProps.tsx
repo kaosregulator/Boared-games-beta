@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
+import { noteCacheLookup, release, retain } from '../engine/cache';
 
 interface DynamicModelProps {
   url: string;
@@ -13,7 +14,12 @@ interface DynamicModelProps {
 
 /** A user-uploaded GLB, fitted by height and sat on `position`. */
 export function DynamicModel({ url, position, rotY, height }: DynamicModelProps) {
+  noteCacheLookup(url);
   const { scene } = useGLTF(url);
+  useEffect(() => {
+    retain(url);
+    return () => release(url);
+  }, [url]);
   const root = useMemo(() => {
     const clone = scene.clone(true);
     clone.traverse(obj => {
@@ -28,7 +34,6 @@ export function DynamicModel({ url, position, rotY, height }: DynamicModelProps)
         if (!mat || !('metalness' in mat)) return;
         mat.metalness = 0;
         mat.metalnessMap = null;
-        mat.roughness = 0.86;
         mat.needsUpdate = true;
       });
     });

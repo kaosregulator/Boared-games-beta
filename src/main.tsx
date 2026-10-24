@@ -4,6 +4,11 @@ import App from './App.tsx';
 import './index.css';
 import { Probe } from './dev/Probe';
 import { PickProbe } from './dev/PickProbe';
+import { installClientErrorLog } from './engine/log';
+import { startPerfObservers } from './engine/perf';
+
+installClientErrorLog();
+startPerfObservers();
 
 const q = new URLSearchParams(location.search);
 

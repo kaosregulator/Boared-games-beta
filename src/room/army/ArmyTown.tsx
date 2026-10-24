@@ -28,6 +28,7 @@ import {
   pushOut,
 } from './town';
 import { armySfx, rotorLevel, rotorOff, rotorOn, wakeArmyAudio } from './armyAudio';
+import { openMiniGame } from '../../engine/lifecycle';
 
 /**
  * Shrunk down to army-man size on the bedroom floor. The town is set up on
@@ -1152,6 +1153,10 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
 }
 
 export function ArmyTownWorld({ boot }: { boot: ArmyBoot | null }) {
+  useEffect(() => {
+    const life = openMiniGame('army');
+    return () => life.close();
+  }, []);
   return (
     <group>
       <ArmyProps />

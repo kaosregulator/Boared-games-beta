@@ -1,12 +1,14 @@
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
 import { handleRadioRequest } from './radioBrowserApi.mjs';
+import { configureLog, getCorrelationId, log } from './logCore.mjs';
 
 dotenv.config();
+configureLog({ console: 'json' });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,6 +16,12 @@ const distDir = path.join(__dirname, 'dist');
 const port = Number(process.env.PORT) || 3000;
 
 const app = express();
+export { app };
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/')) res.setHeader('x-correlation-id', getCorrelationId());
+  next();
+});
+
 // Railway sits in front: trust its one proxy hop so req.ip is the player's address.
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '1mb' }));
@@ -86,7 +94,8 @@ app.post('/api/generate-trivia', async (req, res) => {
     if (match) rawText = match[0];
     res.json(JSON.parse(rawText));
   } catch (err) {
-    console.error('Trivia generation error:', err);
+    const message = err instanceof Error ? err.message : 'trivia generation failed';
+    log('error', 'trivia generation failed', { source: 'server', asset: '/api/generate-trivia', detail: message });
     res.status(500).json({ error: 'Failed to generate trivia pack' });
   }
 });
@@ -162,6 +171,9 @@ app.get('*', (_req, res) => {
   res.sendFile(path.join(distDir, 'index.html'));
 });
 
-app.listen(port, '0.0.0.0', () => {
-  console.log(`Game Room Beta listening on http://0.0.0.0:${port}`);
-});
+const isMain = process.argv[1] ? import.meta.url === pathToFileURL(process.argv[1]).href : false;
+if (isMain) {
+  app.listen(port, '0.0.0.0', () => {
+    log('info', 'listening', { source: 'server', port });
+  });
+}
