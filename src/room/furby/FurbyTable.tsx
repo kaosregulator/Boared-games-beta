@@ -198,6 +198,7 @@ export function FurbyTable({
       note: 'Brand new, out of the box. Touch its head, tummy or beak, or pick it up and play.',
       detail: 'The Furby Boom in the back just dances.',
       onLeave,
+      dock: 'bottom',
       actions: [
         { label: 'Pet', onClick: act('pet') },
         { label: 'Tickle', onClick: act('tickle') },
