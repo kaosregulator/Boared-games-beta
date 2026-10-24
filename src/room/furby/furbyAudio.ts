@@ -221,9 +221,24 @@ function loadMotor() {
 }
 
 /** One run of the motor from `at` for `seconds`. Returns a stop. */
-function motorRun(at: number, seconds: number, volume: number) {
+function motorRun(at: number, seconds: number, volume: number): () => void {
   const ac = audio();
-  if (!ac || !master || !motor?.bursts.length) return () => {};
+  if (!ac || !master) return () => {};
+  if (!motor) {
+    // Still loading (the first sounds after the page opens): run whatever
+    // part of this window is left once it arrives.
+    let stop: (() => void) | null = null;
+    let cancelled = false;
+    void loadMotor().then(() => {
+      const now = ac.currentTime + 0.01;
+      if (!cancelled && motor && now < at + seconds - 0.1) stop = motorRun(Math.max(at, now), at + seconds - Math.max(at, now), volume);
+    });
+    return () => {
+      cancelled = true;
+      stop?.();
+    };
+  }
+  if (!motor.bursts.length) return () => {};
   const b = motor.bursts[Math.floor(Math.random() * motor.bursts.length)];
   const release = b.end - b.loopEnd;
   // Spin-up, then the steady middle loops for as long as it has to run.
