@@ -47,7 +47,7 @@ import { FurbyHold } from './furby/FurbyHold';
 import { FurbyQuiet } from './furby/FurbyQuiet';
 import { furbyMuteAvailable } from './furby/furbyQuiet';
 import { FurbyBubble, FurbyHoldHud } from './furby/FurbyHud';
-import { anchorPose, furbyGesture, setFurby, useFurby } from './furby/furbyStore';
+import { anchorPose, requestFurbyPutdown, setFurby, useFurby } from './furby/furbyStore';
 import { FURBY_GAME } from './furby/furbyGame';
 import { TABLE_SEAT } from './roomLayout';
 import { ANCHORS, anchorById, type Anchor } from './anchors';
@@ -469,16 +469,9 @@ export function WalkRoom({
   }, []);
 
   useEffect(() => {
-    if (!furbyToTable) return;
-    if (!furbyHeld) {
-      setFurbyToTable(false);
-      if (!session) startTable(FURBY_GAME);
-      return;
-    }
-    // It flies back to the bed in well under a second; if it hasn't (a
-    // stalled frame loop, a missed put-down), take it out of your hands.
-    const id = window.setTimeout(() => setFurby({ held: null, from: null }), 1500);
-    return () => window.clearTimeout(id);
+    if (!furbyToTable || furbyHeld) return;
+    setFurbyToTable(false);
+    if (!session) startTable(FURBY_GAME);
   }, [furbyToTable, furbyHeld, session, startTable]);
 
   const playGame = useCallback(
@@ -913,8 +906,10 @@ export function WalkRoom({
             session || furbyToTable
               ? undefined
               : () => {
-                  furbyGesture('putdown');
+                  // Ask for the table first. The put-down is what lets it start,
+                  // and a throw inside the gesture must not drop the request.
                   setFurbyToTable(true);
+                  requestFurbyPutdown();
                 }
           }
         />

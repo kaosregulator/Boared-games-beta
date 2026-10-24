@@ -4,6 +4,7 @@ import { useAnimations, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { pushHud } from '../table/tableHud';
 import { FURBY_SOLID, FurbyPuppet } from './FurbyPuppet';
+import { scriptedStep } from './scriptClock';
 import { anchorPose, furbyAnchors, setFurby, tableBrain, useFurby } from './furbyStore';
 import { motorWhirr } from './furbyAudio';
 import { HoldArms, applyHand, newHandPose, type GripShape } from './HoldArms';
@@ -157,6 +158,7 @@ export function FurbyTable({
   const away = held === 'table';
   const fur = useRef<THREE.Group>(null);
   const clock = useRef(0);
+  const mark = useRef<number | null>(null);
   const cues = useRef(new Set<string>());
   const done = useRef(false);
   const inside = useMemo(
@@ -174,6 +176,7 @@ export function FurbyTable({
 
   useEffect(() => {
     clock.current = 0;
+    mark.current = null;
     cues.current.clear();
     done.current = false;
     if (phase === 'pack' && held === 'table') setFurby({ held: null, from: null });
@@ -218,8 +221,11 @@ export function FurbyTable({
   useFrame((_, dtRaw) => {
     const g = fur.current;
     if (!g) return;
-    const dt = Math.min(dtRaw, 0.05);
-    clock.current += dt;
+    // The pull out of the box is a script. A capped physics step left it
+    // crawling, so "Opening" never finished on a heavy frame.
+    const step = phase === 'play' ? { dt: Math.min(dtRaw, 0.05), at: performance.now() } : scriptedStep(mark.current, performance.now(), 1);
+    if (phase !== 'play') mark.current = step.at;
+    clock.current += step.dt;
     const t = clock.current;
     tableBrain.attentive = phase === 'play';
     const cue = (name: string, at: number, fn: () => void) => {

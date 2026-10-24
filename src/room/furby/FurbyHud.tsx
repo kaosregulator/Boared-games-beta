@@ -62,19 +62,20 @@ export function FurbyHoldHud({ asleep, onTable }: { asleep?: boolean; onTable?: 
   }, []);
   return (
     <div data-furby-hud className="pointer-events-none absolute inset-0 z-40 text-white">
-      <div className="pointer-events-auto absolute left-4 top-4">
+      <div className="pointer-events-auto absolute left-4 top-4 flex max-w-[calc(100vw-2rem)] flex-wrap gap-2">
         <button
           type="button"
           onClick={() => furbyGesture('putdown')}
-          className="rounded-xl bg-amber-400 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-black"
+          className="min-h-11 rounded-xl bg-amber-400 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-black"
         >
           Put it down <span className="opacity-60">Esc</span>
         </button>
         {onTable && (
           <button
             type="button"
+            data-furby-table="open"
             onClick={onTable}
-            className="ml-2 rounded-xl border border-fuchsia-300/50 bg-[#7b1f78]/85 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-amber-100"
+            className="min-h-11 rounded-xl border border-fuchsia-300/50 bg-[#7b1f78]/85 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-amber-100"
           >
             Open the new ones at the table
           </button>
