@@ -439,9 +439,16 @@ export function WalkRoom({
   }, []);
 
   useEffect(() => {
-    if (!furbyToTable || furbyHeld) return;
-    setFurbyToTable(false);
-    if (!session) startTable(FURBY_GAME);
+    if (!furbyToTable) return;
+    if (!furbyHeld) {
+      setFurbyToTable(false);
+      if (!session) startTable(FURBY_GAME);
+      return;
+    }
+    // It flies back to the bed in well under a second; if it hasn't (a
+    // stalled frame loop, a missed put-down), take it out of your hands.
+    const id = window.setTimeout(() => setFurby({ held: null, from: null }), 1500);
+    return () => window.clearTimeout(id);
   }, [furbyToTable, furbyHeld, session, startTable]);
 
   const playGame = useCallback(
