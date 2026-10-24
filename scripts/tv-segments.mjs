@@ -14,6 +14,9 @@ const [dir, out] = process.argv.slice(2);
 
 function title(row) {
   if (row.kind === 'commercial') return 'Commercial break';
+  if (row.kind === 'promo') return row.show ? `Promo: ${row.show}` : 'Promo';
+  // some sheets already spell the show inside the episode ("Show · Episode")
+  if (row.show && row.episode?.startsWith(row.show)) return row.episode;
   const parts = [row.show, row.episode].filter(Boolean);
   if (parts.length) return parts.join(' · ');
   return row.kind === 'show' ? 'Cartoon' : 'Station break';
