@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { PIVOT, type FurbyRig } from './furbyRig';
-import { chomp, motorPlan, motorPlay, mouth, speak, voiceOver, type FurbyTag, type Voice } from './furbyAudio';
+import { chomp, motorPlan, motorPlay, mouth, speak, voiceOver, voiceTime, type FurbyTag, type Voice } from './furbyAudio';
 
 /**
  * How a 1998 Furby behaves, as a little state machine per toy. It reads
@@ -246,6 +246,9 @@ export class FurbyBrain {
         stopVoice();
         stopMotor();
       };
+    } else if (this.voiced) {
+      // The voice is still loading and the line is mimed; the gearbox isn't.
+      motorPlay(voiceTime() + 0.02, plan, 0.3 * this.volume);
     }
   }
 
