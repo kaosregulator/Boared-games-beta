@@ -3,7 +3,7 @@ import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { useAnimations, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { pushHud } from '../table/tableHud';
-import { FurbyPuppet } from './FurbyPuppet';
+import { FURBY_SOLID, FurbyPuppet } from './FurbyPuppet';
 import { anchorPose, furbyAnchors, setFurby, tableBrain, useFurby } from './furbyStore';
 import { motorWhirr } from './furbyAudio';
 import { HoldArms, applyHand, newHandPose, type GripShape } from './HoldArms';
@@ -168,7 +168,7 @@ export function FurbyTable({
   const pull = useMemo(newHandPose, []);
   const idle = useMemo(newHandPose, []);
   const pullGrip = useMemo<GripShape>(
-    () => ({ inverse: new THREE.Matrix4(), center: new THREE.Vector3(0, 0.068, 0.003), radii: new THREE.Vector3(0.066, 0.072, 0.06) }),
+    () => ({ inverse: new THREE.Matrix4(), parts: FURBY_SOLID }),
     [],
   );
 
@@ -234,7 +234,7 @@ export function FurbyTable({
       // Wiggles in the box, gets pulled up out of the top, hops down to you.
       cue('hello', 0.7, () => tableBrain.act('hello'));
       cue('pull', 1.6, () => {
-        motorWhirr(0.24, 1.1);
+        motorWhirr(0.35, 1.1);
         tableBrain.act('flip');
       });
       cue('land', 3.5, () => tableBrain.act('putdown'));

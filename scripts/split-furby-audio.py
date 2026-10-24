@@ -16,6 +16,14 @@ that drives the beak, so the mouth moves with the words like the real toy.
     python3 -I scripts/split-furby-audio.py rip1.m4a rip2.m4a rip3.m4a public/audio/furby \
         --library FurbSounds/
 
+--video adds every sound in the user's video of a 1998 Furby talking,
+taken from its voice track (scripts/separate-furby-video.py splits the video
+into voice and motor first, so none of the gearbox comes along). The voice
+track is cut at its gaps like the rips; VIDEO_TAGS says what each sound is,
+read off its spectrogram: stepped held notes are singing, wobbling pulsed
+arcs laughing, big rising-falling arcs whee, long low falling tones yawns,
+and anything under 0.6 s a chirp. The rest is Furbish chatter.
+
 --library adds a folder of single, named 1998 Furby sounds (FurbSounds.zip,
 ripped from the "Big Fun in Furbyland" CD-ROM). Their file names say what
 each one is (YUM, SFX_LAUGH_3, me_hungry...), so LIBRARY maps them onto the
@@ -81,6 +89,16 @@ LIBRARY = {
 }
 LIBRARY = {name: tag for tag, names in LIBRARY.items() for name in names.split()}
 LIBRARY_SKIP = {'credits', 'SFX_PHONE', 'SFX_BEEP', 'SFX_RAP1', 'SFX_RAP2', 'ILL_BE_BACK', 'credits'}
+# Video sound, by where it starts in the video (tenths of a second) -> tag.
+VIDEO_TAGS = {
+    10.2: 'sing', 12.4: 'sing', 14.9: 'sing', 27.2: 'sing',
+    19.1: 'whee', 22.6: 'whee', 86.0: 'whee', 103.0: 'whee',
+    36.9: 'yawn', 39.7: 'yawn', 96.0: 'yawn',
+    78.1: 'laugh', 80.5: 'laugh', 83.3: 'laugh',
+    57.9: 'story',
+}
+# Clicks and hiss with no voice in them.
+VIDEO_SKIP = {68.3, 105.0}
 MAX_TALK = 8.0
 # Enough variety without a huge download: the rest of the talk is cut.
 CAP = {'talk': 14, 'story': 1, 'sing-long': 1, 'laugh-long': 2}
@@ -118,12 +136,43 @@ def envelope(y):
     return ''.join(str(int(v)) for v in np.clip((db + 50) / 34 * 9, 0, 9))
 
 
+def voice_segments(x):
+    """Sounds in the video's voice track: runs above its 40th-percentile level,
+    split where it stays below for 0.18 s. A run that comes out over 6 s
+    (sounds close together) is split again against its own level."""
+    hop = SR // 100
+    n = len(x) // hop
+    db = 20 * np.log10(np.sqrt((x[: n * hop].reshape(n, hop) ** 2).mean(1)) + 1e-9)
+
+    def runs(lo, hi, threshold):
+        out, start, last = [], None, 0
+        for i in range(lo, hi + 1):
+            v = i < hi and db[i] > threshold
+            if v:
+                start = i if start is None else start
+                last = i
+            elif start is not None and (i - last > 18 or i == hi):
+                if last + 1 - start > 600 and threshold < db[start:last + 1].max() - 6:
+                    out += runs(start, last + 1, np.percentile(db[start:last + 1], 45))
+                else:
+                    out.append((start / 100, (last + 1) / 100))
+                start = None
+        return out
+
+    # The first 3.5 s is the video's intro, before the Furby starts.
+    return [(a, b) for a, b in runs(0, n, np.percentile(db, 40)) if b - a >= 0.25 and a > 3.5]
+
+
 def main():
     args = sys.argv[1:]
-    library = None
+    library = video = None
     if '--library' in args:
         i = args.index('--library')
         library = args[i + 1]
+        del args[i:i + 2]
+    if '--video' in args:
+        i = args.index('--video')
+        video = args[i + 1]
         del args[i:i + 2]
     *rips, outdir = args
     os.makedirs(outdir, exist_ok=True)
@@ -172,6 +221,21 @@ def main():
             y[:fade] *= np.linspace(0, 1, fade)
             y[-fade:] *= np.linspace(1, 0, fade)
             kept.append({'id': stem, 'tag': tag, 'start': round(cursor, 3), 'dur': round(len(y) / SR, 3), 'env': envelope(y)})
+            pieces += [y, pad]
+            cursor += (len(y) + len(pad)) / SR
+    if video:
+        x = load(video)
+        for a, b in voice_segments(x):
+            dur = b - a
+            if dur > MAX_TALK or round(a, 1) in VIDEO_SKIP:
+                continue
+            tag = VIDEO_TAGS.get(round(a, 1)) or ('chirp' if dur < 0.6 else 'talk')
+            y = x[int(max(0, a - 0.03) * SR): int((b + 0.05) * SR)].copy()
+            y *= 0.8 / max(1e-6, np.abs(y).max())
+            fade = min(len(y), int(SR * 0.01))
+            y[:fade] *= np.linspace(0, 1, fade)
+            y[-fade:] *= np.linspace(1, 0, fade)
+            kept.append({'id': f'v-{a:05.1f}', 'tag': tag, 'start': round(cursor, 3), 'dur': round(len(y) / SR, 3), 'env': envelope(y)})
             pieces += [y, pad]
             cursor += (len(y) + len(pad)) / SR
     sprite = np.concatenate(pieces)

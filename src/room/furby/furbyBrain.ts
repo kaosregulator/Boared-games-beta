@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import type { FurbyRig } from './furbyRig';
-import { chomp, motorWhirr, mouth, speak, voiceOver, type FurbyTag, type Voice } from './furbyAudio';
+import { PIVOT, type FurbyRig } from './furbyRig';
+import { chomp, motorPlan, motorPlay, mouth, speak, voiceOver, voiceTime, type FurbyTag, type Voice } from './furbyAudio';
 
 /**
  * How a 1998 Furby behaves, as a little state machine per toy. It reads
@@ -43,9 +43,11 @@ export interface Pose {
   lookY: number;
   hop: number;
   squash: number;
+  /** The tummy pulled in by the cam, 0-1. */
+  belly: number;
 }
 
-const REST: Pose = { lean: 0, sway: 0, nod: 0, turn: 0, earL: 0.62, earR: 0.62, jaw: 0, lid: 0, squint: 0, lookX: 0, lookY: 0, hop: 0, squash: 1 };
+const REST: Pose = { lean: 0, sway: 0, nod: 0, turn: 0, earL: 0.62, earR: 0.62, jaw: 0, lid: 0, squint: 0, lookX: 0, lookY: 0, hop: 0, squash: 1, belly: 0 };
 
 type Line = [furbish: string, english: string];
 
@@ -204,6 +206,13 @@ export class FurbyBrain {
   private lastChomp = 0;
   private tuft = new THREE.Vector2();
   private tuftV = new THREE.Vector2();
+  /** When the motor runs, in this brain's time: [start, end] pairs. */
+  private motorRuns: [number, number][] = [];
+  /** How hard the motor is running now (eased 0-1), and how far the cam has turned. */
+  private motor = 0;
+  /** Stops the gearbox sound of the line playing now. */
+  private stopMotor: () => void = () => {};
+  private cam = 0;
   /** Set from outside each frame. */
   dark = false;
   /** Talk on its own only when someone is around (held, nearby, at the table). */
@@ -227,8 +236,13 @@ export class FurbyBrain {
     const [furbish, english] = lines[Math.floor(Math.random() * lines.length)];
     say({ furbish, english, who: this.name, at: performance.now() });
     this.voice?.stop();
+    this.stopMotor();
     this.voice = this.voiced ? speak(tag ?? pickTag(SOUND[key]), { pitch: this.pitch, volume: this.volume, maxDur }) : null;
-    if (this.voiced) motorWhirr(0.16 * this.volume, this.voice ? this.voice.clip.dur : 0.6);
+    // The motor moves the body through the line; its gearbox is heard with it
+    // (from now if the voice is still loading and the line is mimed).
+    const plan = motorPlan(this.voice ? this.voice.clip.dur : 1.2);
+    this.motorRuns = plan.map(([a, b]) => [this.time + 0.02 + a, this.time + 0.02 + b]);
+    if (this.voiced) this.stopMotor = motorPlay(this.voice ? this.voice.at : voiceTime() + 0.02, plan, 0.3 * this.volume);
   }
 
   /** Something happened to the Furby. Returns false if it ignored it. */
@@ -366,12 +380,20 @@ export class FurbyBrain {
       }
     }
 
-    // While talking the motor runs: ears pump, body rocks, eyes go wide.
-    if (talk > 0.05 && !this.asleep) {
-      w.earL += Math.sin(t * 5) * 0.2;
-      w.earR += Math.sin(t * 5) * 0.2;
-      w.lean += Math.sin(t * 2.6) * 0.06;
-      w.lid = Math.min(w.lid, 0);
+    // One motor turns one cam that moves everything: while it runs the ears
+    // pump, the body rocks, the eyes go wide and the tummy pulls in; when it
+    // stops, everything stays where the cam left it.
+    const running = this.motorRuns.some(([a, b]) => t >= a && t < b);
+    this.motor += ((running ? 1 : 0) - this.motor) * (1 - Math.exp(-dt * 30));
+    this.cam += dt * this.motor * 7;
+    if (this.motorRuns.length && t > this.motorRuns[this.motorRuns.length - 1][1]) this.motorRuns = [];
+    if (!this.asleep) {
+      w.earL += Math.sin(this.cam) * 0.22;
+      w.earR += Math.sin(this.cam) * 0.22;
+      w.lean += Math.sin(this.cam * 0.5) * 0.05;
+      w.nod += Math.sin(this.cam * 0.7 + 1) * 0.03;
+      if (this.motor > 0.3) w.lid = Math.min(w.lid, 0);
+      w.belly = this.motor * (0.65 + 0.35 * Math.sin(this.cam * 2));
     }
     w.jaw = talk;
 
@@ -520,6 +542,7 @@ export class FurbyBrain {
     b.earL.rotation.set(-(p.earL - 0.6) * 0.3, 0, (0.55 - p.earL) * 1.1);
     b.earR.rotation.set(-(p.earR - 0.6) * 0.3, 0, -(0.55 - p.earR) * 1.1);
     b.jaw.rotation.x = p.jaw * 0.42;
+    b.belly.position.z = PIVOT.belly.z - PIVOT.waist.z - p.belly * 0.04;
     b.tuft.rotation.set(THREE.MathUtils.clamp(this.tuft.y, -0.4, 0.4) * 0.5, 0, THREE.MathUtils.clamp(this.tuft.x, -0.4, 0.4) * 0.5);
     b.root.position.y = p.hop / 0.16;
     b.root.scale.set(1 / Math.sqrt(p.squash), p.squash, 1 / Math.sqrt(p.squash));
@@ -532,5 +555,6 @@ export class FurbyBrain {
 
   dispose() {
     this.voice?.stop();
+    this.stopMotor();
   }
 }

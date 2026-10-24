@@ -2,7 +2,7 @@ import React, { Suspense, useEffect, useMemo, useRef } from 'react';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { HoldArms, applyHand, newHandPose, type GripShape, type HandPose } from './HoldArms';
-import { FurbyPuppet } from './FurbyPuppet';
+import { FURBY_SOLID, FurbyPuppet } from './FurbyPuppet';
 import { brainFor, furbyGesture, onFurbyGesture, setFurby, useFurby, type Gesture } from './furbyStore';
 
 /**
@@ -47,8 +47,6 @@ interface Target {
 }
 const target = (): Target => ({ wrist: new THREE.Vector3(), fingers: new THREE.Vector3(), palm: new THREE.Vector3(), curl: 0, point: 0, grips: true });
 
-/** The Furby's body as an ellipsoid, holder space, for the hands to close on. */
-const BODY = { center: new THREE.Vector3(0, 0.068, 0.003), radii: new THREE.Vector3(0.066, 0.072, 0.06) };
 /** Wrist to the middle of the palm, along the fingers, and the palm's thickness. */
 const PALM_REACH = 0.05;
 const PALM_DEPTH = 0.012;
@@ -98,7 +96,7 @@ export function FurbyHold() {
   const want = useMemo(() => ({ left: target(), right: target() }), []);
   const st = useRef({ fly: 0, leaving: false, gesture: null as Gesture | null, t: 0, acted: false });
   const start = useMemo(() => ({ pos: new THREE.Vector3(), quat: new THREE.Quaternion(), scale: 1 }), []);
-  const gripShape = useMemo<GripShape>(() => ({ inverse: new THREE.Matrix4(), center: BODY.center, radii: BODY.radii }), []);
+  const gripShape = useMemo<GripShape>(() => ({ inverse: new THREE.Matrix4(), parts: FURBY_SOLID }), []);
 
   // A fresh pick-up: start the flight from where it sat.
   useEffect(() => {

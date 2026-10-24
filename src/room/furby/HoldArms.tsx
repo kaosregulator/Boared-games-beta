@@ -14,12 +14,16 @@ import * as THREE from 'three';
  * its surface, so the hands wrap round the toy instead of passing through.
  */
 
+export interface Ellipsoid {
+  center: THREE.Vector3;
+  radii: THREE.Vector3;
+}
+
 export interface GripShape {
   /** World -> the held object's local space. */
   inverse: THREE.Matrix4;
-  /** An ellipsoid round the object, in its local space. */
-  center: THREE.Vector3;
-  radii: THREE.Vector3;
+  /** The object as a few overlapping ellipsoids, in its local space. */
+  parts: Ellipsoid[];
 }
 
 export interface HandPose {
@@ -280,9 +284,49 @@ const toWorld = new THREE.Matrix4();
 
 /** Is a model-space point inside the held shape (grown by `pad`)? */
 function inside(grip: GripShape, p: THREE.Vector3, pad: number) {
-  local.copy(p).applyMatrix4(toWorld).applyMatrix4(grip.inverse).sub(grip.center);
-  const r = grip.radii;
-  return (local.x / (r.x + pad)) ** 2 + (local.y / (r.y + pad)) ** 2 + (local.z / (r.z + pad)) ** 2 < 1;
+  local.copy(p).applyMatrix4(toWorld).applyMatrix4(grip.inverse);
+  return grip.parts.some(({ center: c, radii: r }) => {
+    const x = (local.x - c.x) / (r.x + pad);
+    const y = (local.y - c.y) / (r.y + pad);
+    const z = (local.z - c.z) / (r.z + pad);
+    return x * x + y * y + z * z < 1;
+  });
+}
+
+const mid = new THREE.Vector3();
+
+/** Does a finger posed at `curl` touch the held shape anywhere along its length? */
+function fingerHits(grip: GripShape, finger: Finger, curl: number) {
+  poseFinger(finger, curl, joints, false);
+  for (let j = 1; j < finger.restPos.length; j++) {
+    if (inside(grip, joints[j], PAD)) return true;
+    // Between knuckles too: a long bone can cut through where its ends don't.
+    if (inside(grip, mid.addVectors(joints[j - 1], joints[j]).multiplyScalar(0.5), PAD)) return true;
+  }
+  return false;
+}
+
+/**
+ * The curl nearest `want` that keeps this finger out of the held shape: it
+ * closes until it touches the surface; a finger that's already in even when
+ * straight wraps further round instead. null if no curl clears it.
+ */
+function clearCurl(grip: GripShape, finger: Finger, want: number) {
+  const steps = 12;
+  if (!fingerHits(grip, finger, 0)) {
+    let ok = 0;
+    for (let s = 1; s <= steps; s++) {
+      const c = (want * s) / steps;
+      if (fingerHits(grip, finger, c)) break;
+      ok = c;
+    }
+    return ok;
+  }
+  for (let s = 1; s <= steps; s++) {
+    const c = want + ((1 - want) * s) / steps;
+    if (!fingerHits(grip, finger, c)) return c;
+  }
+  return null;
 }
 
 function Hand({ pose, side, skin, sleeve, cuff }: { pose: HandPose; side: 'left' | 'right'; skin: THREE.Material; sleeve: THREE.Material; cuff: THREE.Material }) {
@@ -306,44 +350,29 @@ function Hand({ pose, side, skin, sleeve, cuff }: { pose: HandPose; side: 'left'
     h.updateMatrixWorld(true);
     // Model space -> world, for testing joints against what's held.
     toWorld.multiplyMatrices(h.matrixWorld, rig.align.matrix);
+    const want = rig.fingers.map((_, i) => {
+      if (i === 0) return Math.min(1, pose.curl * 0.8 + 0.1);
+      return i === 1 ? pose.curl * (1 - pose.point) : pose.curl;
+    });
+    let curls = want;
     if (pose.grip) {
-      // A palm sunk into the toy slides back out along the palm normal.
-      const palm = rig.palmCenter.clone();
-      const back = rig.palmNormal.clone().multiplyScalar(-0.004);
-      let pushed = 0;
-      while (inside(pose.grip, palm, 0.004) && pushed < 15) {
-        palm.add(back);
-        pushed++;
-      }
-      if (pushed) {
-        const shift = back.clone().multiplyScalar(pushed).applyQuaternion(rig.align.quaternion).applyQuaternion(h.quaternion);
-        h.position.add(shift);
+      const grip = pose.grip;
+      // Back the hand out along its palm normal, 3 mm at a time, until the
+      // palm is out of the toy and every finger can rest on its surface.
+      const step = rig.palmNormal.clone().multiplyScalar(-0.003).applyQuaternion(rig.align.quaternion).applyQuaternion(h.quaternion);
+      for (let tries = 0; tries < 20; tries++) {
+        const palmIn = inside(grip, rig.palmCenter, 0.004);
+        const fit = palmIn ? null : rig.fingers.map((finger, i) => clearCurl(grip, finger, want[i]));
+        if (fit && fit.every(c => c !== null)) {
+          curls = fit as number[];
+          break;
+        }
+        h.position.add(step);
         h.updateMatrixWorld(true);
         toWorld.multiplyMatrices(h.matrixWorld, rig.align.matrix);
       }
     }
-    rig.fingers.forEach((finger, i) => {
-      let curl = pose.curl;
-      if (i === 1) curl *= 1 - pose.point;
-      if (i === 0) curl = Math.min(1, pose.curl * 0.8 + 0.1);
-      if (pose.grip) {
-        // Close the finger until it meets the surface, and no further.
-        const steps = 12;
-        let ok = 0;
-        for (let s = 1; s <= steps; s++) {
-          const c = (curl * s) / steps;
-          poseFinger(finger, c, joints, false);
-          let hit = false;
-          for (let j = 1; j < finger.restPos.length && !hit; j++) hit = inside(pose.grip, joints[j], PAD);
-          if (hit) break;
-          ok = c;
-        }
-        poseFinger(finger, 0, joints, false);
-        const straightHit = finger.restPos.slice(1).some((_, j) => inside(pose.grip!, joints[j + 1], PAD));
-        curl = straightHit ? 0 : ok;
-      }
-      poseFinger(finger, curl, joints, true);
-    });
+    rig.fingers.forEach((finger, i) => poseFinger(finger, curls[i], joints, true));
 
     // Forearm from the elbow to just behind the wrist.
     const end = new THREE.Vector3().copy(h.position).addScaledVector(y, -0.03);

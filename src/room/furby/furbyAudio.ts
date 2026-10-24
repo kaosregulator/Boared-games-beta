@@ -53,6 +53,8 @@ export interface Voice {
   clip: Clip;
   /** AudioContext time the clip started. */
   at: number;
+  /** Playback rate the clip was played at. */
+  rate: number;
   stop: () => void;
 }
 
@@ -134,6 +136,7 @@ export function speak(tag: FurbyTag, opts: { volume?: number; pitch?: number; ma
   return {
     clip: { ...clip, dur: clip.dur / (opts.pitch ?? 1) },
     at,
+    rate: opts.pitch ?? 1,
     stop: () => {
       if (stopped) return;
       stopped = true;
@@ -183,33 +186,33 @@ export function chomp(volume = 0.25) {
   src.start(t);
 }
 
-interface MotorSample {
-  buffer: AudioBuffer;
+interface MotorBurst {
+  start: number;
   loopStart: number;
   loopEnd: number;
-  stopAt: number;
+  end: number;
 }
 
-let motor: MotorSample | null = null;
+let motor: { buffer: AudioBuffer; bursts: MotorBurst[] } | null = null;
 let motorLoading: Promise<void> | null = null;
 
 /**
- * The gearbox sample from scripts/make-furby-motor.py: a cam-switch click and
- * spin-up, a steady whirr that loops, then the spin-down and the click as the
- * cam parks.
+ * A real 1998 Furby's gearbox (the user's recording of one with a dead
+ * speaker), cut into bursts by scripts/build-furby-motor.py: each one a
+ * spin-up, a steady middle that loops, and a spin-down.
  */
 function loadMotor() {
   if (motorLoading) return motorLoading;
   const ac = audio();
   if (!ac) return Promise.resolve();
   motorLoading = Promise.all([
-    fetch('/audio/furby/motor.json').then(r => r.json() as Promise<Omit<MotorSample, 'buffer'>>),
+    fetch('/audio/furby/motor.json').then(r => r.json() as Promise<{ bursts: MotorBurst[] }>),
     fetch('/audio/furby/motor.mp3')
       .then(r => r.arrayBuffer())
       .then(bytes => ac.decodeAudioData(bytes)),
   ])
-    .then(([marks, decoded]) => {
-      motor = { ...marks, buffer: decoded };
+    .then(([index, decoded]) => {
+      motor = { buffer: decoded, bursts: index.bursts };
     })
     .catch(() => {
       motorLoading = null;
@@ -217,63 +220,89 @@ function loadMotor() {
   return motorLoading;
 }
 
-/**
- * The motor under the fur running for `seconds`, the way the real toy's
- * single motor turned the cam shaft for every word and wiggle. `volume` is
- * relative to the voice.
- */
-export function motorWhirr(volume = 0.18, seconds = 0.6) {
-  void loadMotor();
+/** One run of the motor from `at` for `seconds`. Returns a stop. */
+function motorRun(at: number, seconds: number, volume: number): () => void {
   const ac = audio();
-  if (!ac || !master) return;
+  if (!ac || !master) return () => {};
   if (!motor) {
-    synthWhirr(volume * 0.25, Math.min(seconds, 0.5));
-    return;
+    // Still loading (the first sounds after the page opens): run whatever
+    // part of this window is left once it arrives.
+    let stop: (() => void) | null = null;
+    let cancelled = false;
+    void loadMotor().then(() => {
+      const now = ac.currentTime + 0.01;
+      if (!cancelled && motor && now < at + seconds - 0.1) stop = motorRun(Math.max(at, now), at + seconds - Math.max(at, now), volume);
+    });
+    return () => {
+      cancelled = true;
+      stop?.();
+    };
   }
-  const t = ac.currentTime + 0.01;
-  // Each run sounds a little different: battery level, which cam lobe, fur.
-  const rate = 0.94 + Math.random() * 0.12;
-  const run = Math.max(seconds, motor.loopStart + 0.05);
+  if (!motor.bursts.length) return () => {};
+  const b = motor.bursts[Math.floor(Math.random() * motor.bursts.length)];
+  const release = b.end - b.loopEnd;
+  // Spin-up, then the steady middle loops for as long as it has to run.
+  const run = Math.max(seconds - release, b.loopStart - b.start + 0.02);
   const spin = ac.createBufferSource();
   spin.buffer = motor.buffer;
   spin.loop = true;
-  spin.loopStart = motor.loopStart;
-  spin.loopEnd = motor.loopEnd;
-  spin.playbackRate.value = rate;
+  spin.loopStart = b.loopStart;
+  spin.loopEnd = b.loopEnd;
   const g = ac.createGain();
-  g.gain.value = volume;
+  g.gain.setValueAtTime(volume, at);
+  g.gain.setValueAtTime(volume, at + run);
+  g.gain.linearRampToValueAtTime(0, at + run + 0.025);
   spin.connect(g).connect(master);
-  spin.start(t, 0);
-  g.gain.setValueAtTime(volume, t + run);
-  g.gain.linearRampToValueAtTime(0, t + run + 0.05);
-  spin.stop(t + run + 0.06);
-
+  spin.start(at, b.start);
+  spin.stop(at + run + 0.03);
+  // Then the burst's own spin-down.
   const park = ac.createBufferSource();
   park.buffer = motor.buffer;
-  park.playbackRate.value = rate;
   const pg = ac.createGain();
-  pg.gain.value = volume;
+  pg.gain.setValueAtTime(0, at + run);
+  pg.gain.linearRampToValueAtTime(volume, at + run + 0.025);
   park.connect(pg).connect(master);
-  park.start(t + run, motor.stopAt);
+  park.start(at + run, b.loopEnd - 0.025, release + 0.025);
+  return () => {
+    const t = ac.currentTime;
+    for (const gain of [g.gain, pg.gain]) {
+      gain.cancelScheduledValues(t);
+      gain.setTargetAtTime(0, t, 0.02);
+    }
+    spin.stop(t + 0.1);
+    park.stop(t + 0.1);
+  };
 }
 
-/** Stand-in until the sample loads. */
-function synthWhirr(volume: number, seconds: number) {
+/** The motor running for `seconds`, for a movement with no voice. `volume` is relative to the voice. */
+export function motorWhirr(volume = 0.3, seconds = 0.6) {
+  void loadMotor();
   const ac = audio();
-  if (!ac || !master) return;
-  const t = ac.currentTime;
-  const osc = ac.createOscillator();
-  osc.type = 'sawtooth';
-  osc.frequency.setValueAtTime(95, t);
-  osc.frequency.linearRampToValueAtTime(120, t + seconds);
-  const lp = ac.createBiquadFilter();
-  lp.type = 'lowpass';
-  lp.frequency.value = 700;
-  const g = ac.createGain();
-  g.gain.setValueAtTime(0, t);
-  g.gain.linearRampToValueAtTime(volume, t + 0.04);
-  g.gain.linearRampToValueAtTime(0, t + seconds);
-  osc.connect(lp).connect(g).connect(master);
-  osc.start(t);
-  osc.stop(t + seconds + 0.05);
+  if (ac) motorRun(ac.currentTime + 0.01, seconds, volume);
+}
+
+/**
+ * When the motor runs during a line `seconds` long, as [start, end] pairs
+ * from the start of the line. Measured off a real 1998 Furby talking (the
+ * user's video): the motor isn't tied to the syllables but to the
+ * movements. It kicks in with the first word, runs in bursts of about a
+ * fifth to half a second with short stops between, and its last burst ends
+ * with the line.
+ */
+export function motorPlan(seconds: number): [number, number][] {
+  const plan: [number, number][] = [];
+  let at = -0.03;
+  while (at < seconds - 0.12) {
+    const end = Math.min(at + 0.15 + Math.random() * 0.35, seconds + 0.05);
+    plan.push([at, end]);
+    at = end + 0.08 + Math.random() * 0.3;
+  }
+  return plan;
+}
+
+/** Plays a motor plan from audio time `at`. Returns a stop. */
+export function motorPlay(at: number, plan: [number, number][], volume = 0.3) {
+  void loadMotor();
+  const stops = plan.map(([a, b]) => motorRun(at + Math.max(0, a), b - Math.max(0, a), volume));
+  return () => stops.forEach(stop => stop());
 }
