@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { closeDb, db, sidecarRow, upsertEpisode } from './db.mjs';
 import {
-  INCOMING_DIR, VAULT_DIR, episodeLabel, episodesOf, fileUrls, hasCommand, hashFile, here, humanBytes, humanTime,
+  INCOMING_DIR, VAULT_DIR, episodeLabel, vaultRel, episodesOf, fileUrls, hasCommand, hashFile, here, humanBytes, humanTime,
   itemMetadata, parseArgs, readSidecars, run, seasonFilter, showConfig, showDir,
 } from './lib.mjs';
 
@@ -43,7 +43,7 @@ const sidecarPath = ep => path.join(showDir(cfg.name), `${ep.key}.json`);
 const isReady = ep => {
   try {
     const s = JSON.parse(fs.readFileSync(sidecarPath(ep), 'utf8'));
-    return fs.existsSync(path.join(VAULT_DIR, s.file));
+    return fs.existsSync(path.join(VAULT_DIR, s.file.replace(/\\/g, '/')));
   } catch {
     return false;
   }
@@ -215,7 +215,7 @@ async function shrinkEpisode(ep, src, file, n, of) {
     const vtt = path.join(dir, `${ep.key}.vtt`);
     try {
       await run('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', src, '-map', `0:${subs.index}`, '-f', 'webvtt', vtt], { quiet: true });
-      subtitles = path.relative(VAULT_DIR, vtt);
+      subtitles = vaultRel(vtt);
     } catch {
       // some subtitle tracks are images or empty; the episode is fine without
     }
@@ -225,7 +225,7 @@ async function shrinkEpisode(ep, src, file, n, of) {
   try {
     const jpg = path.join(dir, `${ep.key}.jpg`);
     await run('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-ss', String(Math.round(seconds * 0.3)), '-i', src, '-frames:v', '1', '-vf', 'scale=320:-2', '-q:v', '5', jpg], { quiet: true });
-    thumb = path.relative(VAULT_DIR, jpg);
+    thumb = vaultRel(jpg);
   } catch {
     // thumbnails are only for the player's list
   }
@@ -234,7 +234,7 @@ async function shrinkEpisode(ep, src, file, n, of) {
   if (settings.parity && (await hasCommand('par2'))) {
     // ~5% repair data: a few rotten sectors on an old drive can be rebuilt instead of lost
     await run('par2', ['create', '-q', '-q', '-r5', '-n1', `${out}.par2`, out], { quiet: true });
-    parity = path.relative(VAULT_DIR, `${out}.par2`);
+    parity = vaultRel(`${out}.par2`);
   }
 
   const outProbe = JSON.parse(await run('ffprobe', ['-v', 'error', '-print_format', 'json', '-show_streams', '-show_format', out], { quiet: true }));
@@ -248,7 +248,7 @@ async function shrinkEpisode(ep, src, file, n, of) {
     title: ep.title,
     label,
     seconds: Number(outProbe.format.duration ?? seconds),
-    file: path.relative(VAULT_DIR, out),
+    file: vaultRel(out),
     bytes: fs.statSync(out).size,
     sha256: await hashFile(out),
     video: 'av1',

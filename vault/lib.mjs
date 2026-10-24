@@ -149,6 +149,13 @@ export async function hasCommand(cmd) {
   }
 }
 
+/** A path inside the vault, stored with forward slashes so a drive made on Windows serves from Linux and back. */
+export function vaultRel(file) {
+  return path.relative(VAULT_DIR, file).split(path.sep).join('/');
+}
+
+const FILE_FIELDS = ['file', 'subtitles', 'thumb', 'parity'];
+
 export function showDir(show) {
   return path.join(MEDIA_DIR, show);
 }
@@ -162,7 +169,10 @@ export function readSidecars(show) {
     .filter(f => f.endsWith('.json'))
     .map(f => {
       try {
-        return JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
+        const s = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
+        // sidecars written before paths were normalized may carry Windows separators
+        for (const k of FILE_FIELDS) if (typeof s[k] === 'string') s[k] = s[k].replace(/\\/g, '/');
+        return s;
       } catch {
         return null;
       }
