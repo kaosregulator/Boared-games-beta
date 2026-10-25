@@ -103,11 +103,11 @@ const list = join(outDir, 'parts.txt');
 writeFileSync(list, parts.map(p => `file '${p}'`).join('\n'));
 const target = join(import.meta.dirname, '..', 'public', 'menu');
 mkdirSync(target, { recursive: true });
-// web copy: full HD at high quality (CRF 18 keeps the shelf's fine detail), and it starts
+// web copy: full HD at high quality (CRF 20: no visible loss from 18, a third smaller), and it starts
 // playing before it's fully downloaded
 execFileSync('ffmpeg', [
   '-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list,
-  '-c:v', 'libx264', '-crf', process.env.CRF ?? '18', '-preset', 'slow', '-tune', 'film', '-profile:v', 'high', '-pix_fmt', 'yuv420p',
+  '-c:v', 'libx264', '-crf', process.env.CRF ?? '20', '-preset', 'slow', '-tune', 'film', '-profile:v', 'high', '-pix_fmt', 'yuv420p',
   '-movflags', '+faststart', '-an', join(target, 'reel.mp4'),
 ]);
 // first frame after the opening fade, shown while the video loads
