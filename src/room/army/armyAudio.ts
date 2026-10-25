@@ -30,7 +30,7 @@ export function wakeArmyAudio() {
   ensure();
 }
 
-function tone(freq: number, dur: number, type: OscillatorType, vol: number, at = 0, slideTo?: number) {
+export function tone(freq: number, dur: number, type: OscillatorType, vol: number, at = 0, slideTo?: number) {
   const c = ensure();
   if (!c || !master) return;
   const t = c.currentTime + at;
@@ -47,7 +47,7 @@ function tone(freq: number, dur: number, type: OscillatorType, vol: number, at =
   o.stop(t + dur + 0.02);
 }
 
-function burst(dur: number, freq: number, vol: number, at = 0, q = 1) {
+export function burst(dur: number, freq: number, vol: number, at = 0, q = 1) {
   const c = ensure();
   if (!c || !master || !noise) return;
   const t = c.currentTime + at;
