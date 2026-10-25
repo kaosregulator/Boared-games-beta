@@ -835,16 +835,17 @@ function ISpyScene({ boot, film = false }: { boot: ISpyBoot | null; film?: boole
       const d = Math.hypot(dx, dz) || 1;
       const sx = -dz / d;
       const sz = dx / d;
-      _want.set(item.x + sx * 0.14 - (dx / d) * 0.04, 0.085, item.z + sz * 0.14 - (dz / d) * 0.04);
-      _look.set(item.x, 0.03, item.z);
+      _want.set(item.x + sx * 0.2 - (dx / d) * 0.1, 0.15, item.z + sz * 0.2 - (dz / d) * 0.1);
+      _look.set(item.x, 0.04, item.z);
     };
     if (t < 2.6) {
       const ang = 0.6 + t * 0.16;
       _want.set(CARPET.x + Math.sin(ang) * 0.9, 1.8, CARPET.z + Math.cos(ang) * 0.9);
       _look.set(CARPET.x, 0, CARPET.z - 0.1);
     } else if (t < 5.6 || (t >= 7.2 && t < 10.2)) {
-      _want.set(me.x - fx * 0.32, 0.2, me.z - fz * 0.32);
-      _look.set(me.x + fx * 0.45, 0.0, me.z + fz * 0.45);
+      // Over the kid's shoulder, high enough to see over the toys in between.
+      _want.set(me.x - fx * 0.36, 0.34, me.z - fz * 0.36);
+      _look.set(me.x + fx * 0.4, 0.0, me.z + fz * 0.4);
     } else if (t < 7.2) {
       closeOn(a);
     } else if (t < 11.8) {
