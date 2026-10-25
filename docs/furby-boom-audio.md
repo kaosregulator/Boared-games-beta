@@ -8,6 +8,23 @@ quiet gaps (below -30 dBFS for 0.3 s or more). Each row is one sound span of at
 least 0.8 s. The span is only a stopping point; it may hold a whole phrase or
 two.
 
+## Why there are no words yet
+
+Automatic captioning was tried and does not work on this file:
+
+- Whisper-style models need weights from Hugging Face, which this build
+  environment can't reach.
+- The offline recognizer that could run here (CMU PocketSphinx) produced
+  nonsense ("nasdaq to pack", "edinburgh glasgow cow"). The Boom speaks
+  Furbish over a backing track, and an English model can't caption that.
+
+What would get the words in:
+
+- YouTube's own transcript for the video (on the video page: "…more", then
+  "Show transcript"). Paste it in and it can be lined up with the rows below.
+- Or run Whisper locally (`whisper file.mp3 --language en --output_format srt`)
+  and add the .srt to the repo.
+
 These rows were found by measuring the audio, not by listening to it. **The
 "What it says" and "Use for" columns are blank, to be filled in by listening.**
 Once they are, the rows can be turned into the Boom's clip list.
