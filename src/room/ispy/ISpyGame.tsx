@@ -10,6 +10,7 @@ import { makeToy } from './items';
 import { ispySfx, wakeISpyAudio } from './ispyAudio';
 import { ReaderHud, ReaderScene } from './ISpyReader';
 import { BEANBAG_SEAT } from '../roomLayout';
+import { filmClock, makeFilmStep } from '../filmClock';
 import {
   CARPET,
   KINDS,
@@ -636,7 +637,7 @@ interface ToyNode {
   foundAt: number;
 }
 
-function ISpyScene({ boot }: { boot: ISpyBoot | null }) {
+function ISpyScene({ boot, film = false }: { boot: ISpyBoot | null; film?: boolean }) {
   const { camera, size, gl, scene } = useThree();
   const state = useISpy();
   const puzzle = state.puzzle;
@@ -659,6 +660,10 @@ function ISpyScene({ boot }: { boot: ISpyBoot | null }) {
   const hintFor = useRef<{ id: number; until: number } | null>(null);
   const lastEmit = useRef(0);
   const madeSeed = useRef<number | null>(null);
+  /** Seconds since the page mounted: found toys pop on this clock, so the reel can step it. */
+  const sceneT = useRef(0);
+  const filmStep = useMemo(() => makeFilmStep(film), [film]);
+  const filmFound = useRef(new Set<number>());
 
   // Mount: page straight away for a boot link, otherwise the book opens.
   useEffect(() => {
@@ -742,6 +747,130 @@ function ISpyScene({ boot }: { boot: ISpyBoot | null }) {
     }
   }
 
+  // --- The menu reel ----------------------------------------------------------------
+  // The kid wanders the page, finds two things on the list (they pop and sparkle),
+  // and the camera goes overhead, behind the kid, in close on each find, then cranes up.
+
+  /** Seconds into the reel's I Spy shot. */
+  const filmT = () => filmClock.shotT;
+
+  function filmPlan(p: Puzzle) {
+    const a = p.items[p.targets[0]];
+    const b = p.items[p.targets[1] ?? p.targets[0]];
+    // Stop a step short of each toy, facing it.
+    const short = (from: { x: number; z: number }, to: { x: number; z: number }) => {
+      const dx = to.x - from.x;
+      const dz = to.z - from.z;
+      const d = Math.hypot(dx, dz) || 1;
+      return { x: to.x - (dx / d) * 0.14, z: to.z - (dz / d) * 0.14 };
+    };
+    const s0 = { x: START.x, z: START.z };
+    const s1 = short(s0, a);
+    const s2 = short(s1, b);
+    return { a, b, s0, s1, s2 };
+  }
+
+  function markFound(id: number) {
+    if (ispy.found.has(id) || filmFound.current.has(id)) return;
+    filmFound.current.add(id);
+    ispy.found.add(id);
+    const node = toys.current.get(id);
+    if (node) node.foundAt = sceneT.current;
+    sparkleAt(id, 6, 1.1);
+    emit();
+  }
+
+  function directKid(p: Puzzle) {
+    const me = player.current;
+    const { a, b, s0, s1, s2 } = filmPlan(p);
+    const t = filmT();
+    const ease = (x: number) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+    let x = s0.x;
+    let z = s0.z;
+    let face = a;
+    let walking = false;
+    if (t < 2.6) {
+      // standing at the edge of the page, taking it in
+    } else if (t < 5.6) {
+      const k = ease((t - 2.6) / 3);
+      x = s0.x + (s1.x - s0.x) * k;
+      z = s0.z + (s1.z - s0.z) * k;
+      walking = k > 0.02 && k < 0.98;
+    } else if (t < 7.2) {
+      x = s1.x;
+      z = s1.z;
+    } else if (t < 10.2) {
+      const k = ease((t - 7.2) / 3);
+      x = s1.x + (s2.x - s1.x) * k;
+      z = s1.z + (s2.z - s1.z) * k;
+      face = b;
+      walking = k > 0.02 && k < 0.98;
+    } else {
+      x = s2.x;
+      z = s2.z;
+      face = b;
+    }
+    me.x = x;
+    me.z = z;
+    me.heading = Math.atan2(face.x - x, face.z - z);
+    me.speed = walking ? 0.3 : 0;
+    if (t >= 5.9) markFound(a.id);
+    if (t >= 10.5) markFound(b.id);
+  }
+
+  function directCamera(dt: number, p: Puzzle) {
+    const me = player.current;
+    const { a, b } = filmPlan(p);
+    const t = filmT();
+    const fx = Math.sin(me.heading);
+    const fz = Math.cos(me.heading);
+    const closeOn = (item: { x: number; z: number }) => {
+      // Low and to the side of the toy, the kid's shoulder in the edge of frame.
+      const dx = item.x - me.x;
+      const dz = item.z - me.z;
+      const d = Math.hypot(dx, dz) || 1;
+      const sx = -dz / d;
+      const sz = dx / d;
+      _want.set(item.x + sx * 0.14 - (dx / d) * 0.04, 0.085, item.z + sz * 0.14 - (dz / d) * 0.04);
+      _look.set(item.x, 0.03, item.z);
+    };
+    if (t < 2.6) {
+      const ang = 0.6 + t * 0.16;
+      _want.set(CARPET.x + Math.sin(ang) * 0.9, 1.8, CARPET.z + Math.cos(ang) * 0.9);
+      _look.set(CARPET.x, 0, CARPET.z - 0.1);
+    } else if (t < 5.6 || (t >= 7.2 && t < 10.2)) {
+      _want.set(me.x - fx * 0.32, 0.2, me.z - fz * 0.32);
+      _look.set(me.x + fx * 0.45, 0.0, me.z + fz * 0.45);
+    } else if (t < 7.2) {
+      closeOn(a);
+    } else if (t < 11.8) {
+      closeOn(b);
+    } else {
+      const k = Math.min(1, (t - 11.8) / 2.2);
+      _want.set(b.x + 0.1, 0.25 + k * 1.3, b.z + 0.3 + k * 0.6);
+      _look.set(b.x, 0, b.z - k * 0.4);
+    }
+    if (!camReady.current) {
+      camPos.current.copy(_want);
+      camLook.current.copy(_look);
+      camReady.current = true;
+    } else {
+      const k = 1 - Math.exp(-dt * 3.2);
+      camPos.current.lerp(_want, k);
+      camLook.current.lerp(_look, Math.min(1, k * 1.4));
+    }
+    kid.root.visible = true;
+    camera.position.copy(camPos.current);
+    camera.up.set(0, 1, 0);
+    camera.lookAt(camLook.current);
+    const persp = camera as THREE.PerspectiveCamera;
+    if (persp.near !== 0.005 || Math.abs(persp.fov - 52) > 0.1) {
+      persp.near = 0.005;
+      persp.fov = 52;
+      persp.updateProjectionMatrix();
+    }
+  }
+
   function hint() {
     const p = ispy.puzzle;
     if (!p || ispy.phase !== 'play') return;
@@ -781,7 +910,7 @@ function ISpyScene({ boot }: { boot: ISpyBoot | null }) {
       if (ispy.found.has(id)) return;
       ispy.found.add(id);
       ispy.lastLine = line;
-      if (node) node.foundAt = performance.now();
+      if (node) node.foundAt = sceneT.current;
       sparkleAt(id, 4);
       ispySfx.found(KINDS[item.kind].sfx);
       if (hintFor.current?.id === id) hintFor.current = null;
@@ -883,13 +1012,14 @@ function ISpyScene({ boot }: { boot: ISpyBoot | null }) {
 
   useFrame((_, rawDt) => {
     try {
-      frame(Math.min(rawDt, 0.05));
+      frame(filmStep(rawDt));
     } catch (err) {
       console.error('[ispy] frame failed', err);
     }
   });
 
   function frame(dt: number) {
+    sceneT.current += dt;
     const persp = camera as THREE.PerspectiveCamera;
     if (!saved.current) {
       saved.current = { near: persp.near, fov: persp.fov };
@@ -934,7 +1064,7 @@ function ISpyScene({ boot }: { boot: ISpyBoot | null }) {
     // --- Eyes shut: build the page behind the black -------------------------
     if (phase === 'dark') {
       darkT.current += dt;
-      if (madeSeed.current !== next.seed && darkT.current > 0.45) {
+      if (madeSeed.current !== next.seed && (film || darkT.current > 0.45)) {
         madeSeed.current = next.seed;
         ispy.puzzle = makePuzzle(next.seed, next.difficulty);
         ispy.found = new Set();
@@ -956,7 +1086,7 @@ function ISpyScene({ boot }: { boot: ISpyBoot | null }) {
         ispy.count = count;
         emit();
       }
-      if (darkT.current > 2.9 && ispy.puzzle) {
+      if ((film || darkT.current > 2.9) && ispy.puzzle) {
         darkT.current = 0;
         ispy.phase = 'play';
         ispySfx.eyesOpen();
@@ -977,7 +1107,9 @@ function ISpyScene({ boot }: { boot: ISpyBoot | null }) {
     const turnIn = (k.KeyD || k.ArrowRight || touch.right ? 1 : 0) - (k.KeyA || k.ArrowLeft || touch.left ? 1 : 0);
     const strafeIn = (k.KeyE ? 1 : 0) - (k.KeyQ ? 1 : 0);
     const flying = cam === 'free';
-    if (!flying && phase !== 'dark') {
+    if (film) {
+      directKid(p);
+    } else if (!flying && phase !== 'dark') {
       const run = Boolean(k.ShiftLeft || k.ShiftRight);
       me.heading = wrap(me.heading - turnIn * 2.4 * dt - nudgeX);
       if (cam === 'first') me.pitch = THREE.MathUtils.clamp(me.pitch - nudgeY, -1.2, 0.5);
@@ -1017,8 +1149,8 @@ function ISpyScene({ boot }: { boot: ISpyBoot | null }) {
     // --- Toys: found ones pop and spin, wrong ones wobble, the hint glows ------
     const now = performance.now();
     for (const [id, node] of toys.current) {
-      if (node.foundAt > 0) {
-        const t = (now - node.foundAt) / 1000;
+      if (node.foundAt >= 0) {
+        const t = sceneT.current - node.foundAt;
         const up = t < 0.9 ? Math.sin((t / 0.9) * Math.PI) * 0.06 : 0;
         node.root.position.y = node.baseY + up;
         if (t < 0.9) node.root.rotation.y = p.items[id].yaw + (t / 0.9) * Math.PI * 2;
@@ -1051,6 +1183,11 @@ function ISpyScene({ boot }: { boot: ISpyBoot | null }) {
     }
 
     // --- Camera -------------------------------------------------------------------
+    if (film) {
+      directCamera(dt, p);
+      throttleEmit();
+      return;
+    }
     const fx = Math.sin(me.heading);
     const fz = Math.cos(me.heading);
     kid.root.visible = cam !== 'first';
@@ -1146,12 +1283,12 @@ function ISpyScene({ boot }: { boot: ISpyBoot | null }) {
   );
 }
 
-export function ISpyWorld({ boot }: { boot: ISpyBoot | null }) {
+export function ISpyWorld({ boot, film = false }: { boot: ISpyBoot | null; film?: boolean }) {
   useEffect(() => {
     const life = openMiniGame('ispy');
     return () => life.close();
   }, []);
-  return <ISpyScene boot={boot} />;
+  return <ISpyScene boot={boot} film={film} />;
 }
 
 // ---------------------------------------------------------------------------

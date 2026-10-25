@@ -3,6 +3,8 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { BEANBAG_SEAT, LAYOUT, NEON_WALL } from './roomLayout';
 import { EAST_X } from './videoRoom';
+import { BOOK_SPOT } from './ispy/ISpyGame';
+import { filmClock } from './filmClock';
 
 type V3 = [number, number, number];
 
@@ -17,88 +19,102 @@ export interface FilmShot {
   look: V3[];
   /** Room lights off for this shot. */
   lightsOut?: boolean;
+  /** A toy world set up in the room for this shot. */
+  world?: 'army' | 'ispy';
+  /** The world drives the camera itself (the I Spy page follows its own finds). */
+  director?: boolean;
 }
 
-const { dresser, crt, boombox, shelf, toyshelf, bed, window: win, clutterdesk, gameboy } = LAYOUT;
+const { dresser, crt, toyshelf, clutterdesk, gameboy, hotwheels } = LAYOUT;
+
+/** The 1998 Furby sat up by the pillow (BED_FURBY in RealRoomScene, turned into room space). */
+const BED_FURBY_AT: V3 = [-2.61, 0.6, -0.22];
+const BOOK: V3 = [BOOK_SPOT.x, 0.02, BOOK_SPOT.z];
 
 /**
  * The menu reel: a slow, almost free-cam walk round the room, one shot per
- * corner. The recorder (scripts/recordFilm.mjs) fades to black between shots.
+ * corner, with the toys out: the TV on Arthur, the Furby on the bed, the
+ * army town popped up on the rug mid-battle, the race track, the I Spy book
+ * and a page of it being played. The recorder (scripts/recordFilm.mjs)
+ * fades to black between shots.
  */
 export const FILM: FilmShot[] = [
   {
     label: 'The TV wall',
     seconds: 7,
-    fov: 60,
+    fov: 56,
     at: [
       [0.35, 1.75, 2.2],
-      [0.05, 1.55, 0.6],
-      [-0.45, 1.32, -1.0],
+      [0.0, 1.5, 0.4],
+      [-0.6, 1.2, -1.45],
     ],
     look: [
       [-0.6, 1.0, -2.6],
       [-0.7, 1.05, -2.6],
-      [crt.x, crt.y + 0.28, crt.z],
+      [crt.x, crt.y + 0.27, crt.z],
     ],
   },
   {
-    label: 'Across the rug',
-    seconds: 7,
+    label: 'Furby on the bed',
+    seconds: 6,
+    fov: 44,
+    at: [
+      [-1.55, 1.0, 0.55],
+      [-1.85, 0.9, 0.05],
+      [-2.0, 0.92, -0.65],
+    ],
+    look: [BED_FURBY_AT, BED_FURBY_AT, [BED_FURBY_AT[0], BED_FURBY_AT[1] + 0.02, BED_FURBY_AT[2] - 0.05]],
+  },
+  {
+    label: 'Army town',
+    seconds: 10,
     fov: 58,
+    world: 'army',
+    // Down out of the sky over the rug, low along the road through town, up past the tower to the tan army.
     at: [
-      [1.3, 0.42, 0.9],
-      [0.4, 0.38, -0.3],
-      [-0.6, 0.5, -0.55],
+      [1.35, 1.25, 1.0],
+      [0.75, 0.3, 0.45],
+      [0.27, 0.1, 0.0],
+      [0.3, 0.12, -0.45],
+      [0.8, 0.34, -0.85],
     ],
     look: [
-      [0.2, 0.1, -1.9],
-      [-0.3, 0.15, -1.5],
-      [boombox.x - 0.45, 0.3, boombox.z - 0.25],
+      [0.2, 0.0, -0.35],
+      [0.15, 0.04, -0.2],
+      [0.2, 0.05, -0.7],
+      [0.22, 0.04, -1.1],
+      [0.22, 0.05, -1.14],
     ],
   },
   {
-    label: 'String lights',
-    seconds: 6.5,
-    fov: 55,
+    label: 'Race track',
+    seconds: 6,
+    fov: 50,
     at: [
-      [0.7, 1.25, -0.6],
-      [1.25, 1.45, -1.2],
-      [1.7, 1.6, -1.35],
+      [0.7, 0.55, 0.75],
+      [0.62, 0.5, -0.25],
+      [0.72, 0.55, -1.2],
     ],
     look: [
-      [shelf.x - 0.1, 1.1, shelf.z],
-      [shelf.x, 1.2, shelf.z],
-      [shelf.x + 0.2, 1.35, shelf.z + 0.1],
+      [hotwheels.x, 0.18, hotwheels.z + 0.2],
+      [hotwheels.x, 0.2, hotwheels.z],
+      [hotwheels.x, 0.18, hotwheels.z - 0.2],
     ],
   },
   {
     label: 'Neon wall',
     seconds: 6,
-    fov: 58,
+    fov: 54,
+    // Wide enough that the shelf's teddy and skateboard stay crisp.
     at: [
-      [0.9, 1.2, -1.0],
-      [1.3, 1.15, -0.2],
-      [1.4, 1.1, 0.6],
+      [0.6, 1.35, -1.2],
+      [0.7, 1.3, -0.3],
+      [0.6, 1.3, 0.9],
     ],
     look: [
       [EAST_X, NEON_WALL.y + 0.05, NEON_WALL.z],
-      [EAST_X, 1.0, -0.6],
-      [toyshelf.x, 0.8, toyshelf.z],
-    ],
-  },
-  {
-    label: 'Bed and window',
-    seconds: 6.5,
-    fov: 58,
-    at: [
-      [-0.9, 1.1, 0.6],
-      [-1.1, 1.3, -0.5],
-      [-1.2, 1.45, -1.55],
-    ],
-    look: [
-      [bed.x, 0.6, bed.z + 0.15],
-      [bed.x - 0.05, 0.9, -1.2],
-      [win.x, 1.3, win.z],
+      [EAST_X - 0.2, 1.0, -0.6],
+      [toyshelf.x, 0.75, toyshelf.z],
     ],
   },
   {
@@ -115,6 +131,26 @@ export const FILM: FilmShot[] = [
       [clutterdesk.x - 0.07, 1.0, clutterdesk.z],
       [clutterdesk.x - 0.17, 1.05, clutterdesk.z + 0.15],
     ],
+  },
+  {
+    label: 'The I Spy book',
+    seconds: 5,
+    fov: 48,
+    at: [
+      [-0.15, 0.62, 1.0],
+      [-0.5, 0.5, 0.95],
+      [-0.85, 0.45, 0.8],
+    ],
+    look: [BOOK, BOOK, BOOK],
+  },
+  {
+    label: 'I Spy',
+    seconds: 14,
+    fov: 60,
+    world: 'ispy',
+    director: true,
+    at: [[0, 1, 0]],
+    look: [[0, 0, 0]],
   },
   {
     label: 'Bean bag',
@@ -197,6 +233,11 @@ export function FilmCamera({ onShot }: { onShot?: (shot: FilmShot, index: number
       current.current = index;
       onShot?.(shot, index);
     }
+    filmClock.t = t;
+    filmClock.shot = index;
+    filmClock.shotT = t - cut.start;
+    // The I Spy page frames its own shots.
+    if (shot.director) return;
     const k = glide((t - cut.start) / shot.seconds);
     curves[index].at.getPoint(k, POS);
     curves[index].look.getPoint(k, LOOK);

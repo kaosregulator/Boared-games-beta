@@ -33,6 +33,7 @@ import { COACH_NAME, COACH_REACH, COACH_SPOT, coachLesson, lineSeconds, nextLine
 import { readArmyKeys, stepLook } from './armyKeys';
 import { SpeechBubble, headOnScreen, type Bubble } from './SpeechBubble';
 import { Quipper, quipSeconds } from '../roomQuips';
+import { filmClock, makeFilmStep } from '../filmClock';
 import {
   STORY_WAVES,
   TAN_POOL,
@@ -465,7 +466,8 @@ function clearShot(from: THREE.Vector3, to: THREE.Vector3) {
   return to;
 }
 
-function Crowd({ boot }: { boot: ArmyBoot | null }) {
+function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }) {
+  const filmStep = useMemo(() => makeFilmStep(film), [film]);
   const kit = useKit();
   const { camera, size, gl } = useThree();
   const group = useRef<THREE.Group>(null);
@@ -584,7 +586,9 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
     army.wave = 0;
     army.waveState = 'incoming';
     army.siege = 'story';
-    army.coach = boot?.calm || boot?.mode === 'heli' ? null : 'wait';
+    army.coach = film || boot?.calm || boot?.mode === 'heli' ? null : 'wait';
+    // The reel cuts straight into the battle.
+    if (film) waveTimer.current = 0.4;
     army.coachLine = 0;
     army.coachNear = false;
     army.bubble = null;
@@ -610,7 +614,9 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
       player.root.visible = false;
       rotorOn();
     }
-    if (army.coach) banner("We're under attack!", 'Go talk to the glowing sergeant first', 3.4);
+    if (film) {
+      // No banners in the reel.
+    } else if (army.coach) banner("We're under attack!", 'Go talk to the glowing sergeant first', 3.4);
     else if (!boot?.calm) banner("We're under attack!", 'Tan army behind the books by the door. Defend the town!', 3);
     emit();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -980,7 +986,7 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
 
   useFrame((_, rawDt) => {
     try {
-      frame(Math.min(rawDt, 0.05));
+      frame(filmStep(rawDt));
     } catch (err) {
       console.error('[army] frame failed', err);
     }
@@ -1307,6 +1313,11 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
 
     // --- Camera -------------------------------------------------------------
     // Up on the shelf with the sniper: his camera, not ours.
+    // The menu reel flies its own camera through the town.
+    if (film) {
+      throttledEmit();
+      return;
+    }
     if (sniperBusy()) {
       // Keep our follow camera where his left it, so handing back glides instead of cutting.
       _cam.copy(camera.position);
@@ -1472,17 +1483,29 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
   );
 }
 
-export function ArmyTownWorld({ boot }: { boot: ArmyBoot | null }) {
+export function ArmyTownWorld({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }) {
+  const town = useRef<THREE.Group>(null);
+  // In the reel the whole town springs up out of the rug, like a pop-up book.
+  useFrame(() => {
+    const g = town.current;
+    if (!g || !film) return;
+    const c = Math.min(1, filmClock.shotT / 1.3);
+    const s = 1.7;
+    const k = c <= 0 ? 0.001 : 1 + (s + 1) * Math.pow(c - 1, 3) + s * Math.pow(c - 1, 2);
+    g.scale.set(1, Math.max(0.001, k), 1);
+  });
   useEffect(() => {
     const life = openMiniGame('army');
     return () => life.close();
   }, []);
   return (
     <group>
-      <ArmyProps />
-      <Suspense fallback={null}>
-        <Crowd boot={boot} />
-      </Suspense>
+      <group ref={town}>
+        <ArmyProps />
+        <Suspense fallback={null}>
+          <Crowd boot={boot} film={film} />
+        </Suspense>
+      </group>
       {/* A bit of extra light over the rug, like a desk lamp pulled down to play. */}
       <pointLight position={[MAT.x, 1.3, MAT.z + 0.2]} intensity={0.9} distance={3.2} decay={2} color="#fff1dc" />
     </group>

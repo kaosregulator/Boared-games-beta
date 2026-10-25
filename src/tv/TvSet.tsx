@@ -16,7 +16,7 @@ import { pressTv, publishTvStatus, useTvCommand, useTvStatus } from './tvBus';
 export const TV_METERS = 0.62;
 const S = TV_METERS;
 /** Measured off the mesh: glass centre and size as fractions of its width. */
-const GLASS = { x: 0.017 * S, y: 0.454 * S, z: 0.394 * S + 0.004, w: 0.766 * S, h: 0.48 * S };
+export const GLASS = { x: 0.017 * S, y: 0.454 * S, z: 0.394 * S + 0.004, w: 0.766 * S, h: 0.48 * S };
 const SCREEN_PX = 640;
 const BEZEL = { y: 0.122 * S, z: 0.394 * S + 0.002 };
 
