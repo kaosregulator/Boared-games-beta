@@ -1312,6 +1312,8 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
       _cam.copy(camera.position);
       camera.getWorldDirection(_dir);
       _camLook.copy(camera.position).addScaledVector(_dir, 0.2);
+      // Step out of his close-up: you'd be standing right in the shot.
+      player.root.visible = army.mode === 'ground' && sniper.phase !== 'brief' && sniper.phase !== 'talk';
       throttledEmit();
       return;
     }
