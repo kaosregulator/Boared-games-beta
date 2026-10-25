@@ -1,22 +1,24 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { advanceTip, tutorialLine } from '../../src/room/army/tutorial.ts';
+import { coachLesson, lineSeconds, nextLine } from '../../src/room/army/tutorial.ts';
 
-const idle = { moved: false, turned: false, shot: false };
-
-test('the tutorial waits for the action it just asked for', () => {
-  assert.equal(advanceTip('move', idle), 'move');
-  assert.equal(advanceTip('move', { ...idle, shot: true }), 'move');
-  assert.equal(advanceTip('move', { ...idle, moved: true }), 'aim');
-  assert.equal(advanceTip('aim', { ...idle, turned: true }), 'shoot');
-  assert.equal(advanceTip('shoot', { ...idle, shot: true }), 'done');
-  assert.equal(advanceTip('done', { moved: true, turned: true, shot: true }), 'done');
+test('the sergeant covers moving, looking and shooting, then sends the wave', () => {
+  const keys = coachLesson(false);
+  assert.match(keys.join(' '), /WASD/);
+  assert.match(keys.join(' '), /arrow keys look/);
+  assert.match(keys.join(' '), /Space fires/);
+  assert.match(keys[keys.length - 1], /Here they come/);
+  const pad = coachLesson(true);
+  assert.equal(pad.length, keys.length);
+  assert.match(pad.join(' '), /Fire is the big button/);
+  assert.doesNotMatch(pad.join(' '), /WASD/);
 });
 
-test('keyboard and touch each get a line they can follow', () => {
-  assert.match(tutorialLine('move', false), /W and S/);
-  assert.match(tutorialLine('move', true), /arrows/i);
-  assert.match(tutorialLine('shoot', false), /Space/);
-  assert.match(tutorialLine('shoot', true), /Fire/);
-  assert.equal(tutorialLine('done', false), '');
+test('lines advance one at a time and give you time to read', () => {
+  const lines = coachLesson(false);
+  assert.equal(nextLine(0, lines), 1);
+  assert.equal(nextLine(lines.length - 1, lines), null);
+  assert.ok(lineSeconds('Hi') >= 1.8);
+  assert.ok(lineSeconds(lines[1]) > lineSeconds('Hi'));
+  assert.ok(lineSeconds('x'.repeat(500)) <= 7);
 });
