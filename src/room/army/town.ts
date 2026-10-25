@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { BLOCKS, ROOM, type Block } from '../hotwheels/world';
 import { WALL } from '../videoRoom';
 import { LAYOUT, WALL_SHELF } from '../roomLayout';
+import { SQUAD, shelfProps } from './sniper/range';
 
 /**
  * The army town as it would be set up on the bedroom carpet: a road play mat
@@ -126,7 +127,10 @@ export const TOWN_BLOCKS: Block[] = [
 /** Up high, where only the helicopter goes: the shelf over the TV and the teddy shelf. */
 const teddy = LAYOUT.teddy;
 const HIGH_BLOCKS: Block[] = [
-  { id: 'wall-shelf', minX: WALL_SHELF.x - WALL_SHELF.w / 2, maxX: WALL_SHELF.x + WALL_SHELF.w / 2, minZ: WALL_SHELF.z - WALL_SHELF.d / 2, maxZ: WALL_SHELF.z + WALL_SHELF.d / 2, minY: WALL_SHELF.y - 0.02, maxY: WALL_SHELF.y + 0.3 },
+  // The plank itself, so the chopper can land on it, and the things standing on it.
+  { id: 'wall-shelf', minX: WALL_SHELF.x - WALL_SHELF.w / 2, maxX: WALL_SHELF.x + WALL_SHELF.w / 2, minZ: WALL_SHELF.z - WALL_SHELF.d / 2, maxZ: WALL_SHELF.z + WALL_SHELF.d / 2, minY: WALL_SHELF.y - 0.02, maxY: WALL_SHELF.y + WALL_SHELF.h },
+  ...shelfProps().map(p => ({ id: `shelf-${p.id}`, minX: p.x - p.half, maxX: p.x + p.half, minZ: p.z - p.half, maxZ: p.z + p.half, minY: WALL_SHELF.y, maxY: p.top })),
+  { id: 'shelf-squad', minX: SQUAD.sniper.x - 0.03, maxX: SQUAD.radio.x + 0.025, minZ: SQUAD.sniper.z - 0.06, maxZ: SQUAD.sniper.z + 0.06, minY: WALL_SHELF.y, maxY: SQUAD.top + 0.085, top: false },
   { id: 'teddy-shelf', minX: teddy.x - teddy.sx / 2, maxX: teddy.x + teddy.sx / 2, minZ: teddy.z - teddy.sz / 2 - 0.05, maxZ: teddy.z + teddy.sz / 2, minY: teddy.y - 0.04, maxY: teddy.y + teddy.sy },
 ];
 

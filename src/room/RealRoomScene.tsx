@@ -22,6 +22,7 @@ import { LAVA, LavaLamp } from './LavaLamp';
 import { LOW_POWER } from './input';
 import type { GameMetadata } from '../types';
 import { LAYOUT, SOUTH_WINDOW, TABLE_SIDE_BOX, WALL_SHELF } from './roomLayout';
+import { ShelfSquad } from './army/sniper/ShelfSquad';
 import { PlayTable, type TableSession } from './table/TablePlay';
 import { NeonGameWall } from './NeonGameWall';
 import { WallPosters } from './WallPosters';
@@ -453,6 +454,8 @@ export function RealRoomScene({
         <WallArt />
       </Suspense>
       <MountedShelf shelf={WALL_SHELF} />
+      {/* The shelf sniper and his radio man: only the chopper gets you up there. */}
+      <ShelfSquad />
       <pointLight
         position={[LAYOUT.teddy.x + 0.2, LAYOUT.teddy.y + 0.35, LAYOUT.teddy.z - 1.35]}
         color="#ffd0a8"

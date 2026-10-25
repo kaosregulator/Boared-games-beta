@@ -42,6 +42,9 @@ import {
   type Siege,
 } from './waves';
 import { openMiniGame } from '../../engine/lifecycle';
+import { SniperMission } from './sniper/SniperMission';
+import { SniperHud, SquadPrompt } from './sniper/SniperHud';
+import { sniper, sniperBusy, sniperControls, useSniper } from './sniper/state';
 
 /**
  * Shrunk down to army-man size on the bedroom floor. The town is set up on
@@ -328,6 +331,8 @@ function RingGate({ index, course }: { index: number; course: typeof army.course
   useFrame(({ clock }) => {
     const m = ref.current;
     if (!m) return;
+    // Out of the way of the scope and the bullet cam.
+    m.visible = !sniperBusy();
     const isNext = course.next === index;
     const passed = course.active && index < course.next;
     const s = r.r * (isNext ? 1 + Math.sin(clock.elapsedTime * 6) * 0.04 : 1);
@@ -647,6 +652,10 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
 
   function board() {
     const h = heli.current;
+    if (army.mode === 'heli' && sniper.phase === 'near') {
+      sniperControls.talk?.();
+      return;
+    }
     if (army.mode === 'ground') {
       if (!army.nearChopper || player.fall > 0) return;
       army.mode = 'heli';
@@ -694,6 +703,8 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
     const typing = (e: KeyboardEvent) => Boolean((e.target as HTMLElement | null)?.closest('input, textarea, select'));
     const down = (e: KeyboardEvent) => {
       if (typing(e)) return;
+      // The shelf sniper has the keys from the talk to the walk back.
+      if (sniperBusy()) return;
       wakeArmyAudio();
       keys.current[e.code] = true;
       if (e.repeat) return;
@@ -937,7 +948,7 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
     // --- Helicopter --------------------------------------------------------
     {
       const input: HeliInput =
-        army.mode === 'heli'
+        army.mode === 'heli' && !sniperBusy()
           ? {
               forward: fwdIn,
               turn: turnIn,
@@ -947,7 +958,7 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
               boost: Boolean(k.Tab),
             }
           : NO_INPUT;
-      if (army.mode === 'heli') {
+      if (army.mode === 'heli' && !sniperBusy()) {
         _prev.copy(h.pos);
         const events = stepHeli(h, input, dt);
         if (events.includes('bump')) armySfx.bump();
@@ -1149,6 +1160,11 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
     tracers.tick(dt);
 
     // --- Camera -------------------------------------------------------------
+    // Up on the shelf with the sniper: his camera, not ours.
+    if (sniperBusy()) {
+      throttledEmit();
+      return;
+    }
     const persp = camera as THREE.PerspectiveCamera;
     if (!saved.current) {
       saved.current = { near: persp.near, fov: persp.fov };
@@ -1222,6 +1238,10 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
       persp.updateProjectionMatrix();
     }
 
+    throttledEmit();
+  }
+
+  function throttledEmit() {
     const now = performance.now();
     if (now - lastEmit.current > 80) {
       lastEmit.current = now;
@@ -1242,6 +1262,7 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
         <meshBasicMaterial color="#000" transparent opacity={0.4} depthWrite={false} />
       </mesh>
       <GuideArrow heli={heli} course={army.course} />
+      <SniperMission heli={heli} flying={() => army.mode === 'heli'} />
       {RINGS.map((_, i) => (
         <RingGate key={i} index={i} course={army.course} />
       ))}
@@ -1305,8 +1326,10 @@ function HoldButton({ label, onHold, className = '' }: { label: string; onHold: 
 export function ArmyHud({ onExit }: { onExit: () => void }) {
   const a = useArmy();
   const [isTouch] = useState(isTouchDevice);
+  useSniper();
   const flying = a.mode === 'heli';
   const c = a.course;
+  if (sniperBusy()) return <SniperHud />;
   const btn = 'rounded-xl border border-white/25 bg-black/55 px-3 py-2 text-[11px] font-bold uppercase tracking-wider';
   return (
     <div data-army className="pointer-events-none absolute inset-0 z-40 text-white">
@@ -1402,6 +1425,7 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
           You got tipped over! Getting back up…
         </p>
       )}
+      <SquadPrompt />
       {a.nearChopper && !flying && (
         <p className="absolute bottom-28 left-1/2 -translate-x-1/2 rounded-full bg-lime-500 px-4 py-1 text-[12px] font-black uppercase tracking-[0.2em] text-black">
           Press F to board the chopper
