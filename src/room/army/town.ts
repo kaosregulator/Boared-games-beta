@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BLOCKS, ROOM, type Block } from '../hotwheels/world';
+import { BLOCKS, ROOM, blockHas, pushOutOf, type Block } from '../hotwheels/world';
 import { WALL } from '../videoRoom';
 import { LAYOUT, WALL_SHELF } from '../roomLayout';
 import { SQUAD, shelfProps } from './sniper/range';
@@ -145,29 +145,11 @@ export function pushOut(p: THREE.Vector3, r: number, y0: number, y1: number, blo
   let hit: Block | null = null;
   for (const b of blocks) {
     if (y1 <= b.minY || y0 >= b.maxY) continue;
-    const cx = Math.max(b.minX, Math.min(p.x, b.maxX));
-    const cz = Math.max(b.minZ, Math.min(p.z, b.maxZ));
-    const dx = p.x - cx;
-    const dz = p.z - cz;
-    const d2 = dx * dx + dz * dz;
-    if (d2 >= r * r) continue;
+    const out = pushOutOf(b, p.x, p.z, r);
+    if (!out) continue;
     hit = b;
-    if (d2 > 1e-10) {
-      const d = Math.sqrt(d2);
-      p.x = cx + (dx / d) * r;
-      p.z = cz + (dz / d) * r;
-    } else {
-      // Centre inside the box: leave by the nearest side.
-      const left = p.x - b.minX;
-      const right = b.maxX - p.x;
-      const near = p.z - b.minZ;
-      const far = b.maxZ - p.z;
-      const m = Math.min(left, right, near, far);
-      if (m === left) p.x = b.minX - r;
-      else if (m === right) p.x = b.maxX + r;
-      else if (m === near) p.z = b.minZ - r;
-      else p.z = b.maxZ + r;
-    }
+    p.x = out.x;
+    p.z = out.z;
   }
   p.x = Math.max(ROOM.minX + r, Math.min(ROOM.maxX - r, p.x));
   p.z = Math.max(ROOM.minZ + r, Math.min(ROOM.maxZ - r, p.z));
@@ -179,7 +161,7 @@ export function floorAt(x: number, z: number, maxY: number, blocks = ALL_BLOCKS)
   let y = 0;
   for (const b of blocks) {
     if (b.top === false) continue;
-    if (x < b.minX || x > b.maxX || z < b.minZ || z > b.maxZ) continue;
+    if (!blockHas(b, x, z)) continue;
     if (b.maxY <= maxY && b.maxY > y) y = b.maxY;
   }
   return y;
@@ -189,7 +171,7 @@ export function floorAt(x: number, z: number, maxY: number, blocks = ALL_BLOCKS)
 export function roofAt(x: number, z: number, fromY: number, blocks = ALL_BLOCKS) {
   let c = CEILING;
   for (const b of blocks) {
-    if (x < b.minX || x > b.maxX || z < b.minZ || z > b.maxZ) continue;
+    if (!blockHas(b, x, z)) continue;
     if (b.minY >= fromY && b.minY < c) c = b.minY;
   }
   return c;
@@ -198,7 +180,7 @@ export function roofAt(x: number, z: number, fromY: number, blocks = ALL_BLOCKS)
 export function insideAny(p: THREE.Vector3, pad = 0, blocks = ALL_BLOCKS) {
   if (p.x < ROOM.minX || p.x > ROOM.maxX || p.z < ROOM.minZ || p.z > ROOM.maxZ || p.y < 0 || p.y > CEILING) return true;
   for (const b of blocks) {
-    if (p.x > b.minX - pad && p.x < b.maxX + pad && p.z > b.minZ - pad && p.z < b.maxZ + pad && p.y > b.minY - pad && p.y < b.maxY + pad) return true;
+    if (p.y > b.minY - pad && p.y < b.maxY + pad && blockHas(b, p.x, p.z, pad)) return true;
   }
   return false;
 }

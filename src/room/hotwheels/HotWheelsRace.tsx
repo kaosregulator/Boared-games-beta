@@ -6,6 +6,7 @@ import { fitFov, isTouchDevice, pad } from '../input';
 import { walkRig } from '../WalkController';
 import { LAYOUT } from '../roomLayout';
 import {
+  backOnTrack,
   BOOSTERS,
   FINISH,
   LOOPS,
@@ -16,7 +17,7 @@ import {
   type Loop,
 } from './course';
 import { CAR, ceilingAt, groundAt, newCar, placeCar, refillNitro, stepCar, TUNING, type CarState } from './carSim';
-import { BED_BOUNDS, BED_CLEAR, BLOCKS, DESK, ROOM, zoneAt, type ZoneId } from './world';
+import { BED_BOUNDS, BED_CLEAR, BLOCKS, DESK, ROOM, blockHas, zoneAt, type ZoneId } from './world';
 import { Quipper, quipSeconds } from '../roomQuips';
 import { SpeechBubble } from '../army/SpeechBubble';
 import { stepLook } from '../army/armyKeys';
@@ -506,7 +507,7 @@ function lookAround(dir: THREE.Vector3, pitch: number) {
 function insideSomething(p: THREE.Vector3) {
   if (p.x < ROOM.minX || p.x > ROOM.maxX || p.z < ROOM.minZ || p.z > ROOM.maxZ) return true;
   for (const b of BLOCKS) {
-    if (p.x > b.minX && p.x < b.maxX && p.z > b.minZ && p.z < b.maxZ && p.y > b.minY && p.y < b.maxY) return true;
+    if (p.y > b.minY && p.y < b.maxY && blockHas(b, p.x, p.z)) return true;
   }
   return false;
 }
@@ -574,6 +575,7 @@ export function HotWheelsWorld({ spot, skipCountdown }: { spot: string | null; s
   /** Arrow-key look: how far the camera has swung round the car and tilted. */
   const look = useRef({ yaw: 0, pitch: 0 });
   const prevPos = useRef(start.p.clone());
+  const offTrack = useRef(0);
   const lastEmit = useRef(0);
 
   useLayoutEffect(() => {
@@ -716,7 +718,18 @@ export function HotWheelsWorld({ spot, skipCountdown }: { spot: string | null; s
     };
 
     prevPos.current.copy(c.pos);
-    const events = stepCar(c, input, dt);
+    // In a race the track steers with you; free roam is all yours.
+    const events = stepCar(c, input, dt, { assist: hwRace.phase !== 'roam' });
+    // Came off the plastic in a race (a jump gone wrong)? A moment on the
+    // carpet and you're put back on the track where you left it.
+    offTrack.current = hwRace.phase === 'racing' && c.mode === 'ground' && !c.piece ? offTrack.current + dt : 0;
+    if (offTrack.current > 2) {
+      offTrack.current = 0;
+      const back = backOnTrack(c.pos.x, c.pos.z);
+      placeCar(c, back.p, back.heading);
+      prevPos.current.copy(back.p);
+      banner('Back on the track', undefined, 1.2);
+    }
     for (const e of events) {
       if (e === 'boost') raceSfx.boost();
       else if (e === 'nitro') raceSfx.nitro();

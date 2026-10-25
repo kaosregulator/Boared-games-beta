@@ -9,7 +9,7 @@ import { resetLogForTests } from '../../src/engine/log.ts';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 test('critical room models are on disk', () => {
-  for (const name of ['teddy.glb', 'desk.glb']) {
+  for (const name of ['teddy.glb', 'pcdesk.glb']) {
     const file = path.join(root, 'public/models', name);
     assert.equal(fs.existsSync(file), true, file);
     assert.equal(fs.statSync(file).size > 1000, true, name);

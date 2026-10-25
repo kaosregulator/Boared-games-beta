@@ -1,141 +1,124 @@
-import { useMemo, useRef } from 'react';
+import { Suspense, useMemo, useRef } from 'react';
+import { useGLTF } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { GREEN, plastic } from '../ArmyProps';
-import { AIM_HOME, BARREL, RIFLE_PIVOT, SCOPE_UP, SQUAD } from './range';
+import { AIM_HOME, SQUAD } from './range';
 import { sniper } from './state';
 
 /**
- * Two green plastic army men on the shelf over the TV, the kind that come
- * stuck to a little base: a sniper lying flat behind a long rifle with a
- * scope and a bipod, and a radio man standing next to him with the handset
- * at his ear. Built from a few primitives, always in the room. The sniper's
- * rifle follows the aim while you are looking through it.
+ * Two green plastic army men on the shelf over the TV, the real old-school
+ * kind still stuck to their little bases: a machine gunner lying flat behind
+ * his bipod, and the standing man pointing the way with a grenade in his
+ * other hand. He's the one who talks. Always in the room.
+ *
+ * As you come in close he starts to waddle, rocking foot to foot the way
+ * you'd walk a toy soldier across the carpet, so you spot him from the
+ * chopper and come over. While he's talking he hops on top of that.
  */
 
-const capsule = (r: number, len: number) => new THREE.CapsuleGeometry(r, len, 3, 8);
+const STANDING_URL = '/models/radio-man.glb';
+const PRONE_URL = '/models/prone-sniper.glb';
 
-function Helmet({ mat, y, z = 0, tilt = 0 }: { mat: THREE.Material; y: number; z?: number; tilt?: number }) {
-  return (
-    <group position={[0, y, z]} rotation={[tilt, 0, 0]}>
-      <mesh material={mat}>
-        <sphereGeometry args={[0.0056, 12, 8]} />
-      </mesh>
-      <mesh material={mat} position={[0, 0.0022, 0]}>
-        <sphereGeometry args={[0.0072, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2]} />
-      </mesh>
-      <mesh material={mat} position={[0, 0.0022, 0]}>
-        <cylinderGeometry args={[0.0084, 0.0084, 0.0009, 14]} />
-      </mesh>
-    </group>
-  );
+/** How tall he stands on the shelf, base included. */
+const STANDING_H = 0.085;
+/** Nose to boots, lying down. */
+const PRONE_LEN = 0.11;
+/** Starts to waddle this far off, full swing by `WADDLE_FULL`. */
+const WADDLE_FAR = 1.6;
+const WADDLE_FULL = 0.35;
+
+/**
+ * Clone a Tripo figure, clear the metal (Tripo marks it all fully metallic,
+ * which renders black without an environment map), and fit it: centred on
+ * x/z, base on y = 0, scaled so `axis` measures `size`.
+ */
+function useFigure(url: string, axis: 'y' | 'z', size: number) {
+  const gltf = useGLTF(url);
+  return useMemo(() => {
+    const model = gltf.scene.clone(true);
+    model.traverse(obj => {
+      const mesh = obj as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      mesh.castShadow = false;
+      mesh.receiveShadow = false;
+      mesh.raycast = () => {};
+      const mat = (mesh.material as THREE.MeshStandardMaterial).clone();
+      mat.metalness = 0;
+      mat.metalnessMap = null;
+      mat.roughness = Math.min(mat.roughness, 0.45);
+      mat.envMapIntensity = 0.3;
+      mesh.material = mat;
+    });
+    model.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(model);
+    const dims = box.getSize(new THREE.Vector3());
+    const centre = box.getCenter(new THREE.Vector3());
+    const s = size / (axis === 'y' ? dims.y : dims.z);
+    model.scale.setScalar(s);
+    model.position.set(-centre.x * s, -box.min.y * s, -centre.z * s);
+    const holder = new THREE.Group();
+    holder.add(model);
+    return holder;
+  }, [gltf.scene, axis, size]);
 }
 
-function RadioMan({ mat }: { mat: THREE.Material }) {
+const _here = new THREE.Vector3();
+
+function Talker() {
+  const figure = useFigure(STANDING_URL, 'y', STANDING_H);
   const ref = useRef<THREE.Group>(null);
-  const geo = useMemo(() => ({ leg: capsule(0.0036, 0.026), arm: capsule(0.0026, 0.016), torso: capsule(0.0078, 0.012) }), []);
-  useFrame(() => {
+  const clock = useRef(0);
+  const swing = useRef(0);
+  useFrame(({ camera }, raw) => {
     const g = ref.current;
     if (!g) return;
-    // Hopping about the way you'd bounce a toy that's talking.
+    const dt = Math.min(raw, 0.05);
+    // Closer you get, the harder he rocks.
+    _here.set(SQUAD.radio.x, SQUAD.top + STANDING_H * 0.6, SQUAD.radio.z);
+    const d = camera.position.distanceTo(_here);
+    const want = THREE.MathUtils.clamp((WADDLE_FAR - d) / (WADDLE_FAR - WADDLE_FULL), 0, 1);
+    swing.current += (want - swing.current) * Math.min(1, dt * 3);
+    const w = swing.current;
+    clock.current += dt * (4.2 + 2.2 * w);
+    const t = clock.current;
+    // Waddle: rock onto one edge of the base, then the other, with a little
+    // lift each time he comes over the middle. Pivots on the base edge.
+    const rock = Math.sin(t) * 0.2 * w;
+    const step = Math.abs(Math.cos(t)) * 0.006 * w;
+    // Talking: the bounce you'd give a toy that's doing the talking.
     const h = sniper.hop;
-    g.position.y = Math.abs(Math.sin(h * Math.PI)) * 0.012;
-    g.rotation.z = Math.sin(h * Math.PI * 2) * 0.12;
+    const hop = Math.abs(Math.sin(h * Math.PI)) * 0.012;
+    g.rotation.z = rock + Math.sin(h * Math.PI * 2) * 0.12;
+    g.rotation.y = Math.sin(t * 0.5) * 0.12 * w;
+    // Lift by the tilt so the low edge of the base stays on the shelf.
+    g.position.y = step + hop + Math.abs(Math.sin(g.rotation.z)) * 0.02;
   });
   return (
     <group position={[SQUAD.radio.x, SQUAD.top, SQUAD.radio.z]} rotation={[0, -0.35, 0]}>
-      {/* The base stays put, the man bounces on it. */}
-      <mesh material={mat} position={[0, 0.002, 0]} scale={[1, 1, 0.8]}>
-        <cylinderGeometry args={[0.017, 0.018, 0.004, 9]} />
-      </mesh>
       <group ref={ref}>
-        <mesh material={mat} geometry={geo.leg} position={[-0.0045, 0.019, 0.003]} rotation={[0.18, 0, 0.04]} />
-        <mesh material={mat} geometry={geo.leg} position={[0.0045, 0.019, -0.003]} rotation={[-0.14, 0, -0.04]} />
-        <mesh material={mat} geometry={geo.torso} position={[0, 0.047, 0]} scale={[1, 1, 0.72]} />
-        {/* Radio on his back, with the whip antenna. */}
-        <mesh material={mat} position={[0, 0.05, -0.0085]}>
-          <boxGeometry args={[0.013, 0.017, 0.007]} />
-        </mesh>
-        <mesh material={mat} position={[0.004, 0.08, -0.012]} rotation={[-0.12, 0, 0]}>
-          <cylinderGeometry args={[0.0005, 0.0008, 0.046, 5]} />
-        </mesh>
-        <mesh material={mat} position={[0.0044, 0.103, -0.0148]}>
-          <sphereGeometry args={[0.0011, 6, 4]} />
-        </mesh>
-        {/* Left hand up at the ear with the handset; right hand on the rifle. */}
-        <mesh material={mat} geometry={geo.arm} position={[-0.0098, 0.06, 0.001]} rotation={[0, 0, -2.5]} />
-        <mesh material={mat} position={[-0.0078, 0.07, 0.003]} rotation={[0.2, 0, 0.3]}>
-          <boxGeometry args={[0.003, 0.011, 0.0035]} />
-        </mesh>
-        <mesh material={mat} geometry={geo.arm} position={[0.0102, 0.046, 0.004]} rotation={[0.6, 0, 0.2]} />
-        <mesh material={mat} position={[0.0118, 0.04, 0.009]} rotation={[0.9, 0, 0]}>
-          <cylinderGeometry args={[0.0013, 0.0016, 0.04, 6]} />
-        </mesh>
-        <mesh material={mat} position={[0, 0.0625, 0]}>
-          <cylinderGeometry args={[0.0028, 0.0034, 0.004, 8]} />
-        </mesh>
-        <Helmet mat={mat} y={0.07} />
+        <primitive object={figure} />
       </group>
     </group>
   );
 }
 
-function Sniper({ mat }: { mat: THREE.Material }) {
+function Gunner() {
+  const figure = useFigure(PRONE_URL, 'z', PRONE_LEN);
   const body = useRef<THREE.Group>(null);
-  const rifle = useRef<THREE.Group>(null);
-  const geo = useMemo(() => ({ leg: capsule(0.0036, 0.03), arm: capsule(0.0025, 0.017), torso: capsule(0.0072, 0.024) }), []);
   useFrame(() => {
-    if (body.current) {
-      body.current.rotation.y = sniper.yaw - AIM_HOME.yaw;
-      body.current.visible = !sniper.scoped;
-    }
-    if (rifle.current) rifle.current.rotation.x = -sniper.pitch;
+    const b = body.current;
+    if (!b) return;
+    // He swings round with your aim; out of sight while you're on his scope.
+    b.rotation.y = sniper.yaw - AIM_HOME.yaw;
+    b.rotation.x = -THREE.MathUtils.clamp(sniper.pitch - AIM_HOME.pitch, -0.12, 0.12);
+    b.visible = !sniper.scoped;
   });
-  const rise = RIFLE_PIVOT.y - SQUAD.top;
   return (
     <group position={[SQUAD.sniper.x, SQUAD.top, SQUAD.sniper.z]} rotation={[0, AIM_HOME.yaw, 0]}>
-      {/* The long base plastic snipers come on. */}
-      <mesh material={mat} position={[0, 0.002, -0.022]}>
-        <boxGeometry args={[0.034, 0.004, 0.1]} />
-      </mesh>
       <group ref={body}>
-        {/* Lying flat, legs spread behind. */}
-        <mesh material={mat} geometry={geo.torso} position={[0, 0.0105, -0.022]} rotation={[Math.PI / 2 - 0.1, 0, 0]} scale={[1, 1, 0.7]} />
-        <mesh material={mat} geometry={geo.leg} position={[-0.0062, 0.0075, -0.058]} rotation={[Math.PI / 2, 0, -0.22]} />
-        <mesh material={mat} geometry={geo.leg} position={[0.0062, 0.0075, -0.058]} rotation={[Math.PI / 2, 0, 0.22]} />
-        {/* Elbows down, hands up on the rifle. */}
-        <mesh material={mat} geometry={geo.arm} position={[-0.0092, 0.012, 0.002]} rotation={[1.2, 0, 0.35]} />
-        <mesh material={mat} geometry={geo.arm} position={[0.0092, 0.012, 0.004]} rotation={[1.2, 0, -0.35]} />
-        <Helmet mat={mat} y={0.0185} z={-0.0015} tilt={0.35} />
-        <group ref={rifle} position={[0, rise, 0]}>
-          {/* Stock against the shoulder, barrel out over the shelf edge. */}
-          <mesh material={mat} position={[0, -0.0012, -0.006]}>
-            <boxGeometry args={[0.0042, 0.0062, 0.026]} />
-          </mesh>
-          <mesh material={mat} position={[0, 0, BARREL / 2 + 0.004]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.0011, 0.0014, BARREL - 0.008, 6]} />
-          </mesh>
-          <mesh material={mat} position={[0, 0, BARREL - 0.002]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.0017, 0.0017, 0.006, 6]} />
-          </mesh>
-          {/* The scope. */}
-          <mesh material={mat} position={[0, SCOPE_UP, 0.012]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.0026, 0.0026, 0.026, 10]} />
-          </mesh>
-          {[-1, 1].map(s => (
-            <mesh key={s} material={mat} position={[0, SCOPE_UP, 0.012 + s * 0.014]} rotation={[Math.PI / 2, 0, 0]}>
-              <cylinderGeometry args={[0.0034, 0.0034, 0.004, 10]} />
-            </mesh>
-          ))}
-          <mesh material={mat} position={[0, SCOPE_UP * 0.55, 0.012]}>
-            <boxGeometry args={[0.002, SCOPE_UP * 0.6, 0.008]} />
-          </mesh>
-          {/* Bipod. */}
-          {[-1, 1].map(s => (
-            <mesh key={s} material={mat} position={[s * 0.004, -0.0075, 0.042]} rotation={[0.25, 0, s * 0.35]}>
-              <cylinderGeometry args={[0.0007, 0.0007, 0.016, 4]} />
-            </mesh>
-          ))}
+        {/* His shoulder sits on the rifle's pivot, gun out over the shelf edge. */}
+        <group position={[0, 0, -0.012]}>
+          <primitive object={figure} />
         </group>
       </group>
     </group>
@@ -143,11 +126,13 @@ function Sniper({ mat }: { mat: THREE.Material }) {
 }
 
 export function ShelfSquad() {
-  const mat = useMemo(() => plastic(GREEN), []);
   return (
-    <group>
-      <Sniper mat={mat} />
-      <RadioMan mat={mat} />
-    </group>
+    <Suspense fallback={null}>
+      <Gunner />
+      <Talker />
+    </Suspense>
   );
 }
+
+useGLTF.preload(STANDING_URL);
+useGLTF.preload(PRONE_URL);

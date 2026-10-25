@@ -1,4 +1,4 @@
-import { LAYOUT } from './roomLayout';
+import { LAYOUT, PC_DESK_TOP } from './roomLayout';
 import { EAST_X, NORTH_Z, WEST_X } from './videoRoom';
 
 export interface Anchor {
@@ -13,7 +13,6 @@ export interface Anchor {
 
 const dresserTop = LAYOUT.dresser.y + LAYOUT.dresser.sy;
 const nightTop = LAYOUT.nightstand.sy;
-const deskTop = LAYOUT.desk.sy;
 const shelfTop = LAYOUT.shelf.sy;
 
 /** Snap points on the room that already works. New uploads land on these. */
@@ -53,7 +52,8 @@ export const ANCHORS: Anchor[] = [
   {
     id: 'desk',
     label: 'On the desk',
-    position: [LAYOUT.desk.x - 0.15, deskTop, LAYOUT.desk.z],
+    // The clear patch behind the CDs, at the north end.
+    position: [LAYOUT.desk.x + 0.2, PC_DESK_TOP, LAYOUT.desk.z - 0.62],
     rotY: -Math.PI / 2,
     kind: 'surface',
   },

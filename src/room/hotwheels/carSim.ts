@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BLOCKS, ROOM } from './world';
+import { BLOCKS, ROOM, blockHas, pushOutOf } from './world';
 import { BOOSTERS, LOOPS, NITRO_SPOTS, trackUnder, type Loop, type Piece } from './course';
 
 /**
@@ -41,6 +41,15 @@ export interface DriveInput {
   throttle: number;
   steer: number;
   nitro: boolean;
+}
+
+export interface DriveOptions {
+  /**
+   * Race assist: the plastic steers you. Every strip keeps you between its
+   * rails, floor runs included, and the car noses along the track by itself,
+   * so holding the gas follows the lap. Free roam leaves it off.
+   */
+  assist?: boolean;
 }
 
 export type CarMode = 'ground' | 'air' | 'loop';
@@ -114,7 +123,7 @@ export function groundAt(x: number, z: number, maxY: number): Ground {
   let piece: Piece | null = null;
   for (const b of BLOCKS) {
     if (b.top === false) continue;
-    if (x < b.minX || x > b.maxX || z < b.minZ || z > b.maxZ) continue;
+    if (!blockHas(b, x, z)) continue;
     if (b.maxY <= maxY && b.maxY > y) y = b.maxY;
   }
   const hit = trackUnder(x, z, maxY);
@@ -129,7 +138,7 @@ export function groundAt(x: number, z: number, maxY: number): Ground {
 export function ceilingAt(x: number, z: number, fromY: number) {
   let c = Infinity;
   for (const b of BLOCKS) {
-    if (x < b.minX || x > b.maxX || z < b.minZ || z > b.maxZ) continue;
+    if (!blockHas(b, x, z)) continue;
     if (b.minY > fromY && b.minY < c) c = b.minY;
   }
   return c;
@@ -189,26 +198,11 @@ function collide(car: CarState): THREE.Vector3 | null {
   for (const b of BLOCKS) {
     if (b.minY >= p.y + CAR.height) continue;
     if (b.maxY <= p.y + TUNING.step) continue;
-    const x0 = b.minX - r;
-    const x1 = b.maxX + r;
-    const z0 = b.minZ - r;
-    const z1 = b.maxZ + r;
-    if (p.x <= x0 || p.x >= x1 || p.z <= z0 || p.z >= z1) continue;
-    const pens = [p.x - x0, x1 - p.x, p.z - z0, z1 - p.z];
-    const i = pens.indexOf(Math.min(...pens));
-    if (i === 0) {
-      p.x = x0;
-      hit = new THREE.Vector3(-1, 0, 0);
-    } else if (i === 1) {
-      p.x = x1;
-      hit = new THREE.Vector3(1, 0, 0);
-    } else if (i === 2) {
-      p.z = z0;
-      hit = new THREE.Vector3(0, 0, -1);
-    } else {
-      p.z = z1;
-      hit = new THREE.Vector3(0, 0, 1);
-    }
+    const out = pushOutOf(b, p.x, p.z, r);
+    if (!out) continue;
+    p.x = out.x;
+    p.z = out.z;
+    hit = new THREE.Vector3(out.nx, 0, out.nz);
   }
   if (p.x < ROOM.minX + r) {
     p.x = ROOM.minX + r;
@@ -290,15 +284,15 @@ function orient(car: CarState, blend: number, up?: THREE.Vector3, tangent?: THRE
 /**
  * Advance the car. Returns events for sound and the HUD.
  */
-export function stepCar(car: CarState, input: DriveInput, dtFull: number): SimEvent[] {
+export function stepCar(car: CarState, input: DriveInput, dtFull: number, opts: DriveOptions = {}): SimEvent[] {
   const events: SimEvent[] = [];
   const steps = Math.max(1, Math.ceil(dtFull / (1 / 120)));
   const dt = dtFull / steps;
-  for (let i = 0; i < steps; i++) step(car, input, dt, events);
+  for (let i = 0; i < steps; i++) step(car, input, dt, events, opts.assist === true);
   return events;
 }
 
-function step(car: CarState, input: DriveInput, dt: number, events: SimEvent[]) {
+function step(car: CarState, input: DriveInput, dt: number, events: SimEvent[], assist: boolean) {
   const T = TUNING;
   for (let i = 0; i < car.boosterCool.length; i++) car.boosterCool[i] = Math.max(0, car.boosterCool[i] - dt);
   if (input.nitro && car.nitroCans > 0 && car.nitroLeft <= 0) {
@@ -356,7 +350,11 @@ function step(car: CarState, input: DriveInput, dt: number, events: SimEvent[]) 
     const crawl = 0.45;
     const speedGrip = crawl + (1 - crawl) * Math.min(1, Math.abs(car.speed) / 0.22);
     const grip = speedGrip * (1 - 0.25 * Math.min(1, Math.abs(car.speed) / 1.3));
-    car.heading += input.steer * T.turnRate * grip * Math.sign(car.speed || 1) * dt;
+    // Steering flips in reverse, but only once you're really backing up: a
+    // nudge back off a wall used to flip it and undo the turn you were making.
+    const backing = car.speed < -0.06 || (car.speed <= 0.06 && thr < -0.05);
+    car.heading += input.steer * T.turnRate * grip * (backing ? -1 : 1) * dt;
+    if (assist && grounded) laneAssist(car, input.steer, dt);
   }
 
   if (grounded) {
@@ -371,10 +369,15 @@ function step(car: CarState, input: DriveInput, dt: number, events: SimEvent[]) 
     const predictedY = car.pos.y + car.vel.y * dt;
     car.pos.x += car.vel.x * dt;
     car.pos.z += car.vel.z * dt;
+    // Rails first, so a car leaning on one is still over the plastic when we look down.
+    railKeep(car, assist);
     const g = groundAt(car.pos.x, car.pos.z, Math.max(car.pos.y, predictedY) + T.step);
     // Rolling off a strip's edge is a bump; a lip at speed is a launch.
     const drop = predictedY - g.y;
-    if (drop > 0.004 && (drop > 0.02 || car.vel.y > 0.08)) {
+    // A chain lift holds the car down until its last piece of plastic, so a
+    // climb can level off and turn at the top without throwing you early.
+    const held = (car.piece?.lift ?? 0) > 0;
+    if (drop > 0.004 && (drop > 0.02 || (!held && car.vel.y > 0.08))) {
       // The plastic ran out from under us: fly.
       car.mode = 'air';
       car.airTime = 0;
@@ -385,7 +388,7 @@ function step(car: CarState, input: DriveInput, dt: number, events: SimEvent[]) 
       car.piece = g.piece;
       surfaceNormal(car.pos.x, car.pos.y, car.pos.z, car.heading, car.normal);
     }
-    railKeep(car);
+    railKeep(car, assist);
   } else {
     car.airTime += dt;
     car.vel.y -= T.gravity * dt;
@@ -417,10 +420,24 @@ function step(car: CarState, input: DriveInput, dt: number, events: SimEvent[]) 
         car.vel.z -= 1.4 * vn * wall.z;
       }
     } else if (into * Math.sign(car.speed) < -0.15) {
-      if (Math.abs(car.speed) > 0.35) events.push('bump');
-      // Head-on stops you; a glancing hit lets you slide along.
-      car.speed *= Math.max(0, 1 - Math.abs(into)) * 0.85;
-      if (Math.abs(into) > 0.85) car.speed = -0.08 * Math.sign(car.speed || 1);
+      const was = Math.sign(car.speed || 1);
+      const hard = Math.abs(car.speed) > 0.35;
+      if (hard) events.push('bump');
+      // A real crash, head-on, bounces you back; anything else scrubs speed
+      // while you slide along it.
+      if (hard && Math.abs(into) > 0.85) car.speed = -0.08 * was;
+      else car.speed *= Math.max(0, 1 - Math.abs(into) * Math.min(1, 20 * dt));
+      // Hands off the wheel, the nose glances off along the wall, the way it
+      // already leans, so holding the gas against something slides you round
+      // it. While you steer, your steering decides.
+      if (input.steer === 0) {
+        const tx = -wall.z * was;
+        const tz = wall.x * was;
+        const along = f.x * tx + f.z * tz >= 0 ? 1 : -1;
+        // Right of travel is (-f.z, f.x); a right turn is +heading.
+        const turn = Math.sign(along * (tx * -f.z + tz * f.x)) || 1;
+        car.heading += turn * Math.min(1, Math.abs(into)) * (hard ? 0.18 : 2.5 * dt);
+      }
     }
   }
 
@@ -461,13 +478,41 @@ function step(car: CarState, input: DriveInput, dt: number, events: SimEvent[]) 
   orient(car, Math.min(1, dt * 14));
 }
 
-/** Raised plastic has walls: lean on them and you slide along. */
-function railKeep(car: CarState) {
-  const piece = car.piece;
-  if (!piece || !piece.railed || car.mode !== 'ground') return;
+/**
+ * Race assist steering: turn the nose along the strip under the car and
+ * ease it back to the middle of the lane. Your own steering still moves you
+ * across the lane; the rails (all of them, in a race) stop you leaving it.
+ */
+function laneAssist(car: CarState, steer: number, dt: number) {
+  const hit = trackUnder(car.pos.x, car.pos.z, car.pos.y + 0.01, 0.06);
+  if (!hit || Math.abs(car.pos.y - hit.y) > 0.03) return;
+  // Aim along the plastic a car-length ahead, so curves are taken early.
+  const f = forward(car.heading, _r);
+  const look = 0.05 + 0.08 * Math.min(1, Math.abs(car.speed));
+  const ahead = trackUnder(car.pos.x + f.x * look * Math.sign(car.speed || 1), car.pos.z + f.z * look * Math.sign(car.speed || 1), car.pos.y + 0.03, 0.02);
+  const t = ahead && ahead.piece === hit.piece ? ahead.tangent : hit.tangent;
+  let want = Math.atan2(t.z, t.x);
+  // Driving the lap backwards is allowed: follow the strip the way you face.
+  const back = Math.cos(want - car.heading) < 0 ? -1 : 1;
+  if (back < 0) want += Math.PI;
+  // Right of travel is +lateral; a right turn is +heading. Steer back to the middle,
+  // less so while you're steering yourself.
+  const pull = (steer === 0 ? 3.2 : 1.2) * hit.lateral * back;
+  let d = want - pull - car.heading;
+  d = Math.atan2(Math.sin(d), Math.cos(d));
+  const rate = Math.min(Math.abs(d) * 10, 7) * dt;
+  car.heading += Math.sign(d) * Math.min(Math.abs(d), rate);
+}
+
+/** Raised plastic has walls: lean on them and you slide along. In a race every strip does. */
+function railKeep(car: CarState, assist = false) {
+  if (car.mode !== 'ground') return;
   const hit = trackUnder(car.pos.x, car.pos.z, car.pos.y + 0.01, 0.05);
-  // Only where it's raised: on the floor you can always drive off.
-  if (!hit || hit.piece !== piece || hit.y < 0.05) return;
+  // In a race a wheel over the edge still counts: the rail is right there.
+  const piece = assist && !car.piece && hit && Math.abs(car.pos.y - hit.y) < 0.03 ? hit.piece : car.piece;
+  if (!piece || (!piece.railed && !assist)) return;
+  // Only where it's raised: on the floor you can always drive off, unless it's a race.
+  if (!hit || hit.piece !== piece || (hit.y < 0.05 && !assist)) return;
   const limit = piece.half - CAR.radius * 0.6;
   if (Math.abs(hit.lateral) <= limit) return;
   const push = Math.sign(hit.lateral) * limit - hit.lateral;

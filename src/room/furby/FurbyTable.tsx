@@ -53,8 +53,12 @@ const BOX_YAW = 0.32;
 /** Inside the box, on its tray, in box model units. */
 const INSIDE = new THREE.Vector3(0, 0.225, 0.14);
 const BOX_TOP = 1.0;
-/** Where it sits once it's out, in front of you. */
-const OUT = new THREE.Vector3(0.02, 0, 0.17);
+/**
+ * Where it sits once it's out: in front of you, and in front of the Boom's
+ * box when the Boom comes over (the Boom rig carries its own box beside it).
+ * At (0.02, 0, 0.17) it stood inside that box for the whole visit.
+ */
+const OUT = new THREE.Vector3(0.06, 0, 0.22);
 
 /** The Boom rig's Furby is 0.32 units tall: about 13 cm, a little smaller than the 1998 one. */
 const BOOM_SCALE = 0.42;
