@@ -1,5 +1,17 @@
 import { useEffect, useState } from 'react';
 import { AIM_HOME, type Duck } from './range';
+import type { Bubble } from '../SpeechBubble';
+
+/** The radio man's briefing, one bubble at a time. Ends by sending you to the sniper. */
+export const RADIO_BRIEF = [
+  "Psst! Up here, soldier! Keep it down, Mom thinks we're asleep.",
+  "We're under attack! The ducks came in through the window and took the beanbag.",
+  "Private Scope has the only rifle on the shelf. He's been lying down since 1994.",
+  "Go talk to the sniper when you're ready. He's the flat one, right next to me.",
+] as const;
+
+export const SNIPER_PITCH =
+  "Private Scope, reporting. My legs fell asleep in '94. Ducks by the beanbag. Want the rifle?";
 
 /**
  * Shared between the shelf soldiers (always in the room), the mission (only
@@ -12,7 +24,9 @@ export type SniperPhase =
   | 'off'
   /** Landed close by: the radio man waves you over. */
   | 'near'
-  /** Up close with the radio man. */
+  /** The radio man's briefing: camera on him, a bubble over his head. */
+  | 'brief'
+  /** Up close with the sniper, deciding whether to take his rifle. */
   | 'talk'
   /** Camera on its way to the scope while the range folds up. */
   | 'scope-in'
@@ -53,6 +67,16 @@ export type WaveStage = 'launch' | 'flying' | 'tally' | 'round' | 'over';
 
 export const sniper = {
   phase: 'off' as SniperPhase,
+  /**
+   * Who you're close to on the shelf: still in the chopper ('land'), on foot by the
+   * radio man, or by the sniper once the radio man has briefed you.
+   */
+  near: null as null | 'land' | 'radio' | 'sniper',
+  /** The radio man has said his piece: next stop, the sniper. */
+  briefed: false,
+  briefLine: 0,
+  /** Speech bubble over whoever's talking, in screen space. */
+  bubble: null as Bubble | null,
   /** Rifle aim, radians. */
   yaw: AIM_HOME.yaw,
   pitch: AIM_HOME.pitch,
@@ -122,6 +146,8 @@ export function sniperBusy() {
 /** Set by the mission while it is mounted. */
 export const sniperControls = {
   talk: null as null | (() => void),
+  /** Next line of the radio man's briefing. */
+  nextBrief: null as null | (() => void),
   accept: null as null | (() => void),
   leave: null as null | (() => void),
   fire: null as null | (() => void),

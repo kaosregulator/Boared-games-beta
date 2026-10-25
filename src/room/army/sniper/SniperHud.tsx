@@ -3,6 +3,7 @@ import { isTouchDevice } from '../../input';
 import { wakeArmyAudio } from '../armyAudio';
 import { DUCKS_PER_WAVE, SHELLS, WAVES_PER_ROUND, quota } from './range';
 import { setSniperHard, sniper, sniperControls, useSniper, zoomLabel } from './state';
+import { SpeechBubble } from '../SpeechBubble';
 
 /**
  * Everything on screen for the shelf sniper: the radio man's call, the scope,
@@ -11,38 +12,25 @@ import { setSniperHard, sniper, sniperControls, useSniper, zoomLabel } from './s
 
 const BULLET_CAM_LABEL = { hits: 'Bullet cam: hits', all: 'Bullet cam: every shot', off: 'Bullet cam: off' } as const;
 
-/** In the army HUD while the chopper sits on the shelf by the squad. */
+/** In the army HUD by the squad: hop out of the chopper, then walk up and talk. */
 export function SquadPrompt() {
   const s = useSniper();
   if (s.phase !== 'near') return null;
-  return (
-    <button
-      type="button"
-      onClick={() => sniperControls.talk?.()}
-      className="pointer-events-auto absolute bottom-28 left-1/2 -translate-x-1/2 rounded-full bg-lime-500 px-4 py-1.5 text-[12px] font-black uppercase tracking-[0.2em] text-black shadow-lg"
-    >
-      Psst! Up here · F to talk to the radio man
-    </button>
-  );
+  if (s.near === 'land') {
+    return (
+      <p className="pointer-events-none absolute bottom-28 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-lime-500 px-4 py-1.5 text-[12px] font-black uppercase tracking-[0.2em] text-black shadow-lg">
+        Psst! Hop out (F) and walk over to the radio man
+      </p>
+    );
+  }
+  return s.bubble ? <SpeechBubble bubble={s.bubble} onNext={() => sniperControls.talk?.()} /> : null;
 }
 
 function Talk() {
   return (
     <div data-sniper-talk className="pointer-events-auto absolute inset-x-0 bottom-0 flex justify-center p-4 sm:bottom-6">
-      <div className="w-full max-w-md rounded-3xl border-4 border-[#2f3d1a] bg-[#55652e]/95 p-5 text-center shadow-2xl">
-        <div className="mx-auto mb-3 flex h-8 w-20 items-center justify-center gap-1 rounded-lg bg-[#2f3d1a]">
-          {Array.from({ length: 6 }, (_, i) => (
-            <span key={i} className="h-4 w-1 animate-pulse rounded bg-lime-300" style={{ animationDelay: `${i * 90}ms` }} />
-          ))}
-        </div>
-        <p className="text-[11px] font-black uppercase tracking-[0.3em] text-lime-200">Radio man · shelf outpost</p>
-        <p className="mt-2 text-2xl font-black uppercase leading-tight text-white drop-shadow sm:text-3xl">We're under attack!</p>
-        <p className="mt-1 text-lg font-black uppercase text-amber-200">The ducks have taken over!</p>
-        <p className="mt-2 text-[13px] leading-snug text-white/85">
-          They came in through the window and set up camp by the beanbag. Private Scope here has the only rifle on the shelf, but he's
-          been lying down since 1994. Take his spot, soldier.
-        </p>
-        <div className="mt-4 flex flex-col gap-2">
+      <div className="w-full max-w-sm rounded-3xl border-4 border-[#2f3d1a] bg-[#55652e]/95 p-3 text-center shadow-2xl">
+        <div className="flex flex-col gap-2">
           <button
             type="button"
             onClick={() => {
@@ -58,7 +46,7 @@ function Talk() {
             onClick={() => sniperControls.leave?.()}
             className="rounded-2xl bg-black/30 px-4 py-2 text-[12px] font-bold uppercase tracking-wider text-white/80 hover:bg-black/45"
           >
-            Not now, I'm flying
+            Not now
           </button>
         </div>
       </div>
@@ -147,6 +135,9 @@ export function SniperHud() {
             </p>
           </div>
         </>
+      )}
+      {(s.phase === 'brief' || s.phase === 'talk') && s.bubble && (
+        <SpeechBubble bubble={s.bubble} onNext={s.phase === 'brief' ? () => sniperControls.nextBrief?.() : undefined} />
       )}
       {s.phase === 'talk' && <Talk />}
 

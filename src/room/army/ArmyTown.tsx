@@ -476,6 +476,8 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
   const camYaw = useRef(Math.PI);
   /** Up/down arrows tilt the view, in every camera. Radians, + looks up. */
   const lookPitch = useRef(0);
+  /** You can walk on the shelf too: your fall speed when you step off an edge. */
+  const playerVy = useRef(0);
   const camReady = useRef(false);
   const lastEmit = useRef(0);
   const waveTimer = useRef(boot?.calm ? Infinity : 3.2);
@@ -705,7 +707,7 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
   function interact() {
     if (army.mode === 'ground' && army.coach === 'wait' && army.coachNear) return startCoach();
     if (army.coach === 'talk') return nextCoach();
-    if (sniper.phase === 'near' && sniperControls.talk) return sniperControls.talk();
+    if (army.mode === 'ground' && sniper.phase === 'near' && (sniper.near === 'radio' || sniper.near === 'sniper')) return sniperControls.talk?.();
     board();
   }
 
@@ -743,10 +745,6 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
 
   function board() {
     const h = heli.current;
-    if (army.mode === 'heli' && sniper.phase === 'near') {
-      sniperControls.talk?.();
-      return;
-    }
     if (army.mode === 'ground') {
       if (!army.nearChopper || player.fall > 0) return;
       army.mode = 'heli';
@@ -760,14 +758,20 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
         banner('Land first', 'Shift to come down, then F to hop out', 1.8);
         return;
       }
-      if (h.pos.y > 0.01) {
-        banner('Land on the floor', 'Hop out on the carpet, not up here', 1.8);
-        return;
-      }
       army.mode = 'ground';
+      // Hop out wherever she's sitting (the rug or the shelf), on a side with floor under it.
       const f = heliForward(h.yaw);
-      player.pos.set(h.pos.x - f.z * 0.08, 0, h.pos.z + f.x * 0.08);
-      pushOut(player.pos, MAN_RADIUS * 1.5, 0.005, MAN_HEIGHT);
+      const ground = floorAt(h.pos.x, h.pos.z, h.pos.y + 0.01);
+      const sides: [number, number][] = [
+        [-f.z * 0.08, f.x * 0.08],
+        [f.z * 0.08, -f.x * 0.08],
+        [-f.x * 0.09, -f.z * 0.09],
+      ];
+      const [ox, oz] =
+        sides.find(([sx, sz]) => Math.abs(floorAt(h.pos.x + sx, h.pos.z + sz, ground + 0.01) - ground) < 0.01) ?? sides[0];
+      player.pos.set(h.pos.x + ox, ground, h.pos.z + oz);
+      playerVy.current = 0;
+      pushOut(player.pos, MAN_RADIUS * 1.5, ground + 0.005, ground + MAN_HEIGHT);
       player.heading = h.yaw;
       player.root.visible = true;
       rotorOff();
@@ -1038,7 +1042,7 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
       } else {
         p.speed = 0;
       }
-      army.nearChopper = h.grounded && Math.hypot(h.pos.x - p.pos.x, h.pos.z - p.pos.z) < 0.16 && h.pos.y < 0.01;
+      army.nearChopper = h.grounded && Math.hypot(h.pos.x - p.pos.x, h.pos.z - p.pos.z) < 0.16 && Math.abs(h.pos.y - p.pos.y) < 0.05;
       army.playerDown = p.fall > 0 || p.falling;
     } else {
       army.nearChopper = false;
@@ -1242,6 +1246,19 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
     for (const m of men) {
       if (!m.active || m.role === 'tower' || m.role === 'guard') continue;
       if (m === player && army.mode === 'heli') continue;
+      if (m === player) {
+        // You stand on whatever's under you (rug, shelf, a low block) and drop off edges.
+        pushOut(m.pos, MAN_RADIUS, m.pos.y + 0.005, m.pos.y + MAN_HEIGHT);
+        const ground = floorAt(m.pos.x, m.pos.z, m.pos.y + 0.015);
+        if (m.pos.y > ground + 0.0005) {
+          playerVy.current -= 9.8 * dt;
+          m.pos.y = Math.max(ground, m.pos.y + playerVy.current * dt);
+        } else {
+          m.pos.y = ground;
+          playerVy.current = 0;
+        }
+        continue;
+      }
       pushOut(m.pos, MAN_RADIUS, 0.005, MAN_HEIGHT);
       m.pos.y = 0;
     }
@@ -1261,6 +1278,10 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
     // --- Camera -------------------------------------------------------------
     // Up on the shelf with the sniper: his camera, not ours.
     if (sniperBusy()) {
+      // Keep our follow camera where his left it, so handing back glides instead of cutting.
+      _cam.copy(camera.position);
+      camera.getWorldDirection(_dir);
+      _camLook.copy(camera.position).addScaledVector(_dir, 0.2);
       throttledEmit();
       return;
     }
@@ -1410,7 +1431,7 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
         </mesh>
         <pointLight position={[0, MAN_HEIGHT * 1.2, 0]} color="#b6ff4a" intensity={0.25} distance={0.35} decay={2} />
       </group>
-      <SniperMission heli={heli} flying={() => army.mode === 'heli'} />
+      <SniperMission heli={heli} flying={() => army.mode === 'heli'} walker={() => (army.mode === 'ground' ? player.pos : null)} />
       {RINGS.map((_, i) => (
         <RingGate key={i} index={i} course={army.course} />
       ))}

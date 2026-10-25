@@ -32,7 +32,9 @@ import {
 } from './range';
 import { DUCK_ASPECT, DUCK_FRAMES, duckSheet, flashTexture, grassTexture, skyTexture } from './duckArt';
 import { sniperSfx } from './sniperAudio';
-import { emitSniper, sniper, sniperControls, zoomFov, type Zoom } from './state';
+import { RADIO_BRIEF, SNIPER_PITCH, emitSniper, sniper, sniperControls, zoomFov, type Zoom } from './state';
+import { headOnScreen } from '../SpeechBubble';
+import { lineSeconds } from '../tutorial';
 
 /**
  * The shelf sniper mission. Land the chopper on the shelf over the TV and the
@@ -279,6 +281,8 @@ interface BulletRun {
 }
 
 const BARREL_SHOT = 0.45;
+/** Walk this close to the squad on foot and they'll talk. */
+const SQUAD_TALK = 0.14;
 const _up = new THREE.Vector3(0, 1, 0);
 const _dir = new THREE.Vector3();
 const _right = new THREE.Vector3();
@@ -297,7 +301,16 @@ function readBoot(): Boot {
   return { stage: s === 'talk' ? 'talk' : s === 'play' || s === '1' ? 'play' : null };
 }
 
-export function SniperMission({ heli, flying }: { heli: React.MutableRefObject<HeliState>; flying: () => boolean }) {
+export function SniperMission({
+  heli,
+  flying,
+  walker,
+}: {
+  heli: React.MutableRefObject<HeliState>;
+  flying: () => boolean;
+  /** Where you're standing when you're on foot (null in the chopper). */
+  walker: () => THREE.Vector3 | null;
+}) {
   const { camera, gl, size } = useThree();
   const range = useRange();
   const boot = useMemo(readBoot, []);
@@ -321,6 +334,8 @@ export function SniperMission({ heli, flying }: { heli: React.MutableRefObject<H
     flash: 0,
     pending: boot.stage,
     leaveAt: 0,
+    /** Seconds the current briefing line has been up. */
+    briefT: 0,
   });
   const keys = useRef<Record<string, boolean>>({});
   const pointer = useRef({ down: false, x: 0, y: 0, moved: 0, locked: false, noLock: false, type: 'mouse' });
@@ -358,16 +373,53 @@ export function SniperMission({ heli, flying }: { heli: React.MutableRefObject<H
     run.current.bullet = null;
   }
 
-  function talk() {
-    if (sniper.phase !== 'near') return;
-    wakeArmyAudio();
-    rotorOff();
+  function saveLens() {
     if (!run.current.saved) {
       const p = camera as THREE.PerspectiveCamera;
       run.current.saved = { near: p.near, fov: p.fov };
     }
+  }
+
+  function restoreLens() {
+    const p = camera as THREE.PerspectiveCamera;
+    if (run.current.saved) {
+      p.near = run.current.saved.near;
+      p.fov = run.current.saved.fov;
+      p.updateProjectionMatrix();
+    }
+  }
+
+  /** F by the squad on foot: the radio man briefs you first, then the sniper offers his rifle. */
+  function talk() {
+    if (sniper.phase !== 'near' || sniper.near === 'land' || sniper.near === null) return;
+    wakeArmyAudio();
+    rotorOff();
+    saveLens();
     sniperSfx.hail();
-    setPhase('talk');
+    if (sniper.near === 'radio') {
+      sniper.briefLine = 0;
+      setPhase('brief');
+    } else setPhase('talk');
+  }
+
+  function nextBrief() {
+    if (sniper.phase !== 'brief') return;
+    run.current.briefT = 0;
+    if (sniper.briefLine + 1 < RADIO_BRIEF.length) {
+      sniper.briefLine += 1;
+      emitSniper();
+    } else endBrief();
+  }
+
+  /** He's said his piece: the camera goes back to you, wherever you had it. */
+  function endBrief() {
+    if (sniper.phase !== 'brief') return;
+    sniper.briefed = true;
+    sniper.bubble = null;
+    restoreLens();
+    sniper.phase = 'off';
+    sniper.near = null;
+    emitSniper();
   }
 
   function accept() {
@@ -503,6 +555,7 @@ export function SniperMission({ heli, flying }: { heli: React.MutableRefObject<H
   // Controls for the HUD, keys and the pointer.
   useEffect(() => {
     sniperControls.talk = talk;
+    sniperControls.nextBrief = nextBrief;
     sniperControls.accept = accept;
     sniperControls.leave = leave;
     sniperControls.fire = fire;
@@ -513,6 +566,12 @@ export function SniperMission({ heli, flying }: { heli: React.MutableRefObject<H
     const playing = () => sniper.phase === 'play' || sniper.phase === 'bullet';
     const down = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement | null)?.closest('input, textarea, select')) return;
+      if (sniper.phase === 'brief') {
+        if (!e.repeat && (e.code === 'Enter' || e.code === 'KeyF' || e.code === 'Space')) nextBrief();
+        if (e.code === 'Escape') endBrief();
+        if (e.code === 'Space') e.preventDefault();
+        return;
+      }
       if (sniper.phase === 'talk') {
         if (e.code === 'Enter' || e.code === 'KeyF' || e.code === 'Space') accept();
         if (e.code === 'Escape') leave();
@@ -639,6 +698,9 @@ export function SniperMission({ heli, flying }: { heli: React.MutableRefObject<H
       for (const k of Object.keys(sniperControls) as (keyof typeof sniperControls)[]) sniperControls[k] = null;
       // Leaving the army town altogether: put everything back.
       sniper.phase = 'off';
+      sniper.near = null;
+      sniper.briefed = false;
+      sniper.bubble = null;
       sniper.scoped = false;
       sniper.rise = 0;
       sniper.hop = 0;
@@ -675,25 +737,41 @@ export function SniperMission({ heli, flying }: { heli: React.MutableRefObject<H
     const h = heli.current;
 
     // --- Who's near the squad ------------------------------------------
+    // Land on the shelf, hop out, and walk over: the radio man first, then the sniper.
     const onShelf = flying() && h.grounded && h.pos.y > SQUAD.top - 0.02 && h.pos.y < SQUAD.top + 0.2;
-    const near = onShelf && Math.hypot(h.pos.x - (SQUAD.sniper.x + SQUAD.radio.x) / 2, h.pos.z - SQUAD.radio.z) < SQUAD.reach;
-    if (sniper.phase === 'off' && near) {
+    const landed = onShelf && Math.hypot(h.pos.x - (SQUAD.sniper.x + SQUAD.radio.x) / 2, h.pos.z - SQUAD.radio.z) < SQUAD.reach;
+    const w = walker();
+    const onFoot = w !== null && Math.abs(w.y - SQUAD.top) < 0.03;
+    const dRadio = onFoot ? Math.hypot(w.x - SQUAD.radio.x, w.z - SQUAD.radio.z) : Infinity;
+    const dSniper = onFoot ? Math.hypot(w.x - SQUAD.sniper.x, w.z - SQUAD.sniper.z) : Infinity;
+    const close = Math.min(dRadio, dSniper) < SQUAD_TALK;
+    const who: typeof sniper.near = close ? (sniper.briefed ? 'sniper' : 'radio') : landed ? 'land' : null;
+    if (sniper.phase === 'off' && who) {
       sniper.phase = 'near';
+      sniper.near = who;
       sniperSfx.hail();
       emitSniper();
-    } else if (sniper.phase === 'near' && !near) {
-      sniper.phase = 'off';
+    } else if (sniper.phase === 'near' && who !== sniper.near) {
+      sniper.near = who;
+      if (!who) sniper.phase = 'off';
       emitSniper();
     }
     if (r.pending && sniper.phase === 'near') {
+      // Test boots skip the walk.
       const stage = r.pending;
       r.pending = null;
+      sniper.briefed = true;
+      sniper.near = 'sniper';
       talk();
       if (stage === 'play') accept();
     }
+    if (sniper.phase === 'brief') {
+      r.briefT += dt;
+      if (r.briefT > lineSeconds(RADIO_BRIEF[sniper.briefLine]) + 0.6) nextBrief();
+    }
 
     // The radio man bounces while he's got something to say.
-    const talking = sniper.phase === 'near' || sniper.phase === 'talk' || (sniper.radio !== null && performance.now() < sniper.radio.until);
+    const talking = sniper.phase === 'near' || sniper.phase === 'brief' || (sniper.radio !== null && performance.now() < sniper.radio.until);
     sniper.hop = talking ? (sniper.hop + dt * 2.4) % 2 : Math.max(0, sniper.hop - dt * 2) % 2;
 
     // --- The range pops up while you're on the rifle ---------------------
@@ -733,6 +811,7 @@ export function SniperMission({ heli, flying }: { heli: React.MutableRefObject<H
 
     // --- Camera ------------------------------------------------------------
     if (sniper.phase !== 'off' && sniper.phase !== 'near') cameraFor(dt);
+    squadBubble();
 
     const now = performance.now();
     if (now - r.lastEmit > 90) {
@@ -741,6 +820,31 @@ export function SniperMission({ heli, flying }: { heli: React.MutableRefObject<H
       if (sniper.radio && now > sniper.radio.until) sniper.radio = null;
       emitSniper();
     }
+  }
+
+  /** The bubble over whoever's talking: the radio man in his briefing, the sniper with his offer. */
+  function squadBubble() {
+    const p = sniper.phase;
+    const radioHead = () => headOnScreen(camera, SQUAD.radio.x, SQUAD.top + 0.1, SQUAD.radio.z);
+    const sniperHead = () => headOnScreen(camera, SQUAD.sniper.x, SQUAD.top + 0.04, SQUAD.sniper.z);
+    let next: typeof sniper.bubble = null;
+    if (p === 'brief') {
+      const at = radioHead();
+      if (at) next = { ...at, who: 'Radio man', text: RADIO_BRIEF[sniper.briefLine], hint: `F or tap · next (${sniper.briefLine + 1}/${RADIO_BRIEF.length})` };
+    } else if (p === 'talk' && run.current.t > 0.7) {
+      const at = sniperHead();
+      if (at) next = { ...at, who: 'Pvt. Scope', text: SNIPER_PITCH };
+    } else if (p === 'near' && (sniper.near === 'radio' || sniper.near === 'sniper')) {
+      const at = sniper.near === 'radio' ? radioHead() : sniperHead();
+      if (at)
+        next = {
+          ...at,
+          who: sniper.near === 'radio' ? 'Radio man' : 'Pvt. Scope',
+          text: sniper.near === 'radio' ? 'Psst! Over here!' : 'Ready when you are, soldier.',
+          hint: 'F or tap to talk',
+        };
+    }
+    sniper.bubble = next;
   }
 
   function tickGame(gdt: number) {
@@ -890,10 +994,6 @@ export function SniperMission({ heli, flying }: { heli: React.MutableRefObject<H
     const aspect = size.width / Math.max(1, size.height);
     let fov = 45;
     let near = 0.003;
-    // Both soldiers in shot, standing above the radio card.
-    const mid = new THREE.Vector3((SQUAD.sniper.x + SQUAD.radio.x) / 2, SQUAD.top, SQUAD.radio.z);
-    const talkPos = mid.clone().add(new THREE.Vector3(-0.03, 0.1, 0.24));
-    const talkLook = mid.clone().add(new THREE.Vector3(-0.01, -0.035, 0));
     const home = aimDir(AIM_HOME.yaw, AIM_HOME.pitch);
     const flatHome = new THREE.Vector3(home.x, 0, home.z).normalize();
     const shoulder = new THREE.Vector3(SQUAD.sniper.x, SQUAD.top, SQUAD.sniper.z)
@@ -902,11 +1002,24 @@ export function SniperMission({ heli, flying }: { heli: React.MutableRefObject<H
     const fieldMid = new THREE.Vector3(FIELD.x, 0.55, (FIELD.fly.z0 + FIELD.fly.z1) / 2);
 
     switch (sniper.phase) {
+      case 'brief': {
+        // Close on the radio man, a little off to his side, so the bubble sits over his head.
+        const e = smooth(r.t / 1.0);
+        _a.set(SQUAD.radio.x + 0.05, SQUAD.top + 0.085, SQUAD.radio.z + 0.13);
+        _b.set(SQUAD.radio.x, SQUAD.top + 0.06, SQUAD.radio.z);
+        _pos.lerpVectors(r.fromPos, _a, e);
+        _look.lerpVectors(r.fromLook, _b, e);
+        fov = 42;
+        break;
+      }
       case 'talk': {
+        // Down low by the sniper, who's lying flat behind his rifle; the radio man in the back.
         const e = smooth(r.t / 1.1);
-        _pos.lerpVectors(r.fromPos, talkPos, e);
-        _look.lerpVectors(r.fromLook, talkLook, e);
-        fov = 40;
+        _a.set(SQUAD.sniper.x - 0.07, SQUAD.top + 0.06, SQUAD.sniper.z + 0.12);
+        _b.set(SQUAD.sniper.x + 0.01, SQUAD.top + 0.02, SQUAD.sniper.z);
+        _pos.lerpVectors(r.fromPos, _a, e);
+        _look.lerpVectors(r.fromLook, _b, e);
+        fov = 42;
         break;
       }
       case 'scope-in': {
