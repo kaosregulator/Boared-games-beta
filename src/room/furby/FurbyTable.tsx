@@ -3,25 +3,48 @@ import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { useAnimations, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { pushHud } from '../table/tableHud';
+import { setTableView, tableCam, type Shot } from '../table/tableCam';
 import { FURBY_SOLID, FurbyPuppet } from './FurbyPuppet';
 import { scriptedStep } from './scriptClock';
 import { anchorPose, furbyAnchors, setFurby, tableBrain, useFurby } from './furbyStore';
+import { speakAs } from './furbyBrain';
 import { motorWhirr } from './furbyAudio';
 import { HoldArms, applyHand, newHandPose, type GripShape } from './HoldArms';
+import {
+  BOOM_FROM,
+  BOOM_SPOT,
+  DANCE_CAM,
+  DANCE_SEC,
+  ENTER_SEC,
+  LEAVE_SEC,
+  SHOTS,
+  TALK_AFTER,
+  TALK_BEFORE,
+  boomBounce,
+  boomWalk,
+  strobeAt,
+  type Beat,
+} from './furbyDance';
 
 /**
  * The Furbies at the card table. The grey 1998 Furby comes in the user's
- * display box (a clear plastic window added over the open front and sides);
- * a hand reaches in from above and pulls it up out of the top (straight
- * through the cardboard), sets it down in front of you, and it's then a
- * live toy: touch its head, tummy or beak, pick it up, put it to bed. The
- * Furby Boom stands at the back in its own box, dancing on a loop, silent.
+ * display box (a clear plastic window with a little round peep-hole, and
+ * "TRY ME" on the cardboard above it). It stays in there until you press
+ * Unbox: the box shakes, it says hello, and a hand pulls it up out of the
+ * top, sets it down in front of you, and it's then a live toy: touch its
+ * head, tummy or beak, pick it up, put it to bed.
+ *
+ * The Furby Boom is not on the table until you ask it to dance. It waddles
+ * in, the two of them talk side by side, ask each other to dance, the lights
+ * go strobe red and blue while they dance, then they talk some more until
+ * pack-up, when the Boom waddles back off. See furbyDance.ts for the script.
  *
  * Children of the table top: y 0 is the table surface, you sit at +z.
  */
 
 const BOX_URL = '/models/furby-box.glb';
 const BOOM_URL = '/models/furby-boom.glb';
+const BOOM_NAME = 'Furby Boom';
 
 /** The display box model is 0.98 units tall; this makes it about 29 cm, just room for the Furby. */
 const BOX_SCALE = 0.3;
@@ -37,30 +60,77 @@ const OUT = new THREE.Vector3(0.02, 0, 0.17);
 const BOOM_SCALE = 0.42;
 const BOOM_FLOOR = 0.226;
 
+/** The window, in box model units: front plane and its sides. */
+const WIN = { y0: 0.21, y1: 0.8, front: 0.43, left: -0.43, right: 0.4, back: -0.05 };
+/** The peep-hole, centred on the window front. */
+const HOLE = { x: 0, y: 0.62, r: 0.1 };
+
 const ease = (x: number) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
 
-function plasticTexture() {
-  // A couple of soft vertical glints, like light on a vacuum-formed window.
+/** The scene's state: where the Boom is in its script and how far through it we are. */
+interface Scene {
+  kind: 'away' | 'enter' | 'talk' | 'dance' | 'talk2' | 'stand' | 'leave';
+  /** Seconds into the current kind. */
+  t: number;
+  /** Next beat of the talk that's playing. */
+  beat: number;
+  /** The Boom is mid-line until this many seconds into the kind. */
+  boomUntil: number;
+  /** The camera view from before the scene, to hand back at the end. */
+  saved: Shot | null;
+}
+
+function freshScene(): Scene {
+  return { kind: 'away', t: 0, beat: 0, boomUntil: 0, saved: null };
+}
+
+function canvasTexture(w: number, h: number, paint: (g: CanvasRenderingContext2D) => void) {
   const c = document.createElement('canvas');
-  c.width = 128;
-  c.height = 8;
-  const g = c.getContext('2d')!;
-  const grad = g.createLinearGradient(0, 0, 128, 0);
-  grad.addColorStop(0, 'rgba(255,255,255,0.05)');
-  grad.addColorStop(0.18, 'rgba(255,255,255,0.55)');
-  grad.addColorStop(0.24, 'rgba(255,255,255,0.08)');
-  grad.addColorStop(0.7, 'rgba(255,255,255,0.03)');
-  grad.addColorStop(0.78, 'rgba(255,255,255,0.3)');
-  grad.addColorStop(0.83, 'rgba(255,255,255,0.04)');
-  grad.addColorStop(1, 'rgba(255,255,255,0.08)');
-  g.fillStyle = grad;
-  g.fillRect(0, 0, 128, 8);
+  c.width = w;
+  c.height = h;
+  paint(c.getContext('2d')!);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
 }
 
-/** The clear window over the box's open front and sides, in box model units. */
+function plasticTexture() {
+  // A couple of soft vertical glints, like light on a vacuum-formed window.
+  return canvasTexture(128, 8, g => {
+    const grad = g.createLinearGradient(0, 0, 128, 0);
+    grad.addColorStop(0, 'rgba(255,255,255,0.05)');
+    grad.addColorStop(0.18, 'rgba(255,255,255,0.55)');
+    grad.addColorStop(0.24, 'rgba(255,255,255,0.08)');
+    grad.addColorStop(0.7, 'rgba(255,255,255,0.03)');
+    grad.addColorStop(0.78, 'rgba(255,255,255,0.3)');
+    grad.addColorStop(0.83, 'rgba(255,255,255,0.04)');
+    grad.addColorStop(1, 'rgba(255,255,255,0.08)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 128, 8);
+  });
+}
+
+/**
+ * Alpha for the window front: white everywhere but the peep-hole, which is
+ * cut clear. The texture maps the plane's full width and height, so the
+ * canvas keeps the window's proportions.
+ */
+function holeTexture() {
+  const w = 256;
+  const h = Math.round((256 * (WIN.y1 - WIN.y0)) / (WIN.right - WIN.left));
+  const u = (HOLE.x - WIN.left) / (WIN.right - WIN.left);
+  const v = (HOLE.y - WIN.y0) / (WIN.y1 - WIN.y0);
+  return canvasTexture(w, h, g => {
+    g.fillStyle = '#fff';
+    g.fillRect(0, 0, w, h);
+    g.fillStyle = '#000';
+    g.beginPath();
+    g.ellipse(u * w, (1 - v) * h, (HOLE.r / (WIN.right - WIN.left)) * w, (HOLE.r / (WIN.y1 - WIN.y0)) * h, 0, 0, Math.PI * 2);
+    g.fill();
+  });
+}
+
+/** The clear window over the box's open front and sides, with the peep-hole cut in the front. */
 function PlasticWindow() {
   const mat = useMemo(
     () =>
@@ -78,42 +148,57 @@ function PlasticWindow() {
       }),
     [],
   );
-  useEffect(() => () => mat.dispose(), [mat]);
-  const y0 = 0.21;
-  const y1 = 0.8;
-  const h = y1 - y0;
-  const front = 0.43;
-  const left = -0.43;
-  const right = 0.4;
-  const back = -0.05;
+  const frontMat = useMemo(() => {
+    const m = mat.clone();
+    m.alphaMap = holeTexture();
+    m.needsUpdate = true;
+    return m;
+  }, [mat]);
+  const rimMat = useMemo(() => new THREE.MeshBasicMaterial({ color: '#e8f1ff', transparent: true, opacity: 0.75, depthWrite: false }), []);
+  useEffect(
+    () => () => {
+      mat.dispose();
+      frontMat.dispose();
+      rimMat.dispose();
+    },
+    [mat, frontMat, rimMat],
+  );
+  const h = WIN.y1 - WIN.y0;
+  const front = WIN.front;
   return (
     <group renderOrder={3}>
-      <mesh position={[(left + right) / 2, y0 + h / 2, front]} material={mat}>
-        <planeGeometry args={[right - left, h]} />
+      <mesh position={[(WIN.left + WIN.right) / 2, WIN.y0 + h / 2, front]} material={frontMat}>
+        <planeGeometry args={[WIN.right - WIN.left, h]} />
       </mesh>
-      <mesh position={[left, y0 + h / 2, (front + back) / 2]} rotation={[0, Math.PI / 2, 0]} material={mat}>
-        <planeGeometry args={[front - back, h]} />
+      <mesh position={[HOLE.x, HOLE.y, front + 0.004]} material={rimMat}>
+        <ringGeometry args={[HOLE.r * 0.9, HOLE.r * 1.12, 40]} />
       </mesh>
-      <mesh position={[right, y0 + h / 2, (front + back) / 2]} rotation={[0, -Math.PI / 2, 0]} material={mat}>
-        <planeGeometry args={[front - back, h]} />
+      <mesh position={[WIN.left, WIN.y0 + h / 2, (front + WIN.back) / 2]} rotation={[0, Math.PI / 2, 0]} material={mat}>
+        <planeGeometry args={[front - WIN.back, h]} />
+      </mesh>
+      <mesh position={[WIN.right, WIN.y0 + h / 2, (front + WIN.back) / 2]} rotation={[0, -Math.PI / 2, 0]} material={mat}>
+        <planeGeometry args={[front - WIN.back, h]} />
       </mesh>
     </group>
   );
 }
 
-function FurbyBox() {
+function FurbyBox({ groupRef }: { groupRef: React.RefObject<THREE.Group | null> }) {
   const gltf = useGLTF(BOX_URL);
   const scene = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
   return (
-    <group position={BOX_AT} rotation={[0, BOX_YAW, 0]} scale={BOX_SCALE}>
+    <group ref={groupRef} position={BOX_AT} rotation={[0, BOX_YAW, 0]} scale={BOX_SCALE}>
       <primitive object={scene} />
       <PlasticWindow />
     </group>
   );
 }
 
-/** The Furby Boom in its own box, dancing at the back of the table. */
-function DancingBoom({ onPoke }: { onPoke: () => void }) {
+/**
+ * The Furby Boom. Hidden until it's asked to dance; FurbyTable moves it, and
+ * its own dance loop runs whenever it's on the table.
+ */
+function Boom({ rootRef, onPoke }: { rootRef: React.RefObject<THREE.Group | null>; onPoke: () => void }) {
   const gltf = useGLTF(BOOM_URL);
   const group = useRef<THREE.Group>(null);
   const { actions, names } = useAnimations(gltf.animations, group);
@@ -125,12 +210,12 @@ function DancingBoom({ onPoke }: { onPoke: () => void }) {
     };
   }, [actions, names]);
   return (
-    <group position={[0.26, 0, -0.27]} rotation={[0, -0.3, 0]}>
+    <group ref={rootRef} visible={false}>
       <group ref={group} scale={BOOM_SCALE} position={[0, BOOM_FLOOR * BOOM_SCALE, 0]}>
         <primitive object={gltf.scene} />
       </group>
       <mesh
-        position={[0.12, 0.1, -0.05]}
+        position={[0, 0.1, -0.05]}
         onPointerDown={(e: ThreeEvent<PointerEvent>) => {
           e.stopPropagation();
           onPoke();
@@ -157,10 +242,19 @@ export function FurbyTable({
   const { held } = useFurby();
   const away = held === 'table';
   const fur = useRef<THREE.Group>(null);
+  const box = useRef<THREE.Group>(null);
+  const boom = useRef<THREE.Group>(null);
+  const redLight = useRef<THREE.PointLight>(null);
+  const blueLight = useRef<THREE.PointLight>(null);
   const clock = useRef(0);
   const mark = useRef<number | null>(null);
   const cues = useRef(new Set<string>());
   const done = useRef(false);
+  /** Set by the Unbox button. Until then the Furby stays in its box and the clock doesn't run. */
+  const unboxed = useRef(false);
+  const scene = useRef<Scene>(freshScene());
+  const boomVoice = useRef<{ stop: () => void } | null>(null);
+  const calm = useMemo(() => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches, []);
   const inside = useMemo(
     () => INSIDE.clone().multiplyScalar(BOX_SCALE).applyAxisAngle(new THREE.Vector3(0, 1, 0), BOX_YAW).add(BOX_AT),
     [],
@@ -174,12 +268,60 @@ export function FurbyTable({
     [],
   );
 
+  /** Moves the scene on to its next kind, and restores the camera when the party's over. */
+  const begin = (kind: Scene['kind']) => {
+    const s = scene.current;
+    s.kind = kind;
+    s.t = 0;
+    s.beat = 0;
+    s.boomUntil = 0;
+    if (kind === 'away' || kind === 'leave' || kind === 'stand') {
+      if (s.saved) setTableView(s.saved, true);
+      s.saved = null;
+    }
+  };
+
+  /** Asks the Boom over. The Furby wakes up first if it was asleep. */
+  const startDance = () => {
+    const s = scene.current;
+    if (phase !== 'play') return;
+    if (s.kind === 'away') {
+      if (tableBrain.asleep) tableBrain.act('wake');
+      s.saved = tableCam.base;
+      begin('enter');
+      tableBrain.act('hello');
+    } else if (s.kind === 'stand') {
+      begin('dance');
+      tableBrain.act('dance');
+      setTableView(SHOTS[DANCE_CAM], true);
+    }
+  };
+
+  /** Plays the beats that have come due, each with its own camera move. */
+  const playBeats = (beats: Beat[], s: Scene) => {
+    while (s.beat < beats.length && s.t >= beats[s.beat].at) {
+      const b = beats[s.beat++];
+      if (b.who === 'furby') {
+        tableBrain.say(b.furbish, b.english, b.tag, 3);
+      } else {
+        boomVoice.current?.stop();
+        boomVoice.current = speakAs(BOOM_NAME, b.furbish, b.english, b.tag, 0.92);
+        s.boomUntil = s.t + 2.4;
+      }
+      setTableView(SHOTS[b.cam], true);
+    }
+  };
+
   useEffect(() => {
     clock.current = 0;
     mark.current = null;
     cues.current.clear();
     done.current = false;
-    if (phase === 'pack' && held === 'table') setFurby({ held: null, from: null });
+    if (phase === 'pack') {
+      if (held === 'table') setFurby({ held: null, from: null });
+      // The Boom waddles off with the box packing up.
+      if (scene.current.kind !== 'away' && scene.current.kind !== 'leave') begin('leave');
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
@@ -187,8 +329,35 @@ export function FurbyTable({
     if (fur.current) furbyAnchors.table = fur.current;
     return () => {
       delete furbyAnchors.table;
+      const s = scene.current;
+      if (s.saved) setTableView(s.saved, true);
+      boomVoice.current?.stop();
     };
   }, []);
+
+  // Unfold: the box waits for Unbox.
+  useEffect(() => {
+    // Re-runs whenever the parent re-renders (onLeave is a new function); once Unbox is pressed, don't bring it back.
+    if (phase !== 'unfold' || unboxed.current) return;
+    pushHud({
+      title: 'Furby',
+      note: 'Still in its box. Try me!',
+      detail: 'Press unbox, and it comes out to say hello.',
+      onLeave,
+      dock: 'bottom',
+      actions: [
+        {
+          label: 'Unbox',
+          tone: 'amber',
+          onClick: () => {
+            unboxed.current = true;
+            pushHud(null);
+          },
+        },
+      ],
+    });
+    return () => pushHud(null);
+  }, [phase, onLeave]);
 
   useEffect(() => {
     if (phase !== 'play') return;
@@ -196,7 +365,7 @@ export function FurbyTable({
     pushHud({
       title: 'Furby',
       note: 'Brand new, out of the box. Touch its head, tummy or beak, or pick it up and play.',
-      detail: 'The Furby Boom in the back just dances.',
+      detail: 'Ask the Furby Boom to come out and dance.',
       onLeave,
       dock: 'bottom',
       actions: [
@@ -204,7 +373,7 @@ export function FurbyTable({
         { label: 'Tickle', onClick: act('tickle') },
         { label: 'Feed', onClick: act('feed') },
         { label: 'Sing', onClick: act('sing') },
-        { label: 'Dance with Boom', onClick: act('dance') },
+        { label: 'Dance with Boom', onClick: startDance },
         {
           label: 'Pick it up',
           tone: 'amber',
@@ -217,18 +386,82 @@ export function FurbyTable({
       ],
     });
     return () => pushHud(null);
+    // startDance reads the current phase and scene only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, onLeave]);
 
   useFrame((_, dtRaw) => {
     const g = fur.current;
     if (!g) return;
-    // The pull out of the box is a script. A capped physics step left it
-    // crawling, so "Opening" never finished on a heavy frame.
-    const step = phase === 'play' ? { dt: Math.min(dtRaw, 0.05), at: performance.now() } : scriptedStep(mark.current, performance.now(), 1);
+    const s = scene.current;
+
+    // The Boom's party: a script that follows real time, not the walker's frame step.
+    const live = phase === 'play' || s.kind === 'leave';
+    if (s.kind !== 'away' && s.kind !== 'stand' && live) {
+      s.t += Math.min(dtRaw, 0.1);
+      if (s.kind === 'enter' && s.t >= ENTER_SEC) {
+        begin('talk');
+        setTableView(SHOTS.wide, true);
+      } else if (s.kind === 'talk') {
+        playBeats(TALK_BEFORE.beats, s);
+        if (s.t >= TALK_BEFORE.dur) {
+          begin('dance');
+          tableBrain.act('dance');
+          setTableView(SHOTS[DANCE_CAM], true);
+        }
+      } else if (s.kind === 'dance' && s.t >= DANCE_SEC) {
+        begin('talk2');
+        setTableView(SHOTS.wide, true);
+      } else if (s.kind === 'talk2') {
+        playBeats(TALK_AFTER.beats, s);
+        if (s.t >= TALK_AFTER.dur) begin('stand');
+      } else if (s.kind === 'leave' && s.t >= LEAVE_SEC) {
+        begin('away');
+      }
+    }
+
+    // The Boom: where it is, which way it faces, and how it moves.
+    const b = boom.current;
+    if (b) {
+      b.visible = s.kind !== 'away';
+      const talking = s.t < s.boomUntil;
+      let x = BOOM_SPOT[0];
+      let z = BOOM_SPOT[2];
+      let yaw = 0;
+      let sway = 0;
+      let bob = 0;
+      if (s.kind === 'enter') {
+        ({ x, z, yaw, sway, bob } = boomWalk(BOOM_FROM, BOOM_SPOT, s.t / ENTER_SEC, s.t));
+      } else if (s.kind === 'leave') {
+        ({ x, z, yaw, sway, bob } = boomWalk(BOOM_SPOT, BOOM_FROM, s.t / LEAVE_SEC, s.t));
+      } else if (s.kind === 'dance') {
+        sway = Math.sin(s.t * Math.PI * 2.2) * 0.14;
+        bob = boomBounce(s.t, false);
+      } else if (s.kind === 'talk' || s.kind === 'talk2' || s.kind === 'stand') {
+        bob = talking ? boomBounce(s.t, true) : 0;
+      }
+      b.position.set(x, bob, z);
+      b.rotation.set(0, yaw, sway);
+    }
+
+    // Strobe: red and blue flashes through the dance. Reduced motion gets a steady wash.
+    const strobe = s.kind === 'dance' ? (calm ? 'steady' : strobeAt(s.t)) : null;
+    if (redLight.current) redLight.current.intensity = strobe === 'steady' ? 1.2 : strobe === 'red' ? 5 : 0;
+    if (blueLight.current) blueLight.current.intensity = strobe === 'steady' ? 1.2 : strobe === 'blue' ? 5 : 0;
+
+    // The Furby is off the speaker while the Boom has the floor.
+    tableBrain.attentive = phase === 'play' && (s.kind === 'away' || s.kind === 'stand');
+
+    // Unfold: the box waits. Once Unbox is pressed the clock runs and the box shakes until the pull.
+    const waiting = phase === 'unfold' && !unboxed.current;
+    const step = waiting
+      ? { dt: 0, at: performance.now() }
+      : phase === 'play'
+        ? { dt: Math.min(dtRaw, 0.05), at: performance.now() }
+        : scriptedStep(mark.current, performance.now(), 1);
     if (phase !== 'play') mark.current = step.at;
     clock.current += step.dt;
     const t = clock.current;
-    tableBrain.attentive = phase === 'play';
     const cue = (name: string, at: number, fn: () => void) => {
       if (t >= at && !cues.current.has(name)) {
         cues.current.add(name);
@@ -238,8 +471,12 @@ export function FurbyTable({
 
     let squash = 1;
     if (phase === 'unfold') {
-      // Wiggles in the box, gets pulled up out of the top, hops down to you.
-      cue('hello', 0.7, () => tableBrain.act('hello'));
+      // Shakes in the box, says hello, gets pulled up out of the top, hops down to you.
+      const shaking = t < 1.6 ? 1 : 0;
+      if (box.current) {
+        box.current.rotation.set(Math.sin(t * 41) * 0.035 * shaking, BOX_YAW, Math.sin(t * 33) * 0.03 * shaking);
+      }
+      cue('hello', 0.35, () => tableBrain.act('hello'));
       cue('pull', 1.6, () => {
         motorWhirr(0.2, 1.1);
         tableBrain.act('flip');
@@ -256,7 +493,7 @@ export function FurbyTable({
       if (hop <= 0) {
         g.position.copy(inside);
         g.position.y = THREE.MathUtils.lerp(inside.y, top, up);
-        g.rotation.set(0, BOX_YAW + Math.sin(t * 9) * 0.06 * (t > 0.6 && t < 1.6 ? 1 : 0), Math.sin(t * 7) * 0.1 * up * (1 - up));
+        g.rotation.set(0, BOX_YAW + Math.sin(t * 9) * 0.06 * (t > 0.2 && t < 1.6 ? 1 : 0), Math.sin(t * 7) * 0.1 * up * (1 - up));
       } else {
         g.position.lerpVectors(new THREE.Vector3(inside.x, top, inside.z), OUT, hop);
         g.position.y = THREE.MathUtils.lerp(top, 0, hop) + Math.sin(hop * Math.PI) * 0.08;
@@ -331,11 +568,13 @@ export function FurbyTable({
   return (
     <group>
       <Suspense fallback={null}>
-        <FurbyBox />
+        <FurbyBox groupRef={box} />
       </Suspense>
       <Suspense fallback={null}>
-        <DancingBoom onPoke={() => phase === 'play' && tableBrain.act('dance')} />
+        <Boom rootRef={boom} onPoke={() => scene.current.kind === 'stand' && startDance()} />
       </Suspense>
+      <pointLight ref={redLight} position={[-0.35, 0.55, 0.3]} color="#ff1e1e" intensity={0} distance={3} decay={2} />
+      <pointLight ref={blueLight} position={[0.6, 0.55, 0.3]} color="#2a5bff" intensity={0} distance={3} decay={2} />
       {phase !== 'play' && <HoldArms left={idle} right={pull} />}
       <group ref={fur} position={inside}>
         <Suspense fallback={null}>

@@ -169,6 +169,15 @@ function say(b: Bubble | null) {
   bubbleSubs.forEach(fn => fn(b));
 }
 
+/**
+ * A line from a toy with no brain of its own (the Furby Boom in a scene):
+ * the speech bubble and a voice, no beak.
+ */
+export function speakAs(who: string, furbish: string, english: string, tag: FurbyTag, pitch = 1) {
+  say({ furbish, english, who, at: performance.now() });
+  return speak(tag, { pitch });
+}
+
 interface Anim {
   kind: FurbyAction | 'burp' | 'full' | 'grumpy' | 'dark';
   t: number;
@@ -227,12 +236,22 @@ export class FurbyBrain {
   private speakLine(key: keyof typeof LINES, tag?: FurbyTag, maxDur?: number) {
     const lines = LINES[key];
     const [furbish, english] = lines[Math.floor(Math.random() * lines.length)];
+    this.playLine(furbish, english, tag ?? pickTag(SOUND[key]), maxDur);
+  }
+
+  private playLine(furbish: string, english: string, tag: FurbyTag, maxDur?: number) {
     say({ furbish, english, who: this.name, at: performance.now() });
     this.voice?.stop();
     this.stopMotor();
-    this.voice = this.voiced ? speak(tag ?? pickTag(SOUND[key]), { pitch: this.pitch, volume: this.volume, maxDur }) : null;
+    this.voice = this.voiced ? speak(tag, { pitch: this.pitch, volume: this.volume, maxDur }) : null;
     // The gearbox runs in bursts through the line, the way the real one's did.
     if (this.voiced) this.stopMotor = motorPlay(this.voice ? this.voice.at : voiceTime() + 0.02, motorPlan(this.voice ? this.voice.clip.dur : 1.2), 0.2 * this.volume);
+  }
+
+  /** A line of a scene this Furby is in: its own words and voice, and its beak moves while it talks. */
+  say(furbish: string, english: string, tag: FurbyTag = 'talk', maxDur?: number) {
+    if (this.asleep) return;
+    this.playLine(furbish, english, tag, maxDur);
   }
 
   /** Something happened to the Furby. Returns false if it ignored it. */

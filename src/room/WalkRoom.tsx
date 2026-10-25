@@ -984,7 +984,8 @@ export function WalkRoom({
       )}
       {(tvOn || tvInRoom) && <TvGlass initialMode={device === 'nes' ? 'gaming' : 'menu'} inRoom={tvInRoom} />}
       {furbyMuteAvailable({ tvMode: tvStatus.mode, atTelevision: tvOn || tvInRoom, radioOn: tapeOn }) && <FurbyQuiet />}
-      {session && session.phase === 'play' && TABLE_GAMES.has(session.game.id) && (
+      {/* The Furby waits in its box for Unbox, so its HUD is up during the unfold too. */}
+      {session && (session.phase === 'play' || (session.phase === 'unfold' && session.game.id === 'furby')) && TABLE_GAMES.has(session.game.id) && (
         <TableHudOverlay
           crouched={crouched}
           onStand={() => walkRig.setCrouch(false)}
