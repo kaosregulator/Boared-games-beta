@@ -809,7 +809,10 @@ export function HotWheelsWorld({ spot, skipCountdown }: { spot: string | null; s
     } else {
       chaseTarget(c, mode, _want, _look);
       // Arrows swing the camera round the car and tilt the view.
-      if (look.current.yaw) _want.sub(c.pos).applyAxisAngle(UP, look.current.yaw).add(c.pos);
+      if (look.current.yaw) {
+        _want.sub(c.pos).applyAxisAngle(UP, look.current.yaw).add(c.pos);
+        _look.sub(c.pos).applyAxisAngle(UP, look.current.yaw).add(c.pos);
+      }
       clearShot(_look, _want, _want);
       const a = camReady.current ? 1 - Math.exp(-dt * (c.mode === 'loop' ? 3.5 : 7)) : 1;
       _cam.lerp(_want, a);

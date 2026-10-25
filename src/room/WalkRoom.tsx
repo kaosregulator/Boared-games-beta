@@ -878,7 +878,7 @@ export function WalkRoom({
           filmTv={override.film}
           lightsOut={lightsOut || ispyDim}
           clearFloor={ispyPage}
-          ispyOpen={ispyOn}
+          ispyOpen={ispyOn || filmWorld === 'ispy'}
         />
         <FurbyHold />
         <DeviceFocus device={scripted ? null : device} />

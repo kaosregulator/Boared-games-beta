@@ -15,7 +15,9 @@ import { existsSync, mkdirSync, renameSync, writeFileSync, rmSync } from 'node:f
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
-const { chromium } = await import(process.env.PLAYWRIGHT ?? 'playwright');
+const pw = await import(process.env.PLAYWRIGHT ?? 'playwright');
+// Imported by path, Playwright's CommonJS exports land on `default`.
+const chromium = pw.chromium ?? pw.default.chromium;
 const BASE = process.env.SHOOT_BASE ?? 'http://localhost:3000';
 const mode = process.argv[2] ?? 'sheet';
 const outDir = process.argv[3] ?? '/tmp/film';
