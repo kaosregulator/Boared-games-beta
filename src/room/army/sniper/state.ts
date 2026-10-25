@@ -106,7 +106,7 @@ export const sniper = {
   touchBreath: false,
   banner: null as null | { text: string; sub?: string; until: number },
   /** A short line from the radio man in the corner. */
-  radio: null as null | { text: string; until: number },
+  radio: null as null | { text: string; until: number; who?: string },
   /** Black flash between cameras. */
   fade: 0,
   listeners: new Set<() => void>(),

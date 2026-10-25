@@ -17,6 +17,8 @@ import {
 } from './course';
 import { CAR, ceilingAt, groundAt, newCar, placeCar, refillNitro, stepCar, TUNING, type CarState } from './carSim';
 import { BED_BOUNDS, BED_CLEAR, BLOCKS, DESK, ROOM, zoneAt, type ZoneId } from './world';
+import { Quipper, quipSeconds } from '../roomQuips';
+import { SpeechBubble } from '../army/SpeechBubble';
 import { motorSpeed, raceSfx, startMotor, stopRaceAudio, wakeRaceAudio } from './raceAudio';
 import { openMiniGame } from '../../engine/lifecycle';
 
@@ -50,8 +52,22 @@ export const hwRace = {
   airborne: false,
   looping: false,
   banner: null as null | { text: string; sub?: string; until: number },
+  /** What the car's thinking: under the bed, by the Hot Pockets, flat out on the floor. */
+  quip: null as null | { text: string; then?: string; until: number },
   listeners: new Set<() => void>(),
 };
+
+const carQuips = new Quipper({ gap: 16, cooldown: 45, chance: 0.08 });
+
+/** Now and then the car has something to say about where it's got to. */
+function tickCarQuip(dt: number, x: number, y: number, z: number) {
+  const now = performance.now();
+  const q = hwRace.quip;
+  if (q && now > q.until) hwRace.quip = q.then ? { text: q.then, until: now + quipSeconds(q.then) * 1000 } : null;
+  if (hwRace.quip) return;
+  const line = carQuips.tick(dt, 'car', x, y, z);
+  if (line) hwRace.quip = { text: line.text, then: line.then, until: now + quipSeconds(line.text) * 1000 };
+}
 
 function emit() {
   hwRace.listeners.forEach(fn => fn());
@@ -566,6 +582,7 @@ export function HotWheelsWorld({ spot, skipCountdown }: { spot: string | null; s
     hwRace.zone = null;
     hwRace.cam = 'chase';
     hwRace.banner = null;
+    hwRace.quip = null;
     emit();
     startMotor();
     if (skipCountdown) return;
@@ -692,6 +709,7 @@ export function HotWheelsWorld({ spot, skipCountdown }: { spot: string | null; s
       hwRace.zone = zone;
       raceSfx.zone(zone);
     }
+    tickCarQuip(dt, c.pos.x, c.pos.y, c.pos.z);
 
     if (hwRace.phase === 'racing') {
       hwRace.time += dt;
@@ -923,6 +941,8 @@ export function HotWheelsHud({ onExit }: { onExit: () => void }) {
           )}
         </div>
       )}
+
+      {race.quip && <SpeechBubble bubble={{ x: 0.5, y: 0.56, who: 'You, the car', text: race.quip.text }} tone="thought" />}
 
       <div className="pointer-events-auto absolute left-4 top-4 flex flex-wrap items-center gap-2">
         <button type="button" onClick={onExit} className="rounded-xl bg-amber-400 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-black">

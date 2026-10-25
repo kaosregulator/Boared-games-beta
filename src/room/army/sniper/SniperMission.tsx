@@ -35,6 +35,7 @@ import { sniperSfx } from './sniperAudio';
 import { RADIO_BRIEF, SNIPER_PITCH, emitSniper, sniper, sniperControls, zoomFov, type Zoom } from './state';
 import { headOnScreen } from '../SpeechBubble';
 import { lineSeconds } from '../tutorial';
+import { Quipper, quipSeconds } from '../../roomQuips';
 
 /**
  * The shelf sniper mission. Land the chopper on the shelf over the TV and the
@@ -338,6 +339,7 @@ export function SniperMission({
     briefT: 0,
   });
   const keys = useRef<Record<string, boolean>>({});
+  const scopeQuips = useMemo(() => new Quipper({ gap: 22, cooldown: 0, chance: 0.12 }), []);
   const pointer = useRef({ down: false, x: 0, y: 0, moved: 0, locked: false, noLock: false, type: 'mouse' });
 
   const rand = Math.random;
@@ -764,6 +766,14 @@ export function SniperMission({
       sniper.near = 'sniper';
       talk();
       if (stage === 'play') accept();
+    }
+    // Glassing the room between ducks, you can't help noticing the mess.
+    if (sniper.phase === 'play' && !sniper.radio) {
+      const q = scopeQuips.tick(dt, 'scope', 0, 0, 0);
+      if (q) {
+        const text = q.then ? `${q.text} ${q.then}` : q.text;
+        sniper.radio = { text, who: 'You', until: performance.now() + quipSeconds(text) * 1000 };
+      }
     }
     if (sniper.phase === 'brief') {
       r.briefT += dt;

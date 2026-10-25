@@ -32,6 +32,7 @@ import { SHOT_RANGE, chestPoint, muzzlePoint, pickAlongBarrel, shotPoint } from 
 import { COACH_NAME, COACH_REACH, COACH_SPOT, coachLesson, lineSeconds, nextLine, type Coach } from './tutorial';
 import { readArmyKeys, stepLook } from './armyKeys';
 import { SpeechBubble, headOnScreen, type Bubble } from './SpeechBubble';
+import { Quipper, quipSeconds } from '../roomQuips';
 import {
   STORY_WAVES,
   TAN_POOL,
@@ -79,6 +80,9 @@ export const army = {
   coachNear: false,
   /** Speech bubble over his head, in screen space. */
   bubble: null as Bubble | null,
+  /** Something you say to yourself about the room, over your own head. */
+  quip: null as null | { text: string; then?: string; until: number },
+  quipBubble: null as Bubble | null,
   invadersLeft: 0,
   toppled: 0,
   nearChopper: false,
@@ -667,6 +671,32 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
   // --- Sergeant Green ---------------------------------------------------------
   const lesson = useMemo(() => coachLesson(isTouchDevice()), []);
   const coachT = useRef(0);
+  const quipper = useMemo(() => new Quipper(), []);
+
+  /** Talk to yourself about the room now and then: the mess from the air, the Hot Pockets, under the bed. */
+  function tickQuips(dt: number, flying: boolean) {
+    const h = heli.current;
+    const now = performance.now();
+    const q = army.quip;
+    if (q && now > q.until) {
+      army.quip = q.then ? { text: q.then, until: now + quipSeconds(q.then) * 1000 } : null;
+    }
+    const busy = army.coach === 'talk' || army.bubble !== null || player.fall > 0;
+    if (!army.quip && !busy) {
+      const at = flying ? h.pos : player.pos;
+      const who = flying ? (h.pos.y > 0.3 ? 'fly' : null) : 'walk';
+      const line = who ? quipper.tick(dt, who, at.x, at.y, at.z) : null;
+      if (line) army.quip = { text: line.text, then: line.then, until: now + quipSeconds(line.text) * 1000 };
+    }
+    if (army.quip) {
+      const head = flying
+        ? headOnScreen(camera, h.pos.x, h.pos.y + 0.06, h.pos.z)
+        : army.cam === 'first'
+          ? null
+          : headOnScreen(camera, player.pos.x, player.pos.y + MAN_HEIGHT * 1.15, player.pos.z);
+      army.quipBubble = { ...(head ?? { x: 0.5, y: 0.34 }), who: flying ? 'You, in the chopper' : 'You', text: army.quip.text };
+    } else army.quipBubble = null;
+  }
 
   function startCoach() {
     if (army.coach !== 'wait' || !army.coachNear) return;
@@ -1330,7 +1360,7 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
     const closeUp = army.coach === 'talk' && guide !== null && !flying;
     if (closeUp && guide) {
       const side = guide.heading + 0.55;
-      _want.set(guide.pos.x + Math.sin(side) * 0.13, guide.pos.y + MAN_HEIGHT * 1.05, guide.pos.z + Math.cos(side) * 0.13);
+      _want.set(guide.pos.x + Math.sin(side) * 0.1, guide.pos.y + MAN_HEIGHT * 1.0, guide.pos.z + Math.cos(side) * 0.1);
       _look.set(guide.pos.x, guide.pos.y + MAN_HEIGHT * 0.78, guide.pos.z);
       clearShot(_look, _want);
       firstPerson = false;
@@ -1395,6 +1425,7 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
         };
       } else army.bubble = null;
     } else if (army.bubble) army.bubble = null;
+    tickQuips(dt, flying);
 
     throttledEmit();
   }
@@ -1580,6 +1611,7 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
         )}
       </div>
 
+      {a.quipBubble && !a.bubble && <SpeechBubble bubble={a.quipBubble} tone="thought" />}
       {a.bubble && !flying && (
         <SpeechBubble
           bubble={a.bubble}

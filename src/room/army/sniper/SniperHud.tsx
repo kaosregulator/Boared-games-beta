@@ -243,7 +243,7 @@ export function SniperHud() {
       )}
       {s.radio && (playing || cine) && (
         <div className="absolute bottom-28 right-4 max-w-[16rem] rounded-2xl border border-lime-300/40 bg-[#2f3d1a]/90 px-3 py-2 shadow-xl">
-          <p className="text-[9px] font-black uppercase tracking-[0.25em] text-lime-200">Radio man</p>
+          <p className="text-[9px] font-black uppercase tracking-[0.25em] text-lime-200">{s.radio.who ?? 'Radio man'}</p>
           <p className="text-[13px] font-bold leading-snug">{s.radio.text}</p>
         </div>
       )}
