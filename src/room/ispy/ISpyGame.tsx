@@ -8,6 +8,8 @@ import { openMiniGame } from '../../engine/lifecycle';
 import { carpetTexture } from './carpet';
 import { makeToy } from './items';
 import { ispySfx, wakeISpyAudio } from './ispyAudio';
+import { ReaderHud, ReaderScene } from './ISpyReader';
+import { BEANBAG_SEAT } from '../roomLayout';
 import {
   CARPET,
   KINDS,
@@ -37,7 +39,7 @@ const BOOK_W = 0.24;
 const BOOK_D = 0.31;
 const BOOK_T = 0.022;
 
-export type ISpyPhase = 'off' | 'book' | 'dark' | 'play' | 'done';
+export type ISpyPhase = 'off' | 'book' | 'dark' | 'play' | 'done' | 'reading';
 export type ISpyCam = 'chase' | 'first' | 'birdseye' | 'free';
 
 const PAGES_KEY = 'ispy-pages';
@@ -92,13 +94,13 @@ export function useISpy() {
 export function useISpyRoom() {
   const read = () => {
     const page = ispy.phase === 'dark' || ispy.phase === 'play' || ispy.phase === 'done';
-    return { page, dim: page && ispy.phase !== 'dark' && Boolean(ispy.puzzle?.theme.dim) };
+    return { page, reading: ispy.phase === 'reading', dim: page && ispy.phase !== 'dark' && Boolean(ispy.puzzle?.theme.dim) };
   };
   const [state, setState] = useState(read);
   useEffect(() => {
     const fn = () => {
       const now = read();
-      setState(prev => (prev.page === now.page && prev.dim === now.dim ? prev : now));
+      setState(prev => (prev.page === now.page && prev.dim === now.dim && prev.reading === now.reading ? prev : now));
     };
     ispy.listeners.add(fn);
     return () => {
@@ -140,6 +142,14 @@ export function startPage(difficulty: Difficulty, seed?: number) {
   emit();
 }
 
+/** Book mode: take the book to the bean bag and read it. */
+export function startReading() {
+  wakeISpyAudio();
+  ispy.phase = 'reading';
+  ispySfx.pageTurn();
+  emit();
+}
+
 const CAM_ORDER: ISpyCam[] = ['chase', 'first', 'birdseye', 'free'];
 function cycleCam() {
   ispy.cam = CAM_ORDER[(CAM_ORDER.indexOf(ispy.cam) + 1) % CAM_ORDER.length];
@@ -153,6 +163,10 @@ export interface ISpyBoot {
   difficulty: Difficulty;
   seed: number | null;
   cam: ISpyCam | null;
+  /** `?ispy=read`: straight to the bean bag with the book. */
+  read: boolean;
+  /** `?ispy=book`: the book opening on the rug, picker and all. */
+  book: boolean;
 }
 
 /** `?ispy=hard&seed=42&ispyCam=free` jumps straight onto a page (for testing and captures). */
@@ -167,6 +181,8 @@ export function readISpyBoot(): ISpyBoot | null {
     difficulty: d === 'medium' || d === 'hard' ? d : 'easy',
     seed: seed === null ? null : Number(seed),
     cam: cam === 'chase' || cam === 'first' || cam === 'birdseye' || cam === 'free' ? cam : null,
+    read: d === 'read',
+    book: d === 'book',
   };
 }
 
@@ -490,7 +506,7 @@ function OpeningBook({ t }: { t: React.MutableRefObject<number> }) {
         <group key={i} position={[p.x, 0.02, p.z + p.h * 0]} ref={el => (pops.current[i] = el)}>
           <mesh position={[0, p.h / 2, 0]}>
             <planeGeometry args={[p.w, p.h]} />
-            <meshStandardMaterial map={textures[i]} transparent alphaTest={0.05} side={THREE.DoubleSide} roughness={0.9} />
+            <meshBasicMaterial map={textures[i]} transparent alphaTest={0.05} side={THREE.DoubleSide} color="#e8e2d6" toneMapped={false} />
           </mesh>
         </group>
       ))}
@@ -653,7 +669,8 @@ function ISpyScene({ boot }: { boot: ISpyBoot | null }) {
     ispy.pages = readNum(PAGES_KEY) ?? 0;
     ispy.banner = null;
     document.exitPointerLock?.();
-    if (boot) startPage(boot.difficulty, boot.seed ?? undefined);
+    if (boot?.read) startReading();
+    else if (boot && !boot.book) startPage(boot.difficulty, boot.seed ?? undefined);
     else {
       ispy.phase = 'book';
       ispySfx.open();
@@ -690,6 +707,7 @@ function ISpyScene({ boot }: { boot: ISpyBoot | null }) {
   useEffect(() => {
     const canvas = gl.domElement;
     return () => {
+      const wasReading = ispy.phase === 'reading';
       const persp = camera as THREE.PerspectiveCamera;
       if (saved.current) {
         persp.near = saved.current.near;
@@ -698,7 +716,9 @@ function ISpyScene({ boot }: { boot: ISpyBoot | null }) {
       }
       camera.up.set(0, 1, 0);
       canvas.style.cursor = '';
-      walkRig.teleport = { at: [BOOK_SPOT.x + 0.35, 1.45, BOOK_SPOT.z + 0.75], look: [BOOK_SPOT.x, 0, BOOK_SPOT.z] };
+      walkRig.teleport = wasReading
+        ? { at: [BEANBAG_SEAT.at[0], 1.45, BEANBAG_SEAT.at[2] - 0.9], look: [BEANBAG_SEAT.at[0], 0.4, BEANBAG_SEAT.at[2]] }
+        : { at: [BOOK_SPOT.x + 0.35, 1.45, BOOK_SPOT.z + 0.75], look: [BOOK_SPOT.x, 0, BOOK_SPOT.z] };
       ispy.phase = 'off';
       ispy.puzzle = null;
       ispy.banner = null;
@@ -884,6 +904,12 @@ function ISpyScene({ boot }: { boot: ISpyBoot | null }) {
     d.dx = 0;
     d.dy = 0;
     const phase = ispy.phase;
+    // Reading in the bean bag: the reader has the camera.
+    if (phase === 'reading') {
+      kid.root.visible = false;
+      saved.current = null;
+      return;
+    }
 
     // --- The book opens -----------------------------------------------------
     if (phase === 'book') {
@@ -894,8 +920,9 @@ function ISpyScene({ boot }: { boot: ISpyBoot | null }) {
       const c = Math.cos(BOOK_SPOT.rotY);
       const s = Math.sin(BOOK_SPOT.rotY);
       // Kneel down over the book, a little toward its bottom edge.
-      _want.set(BOOK_SPOT.x + s * 0.3, 0.42, BOOK_SPOT.z + c * 0.3);
-      _look.set(BOOK_SPOT.x - s * 0.02, 0.03, BOOK_SPOT.z - c * 0.02);
+      _want.set(BOOK_SPOT.x + s * 0.34, 0.5, BOOK_SPOT.z + c * 0.34);
+      // Aim a little short of the book so it sits in the top half, above the picker.
+      _look.set(BOOK_SPOT.x + s * 0.13, 0.0, BOOK_SPOT.z + c * 0.13);
       camera.position.lerpVectors(g.from, _want, e);
       _v.lerpVectors(g.look, _look, e);
       camera.up.set(0, 1, 0);
@@ -1057,7 +1084,7 @@ function ISpyScene({ boot }: { boot: ISpyBoot | null }) {
         _want.set(me.x + fx * 0.012, KID_H * 0.88, me.z + fz * 0.012);
         _look.set(_want.x + fx * Math.cos(me.pitch), _want.y + Math.sin(me.pitch), _want.z + fz * Math.cos(me.pitch));
       } else if (cam === 'birdseye') {
-        _want.set(me.x - fx * 0.45, 1.05, me.z - fz * 0.45);
+        _want.set(me.x - fx * 0.42, 0.8, me.z - fz * 0.42);
         _look.set(me.x + fx * 0.25, 0, me.z + fz * 0.25);
       } else {
         _want.set(me.x - fx * 0.36, 0.27, me.z - fz * 0.36);
@@ -1100,6 +1127,7 @@ function ISpyScene({ boot }: { boot: ISpyBoot | null }) {
   return (
     <group>
       {state.phase === 'book' && <OpeningBook t={bookT} />}
+      {state.phase === 'reading' && <ReaderScene />}
       {showPage && carpet && theme && (
         <>
           <mesh position={[CARPET.x, 0.003, CARPET.z]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
@@ -1168,13 +1196,13 @@ const LEVEL_INFO: Record<Difficulty, { label: string; blurb: string; tone: strin
 
 function LevelButtons({ onPick, compact = false }: { onPick: (d: Difficulty) => void; compact?: boolean }) {
   return (
-    <div className={`grid gap-2 ${compact ? 'grid-cols-3' : 'grid-cols-1 sm:grid-cols-3'}`}>
+    <div className="grid grid-cols-3 gap-2">
       {(['easy', 'medium', 'hard'] as Difficulty[]).map(d => (
         <button
           key={d}
           type="button"
           onClick={() => onPick(d)}
-          className={`rounded-2xl px-3 py-3 text-left shadow-lg transition hover:scale-[1.03] ${LEVEL_INFO[d].tone}`}
+          className={`rounded-2xl px-3 py-2 text-left shadow-lg transition hover:scale-[1.03] ${LEVEL_INFO[d].tone}`}
         >
           <p className="text-lg font-black uppercase leading-none">{LEVEL_INFO[d].label}</p>
           {!compact && (
@@ -1219,6 +1247,7 @@ export function ISpyHud({ onExit }: { onExit: () => void }) {
   const btn = 'rounded-xl border border-white/25 bg-black/55 px-3 py-2 text-[11px] font-bold uppercase tracking-wider';
 
   if (s.phase === 'off') return null;
+  if (s.phase === 'reading') return <ReaderHud onExit={onExit} />;
 
   if (s.phase === 'book') {
     return (
@@ -1229,10 +1258,17 @@ export function ISpyHud({ onExit }: { onExit: () => void }) {
           </button>
         </div>
         {s.bookReady && (
-          <div className="pointer-events-auto absolute bottom-6 left-1/2 w-[min(92vw,640px)] -translate-x-1/2 rounded-3xl border-4 border-[#f5f0e2] bg-[#16131c]/92 p-4 text-center shadow-2xl">
-            <p className="font-serif text-3xl font-black tracking-wide text-[#f5f0e2]">I SPY</p>
-            <p className="mb-3 font-serif text-sm italic text-white/75">Pick a page. It's a brand new one every time you open the book.</p>
+          <div className="pointer-events-auto absolute bottom-3 left-1/2 w-[min(94vw,600px)] -translate-x-1/2 rounded-3xl border-4 border-[#f5f0e2] bg-[#16131c]/92 px-4 py-3 text-center shadow-2xl">
+            <p className="mb-2 font-serif text-sm italic text-white/80">Shrink down onto the carpet: a brand new page every time.</p>
             <LevelButtons onPick={d => startPage(d)} />
+            <button
+              type="button"
+              onClick={startReading}
+              className="mt-2 w-full rounded-2xl border-2 border-[#f5f0e2]/60 bg-[#f4ecd8] px-3 py-2.5 text-left text-[#3a2a1a] shadow-lg transition hover:scale-[1.01]"
+            >
+              <p className="text-base font-black uppercase leading-none">Read it in the bean bag</p>
+              <p className="mt-1 text-[12px] font-bold leading-tight opacity-75">Flip the pages, circle what you spy, cross it off the list</p>
+            </button>
           </div>
         )}
       </div>

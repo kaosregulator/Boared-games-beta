@@ -275,9 +275,9 @@ export interface Rules {
 }
 
 export const RULES: Record<Difficulty, Rules> = {
-  easy: { items: 42, targets: 5, scale: [1.15, 1.4], lookAlikes: 0, spread: 0.5, tipped: 0 },
-  medium: { items: 96, targets: 7, scale: [0.9, 1.15], lookAlikes: 1, spread: 0.74, tipped: 0.15 },
-  hard: { items: 180, targets: 9, scale: [0.7, 0.95], lookAlikes: 2, spread: 0.96, tipped: 0.35 },
+  easy: { items: 42, targets: 5, scale: [1.9, 2.3], lookAlikes: 0, spread: 0.5, tipped: 0 },
+  medium: { items: 96, targets: 7, scale: [1.45, 1.8], lookAlikes: 1, spread: 0.74, tipped: 0.15 },
+  hard: { items: 180, targets: 9, scale: [1.1, 1.4], lookAlikes: 2, spread: 0.96, tipped: 0.35 },
 };
 
 /**
@@ -364,11 +364,23 @@ export function themesFor(difficulty: Difficulty) {
   return THEMES.filter(t => t.difficulty === difficulty);
 }
 
+export interface PageOptions {
+  /** Where the pile goes (defaults to the bedroom carpet). */
+  area?: { x: number; z: number; w: number; d: number };
+  rules?: Partial<Rules>;
+  /** Pick from every theme, not just the difficulty's. */
+  anyTheme?: boolean;
+  /** Keep the spot where you open your eyes clear (carpet mode). */
+  clearStart?: boolean;
+}
+
 /** Lay out one page. Same seed and difficulty, same page. */
-export function makePuzzle(seed: number, difficulty: Difficulty): Puzzle {
+export function makePuzzle(seed: number, difficulty: Difficulty, opts: PageOptions = {}): Puzzle {
   const r = rng(seed);
-  const rules = RULES[difficulty];
-  const theme = pick(r, themesFor(difficulty));
+  const rules = { ...RULES[difficulty], ...opts.rules };
+  const theme = pick(r, opts.anyTheme ? THEMES : themesFor(difficulty));
+  const area = opts.area ?? { x: CARPET.x, z: CARPET.z - 0.08, w: CARPET.w - 0.24, d: CARPET.d - 0.24 };
+  const clearStart = opts.clearStart ?? !opts.area;
 
   // 1. Decide what goes in the pile.
   type Spec = Omit<PlacedItem, 'id' | 'x' | 'z' | 'yaw' | 'tip' | 'scale' | 'radius'>;
@@ -423,10 +435,10 @@ export function makePuzzle(seed: number, difficulty: Difficulty): Puzzle {
   specs.push({ kind: 'libraryBook', color: 'blue' });
 
   // 2. Scatter it over the carpet, biggest first so the small stuff fills the gaps.
-  const halfW = (CARPET.w / 2 - 0.12) * rules.spread;
-  const halfD = (CARPET.d / 2 - 0.12) * rules.spread;
-  const cx = CARPET.x;
-  const cz = CARPET.z - 0.08;
+  const halfW = (area.w / 2) * rules.spread;
+  const halfD = (area.d / 2) * rules.spread;
+  const cx = area.x;
+  const cz = area.z;
   const order = specs.map((s, i) => ({ s, i, r: KINDS[s.kind].r })).sort((a, b) => b.r - a.r);
   const placed: PlacedItem[] = new Array(specs.length);
   const done: PlacedItem[] = [];
@@ -439,7 +451,7 @@ export function makePuzzle(seed: number, difficulty: Difficulty): Puzzle {
     for (let tries = 0; tries < 24; tries++) {
       const x = cx + (r() * 2 - 1) * halfW;
       const z = cz + (r() * 2 - 1) * halfD;
-      if (Math.hypot(x - START.x, z - START.z) < startClear + radius) continue;
+      if (clearStart && Math.hypot(x - START.x, z - START.z) < startClear + radius) continue;
       let gap = Infinity;
       for (const o of done) gap = Math.min(gap, Math.hypot(o.x - x, o.z - z) - o.radius - radius);
       if (gap > 0.004) {

@@ -42,7 +42,7 @@ import { TableCameraRig } from './table/TableCameraRig';
 import { TriviaTableCam } from './table/TriviaTableCam';
 import { HotWheelsHud, HotWheelsWorld } from './hotwheels/HotWheelsRace';
 import { ArmyAlert, ArmyHud, ArmyTownWorld, readArmyBoot } from './army/ArmyTown';
-import { ISpyHud, ISpyWorld, readISpyBoot, useISpyRoom } from './ispy/ISpyGame';
+import { BOOK_SPOT, ISpyHud, ISpyWorld, readISpyBoot, useISpyRoom } from './ispy/ISpyGame';
 import { walkRig } from './WalkController';
 import { FurbyHold } from './furby/FurbyHold';
 import { FurbyQuiet } from './furby/FurbyQuiet';
@@ -120,6 +120,7 @@ const DEMO_POSE: Record<string, { at: [number, number, number]; look: [number, n
   toyshelf: { at: [LAYOUT.toyshelf.x - 1.45, 1.4, LAYOUT.toyshelf.z], look: [LAYOUT.toyshelf.x, 0.8, LAYOUT.toyshelf.z] },
   window: { at: [LAYOUT.window.x - 0.7, 1.5, LAYOUT.window.z + 1.4], look: [LAYOUT.window.x, 1.6, LAYOUT.window.z] },
   bed: { at: [LAYOUT.bed.x + 1.2, 1.35, LAYOUT.bed.z + 0.4], look: [LAYOUT.bed.x, 0.6, LAYOUT.bed.z] },
+  'ispy-book': { at: [BOOK_SPOT.x + 0.45, 1.05, BOOK_SPOT.z + 0.8], look: [BOOK_SPOT.x, 0.02, BOOK_SPOT.z] },
 };
 
 function DemoPose({ at, look }: { at: [number, number, number]; look: [number, number, number] }) {
@@ -862,7 +863,7 @@ export function WalkRoom({
           onUnfolded={onUnfolded}
           onPacked={onPacked}
           onLeaveTable={packUp}
-          hideGameboy={seated}
+          hideGameboy={seated || (ispyOn && ispyRoom.reading)}
           tvInRoom={tvInRoom}
           lightsOut={lightsOut || ispyDim}
           clearFloor={ispyPage}
