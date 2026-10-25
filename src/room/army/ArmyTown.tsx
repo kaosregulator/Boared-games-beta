@@ -1476,9 +1476,11 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
         <pointLight position={[0, MAN_HEIGHT * 1.2, 0]} color="#b6ff4a" intensity={0.25} distance={0.35} decay={2} />
       </group>
       <SniperMission heli={heli} flying={() => army.mode === 'heli'} walker={() => (army.mode === 'ground' ? player.pos : null)} />
-      {RINGS.map((_, i) => (
-        <RingGate key={i} index={i} course={army.course} />
-      ))}
+      {/* The ring course hangs round the whole room: not in the reel's shot of the town. */}
+      {!film &&
+        RINGS.map((_, i) => (
+          <RingGate key={i} index={i} course={army.course} />
+        ))}
     </group>
   );
 }

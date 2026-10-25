@@ -60,10 +60,10 @@ export const FILM: FilmShot[] = [
     fov: 44,
     at: [
       [-1.55, 1.0, 0.55],
-      [-1.85, 0.9, 0.05],
-      [-2.0, 0.92, -0.65],
+      [-1.8, 0.92, 0.1],
+      [-1.85, 0.95, -0.4],
     ],
-    look: [BED_FURBY_AT, BED_FURBY_AT, [BED_FURBY_AT[0], BED_FURBY_AT[1] + 0.02, BED_FURBY_AT[2] - 0.05]],
+    look: [BED_FURBY_AT, BED_FURBY_AT, [BED_FURBY_AT[0], BED_FURBY_AT[1] + 0.02, BED_FURBY_AT[2] + 0.05]],
   },
   {
     label: 'Army town',

@@ -897,7 +897,10 @@ export function WalkRoom({
                 setFilmWorld(shot.world ?? null);
               }}
             />
-            {filmWorld === 'army' && <ArmyTownWorld boot={FILM_ARMY_BOOT} film />}
+            {/* Up from the first frame (models loaded, the battle under way), seen only in its shot. */}
+            <group visible={filmWorld === 'army'}>
+              <ArmyTownWorld boot={FILM_ARMY_BOOT} film />
+            </group>
             {filmWorld === 'ispy' && <ISpyWorld boot={FILM_ISPY_BOOT} film />}
           </>
         ) : scripted ? (

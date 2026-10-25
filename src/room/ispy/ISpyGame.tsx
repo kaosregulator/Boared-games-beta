@@ -664,6 +664,7 @@ function ISpyScene({ boot, film = false }: { boot: ISpyBoot | null; film?: boole
   const sceneT = useRef(0);
   const filmStep = useMemo(() => makeFilmStep(film), [film]);
   const filmFound = useRef(new Set<number>());
+  const lastFilmT = useRef(-1);
 
   // Mount: page straight away for a boot link, otherwise the book opens.
   useEffect(() => {
@@ -822,6 +823,9 @@ function ISpyScene({ boot, film = false }: { boot: ISpyBoot | null; film?: boole
     const me = player.current;
     const { a, b } = filmPlan(p);
     const t = filmT();
+    // A jump in the reel's clock (a contact sheet, a resumed record): cut, don't glide.
+    if (Math.abs(t - lastFilmT.current) > 0.25) camReady.current = false;
+    lastFilmT.current = t;
     const fx = Math.sin(me.heading);
     const fz = Math.cos(me.heading);
     const closeOn = (item: { x: number; z: number }) => {

@@ -84,7 +84,9 @@ function paint(g: CanvasRenderingContext2D, t: number) {
   g.arc(bx + 18, by - 30, 9, 0, Math.PI * 2);
   g.fill();
 
-  // The cable box's on-screen display, like TvScreen's.
+  // The cable box's on-screen display, like TvScreen's, on a dark strip so it reads over the sky.
+  g.fillStyle = 'rgba(0,0,0,0.55)';
+  g.fillRect(10, 12, 150, 50);
   g.font = 'bold 22px "IBM Plex Mono", ui-monospace, monospace';
   g.fillStyle = OSD;
   g.shadowColor = OSD;
