@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { isTouchDevice } from '../../input';
 import { wakeArmyAudio } from '../armyAudio';
 import { DUCKS_PER_WAVE, SHELLS, WAVES_PER_ROUND, quota } from './range';
-import { ZOOM_LABEL, sniper, sniperControls, useSniper } from './state';
+import { setSniperHard, sniper, sniperControls, useSniper, zoomLabel } from './state';
 
 /**
  * Everything on screen for the shelf sniper: the radio man's call, the scope,
@@ -66,12 +66,26 @@ function Talk() {
   );
 }
 
-function Scope({ zoom }: { zoom: number }) {
+function Scope({ zoom, hard }: { zoom: number; hard: boolean }) {
   if (zoom === 1) {
     return (
       <div className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2">
         <span className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/80" />
         <span className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-white/80" />
+      </div>
+    );
+  }
+  if (!hard) {
+    // A see-through sight: just the ring and the crosshair, so the whole range stays in view.
+    return (
+      <div className="absolute inset-0">
+        <div className="absolute left-1/2 top-1/2 h-[46vmin] w-[46vmin] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/70 shadow-[0_0_0_1px_rgba(0,0,0,0.45)]" />
+        <span className="absolute left-1/2 top-1/2 h-px w-[46vmin] -translate-x-1/2 -translate-y-1/2 bg-white/75 shadow-[0_0_0_1px_rgba(0,0,0,0.35)]" />
+        <span className="absolute left-1/2 top-1/2 h-[46vmin] w-px -translate-x-1/2 -translate-y-1/2 bg-white/75 shadow-[0_0_0_1px_rgba(0,0,0,0.35)]" />
+        {[-3, -2, -1, 1, 2, 3].map(i => (
+          <span key={`h${i}`} className="absolute top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/85" style={{ left: `calc(50% + ${i * 3.2}vmin)` }} />
+        ))}
+        <span className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-red-500 shadow-[0_0_6px_rgba(255,0,0,0.9)]" />
       </div>
     );
   }
@@ -118,8 +132,13 @@ export function SniperHud() {
   const need = quota(s.round);
   return (
     <div data-sniper={s.phase} className="pointer-events-none absolute inset-0 z-40 select-none text-white">
-      {playing && <Scope zoom={s.zoom} />}
-      {cine && (
+      {playing && <Scope zoom={s.zoom} hard={s.hard} />}
+      {cine && !s.hard && (
+        <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/55 px-4 py-1 text-[11px] font-black uppercase tracking-[0.4em] text-amber-200">
+          Bullet cam <span className="text-white/45">· click or Space to skip</span>
+        </p>
+      )}
+      {cine && s.hard && (
         <>
           <div className="absolute inset-x-0 top-0 h-[11vh] bg-black" />
           <div className="absolute inset-x-0 bottom-0 flex h-[11vh] items-center justify-center bg-black">
@@ -140,7 +159,16 @@ export function SniperHud() {
             {playing && (
               <>
                 <button type="button" onClick={() => sniperControls.zoom?.()} className={`${btn} text-lime-100`}>
-                  Zoom: {ZOOM_LABEL[s.zoom]}
+                  Zoom: {zoomLabel(s.zoom, s.hard)}
+                </button>
+                <button
+                  type="button"
+                  data-sniper-hard={s.hard ? 'on' : 'off'}
+                  onClick={() => setSniperHard(!s.hard)}
+                  className={`${btn} ${s.hard ? 'border-red-300/60 bg-red-800/70 text-white' : 'text-white/80'}`}
+                  title="Hard mode: tighter zoom and a black scope ring"
+                >
+                  Hard mode: {s.hard ? 'on' : 'off'}
                 </button>
                 <button type="button" onClick={() => sniperControls.cycleBulletCam?.()} className={`${btn} text-amber-100`}>
                   {BULLET_CAM_LABEL[s.bulletCam]}

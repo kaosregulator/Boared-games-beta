@@ -32,7 +32,7 @@ import {
 } from './range';
 import { DUCK_ASPECT, DUCK_FRAMES, duckSheet, flashTexture, grassTexture, skyTexture } from './duckArt';
 import { sniperSfx } from './sniperAudio';
-import { ZOOM_FOV, emitSniper, sniper, sniperControls, type Zoom } from './state';
+import { emitSniper, sniper, sniperControls, zoomFov, type Zoom } from './state';
 
 /**
  * The shelf sniper mission. Land the chopper on the shelf over the TV and the
@@ -531,7 +531,7 @@ export function SniperMission({ heli, flying }: { heli: React.MutableRefObject<H
       keys.current[e.code] = false;
     };
     const aimBy = (dx: number, dy: number) => {
-      const k = 0.0024 * (ZOOM_FOV[sniper.zoom] / 30);
+      const k = 0.0024 * (zoomFov(sniper.zoom) / 30);
       const c = clampAim(sniper.yaw - dx * k, sniper.pitch - dy * k);
       sniper.yaw = c.yaw;
       sniper.pitch = c.pitch;
@@ -724,7 +724,7 @@ export function SniperMission({ heli, flying }: { heli: React.MutableRefObject<H
       const ax = (k.ArrowRight || k.KeyD ? 1 : 0) - (k.ArrowLeft || k.KeyA ? 1 : 0);
       const ay = (k.ArrowDown || k.KeyS ? 1 : 0) - (k.ArrowUp || k.KeyW ? 1 : 0);
       if (ax || ay) {
-        const rate = 0.55 * (ZOOM_FOV[sniper.zoom] / 30) * dt;
+        const rate = 0.55 * (zoomFov(sniper.zoom) / 30) * dt;
         const c = clampAim(sniper.yaw - ax * rate, sniper.pitch - ay * rate);
         sniper.yaw = c.yaw;
         sniper.pitch = c.pitch;
@@ -927,7 +927,7 @@ export function SniperMission({ heli, flying }: { heli: React.MutableRefObject<H
           const e = smooth((r.t - 2.9) / 0.8);
           _pos.lerpVectors(shoulder, eye, e);
           _look.lerpVectors(fieldMid, eyeLook, e);
-          fov = 45 + (ZOOM_FOV[sniper.zoom] - 45) * e;
+          fov = 45 + (zoomFov(sniper.zoom) - 45) * e;
           sniper.scoped = e > 0.85;
           if (e >= 1) {
             sniper.phase = 'play';
@@ -944,7 +944,7 @@ export function SniperMission({ heli, flying }: { heli: React.MutableRefObject<H
         const aim = liveAim();
         _pos.copy(v(scopeEye(aim.yaw, aim.pitch)));
         _look.copy(_pos).add(v(aimDir(aim.yaw, aim.pitch)));
-        fov = ZOOM_FOV[sniper.zoom];
+        fov = zoomFov(sniper.zoom);
         near = 0.004;
         sniper.scoped = true;
         break;
@@ -980,7 +980,7 @@ export function SniperMission({ heli, flying }: { heli: React.MutableRefObject<H
     camera.up.set(0, 1, 0);
     camera.lookAt(_look);
     // Scope zooms keep their real angle; wider shots widen on a tall phone.
-    const want = fov < 20 ? fov : fitFov(fov, aspect, 1.5, 80);
+    const want = sniper.phase === 'play' || fov < 20 ? fov : fitFov(fov, aspect, 1.5, 80);
     if (Math.abs(persp.fov - want) > 0.01 || persp.near !== near) {
       persp.fov = want;
       persp.near = near;
