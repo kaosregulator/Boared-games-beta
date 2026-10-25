@@ -30,6 +30,7 @@ import {
 import { armySfx, rotorLevel, rotorOff, rotorOn, wakeArmyAudio } from './armyAudio';
 import { SHOT_RANGE, chestPoint, muzzlePoint, pickAlongBarrel, shotPoint } from './aim';
 import { advanceTip, tutorialLine, type Tip } from './tutorial';
+import { readArmyKeys, stepLook } from './armyKeys';
 import {
   STORY_WAVES,
   TAN_POOL,
@@ -135,6 +136,7 @@ const touch = { fwd: false, back: false, left: false, right: false, up: false, d
 const controls = {
   board: null as null | (() => void),
   againWaves: null as null | (() => void),
+  endSiege: null as null | (() => void),
   startSiege: null as null | ((level: Exclude<Siege, 'story'>) => void),
   resetHeli: null as null | (() => void),
   quitCourse: null as null | (() => void),
@@ -442,6 +444,9 @@ const _look = new THREE.Vector3();
 const _cam = new THREE.Vector3();
 const _camLook = new THREE.Vector3();
 const _prev = new THREE.Vector3();
+const _dir = new THREE.Vector3();
+const _right = new THREE.Vector3();
+const UP = new THREE.Vector3(0, 1, 0);
 
 function clearShot(from: THREE.Vector3, to: THREE.Vector3) {
   for (let i = 0; i < 12 && insideAny(to, 0.008); i++) to.lerpVectors(to, from, 0.25);
@@ -461,6 +466,8 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
   const saved = useRef<{ near: number; fov: number } | null>(null);
   const intro = useRef({ t: boot ? 1 : 0, from: camera.position.clone(), look: new THREE.Vector3() });
   const camYaw = useRef(Math.PI);
+  /** Up/down arrows tilt the view, in every camera. Radians, + looks up. */
+  const lookPitch = useRef(0);
   const camReady = useRef(false);
   const lastEmit = useRef(0);
   const waveTimer = useRef(boot?.calm ? Infinity : 3.2);
@@ -636,6 +643,24 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
     emit();
   }
 
+  /** Easy, Medium and Hard never stop on their own: this calls it off and tallies up. */
+  function endSiege() {
+    if (army.siege === 'story' || army.waveState === 'won') return;
+    const reached = army.wave;
+    army.waveState = 'won';
+    waveTimer.current = 0.01;
+    for (const t of tans) {
+      t.active = false;
+      t.root.visible = false;
+      t.fall = 0;
+      t.falling = false;
+    }
+    army.invadersLeft = 0;
+    armySfx.victory();
+    banner('Ceasefire!', `You held to wave ${reached} and toppled ${army.toppled} tan soldiers`, 3.4);
+    emit();
+  }
+
   function againWaves() {
     army.siege = 'story';
     army.wave = 0;
@@ -743,6 +768,7 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
     window.addEventListener('pointercancel', pUp);
     controls.board = board;
     controls.againWaves = againWaves;
+    controls.endSiege = endSiege;
     controls.startSiege = startSiege;
     controls.resetHeli = resetHeli;
     controls.quitCourse = quitCourse;
@@ -757,6 +783,7 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
       window.removeEventListener('pointercancel', pUp);
       controls.board = null;
       controls.againWaves = null;
+      controls.endSiege = null;
       controls.startSiege = null;
       controls.resetHeli = null;
       controls.quitCourse = null;
@@ -892,21 +919,25 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
     const fighting = army.waveState === 'attack' || (army.waveState === 'cleared' && !storyOver(army.siege, army.wave));
 
     // --- Player on foot ----------------------------------------------------
-    const fwdIn = (k.KeyW || k.ArrowUp || touch.fwd ? 1 : 0) - (k.KeyS || k.ArrowDown || touch.back ? 1 : 0);
-    const turnIn = (k.KeyD || k.ArrowRight || touch.right ? 1 : 0) - (k.KeyA || k.ArrowLeft || touch.left ? 1 : 0);
+    // WASD moves, arrows look (left/right turn, up/down tilt), like the main room.
+    const keyIn = readArmyKeys(k, touch);
+    const fwdIn = keyIn.forward;
+    const turnIn = keyIn.turn;
+    const strafe = keyIn.strafe;
+    lookPitch.current = stepLook(lookPitch.current, keyIn.look, dt);
     if (army.mode === 'ground') {
       const p = player;
       if (p.fall === 0 && !p.falling) {
         const run = Boolean(k.ShiftLeft || k.ShiftRight);
-        const strafe = (k.KeyE ? 1 : 0) - (k.KeyQ ? 1 : 0);
         p.heading = wrap(p.heading - turnIn * 2.6 * dt - nudge);
         const top = run ? 0.24 : 0.11;
         const want = fwdIn > 0 ? fwdIn * top : fwdIn * 0.06;
         p.speed += (want - p.speed) * Math.min(1, dt * 9);
         const s = Math.sin(p.heading);
         const c = Math.cos(p.heading);
-        p.pos.x += s * p.speed * dt - c * strafe * 0.06 * dt;
-        p.pos.z += c * p.speed * dt + s * strafe * 0.06 * dt;
+        const side = strafe * (run ? 0.12 : 0.07);
+        p.pos.x += s * p.speed * dt - c * side * dt;
+        p.pos.z += c * p.speed * dt + s * side * dt;
         if (army.tip && army.tip !== 'done' && army.coachNear) {
           const next = advanceTip(army.tip, {
             moved: fwdIn !== 0 || strafe !== 0,
@@ -953,7 +984,7 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
               forward: fwdIn,
               turn: turnIn,
               lift: (k.Space || touch.up ? 1 : 0) - (k.ShiftLeft || k.ShiftRight || k.ControlLeft || touch.down ? 1 : 0),
-              strafe: (k.KeyE ? 1 : 0) - (k.KeyQ ? 1 : 0),
+              strafe,
               yawNudge: nudge,
               boost: Boolean(k.Tab),
             }
@@ -1206,6 +1237,13 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
       _look.set(player.pos.x + fx * 0.12, player.pos.y + 0.045, player.pos.z + fz * 0.12);
       clearShot(_look, _want);
     }
+    // Up/down arrows tilt the view about the camera's own right axis: look up at the
+    // ceiling from the rug, or out across the room from the bird's-eye.
+    if (lookPitch.current !== 0) {
+      _dir.subVectors(_look, _want);
+      _right.crossVectors(_dir, UP).normalize();
+      if (_right.lengthSq() > 0) _look.copy(_want).add(_dir.applyAxisAngle(_right, lookPitch.current));
+    }
     player.root.visible = !flying && !(firstPerson && player.fall === 0);
     if (!camReady.current || firstPerson) {
       _cam.copy(_want);
@@ -1355,6 +1393,11 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
             Back to pad
           </button>
         )}
+        {a.siege !== 'story' && a.waveState !== 'won' && (
+          <button type="button" data-army-end onClick={() => controls.endSiege?.()} className={`${btn} border-red-300/60 bg-red-700/70 text-white`}>
+            End {a.siege} siege
+          </button>
+        )}
         {a.waveState === 'won' && !flying && (
           <button type="button" onClick={() => controls.againWaves?.()} className={`${btn} text-amber-200`}>
             Send another attack
@@ -1438,10 +1481,10 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
             <>
               <span className="font-mono tabular-nums text-lime-200">{Math.round(a.heliSpeed * 100)} cm/s</span>
               <span className="font-mono tabular-nums text-cyan-200">{Math.round(a.heliAlt * 100)} cm up</span>
-              {!isTouch && <span className="text-white/65">W/S fly · A/D turn · Space up · Shift down · Q/E slide · Tab boost · drag to turn · C camera</span>}
+              {!isTouch && <span className="text-white/65">WASD fly · Arrows look · Space up · Shift down · Tab boost · drag to turn · C camera</span>}
             </>
           ) : (
-            !isTouch && <span className="text-white/65">W/S walk · A/D turn · Shift run · Space fire · drag to turn · F chopper · C camera</span>
+            !isTouch && <span className="text-white/65">WASD move · Arrows look · Shift run · Space fire · drag to turn · F talk / chopper · C camera</span>
           )}
         </div>
       </div>
