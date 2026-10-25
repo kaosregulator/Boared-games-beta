@@ -10,6 +10,8 @@ import { attachGltfCache } from './gltfCache';
  */
 const SHARED_GLTF = [
   '/models/army-man.glb',
+  '/models/radio-man.glb',
+  '/models/prone-sniper.glb',
   '/models/hw-racer.glb',
   '/models/furby.glb',
   '/models/furby-box.glb',

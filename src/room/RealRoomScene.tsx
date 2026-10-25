@@ -169,6 +169,20 @@ function DeskLampGlow({ at }: { at: [number, number, number] }) {
   );
 }
 
+/**
+ * The PC desk has no lamp, so the computer lights itself: the CRT throws a
+ * cool glow on the keyboard, and a soft warm fill from the room side keeps
+ * the beige plastic and the stickers readable from across the room.
+ */
+function PcDeskGlow({ lightsOut }: { lightsOut: boolean }) {
+  return (
+    <group>
+      <pointLight position={[-0.15, 0.86, 0.32]} color="#9cc8ff" intensity={lightsOut ? 0.9 : 0.55} distance={1.6} decay={2} />
+      {!lightsOut && <pointLight position={[0.05, 1.45, 0.95]} color="#ffe2bd" intensity={0.75} distance={2.3} decay={2} />}
+    </group>
+  );
+}
+
 function MountedShelf({
   shelf,
 }: {
@@ -620,7 +634,7 @@ export function RealRoomScene({
       )}
 
       <PlacedModel id="desk" hoveredId={hoveredId} card="desk">
-        {!lightsOut && <DeskLampGlow at={[0.43, 0.86, -0.13]} />}
+        <PcDeskGlow lightsOut={lightsOut} />
       </PlacedModel>
       {!clearFloor && (
       <PlacedModel

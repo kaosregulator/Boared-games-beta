@@ -14,9 +14,14 @@ import type { FurbyTag } from './furbyAudio';
 export type Vec3 = [number, number, number];
 
 /** Where the Boom starts its walk: the back corner of the table. */
-export const BOOM_FROM: Vec3 = [0.6, 0, -0.12];
-/** Side by side with the grey Furby, who sits at (0.02, 0, 0.17). */
-export const BOOM_SPOT: Vec3 = [0.22, 0, 0.17];
+export const BOOM_FROM: Vec3 = [0.62, 0, -0.3];
+/**
+ * Where the Boom stops, back and to the right of the grey Furby at
+ * (0.06, 0, 0.22). The Boom rig carries its own box on its left, about 0.14
+ * to 0.41 to the side; parked here that box stands behind the grey Furby
+ * instead of around him, and clear of his display box.
+ */
+export const BOOM_SPOT: Vec3 = [0.36, 0, -0.08];
 
 export const ENTER_SEC = 3.2;
 export const LEAVE_SEC = 2.8;
@@ -31,15 +36,15 @@ export interface Shot {
 
 export const SHOTS = {
   /** Both Furbies in the frame. */
-  wide: { target: [0.1, 0.1, 0.14], yaw: 0, pitch: 0.5, dist: 0.8 },
+  wide: { target: [0.24, 0.1, 0.08], yaw: 0, pitch: 0.5, dist: 0.9 },
   /** Close on the grey Furby. */
-  furby: { target: [0.0, 0.09, 0.17], yaw: 0.28, pitch: 0.2, dist: 0.3 },
+  furby: { target: [0.06, 0.09, 0.22], yaw: 0.28, pitch: 0.2, dist: 0.3 },
   /** Close on the Boom. */
-  boom: { target: [0.22, 0.09, 0.17], yaw: -0.28, pitch: 0.2, dist: 0.3 },
+  boom: { target: [0.45, 0.09, -0.12], yaw: -0.28, pitch: 0.2, dist: 0.3 },
   /** Dolly in on the pair while they dance. */
-  dance: { target: [0.12, 0.1, 0.16], yaw: 0.0, pitch: 0.32, dist: 0.46 },
+  dance: { target: [0.25, 0.1, 0.06], yaw: 0.0, pitch: 0.32, dist: 0.62 },
   /** Slow push-in for a punchline. */
-  push: { target: [0.12, 0.1, 0.17], yaw: 0.12, pitch: 0.24, dist: 0.5 },
+  push: { target: [0.25, 0.1, 0.07], yaw: 0.12, pitch: 0.24, dist: 0.62 },
 } satisfies Record<string, Shot>;
 
 export type ShotName = keyof typeof SHOTS;

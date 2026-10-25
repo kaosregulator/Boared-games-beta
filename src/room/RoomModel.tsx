@@ -53,7 +53,7 @@ export const MODEL_URL: Record<ModelId, string> = {
   shelf: '/models/shelf.glb',
   crt: '/models/crt.glb',
   dresser: '/models/dresser.glb',
-  desk: '/models/desk.glb',
+  desk: '/models/pcdesk.glb',
   nightstand: '/models/nightstand.glb',
   boombox: '/models/boombox.glb',
   window: '/models/window.glb',

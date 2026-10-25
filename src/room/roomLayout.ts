@@ -41,7 +41,7 @@ const N = {
   shelf: [0.702, 0.98, 0.314] as [number, number, number],
   dresser: [0.981, 0.836, 0.688] as [number, number, number],
   crt: [0.956, 0.98, 0.767] as [number, number, number],
-  desk: [0.98, 0.661, 0.707] as [number, number, number],
+  desk: [0.98, 0.626, 0.454] as [number, number, number],
   nightstand: [0.894, 0.977, 0.644] as [number, number, number],
   window: [0.979, 0.845, 0.26] as [number, number, number],
   boombox: [0.981, 0.662, 0.477] as [number, number, number],
@@ -78,7 +78,8 @@ const shelfSize = fit(N.shelf, 'y', 2.05);
 const dresserSize = fit(N.dresser, 'y', 0.84);
 const crtSize = fit(N.crt, 'x', 0.62);
 const toySize = fit(N.toyshelf, 'y', 1.32);
-const deskSize = fit(N.desk, 'y', 1.05);
+/** The retro PC desk: 1.65m long, so the top lands at about 62cm. */
+const deskSize = fit(N.desk, 'x', 1.65);
 const nightSize = fit(N.nightstand, 'y', 0.9);
 const windowSize = fit(N.window, 'y', 1.12);
 const boomSize = fit(N.boombox, 'x', 0.52);
@@ -137,8 +138,12 @@ const doorZ = flushNorth(doorSize.sz);
 const toyX = EAST_X - toySize.sz / 2 - 0.05;
 const toyZ = 0.05;
 
-const deskX = EAST_X - deskSize.sz / 2 - 0.06;
-const deskZ = 1.88;
+/** Height of the PC desk's top, under the computer: 37% of the mesh's height. */
+export const PC_DESK_TOP = (deskSize.sx / N.desk[0]) * 0.37;
+
+/** Slid all the way into the south-east corner, back to the wall. */
+const deskX = EAST_X - deskSize.sz / 2 - 0.03;
+const deskZ = SOUTH_Z - deskSize.sx / 2 - 0.03;
 
 const clutterX = WEST_X + clutterSize.sz / 2 + 0.06;
 const clutterZ = 1.45;
@@ -242,8 +247,8 @@ export const LAYOUT = {
     y: 0,
     z: deskZ,
     rotY: -Math.PI / 2,
-    axis: 'y' as const,
-    meters: 1.05,
+    axis: 'x' as const,
+    meters: 1.65,
     ...deskSize,
   },
   clutterdesk: {

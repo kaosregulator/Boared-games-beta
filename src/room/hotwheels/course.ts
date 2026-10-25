@@ -173,32 +173,38 @@ export const PIECES: Piece[] = [
     [0.66, f, 1.17],
     [0.8, f, 1.2],
   ], { railed: false }),
-  // Chain-lift up to desk height; the lip throws you over the gap.
+  // Chain-lift up to desk height, curling south at the top so the lip throws
+  // you along the computer desk's front edge.
   piece('climb', [
     [0.8, f, 1.2],
-    [1.05, 0.08, 1.26],
-    [1.35, 0.3, 1.33],
-    [1.62, 0.52, 1.4],
-    [1.85, 0.68, 1.455],
-    [1.98, 0.72, 1.485],
+    [1.05, 0.08, 1.2],
+    [1.32, 0.28, 1.14],
+    [1.58, 0.47, 1.08],
+    [1.78, 0.6, 1.07],
+    [1.95, 0.68, 1.1],
+    [2.06, 0.71, 1.17],
+    [2.12, 0.72, 1.26],
+    [2.14, 0.725, 1.34],
   ], { lift: 1.38, railed: true }),
-  // Across the desk top, between the binder, the books and the lamp.
+  // Along the front lip of the computer desk, past the keyboard, round the
+  // corner in front of the printer.
   piece('desk', [
-    [2.2, DECK, 1.55],
-    [2.42, DECK, 1.66],
-    [2.53, DECK, 1.88],
-    [2.5, DECK, 2.1],
-    [2.38, DECK, 2.3],
-    [2.2, DECK, 2.41],
+    [2.16, DECK, 1.42],
+    [2.19, DECK, 1.56],
+    [2.19, DECK, 1.9],
+    [2.2, DECK, 2.22],
+    [2.29, DECK, 2.4],
+    [2.25, DECK, 2.53],
+    [2.08, DECK, 2.58],
   ], { railed: true }),
-  // Down off the desk past the chair, curling north beside the army men.
+  // Down off the desk, curling north beside the army men.
   piece('drop', [
-    [2.2, DECK, 2.41],
-    [2.0, DECK - 0.08, 2.43],
-    [1.78, 0.42, 2.41],
-    [1.66, 0.24, 2.31],
-    [1.62, 0.1, 2.12],
-    [1.62, 0.02, 1.9],
+    [2.08, DECK, 2.58],
+    [1.9, DECK - 0.08, 2.58],
+    [1.74, 0.42, 2.54],
+    [1.63, 0.24, 2.4],
+    [1.6, 0.1, 2.2],
+    [1.62, 0.02, 1.95],
     [1.63, f, 1.65],
     [1.66, f, 1.38],
   ], { railed: true }),
@@ -236,7 +242,7 @@ export const FINISH = (() => {
 export const NITRO_SPOTS: THREE.Vector3[] = [
   at('bed-run', 0.72).p,
   at('desk', 0.45).p,
-  new THREE.Vector3(2.62, FLOOR, 1.9), // back of the knee hole, under the desk
+  new THREE.Vector3(2.75, FLOOR, 1.9), // back of the knee hole, under the desk
   new THREE.Vector3(-2.5, FLOOR, -0.9), // deep under the bed, by the headboard
 ];
 
@@ -245,6 +251,28 @@ function nearest(pieceId: string, x: number, z: number): Booster {
   let best = p.frames[0];
   for (const fr of p.frames) if (Math.hypot(fr.p.x - x, fr.p.z - z) < Math.hypot(best.p.x - x, best.p.z - z)) best = fr;
   return { p: best.p.clone(), tangent: best.tangent.clone(), up: best.up.clone(), right: best.right.clone() };
+}
+
+/**
+ * The nearest floor-level-or-higher bit of the lap to (x, z), facing the way
+ * the lap runs: where a car that came off in a race gets put back.
+ */
+export function backOnTrack(x: number, z: number) {
+  let best: Frame | null = null;
+  let bestD = Infinity;
+  for (const pc of PIECES) {
+    // Not onto a chain lift or a jump ramp mid-climb: you'd just fall off again.
+    if (pc.lift > 0) continue;
+    for (const fr of pc.frames) {
+      const d = Math.hypot(fr.p.x - x, fr.p.z - z);
+      if (d < bestD) {
+        bestD = d;
+        best = fr;
+      }
+    }
+  }
+  const fr = best ?? PIECES[0].frames[0];
+  return { p: fr.p.clone(), heading: Math.atan2(fr.tangent.z, fr.tangent.x) };
 }
 
 export function startPose() {
@@ -313,7 +341,8 @@ export function trackUnder(x: number, z: number, maxY: number, slack = 0): Track
     const len2 = dx * dx + dz * dz;
     if (len2 < 1e-10) continue;
     const t = ((x - ax) * dx + (z - az) * dz) / len2;
-    if (t < -0.02 || t > 1.02) continue;
+    // A little past each end, so the outside of a bend has no gaps between segments.
+    if (t < -0.35 || t > 1.35) continue;
     const tc = Math.min(1, Math.max(0, t));
     const cx = ax + dx * tc;
     const cz = az + dz * tc;

@@ -828,73 +828,87 @@ const CARDS: PropCard[] = [
     memories: ['Office chair races down the hallway. Banned.'],
     photos: [P.chair],
   },
-  // ---------- the plain desk (east) ----------
+  // ---------- the computer desk (east corner) ----------
   {
     id: 'desk',
-    title: 'The other desk',
-    era: 'The "nice" desk',
+    title: 'The family computer',
+    era: 'Windows 98, dial-up, one phone line',
     story:
-      'The desk that was supposed to stay clean for company. It stayed clean for about a week. The books on top have never been opened. They\'re for decoration and looking smart.',
-    memories: ['Has a drawer that only opens if you kick it.'],
+      'The computer desk in the corner, where the whole house took turns. Somebody always picked up the phone in the middle of a download and the whole thing started over.',
+    memories: ['That dial-up screech meant you were about to be online.', 'Get off the internet, I need to use the phone!'],
   },
   {
-    id: 'dk-books',
-    title: 'Goosebumps, Space Jam & Sonic',
-    era: 'Book order day',
+    id: 'pc-monitor',
+    title: 'Beige CRT monitor',
+    era: 'Fifteen glorious inches',
     story:
-      'The Scholastic book order form came home and every box got checked. Mom said pick two. We picked four and hid the other two in the stack.',
-    memories: ['The scent of a new book order box.', 'A free poster came with the order.'],
+      'Heavier than you were. The Windows 98 logo came up and you waited, and waited, and then the desktop showed up and you waited some more. The screen buzzed and made the hair on your arm stand up.',
+    memories: ['3D Pipes screensaver, for hours.', 'Wallpapers you set and forgot for a whole year.'],
   },
   {
-    id: 'dk-vhs',
-    title: 'Horror tape row',
-    era: 'Too young for these',
+    id: 'pc-tower',
+    title: 'The tower',
+    era: 'Pentium inside',
     story:
-      'Tapes that were "for when you\'re older". You watched them at a sleepover anyway and slept with the light on for a week.',
-    memories: ['Just one more chapter of a scary tape became a whole movie.'],
+      'A beige box with a Turbo button nobody understood and a CD tray that made a perfect cup holder. The sticker on the front was more important than anything inside it.',
+    memories: ['Pressing the power button and hearing every fan in the house wake up.'],
   },
   {
-    id: 'dk-photo',
-    title: 'Anime picture',
-    era: 'Saturday morning cartoons',
+    id: 'pc-printer',
+    title: 'Inkjet printer',
+    era: 'Out of cyan again',
     story:
-      'Drew this off the TV, paused on the exact frame, then framed it. The VCR\'s pause made everything shaky, so the drawing is shaky too.',
-    memories: ['Woke up at 6 for the cartoons. Woke up at 11 on school days.'],
+      'Printed every school report the night before it was due, one slow line at a time. Ran out of colour ink right when you needed the cover page.',
+    memories: ['Banner paper with the holes down the sides, torn off strip by strip.'],
   },
   {
-    id: 'dk-pencils',
-    title: 'Pencil cups',
-    era: 'Every color but the one you need',
+    id: 'pc-keyboard',
+    title: 'Clicky keyboard',
+    era: 'Typing class, home edition',
+    story:
+      'Loud enough to wake the house at midnight. You learned to type on Mavis Beacon and on instant messages, mostly the instant messages.',
+    memories: ['Crumbs between the keys. All of them.'],
+  },
+  {
+    id: 'pc-mouse',
+    title: 'Ball mouse',
+    era: 'Clean the ball, clean the rollers',
+    story:
+      'When the cursor started skipping, you popped out the ball and scraped the gunk off the rollers with a fingernail. Good as new.',
+    memories: ['The mouse pad was a free one from a bank.'],
+  },
+  {
+    id: 'pc-cds',
+    title: 'CD-ROMs and floppies',
+    era: 'Insert disk 2 of 7',
+    story:
+      'Encyclopedia discs, a demo disc from a cereal box and a stack of free AOL CDs that showed up in the mail every single week.',
+    memories: ['1,000 free hours! (must be used within one month).'],
+  },
+  {
+    id: 'pc-pencils',
+    title: 'Pencil cup',
+    era: 'Every colour but the one you need',
     story:
       'Colored pencils for the state project, all sharpened to a point except the one color you need for the ocean. Someone always took the blue.',
     memories: ['Electric pencil sharpeners: ate half the pencil every time.'],
     photos: [P.pencils],
   },
   {
-    id: 'dk-pager',
-    title: 'Pager',
-    era: '143 = I love you',
+    id: 'pc-stickers',
+    title: 'Drawer stickers',
+    era: 'MTV, a smiley and a bit of rebellion',
     story:
-      'Found in a drawer, borrowed from an older cousin. You only knew three codes: 911, 143 and 07734, which is "hello" upside down on a calculator.',
-    memories: ['Nobody ever paged you. You checked it anyway.'],
-    photos: [P.pager],
+      'Every drawer got a sticker the day you got it. Peeling them off now would take the paint with them, so they stay.',
+    memories: ['The drawer with the RAD sticker is where the good stuff is hidden.'],
   },
   {
-    id: 'dk-lamp',
-    title: 'Black desk lamp',
-    era: 'Homework spotlight',
+    id: 'pc-games',
+    title: 'PC game boxes',
+    era: 'Big boxes, tiny discs',
     story:
-      'Pointed at the homework like an interrogation light. The homework never confessed.',
-    memories: ['Bends in every direction except the one you need.'],
-    photos: [P.lamp],
-  },
-  {
-    id: 'dk-sticker',
-    title: 'Warning sticker',
-    era: 'Danger: kid inside',
-    story:
-      'Peeled off a box of something from the garage and stuck it on the desk because it looked cool. No idea what it was warning about. Probably fine.',
-    memories: ['Nothing bad has happened. Yet.'],
+      'Giant cardboard boxes holding one CD and a manual you actually read. The system requirements on the back were a test your computer never quite passed.',
+    memories: ['Installing took an hour. Worth it.'],
   },
   // ---------- little things on the floor and walls ----------
   {
