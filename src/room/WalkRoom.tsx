@@ -7,7 +7,7 @@ import { RealRoomScene, TABLE_BOX_PREFIX, type LiveProp } from './RealRoomScene'
 import { WalkController } from './WalkController';
 import { ReachRaycaster, type Aimed } from './ReachRaycaster';
 import { CaptureClock, TourCamera } from './TourCamera';
-import { FilmCamera } from './FilmCamera';
+import { FilmCamera, type FilmShot } from './FilmCamera';
 import { LAYOUT } from './roomLayout';
 import { DESK_SLOTS, SHELF_SLOTS, SHELF_SLOTS_LOWER } from './videoRoom';
 import { MemoryFlashCard } from './MemoryFlashCard';
@@ -41,8 +41,8 @@ import { TABLE_GAMES, TableHudOverlay, type TableSession } from './table/TablePl
 import { TableCameraRig } from './table/TableCameraRig';
 import { TriviaTableCam } from './table/TriviaTableCam';
 import { HotWheelsHud, HotWheelsWorld } from './hotwheels/HotWheelsRace';
-import { ArmyAlert, ArmyHud, ArmyTownWorld, readArmyBoot } from './army/ArmyTown';
-import { BOOK_SPOT, ISpyHud, ISpyWorld, readISpyBoot, useISpyRoom } from './ispy/ISpyGame';
+import { ArmyAlert, ArmyHud, ArmyTownWorld, readArmyBoot, type ArmyBoot } from './army/ArmyTown';
+import { BOOK_SPOT, ISpyHud, ISpyWorld, readISpyBoot, useISpyRoom, type ISpyBoot } from './ispy/ISpyGame';
 import { walkRig } from './WalkController';
 import { FurbyHold } from './furby/FurbyHold';
 import { FurbyQuiet } from './furby/FurbyQuiet';
@@ -80,6 +80,11 @@ function parseCam(raw: string | null) {
   return { at: [n[0], n[1], n[2]] as [number, number, number], look: [n[3], n[4], n[5]] as [number, number, number] };
 }
 
+/** The reel's army town: the waves start straight away, no sergeant, and the reel has the camera. */
+const FILM_ARMY_BOOT: ArmyBoot = { mode: 'ground', ring: null, cam: null, calm: false };
+/** The reel's I Spy page: always the same easy page, so the finds land where the camera expects. */
+const FILM_ISPY_BOOT: ISpyBoot = { difficulty: 'easy', seed: 7, cam: null, read: false, book: false };
+
 function readCameraOverride() {
   if (typeof window === 'undefined') {
     return {
@@ -90,6 +95,7 @@ function readCameraOverride() {
       cam: null as { at: [number, number, number]; look: [number, number, number] } | null,
       menu: false,
       capture: false,
+      dpr: 1,
       device: null as DeviceId | null,
       seat: false,
     };
@@ -107,6 +113,8 @@ function readCameraOverride() {
     cam: parseCam(params.get('cam')),
     menu: params.has('menu'),
     capture: params.has('capture'),
+    /** Captures render at this pixel ratio (the reel records supersampled at 1.5 or 2). */
+    dpr: Math.min(2, Math.max(1, Number(params.get('dpr')) || 1)),
     device,
     seat: params.get('seat') === 'gameboy',
   };
@@ -254,9 +262,11 @@ export function WalkRoom({
   /** The I Spy book is open: on the rug, or shrunk down on its carpet. */
   const [ispyOn, setIspyOn] = useState(Boolean(ispyBoot));
   const ispyRoom = useISpyRoom();
+  /** The menu reel's toy world for the shot on screen (the army town, an I Spy page). */
+  const [filmWorld, setFilmWorld] = useState<FilmShot['world'] | null>(null);
   /** Eyes shut or playing: everything but the furniture is off the floor. */
-  const ispyPage = ispyOn && ispyRoom.page;
-  const ispyDim = ispyOn && ispyRoom.dim;
+  const ispyPage = (ispyOn || filmWorld === 'ispy') && ispyRoom.page;
+  const ispyDim = (ispyOn || filmWorld === 'ispy') && ispyRoom.dim;
   const toyMode = racing || armyOn || armyAlert !== null || ispyOn;
   /** Something held up close (Tamagotchi, Rubik's Cube): the room waits behind it. */
   const holding = tamagotchi || rubik;
@@ -807,7 +817,7 @@ export function WalkRoom({
         // Behind the title reel the room only draws when something loads in, so
         // it's ready the moment play is pressed without burning the GPU meanwhile.
         frameloop={override.capture || seated || (!engaged && !scripted) ? 'demand' : holding ? 'never' : 'always'}
-        dpr={override.capture ? 1 : gfx.dpr}
+        dpr={override.capture ? override.dpr : gfx.dpr}
         camera={{ fov: 72, near: 0.08, far: 40, position: [0.02, 1.58, 1.32] }}
         // alpha so the room TV's picture can show through the hole cut for it (RoomTvGlass)
         gl={{ antialias: true, powerPreference: 'high-performance', alpha: true }}
@@ -865,9 +875,10 @@ export function WalkRoom({
           onLeaveTable={packUp}
           hideGameboy={seated || (ispyOn && ispyRoom.reading)}
           tvInRoom={tvInRoom}
+          filmTv={override.film}
           lightsOut={lightsOut || ispyDim}
           clearFloor={ispyPage}
-          ispyOpen={ispyOn}
+          ispyOpen={ispyOn || filmWorld === 'ispy'}
         />
         <FurbyHold />
         <DeviceFocus device={scripted ? null : device} />
@@ -879,7 +890,19 @@ export function WalkRoom({
         ) : override.card && DEMO_POSE[override.card] ? (
           <DemoPose at={DEMO_POSE[override.card].at} look={DEMO_POSE[override.card].look} />
         ) : override.film ? (
-          <FilmCamera onShot={shot => setLightsOut(Boolean(shot.lightsOut))} />
+          <>
+            <FilmCamera
+              onShot={shot => {
+                setLightsOut(Boolean(shot.lightsOut));
+                setFilmWorld(shot.world ?? null);
+              }}
+            />
+            {/* Up from the first frame (models loaded, the battle under way), seen only in its shot. */}
+            <group visible={filmWorld === 'army'}>
+              <ArmyTownWorld boot={FILM_ARMY_BOOT} film />
+            </group>
+            {filmWorld === 'ispy' && <ISpyWorld boot={FILM_ISPY_BOOT} film />}
+          </>
         ) : scripted ? (
           <TourCamera staticIndex={override.shot} onWaypoint={label => setTourLabel(label)} />
         ) : (
@@ -984,7 +1007,8 @@ export function WalkRoom({
       )}
       {(tvOn || tvInRoom) && <TvGlass initialMode={device === 'nes' ? 'gaming' : 'menu'} inRoom={tvInRoom} />}
       {furbyMuteAvailable({ tvMode: tvStatus.mode, atTelevision: tvOn || tvInRoom, radioOn: tapeOn }) && <FurbyQuiet />}
-      {session && session.phase === 'play' && TABLE_GAMES.has(session.game.id) && (
+      {/* The Furby waits in its box for Unbox, so its HUD is up during the unfold too. */}
+      {session && (session.phase === 'play' || (session.phase === 'unfold' && session.game.id === 'furby')) && TABLE_GAMES.has(session.game.id) && (
         <TableHudOverlay
           crouched={crouched}
           onStand={() => walkRig.setCrouch(false)}

@@ -29,7 +29,11 @@ import {
 } from './town';
 import { armySfx, rotorLevel, rotorOff, rotorOn, wakeArmyAudio } from './armyAudio';
 import { SHOT_RANGE, chestPoint, muzzlePoint, pickAlongBarrel, shotPoint } from './aim';
-import { advanceTip, tutorialLine, type Tip } from './tutorial';
+import { COACH_NAME, COACH_REACH, COACH_SPOT, coachLesson, lineSeconds, nextLine, type Coach } from './tutorial';
+import { readArmyKeys, stepLook } from './armyKeys';
+import { SpeechBubble, headOnScreen, type Bubble } from './SpeechBubble';
+import { Quipper, quipSeconds } from '../roomQuips';
+import { filmClock, makeFilmStep } from '../filmClock';
 import {
   STORY_WAVES,
   TAN_POOL,
@@ -69,10 +73,17 @@ export const army = {
   wave: 0,
   waveState: 'incoming' as WaveState,
   siege: 'story' as Siege,
-  /** Story coach. Null on a calm or helicopter boot. Done sends him back to the parade. */
-  tip: null as Tip | null,
-  /** True once that soldier has walked up close enough to talk. */
+  /** Sergeant Green: waits glowing until you talk to him. Null on a calm or helicopter boot. */
+  coach: null as Coach | null,
+  /** Which line of his lesson is up. */
+  coachLine: 0,
+  /** True while you're close enough to talk to him. */
   coachNear: false,
+  /** Speech bubble over his head, in screen space. */
+  bubble: null as Bubble | null,
+  /** Something you say to yourself about the room, over your own head. */
+  quip: null as null | { text: string; then?: string; until: number },
+  quipBubble: null as Bubble | null,
   invadersLeft: 0,
   toppled: 0,
   nearChopper: false,
@@ -135,9 +146,13 @@ const touch = { fwd: false, back: false, left: false, right: false, up: false, d
 const controls = {
   board: null as null | (() => void),
   againWaves: null as null | (() => void),
+  endSiege: null as null | (() => void),
   startSiege: null as null | ((level: Exclude<Siege, 'story'>) => void),
   resetHeli: null as null | (() => void),
   quitCourse: null as null | (() => void),
+  /** F, or a tap on a bubble: talk to whoever's close, else the chopper. */
+  interact: null as null | (() => void),
+  skipCoach: null as null | (() => void),
 };
 
 // ---------------------------------------------------------------------------
@@ -442,13 +457,17 @@ const _look = new THREE.Vector3();
 const _cam = new THREE.Vector3();
 const _camLook = new THREE.Vector3();
 const _prev = new THREE.Vector3();
+const _dir = new THREE.Vector3();
+const _right = new THREE.Vector3();
+const UP = new THREE.Vector3(0, 1, 0);
 
 function clearShot(from: THREE.Vector3, to: THREE.Vector3) {
   for (let i = 0; i < 12 && insideAny(to, 0.008); i++) to.lerpVectors(to, from, 0.25);
   return to;
 }
 
-function Crowd({ boot }: { boot: ArmyBoot | null }) {
+function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }) {
+  const filmStep = useMemo(() => makeFilmStep(film), [film]);
   const kit = useKit();
   const { camera, size, gl } = useThree();
   const group = useRef<THREE.Group>(null);
@@ -461,6 +480,10 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
   const saved = useRef<{ near: number; fov: number } | null>(null);
   const intro = useRef({ t: boot ? 1 : 0, from: camera.position.clone(), look: new THREE.Vector3() });
   const camYaw = useRef(Math.PI);
+  /** Up/down arrows tilt the view, in every camera. Radians, + looks up. */
+  const lookPitch = useRef(0);
+  /** You can walk on the shelf too: your fall speed when you step off an edge. */
+  const playerVy = useRef(0);
   const camReady = useRef(false);
   const lastEmit = useRef(0);
   const waveTimer = useRef(boot?.calm ? Infinity : 3.2);
@@ -537,6 +560,8 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
   const player = men[0];
   const tans = useMemo(() => men.filter(m => m.team === 'tan'), [men]);
   const greens = useMemo(() => men.filter(m => m.team === 'green'), [men]);
+  const guide = useMemo(() => men.find(m => m.guide) ?? null, [men]);
+  const coachGlow = useRef<THREE.Group>(null);
 
   useEffect(() => {
     const g = group.current;
@@ -561,8 +586,17 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
     army.wave = 0;
     army.waveState = 'incoming';
     army.siege = 'story';
-    army.tip = boot?.calm || boot?.mode === 'heli' ? null : 'move';
+    army.coach = film || boot?.calm || boot?.mode === 'heli' ? null : 'wait';
+    // The reel cuts straight into the battle.
+    if (film) waveTimer.current = 0.4;
+    army.coachLine = 0;
     army.coachNear = false;
+    army.bubble = null;
+    if (army.coach && guide) {
+      // He waits for you a few steps from where you land, glowing.
+      guide.pos.set(COACH_SPOT.x, 0, COACH_SPOT.z);
+      guide.heading = Math.atan2(player.pos.x - COACH_SPOT.x, player.pos.z - COACH_SPOT.z);
+    }
     army.toppled = 0;
     army.invadersLeft = 0;
     army.course = { active: false, next: 0, time: 0, best: readBest(), last: null };
@@ -580,7 +614,10 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
       player.root.visible = false;
       rotorOn();
     }
-    if (!boot?.calm) banner("We're under attack!", 'Tan army behind the books by the door. Defend the town!', 3);
+    if (film) {
+      // No banners in the reel.
+    } else if (army.coach) banner("We're under attack!", 'Go talk to the glowing sergeant first', 3.4);
+    else if (!boot?.calm) banner("We're under attack!", 'Tan army behind the books by the door. Defend the town!', 3);
     emit();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -619,8 +656,9 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
 
   function startSiege(level: Exclude<Siege, 'story'>) {
     army.siege = level;
-    army.tip = 'done';
+    army.coach = 'done';
     army.coachNear = false;
+    army.bubble = null;
     army.wave = 0;
     army.waveState = 'incoming';
     waveTimer.current = 2.2;
@@ -633,6 +671,97 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
     }
     const name = level === 'easy' ? 'Easy' : level === 'medium' ? 'Medium' : 'Hard';
     banner(name, 'They keep coming. Clear a wave and the next one steps out.', 2.4);
+    emit();
+  }
+
+  // --- Sergeant Green ---------------------------------------------------------
+  const lesson = useMemo(() => coachLesson(isTouchDevice()), []);
+  const coachT = useRef(0);
+  const quipper = useMemo(() => new Quipper(), []);
+
+  /** Talk to yourself about the room now and then: the mess from the air, the Hot Pockets, under the bed. */
+  function tickQuips(dt: number, flying: boolean) {
+    const h = heli.current;
+    const now = performance.now();
+    const q = army.quip;
+    if (q && now > q.until) {
+      army.quip = q.then ? { text: q.then, until: now + quipSeconds(q.then) * 1000 } : null;
+    }
+    const busy = army.coach === 'talk' || army.bubble !== null || player.fall > 0;
+    if (!army.quip && !busy) {
+      const at = flying ? h.pos : player.pos;
+      const who = flying ? (h.pos.y > 0.3 ? 'fly' : null) : 'walk';
+      const line = who ? quipper.tick(dt, who, at.x, at.y, at.z) : null;
+      if (line) army.quip = { text: line.text, then: line.then, until: now + quipSeconds(line.text) * 1000 };
+    }
+    if (army.quip) {
+      const head = flying
+        ? headOnScreen(camera, h.pos.x, h.pos.y + 0.06, h.pos.z)
+        : army.cam === 'first'
+          ? null
+          : headOnScreen(camera, player.pos.x, player.pos.y + MAN_HEIGHT * 1.15, player.pos.z);
+      army.quipBubble = { ...(head ?? { x: 0.5, y: 0.34 }), who: flying ? 'You, in the chopper' : 'You', text: army.quip.text };
+    } else army.quipBubble = null;
+  }
+
+  function startCoach() {
+    if (army.coach !== 'wait' || !army.coachNear) return;
+    army.coach = 'talk';
+    army.coachLine = 0;
+    coachT.current = 0;
+    armySfx.radio();
+    camReady.current = true;
+    emit();
+  }
+
+  function nextCoach() {
+    if (army.coach !== 'talk') return;
+    const n = nextLine(army.coachLine, lesson);
+    coachT.current = 0;
+    if (n === null) finishCoach();
+    else {
+      army.coachLine = n;
+      emit();
+    }
+  }
+
+  /** Done talking (or skipped): back to your camera, and the first wave steps out. */
+  function finishCoach() {
+    if (army.coach === 'done' || army.coach === null) return;
+    army.coach = 'done';
+    army.bubble = null;
+    army.coachNear = false;
+    if (army.siege === 'story' && army.wave === 0) {
+      waveTimer.current = 2;
+      armySfx.alarm();
+      banner('Here they come!', 'Get to the sandbags', 2);
+    }
+    emit();
+  }
+
+  /** F: talk to whoever's close, or the chopper. */
+  function interact() {
+    if (army.mode === 'ground' && army.coach === 'wait' && army.coachNear) return startCoach();
+    if (army.coach === 'talk') return nextCoach();
+    if (army.mode === 'ground' && sniper.phase === 'near' && (sniper.near === 'radio' || sniper.near === 'sniper')) return sniperControls.talk?.();
+    board();
+  }
+
+  /** Easy, Medium and Hard never stop on their own: this calls it off and tallies up. */
+  function endSiege() {
+    if (army.siege === 'story' || army.waveState === 'won') return;
+    const reached = army.wave;
+    army.waveState = 'won';
+    waveTimer.current = 0.01;
+    for (const t of tans) {
+      t.active = false;
+      t.root.visible = false;
+      t.fall = 0;
+      t.falling = false;
+    }
+    army.invadersLeft = 0;
+    armySfx.victory();
+    banner('Ceasefire!', `You held to wave ${reached} and toppled ${army.toppled} tan soldiers`, 3.4);
     emit();
   }
 
@@ -652,10 +781,6 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
 
   function board() {
     const h = heli.current;
-    if (army.mode === 'heli' && sniper.phase === 'near') {
-      sniperControls.talk?.();
-      return;
-    }
     if (army.mode === 'ground') {
       if (!army.nearChopper || player.fall > 0) return;
       army.mode = 'heli';
@@ -669,14 +794,20 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
         banner('Land first', 'Shift to come down, then F to hop out', 1.8);
         return;
       }
-      if (h.pos.y > 0.01) {
-        banner('Land on the floor', 'Hop out on the carpet, not up here', 1.8);
-        return;
-      }
       army.mode = 'ground';
+      // Hop out wherever she's sitting (the rug or the shelf), on a side with floor under it.
       const f = heliForward(h.yaw);
-      player.pos.set(h.pos.x - f.z * 0.08, 0, h.pos.z + f.x * 0.08);
-      pushOut(player.pos, MAN_RADIUS * 1.5, 0.005, MAN_HEIGHT);
+      const ground = floorAt(h.pos.x, h.pos.z, h.pos.y + 0.01);
+      const sides: [number, number][] = [
+        [-f.z * 0.08, f.x * 0.08],
+        [f.z * 0.08, -f.x * 0.08],
+        [-f.x * 0.09, -f.z * 0.09],
+      ];
+      const [ox, oz] =
+        sides.find(([sx, sz]) => Math.abs(floorAt(h.pos.x + sx, h.pos.z + sz, ground + 0.01) - ground) < 0.01) ?? sides[0];
+      player.pos.set(h.pos.x + ox, ground, h.pos.z + oz);
+      playerVy.current = 0;
+      pushOut(player.pos, MAN_RADIUS * 1.5, ground + 0.005, ground + MAN_HEIGHT);
       player.heading = h.yaw;
       player.root.visible = true;
       rotorOff();
@@ -709,7 +840,8 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
       keys.current[e.code] = true;
       if (e.repeat) return;
       if (e.code === 'KeyC' || e.code === 'KeyV') cycleCam();
-      if (e.code === 'KeyF') board();
+      if (e.code === 'KeyF') interact();
+      if ((e.code === 'Enter' || e.code === 'Space') && army.coach === 'talk') nextCoach();
       if (e.code === 'KeyR' && army.mode === 'heli') resetHeli();
       if (e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
     };
@@ -742,7 +874,10 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
     window.addEventListener('pointerup', pUp);
     window.addEventListener('pointercancel', pUp);
     controls.board = board;
+    controls.interact = interact;
+    controls.skipCoach = finishCoach;
     controls.againWaves = againWaves;
+    controls.endSiege = endSiege;
     controls.startSiege = startSiege;
     controls.resetHeli = resetHeli;
     controls.quitCourse = quitCourse;
@@ -756,7 +891,10 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
       window.removeEventListener('pointerup', pUp);
       window.removeEventListener('pointercancel', pUp);
       controls.board = null;
+      controls.interact = null;
+      controls.skipCoach = null;
       controls.againWaves = null;
+      controls.endSiege = null;
       controls.startSiege = null;
       controls.resetHeli = null;
       controls.quitCourse = null;
@@ -848,7 +986,7 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
 
   useFrame((_, rawDt) => {
     try {
-      frame(Math.min(rawDt, 0.05));
+      frame(filmStep(rawDt));
     } catch (err) {
       console.error('[army] frame failed', err);
     }
@@ -861,7 +999,9 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
     drag.current.acc = 0;
 
     // --- Waves -----------------------------------------------------------
-    if (army.waveState === 'incoming' || army.waveState === 'cleared') {
+    // The story waits for Sergeant Green: no tan soldiers until he's done talking.
+    const briefing = army.siege === 'story' && (army.coach === 'wait' || army.coach === 'talk');
+    if ((army.waveState === 'incoming' || army.waveState === 'cleared') && !briefing) {
       waveTimer.current -= dt;
       if (waveTimer.current <= 0) {
         if (army.waveState === 'cleared' && storyOver(army.siege, army.wave)) {
@@ -892,34 +1032,33 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
     const fighting = army.waveState === 'attack' || (army.waveState === 'cleared' && !storyOver(army.siege, army.wave));
 
     // --- Player on foot ----------------------------------------------------
-    const fwdIn = (k.KeyW || k.ArrowUp || touch.fwd ? 1 : 0) - (k.KeyS || k.ArrowDown || touch.back ? 1 : 0);
-    const turnIn = (k.KeyD || k.ArrowRight || touch.right ? 1 : 0) - (k.KeyA || k.ArrowLeft || touch.left ? 1 : 0);
+    // WASD moves, arrows look (left/right turn, up/down tilt), like the main room.
+    // While the sergeant has the floor you stand and listen.
+    const listening = army.coach === 'talk';
+    const keyIn = listening ? { forward: 0, strafe: 0, turn: 0, look: 0 } : readArmyKeys(k, touch);
+    const fwdIn = keyIn.forward;
+    const turnIn = keyIn.turn;
+    const strafe = keyIn.strafe;
+    lookPitch.current = stepLook(lookPitch.current, keyIn.look, dt);
+    if (listening) {
+      coachT.current += dt;
+      if (coachT.current > lineSeconds(lesson[army.coachLine] ?? '')) nextCoach();
+    }
     if (army.mode === 'ground') {
       const p = player;
       if (p.fall === 0 && !p.falling) {
         const run = Boolean(k.ShiftLeft || k.ShiftRight);
-        const strafe = (k.KeyE ? 1 : 0) - (k.KeyQ ? 1 : 0);
-        p.heading = wrap(p.heading - turnIn * 2.6 * dt - nudge);
+        p.heading = wrap(p.heading - turnIn * 2.6 * dt - (listening ? 0 : nudge));
         const top = run ? 0.24 : 0.11;
         const want = fwdIn > 0 ? fwdIn * top : fwdIn * 0.06;
         p.speed += (want - p.speed) * Math.min(1, dt * 9);
         const s = Math.sin(p.heading);
         const c = Math.cos(p.heading);
-        p.pos.x += s * p.speed * dt - c * strafe * 0.06 * dt;
-        p.pos.z += c * p.speed * dt + s * strafe * 0.06 * dt;
-        if (army.tip && army.tip !== 'done' && army.coachNear) {
-          const next = advanceTip(army.tip, {
-            moved: fwdIn !== 0 || strafe !== 0,
-            turned: turnIn !== 0 || nudge !== 0,
-            shot: Boolean(k.Space || touch.fire),
-          });
-          if (next !== army.tip) {
-            army.tip = next;
-            emit();
-          }
-        }
+        const side = strafe * (run ? 0.12 : 0.07);
+        p.pos.x += s * p.speed * dt - c * side * dt;
+        p.pos.z += c * p.speed * dt + s * side * dt;
         p.cooldown -= dt;
-        if ((k.Space || touch.fire) && p.cooldown <= 0) {
+        if ((k.Space || touch.fire) && p.cooldown <= 0 && !listening) {
           p.cooldown = 0.33;
           const live = tans.filter(o => o.active && o.fall === 0 && !o.falling && o.root.visible);
           const pick = pickAlongBarrel(
@@ -939,7 +1078,7 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
       } else {
         p.speed = 0;
       }
-      army.nearChopper = h.grounded && Math.hypot(h.pos.x - p.pos.x, h.pos.z - p.pos.z) < 0.16 && h.pos.y < 0.01;
+      army.nearChopper = h.grounded && Math.hypot(h.pos.x - p.pos.x, h.pos.z - p.pos.z) < 0.16 && Math.abs(h.pos.y - p.pos.y) < 0.05;
       army.playerDown = p.fall > 0 || p.falling;
     } else {
       army.nearChopper = false;
@@ -953,7 +1092,7 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
               forward: fwdIn,
               turn: turnIn,
               lift: (k.Space || touch.up ? 1 : 0) - (k.ShiftLeft || k.ShiftRight || k.ControlLeft || touch.down ? 1 : 0),
-              strafe: (k.KeyE ? 1 : 0) - (k.KeyQ ? 1 : 0),
+              strafe,
               yawNudge: nudge,
               boost: Boolean(k.Tab),
             }
@@ -1024,16 +1163,16 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
         m.speed = 0;
         continue;
       }
-      if (m.guide && army.tip && army.tip !== 'done' && army.siege === 'story' && army.mode === 'ground') {
+      if (m.guide && (army.coach === 'wait' || army.coach === 'talk')) {
+        // Sergeant Green holds his spot and keeps an eye on you.
         const dx = player.pos.x - m.pos.x;
         const dz = player.pos.z - m.pos.z;
-        const near = Math.hypot(dx, dz) <= 0.11;
+        const near = army.mode === 'ground' && Math.hypot(dx, dz) <= COACH_REACH && Math.abs(player.pos.y - m.pos.y) < 0.03;
         if (army.coachNear !== near) {
           army.coachNear = near;
           emit();
         }
-        if (!near) walkTo(m, player.pos.x, player.pos.z, 0.09, dt);
-        else {
+        if (walkTo(m, COACH_SPOT.x, COACH_SPOT.z, 0.09, dt) < 0.012) {
           m.speed = 0;
           turnToward(m, Math.atan2(dx, dz), 6, dt);
         }
@@ -1143,6 +1282,19 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
     for (const m of men) {
       if (!m.active || m.role === 'tower' || m.role === 'guard') continue;
       if (m === player && army.mode === 'heli') continue;
+      if (m === player) {
+        // You stand on whatever's under you (rug, shelf, a low block) and drop off edges.
+        pushOut(m.pos, MAN_RADIUS, m.pos.y + 0.005, m.pos.y + MAN_HEIGHT);
+        const ground = floorAt(m.pos.x, m.pos.z, m.pos.y + 0.015);
+        if (m.pos.y > ground + 0.0005) {
+          playerVy.current -= 9.8 * dt;
+          m.pos.y = Math.max(ground, m.pos.y + playerVy.current * dt);
+        } else {
+          m.pos.y = ground;
+          playerVy.current = 0;
+        }
+        continue;
+      }
       pushOut(m.pos, MAN_RADIUS, 0.005, MAN_HEIGHT);
       m.pos.y = 0;
     }
@@ -1161,7 +1313,18 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
 
     // --- Camera -------------------------------------------------------------
     // Up on the shelf with the sniper: his camera, not ours.
+    // The menu reel flies its own camera through the town.
+    if (film) {
+      throttledEmit();
+      return;
+    }
     if (sniperBusy()) {
+      // Keep our follow camera where his left it, so handing back glides instead of cutting.
+      _cam.copy(camera.position);
+      camera.getWorldDirection(_dir);
+      _camLook.copy(camera.position).addScaledVector(_dir, 0.2);
+      // Step out of his close-up: you'd be standing right in the shot.
+      player.root.visible = army.mode === 'ground' && sniper.phase !== 'brief' && sniper.phase !== 'talk';
       throttledEmit();
       return;
     }
@@ -1206,8 +1369,24 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
       _look.set(player.pos.x + fx * 0.12, player.pos.y + 0.045, player.pos.z + fz * 0.12);
       clearShot(_look, _want);
     }
+    // Sergeant Green's lesson: the camera closes in on him, a three-quarter shot from in front.
+    const closeUp = army.coach === 'talk' && guide !== null && !flying;
+    if (closeUp && guide) {
+      const side = guide.heading + 0.55;
+      _want.set(guide.pos.x + Math.sin(side) * 0.1, guide.pos.y + MAN_HEIGHT * 1.0, guide.pos.z + Math.cos(side) * 0.1);
+      _look.set(guide.pos.x, guide.pos.y + MAN_HEIGHT * 0.78, guide.pos.z);
+      clearShot(_look, _want);
+      firstPerson = false;
+    }
+    // Up/down arrows tilt the view about the camera's own right axis: look up at the
+    // ceiling from the rug, or out across the room from the bird's-eye.
+    if (lookPitch.current !== 0 && !closeUp) {
+      _dir.subVectors(_look, _want);
+      _right.crossVectors(_dir, UP).normalize();
+      if (_right.lengthSq() > 0) _look.copy(_want).add(_dir.applyAxisAngle(_right, lookPitch.current));
+    }
     player.root.visible = !flying && !(firstPerson && player.fall === 0);
-    if (!camReady.current || firstPerson) {
+    if (!camReady.current || (firstPerson && !closeUp)) {
       _cam.copy(_want);
       _camLook.copy(_look);
     } else {
@@ -1238,6 +1417,29 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
       persp.updateProjectionMatrix();
     }
 
+    // Sergeant Green: a glow on the rug while he waits, and his bubble.
+    const waiting = army.coach === 'wait' || army.coach === 'talk';
+    const glow = coachGlow.current;
+    if (glow && guide) {
+      glow.visible = army.coach === 'wait';
+      glow.position.set(guide.pos.x, guide.pos.y, guide.pos.z);
+      const pulse = 1 + Math.sin(performance.now() / 240) * 0.12;
+      glow.scale.set(pulse, 1, pulse);
+    }
+    if (waiting && guide && !flying) {
+      const at = headOnScreen(camera, guide.pos.x, guide.pos.y + MAN_HEIGHT * 1.15, guide.pos.z);
+      if (at) {
+        const talking = army.coach === 'talk';
+        army.bubble = {
+          ...at,
+          who: COACH_NAME,
+          text: talking ? lesson[army.coachLine] : army.coachNear ? 'Over here, soldier! Talk to me.' : 'TALK HERE',
+          hint: talking ? `F or tap · next (${army.coachLine + 1}/${lesson.length})` : army.coachNear ? 'F or tap to talk' : 'Walk over to me',
+        };
+      } else army.bubble = null;
+    } else if (army.bubble) army.bubble = null;
+    tickQuips(dt, flying);
+
     throttledEmit();
   }
 
@@ -1262,25 +1464,50 @@ function Crowd({ boot }: { boot: ArmyBoot | null }) {
         <meshBasicMaterial color="#000" transparent opacity={0.4} depthWrite={false} />
       </mesh>
       <GuideArrow heli={heli} course={army.course} />
-      <SniperMission heli={heli} flying={() => army.mode === 'heli'} />
-      {RINGS.map((_, i) => (
-        <RingGate key={i} index={i} course={army.course} />
-      ))}
+      <group ref={coachGlow} visible={false}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, MAT_TOP + 0.001, 0]} renderOrder={2}>
+          <ringGeometry args={[0.018, 0.028, 32]} />
+          <meshBasicMaterial color="#b6ff4a" transparent opacity={0.85} depthWrite={false} />
+        </mesh>
+        <mesh position={[0, MAN_HEIGHT * 0.75, 0]} renderOrder={2}>
+          <cylinderGeometry args={[0.02, 0.026, MAN_HEIGHT * 1.5, 20, 1, true]} />
+          <meshBasicMaterial color="#c8ff6a" transparent opacity={0.16} depthWrite={false} side={THREE.DoubleSide} />
+        </mesh>
+        <pointLight position={[0, MAN_HEIGHT * 1.2, 0]} color="#b6ff4a" intensity={0.25} distance={0.35} decay={2} />
+      </group>
+      <SniperMission heli={heli} flying={() => army.mode === 'heli'} walker={() => (army.mode === 'ground' ? player.pos : null)} />
+      {/* The ring course hangs round the whole room: not in the reel's shot of the town. */}
+      {!film &&
+        RINGS.map((_, i) => (
+          <RingGate key={i} index={i} course={army.course} />
+        ))}
     </group>
   );
 }
 
-export function ArmyTownWorld({ boot }: { boot: ArmyBoot | null }) {
+export function ArmyTownWorld({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }) {
+  const town = useRef<THREE.Group>(null);
+  // In the reel the whole town springs up out of the rug, like a pop-up book.
+  useFrame(() => {
+    const g = town.current;
+    if (!g || !film) return;
+    const c = Math.min(1, filmClock.shotT / 1.3);
+    const s = 1.7;
+    const k = c <= 0 ? 0.001 : 1 + (s + 1) * Math.pow(c - 1, 3) + s * Math.pow(c - 1, 2);
+    g.scale.set(1, Math.max(0.001, k), 1);
+  });
   useEffect(() => {
     const life = openMiniGame('army');
     return () => life.close();
   }, []);
   return (
     <group>
-      <ArmyProps />
-      <Suspense fallback={null}>
-        <Crowd boot={boot} />
-      </Suspense>
+      <group ref={town}>
+        <ArmyProps />
+        <Suspense fallback={null}>
+          <Crowd boot={boot} film={film} />
+        </Suspense>
+      </group>
       {/* A bit of extra light over the rug, like a desk lamp pulled down to play. */}
       <pointLight position={[MAT.x, 1.3, MAT.z + 0.2]} intensity={0.9} distance={3.2} decay={2} color="#fff1dc" />
     </group>
@@ -1355,6 +1582,11 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
             Back to pad
           </button>
         )}
+        {a.siege !== 'story' && a.waveState !== 'won' && (
+          <button type="button" data-army-end onClick={() => controls.endSiege?.()} className={`${btn} border-red-300/60 bg-red-700/70 text-white`}>
+            End {a.siege} siege
+          </button>
+        )}
         {a.waveState === 'won' && !flying && (
           <button type="button" onClick={() => controls.againWaves?.()} className={`${btn} text-amber-200`}>
             Send another attack
@@ -1406,11 +1638,22 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
         )}
       </div>
 
-      {a.tip && a.tip !== 'done' && a.coachNear && !flying && (
-        <div className="pointer-events-none absolute bottom-24 left-1/2 z-10 w-[min(22rem,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border border-lime-300/50 bg-black/80 px-4 py-3 text-center shadow-2xl">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-lime-200">Green army</p>
-          <p className="mt-1 text-sm font-bold leading-snug text-white">{tutorialLine(a.tip, isTouch)}</p>
-        </div>
+      {a.quipBubble && !a.bubble && <SpeechBubble bubble={a.quipBubble} tone="thought" />}
+      {a.bubble && !flying && (
+        <SpeechBubble
+          bubble={a.bubble}
+          onNext={a.coach === 'talk' || a.coachNear ? () => controls.interact?.() : undefined}
+        />
+      )}
+      {(a.coach === 'wait' || a.coach === 'talk') && !flying && (
+        <button
+          type="button"
+          data-army-skip
+          onClick={() => controls.skipCoach?.()}
+          className="pointer-events-auto absolute bottom-16 right-4 rounded-xl border border-white/25 bg-black/55 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white/75"
+        >
+          Skip training
+        </button>
       )}
       {a.banner && (
         <div className="absolute left-1/2 top-[26%] -translate-x-1/2 text-center">
@@ -1438,10 +1681,10 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
             <>
               <span className="font-mono tabular-nums text-lime-200">{Math.round(a.heliSpeed * 100)} cm/s</span>
               <span className="font-mono tabular-nums text-cyan-200">{Math.round(a.heliAlt * 100)} cm up</span>
-              {!isTouch && <span className="text-white/65">W/S fly · A/D turn · Space up · Shift down · Q/E slide · Tab boost · drag to turn · C camera</span>}
+              {!isTouch && <span className="text-white/65">WASD fly · Arrows look · Space up · Shift down · Tab boost · drag to turn · C camera</span>}
             </>
           ) : (
-            !isTouch && <span className="text-white/65">W/S walk · A/D turn · Shift run · Space fire · drag to turn · F chopper · C camera</span>
+            !isTouch && <span className="text-white/65">WASD move · Arrows look · Shift run · Space fire · drag to turn · F talk / chopper · C camera</span>
           )}
         </div>
       </div>

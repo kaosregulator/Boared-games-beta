@@ -17,6 +17,9 @@ import {
 } from './course';
 import { CAR, ceilingAt, groundAt, newCar, placeCar, refillNitro, stepCar, TUNING, type CarState } from './carSim';
 import { BED_BOUNDS, BED_CLEAR, BLOCKS, DESK, ROOM, zoneAt, type ZoneId } from './world';
+import { Quipper, quipSeconds } from '../roomQuips';
+import { SpeechBubble } from '../army/SpeechBubble';
+import { stepLook } from '../army/armyKeys';
 import { motorSpeed, raceSfx, startMotor, stopRaceAudio, wakeRaceAudio } from './raceAudio';
 import { openMiniGame } from '../../engine/lifecycle';
 
@@ -50,8 +53,22 @@ export const hwRace = {
   airborne: false,
   looping: false,
   banner: null as null | { text: string; sub?: string; until: number },
+  /** What the car's thinking: under the bed, by the Hot Pockets, flat out on the floor. */
+  quip: null as null | { text: string; then?: string; until: number },
   listeners: new Set<() => void>(),
 };
+
+const carQuips = new Quipper({ gap: 16, cooldown: 45, chance: 0.08 });
+
+/** Now and then the car has something to say about where it's got to. */
+function tickCarQuip(dt: number, x: number, y: number, z: number) {
+  const now = performance.now();
+  const q = hwRace.quip;
+  if (q && now > q.until) hwRace.quip = q.then ? { text: q.then, until: now + quipSeconds(q.then) * 1000 } : null;
+  if (hwRace.quip) return;
+  const line = carQuips.tick(dt, 'car', x, y, z);
+  if (line) hwRace.quip = { text: line.text, then: line.then, until: now + quipSeconds(line.text) * 1000 };
+}
 
 function emit() {
   hwRace.listeners.forEach(fn => fn());
@@ -474,6 +491,18 @@ const _look = new THREE.Vector3();
 const _want = new THREE.Vector3();
 const _tmp = new THREE.Vector3();
 
+const UP = new THREE.Vector3(0, 1, 0);
+const _side = new THREE.Vector3();
+const wrapAngle = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+
+/** Tilt a view direction up (+) or down (-) about its own right-hand side. */
+function lookAround(dir: THREE.Vector3, pitch: number) {
+  if (!pitch) return dir;
+  _side.crossVectors(dir, UP);
+  if (_side.lengthSq() < 1e-8) return dir;
+  return dir.applyAxisAngle(_side.normalize(), pitch);
+}
+
 function insideSomething(p: THREE.Vector3) {
   if (p.x < ROOM.minX || p.x > ROOM.maxX || p.z < ROOM.minZ || p.z > ROOM.maxZ) return true;
   for (const b of BLOCKS) {
@@ -542,6 +571,8 @@ export function HotWheelsWorld({ spot, skipCountdown }: { spot: string | null; s
   const keys = useRef<Record<string, boolean>>({});
   const saved = useRef<{ near: number; fov: number } | null>(null);
   const camReady = useRef(false);
+  /** Arrow-key look: how far the camera has swung round the car and tilted. */
+  const look = useRef({ yaw: 0, pitch: 0 });
   const prevPos = useRef(start.p.clone());
   const lastEmit = useRef(0);
 
@@ -566,6 +597,7 @@ export function HotWheelsWorld({ spot, skipCountdown }: { spot: string | null; s
     hwRace.zone = null;
     hwRace.cam = 'chase';
     hwRace.banner = null;
+    hwRace.quip = null;
     emit();
     startMotor();
     if (skipCountdown) return;
@@ -591,8 +623,14 @@ export function HotWheelsWorld({ spot, skipCountdown }: { spot: string | null; s
       if (typing(e)) return;
       wakeRaceAudio();
       keys.current[e.code] = true;
-      if (e.code === 'KeyC' || e.code === 'KeyV') cycleCam();
-      if (e.code === 'KeyR') resetCar();
+      if (e.code === 'KeyC' || e.code === 'KeyV') {
+        cycleCam();
+        look.current = { yaw: 0, pitch: 0 };
+      }
+      if (e.code === 'KeyR') {
+        resetCar();
+        look.current = { yaw: 0, pitch: 0 };
+      }
       if (e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
     };
     const up = (e: KeyboardEvent) => {
@@ -661,10 +699,15 @@ export function HotWheelsWorld({ spot, skipCountdown }: { spot: string | null; s
     const dt = Math.min(rawDt, 0.05);
     const c = car.current;
     const k = keys.current;
-    const gas = k.KeyW || k.ArrowUp || touchDrive.gas || pad.y > 0.3;
-    const brake = k.KeyS || k.ArrowDown || touchDrive.brake || pad.y < -0.3;
-    const left = k.KeyA || k.ArrowLeft || touchDrive.left || pad.x < -0.3;
-    const right = k.KeyD || k.ArrowRight || touchDrive.right || pad.x > 0.3;
+    // WASD drives; the arrow keys look around, like walking the room.
+    const gas = k.KeyW || touchDrive.gas || pad.y > 0.3;
+    const brake = k.KeyS || touchDrive.brake || pad.y < -0.3;
+    const left = k.KeyA || touchDrive.left || pad.x < -0.3;
+    const right = k.KeyD || touchDrive.right || pad.x > 0.3;
+    const lookYaw = (k.ArrowLeft ? 1 : 0) - (k.ArrowRight ? 1 : 0);
+    const lookUp = (k.ArrowUp ? 1 : 0) - (k.ArrowDown ? 1 : 0);
+    if (lookYaw) look.current.yaw = wrapAngle(look.current.yaw + lookYaw * 1.9 * dt);
+    look.current.pitch = stepLook(look.current.pitch, lookUp, dt);
     const held = hwRace.phase === 'countdown';
     const input = {
       throttle: held ? 0 : (gas ? 1 : 0) - (brake ? 1 : 0),
@@ -692,6 +735,7 @@ export function HotWheelsWorld({ spot, skipCountdown }: { spot: string | null; s
       hwRace.zone = zone;
       raceSfx.zone(zone);
     }
+    tickCarQuip(dt, c.pos.x, c.pos.y, c.pos.z);
 
     if (hwRace.phase === 'racing') {
       hwRace.time += dt;
@@ -758,11 +802,17 @@ export function HotWheelsWorld({ spot, skipCountdown }: { spot: string | null; s
       const up = new THREE.Vector3(0, 1, 0).applyQuaternion(c.quat);
       camera.position.copy(c.pos).addScaledVector(up, 0.032).addScaledVector(fwd, 0.01);
       camera.up.set(0, 1, 0);
+      lookAround(fwd.applyAxisAngle(UP, look.current.yaw), look.current.pitch);
       _look.copy(camera.position).addScaledVector(fwd, 1);
       camera.lookAt(_look);
       camReady.current = false;
     } else {
       chaseTarget(c, mode, _want, _look);
+      // Arrows swing the camera round the car and tilt the view.
+      if (look.current.yaw) {
+        _want.sub(c.pos).applyAxisAngle(UP, look.current.yaw).add(c.pos);
+        _look.sub(c.pos).applyAxisAngle(UP, look.current.yaw).add(c.pos);
+      }
       clearShot(_look, _want, _want);
       const a = camReady.current ? 1 - Math.exp(-dt * (c.mode === 'loop' ? 3.5 : 7)) : 1;
       _cam.lerp(_want, a);
@@ -770,6 +820,7 @@ export function HotWheelsWorld({ spot, skipCountdown }: { spot: string | null; s
       camReady.current = true;
       camera.position.copy(_cam);
       camera.up.set(0, 1, 0);
+      if (look.current.pitch) _look.copy(_cam).add(lookAround(_tmp.subVectors(_look, _cam), look.current.pitch));
       camera.lookAt(_look);
     }
     const near = mode === 'birdseye' ? 0.03 : 0.006;
@@ -924,6 +975,8 @@ export function HotWheelsHud({ onExit }: { onExit: () => void }) {
         </div>
       )}
 
+      {race.quip && <SpeechBubble bubble={{ x: 0.5, y: 0.56, who: 'You, the car', text: race.quip.text }} tone="thought" />}
+
       <div className="pointer-events-auto absolute left-4 top-4 flex flex-wrap items-center gap-2">
         <button type="button" onClick={onExit} className="rounded-xl bg-amber-400 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-black">
           Stand up
@@ -996,7 +1049,7 @@ export function HotWheelsHud({ onExit }: { onExit: () => void }) {
           <span className="h-1.5 w-14 overflow-hidden rounded-full bg-white/15">
             <span className="block h-full bg-cyan-300" style={{ width: `${Math.round(race.nitro * 100)}%` }} />
           </span>
-          {!touch && <span className="text-white/65">WASD drive · Space nitro · C camera · R reset</span>}
+          {!touch && <span className="text-white/65">WASD drive · Arrows look · Space nitro · C camera (re-centres) · R reset</span>}
         </div>
       </div>
 

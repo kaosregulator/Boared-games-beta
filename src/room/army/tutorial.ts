@@ -1,21 +1,39 @@
 /**
- * The green soldier who walks over at the start of a story attack.
- * Three short lines. Each one waits until you have done it, then he goes back to the parade.
+ * Sergeant Green, the glowing soldier who meets you when you shrink down.
+ * Walk up to him and talk (F, or tap the bubble): the camera closes in on
+ * him and he runs through moving, looking and shooting, one line at a time,
+ * then the first tan wave steps out from behind the books.
  */
 
-export type Tip = 'move' | 'aim' | 'shoot' | 'done';
+export type Coach = 'wait' | 'talk' | 'done';
 
-export function tutorialLine(tip: Tip, touch: boolean) {
-  if (tip === 'move') return touch ? 'The arrows walk you around the town.' : 'W and S walk. A and D turn you.';
-  if (tip === 'aim') return touch ? 'Drag on the town to turn. Shots go the way you face.' : 'Drag on the floor to turn. Shots go the way you face.';
-  if (tip === 'shoot') return touch ? 'Fire is the big button on the right.' : 'Space fires along the way you are facing.';
-  return '';
+export const COACH_NAME = 'Sgt. Green';
+
+/** Where he waits for you, a few steps from where you land. */
+export const COACH_SPOT = { x: 0.27, z: 0.27 };
+
+/** How close you need to be before he'll talk. */
+export const COACH_REACH = 0.11;
+
+export function coachLesson(touch: boolean): string[] {
+  return [
+    "At ease, soldier! Welcome to the rug. I'm Sergeant Green. Listen up, this'll be quick.",
+    touch ? 'The arrows on the left walk you around the town.' : 'WASD walks you. W and S go forward and back, A and D step sideways. Hold Shift to run.',
+    touch
+      ? 'Drag on the town to turn and look around.'
+      : 'The arrow keys look around: left and right turn you, up and down tilt your view. Dragging works too.',
+    touch ? 'Fire is the big button on the right. Point first, then pop.' : "Space fires the way you're facing. Point first, then pop 'em.",
+    'C swaps the camera. F talks to people, and boards the chopper on the helipad.',
+    "The tan army's behind the books by the door. Here they come. Get to the sandbags!",
+  ];
 }
 
-/** The next line, once the player has actually done this one. */
-export function advanceTip(tip: Tip, did: { moved: boolean; turned: boolean; shot: boolean }): Tip {
-  if (tip === 'move' && did.moved) return 'aim';
-  if (tip === 'aim' && did.turned) return 'shoot';
-  if (tip === 'shoot' && did.shot) return 'done';
-  return tip;
+/** Seconds a line stays up before the next one, long enough to read. */
+export function lineSeconds(text: string) {
+  return Math.min(7, 1.8 + text.length * 0.045);
+}
+
+/** The next line, or null once he's done talking. */
+export function nextLine(index: number, lines: readonly string[]) {
+  return index + 1 < lines.length ? index + 1 : null;
 }

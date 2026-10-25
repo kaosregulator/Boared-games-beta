@@ -31,6 +31,7 @@ import { DynamicModel } from './UserProps';
 import { MOODS, type RoomMood } from './moods';
 import type { SavedPlacement } from './userPlacements';
 import { RoomTvGlass } from '../tv/TvSet';
+import { FilmTvPicture } from '../tv/FilmTvPicture';
 import { LightSwitch, TvGlow } from './LightSwitch';
 import { BedFurby, FURBY_CARD } from './furby/BedFurby';
 import { ISpyBookProp } from './ispy/ISpyGame';
@@ -414,6 +415,8 @@ export interface RealRoomSceneProps {
   hideGameboy?: boolean;
   /** The TV was left on: its picture plays on the room's CRT. */
   tvInRoom?: boolean;
+  /** The menu reel: the TV shows a lit picture on the glass itself. */
+  filmTv?: boolean;
   /** Wall switch off: only the TV, the lava lamps and the shelf's string lights glow. */
   lightsOut?: boolean;
   /** I Spy page: only the furniture stays; the loose stuff and the rug go. */
@@ -442,6 +445,7 @@ export function RealRoomScene({
   onLeaveTable,
   hideGameboy = false,
   tvInRoom = false,
+  filmTv = false,
   lightsOut = false,
   clearFloor = false,
   ispyOpen = false,
@@ -550,6 +554,7 @@ export function RealRoomScene({
       <PlacedModel id="dresser" hoveredId={hoveredId} card="dresser" />
       <PlacedModel id="crt" hoveredId={hoveredId} card="crt-tv">
         {tvInRoom && <RoomTvGlass />}
+        {filmTv && !tvInRoom && <FilmTvPicture />}
       </PlacedModel>
       <PlacedModel
         id="door"

@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { isTouchDevice } from '../../input';
 import { wakeArmyAudio } from '../armyAudio';
 import { DUCKS_PER_WAVE, SHELLS, WAVES_PER_ROUND, quota } from './range';
-import { ZOOM_LABEL, sniper, sniperControls, useSniper } from './state';
+import { setSniperHard, sniper, sniperControls, useSniper, zoomLabel } from './state';
+import { SpeechBubble } from '../SpeechBubble';
 
 /**
  * Everything on screen for the shelf sniper: the radio man's call, the scope,
@@ -11,38 +12,25 @@ import { ZOOM_LABEL, sniper, sniperControls, useSniper } from './state';
 
 const BULLET_CAM_LABEL = { hits: 'Bullet cam: hits', all: 'Bullet cam: every shot', off: 'Bullet cam: off' } as const;
 
-/** In the army HUD while the chopper sits on the shelf by the squad. */
+/** In the army HUD by the squad: hop out of the chopper, then walk up and talk. */
 export function SquadPrompt() {
   const s = useSniper();
   if (s.phase !== 'near') return null;
-  return (
-    <button
-      type="button"
-      onClick={() => sniperControls.talk?.()}
-      className="pointer-events-auto absolute bottom-28 left-1/2 -translate-x-1/2 rounded-full bg-lime-500 px-4 py-1.5 text-[12px] font-black uppercase tracking-[0.2em] text-black shadow-lg"
-    >
-      Psst! Up here · F to talk to the radio man
-    </button>
-  );
+  if (s.near === 'land') {
+    return (
+      <p className="pointer-events-none absolute bottom-28 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-lime-500 px-4 py-1.5 text-[12px] font-black uppercase tracking-[0.2em] text-black shadow-lg">
+        Psst! Hop out (F) and walk over to the radio man
+      </p>
+    );
+  }
+  return s.bubble ? <SpeechBubble bubble={s.bubble} onNext={() => sniperControls.talk?.()} /> : null;
 }
 
 function Talk() {
   return (
     <div data-sniper-talk className="pointer-events-auto absolute inset-x-0 bottom-0 flex justify-center p-4 sm:bottom-6">
-      <div className="w-full max-w-md rounded-3xl border-4 border-[#2f3d1a] bg-[#55652e]/95 p-5 text-center shadow-2xl">
-        <div className="mx-auto mb-3 flex h-8 w-20 items-center justify-center gap-1 rounded-lg bg-[#2f3d1a]">
-          {Array.from({ length: 6 }, (_, i) => (
-            <span key={i} className="h-4 w-1 animate-pulse rounded bg-lime-300" style={{ animationDelay: `${i * 90}ms` }} />
-          ))}
-        </div>
-        <p className="text-[11px] font-black uppercase tracking-[0.3em] text-lime-200">Radio man · shelf outpost</p>
-        <p className="mt-2 text-2xl font-black uppercase leading-tight text-white drop-shadow sm:text-3xl">We're under attack!</p>
-        <p className="mt-1 text-lg font-black uppercase text-amber-200">The ducks have taken over!</p>
-        <p className="mt-2 text-[13px] leading-snug text-white/85">
-          They came in through the window and set up camp by the beanbag. Private Scope here has the only rifle on the shelf, but he's
-          been lying down since 1994. Take his spot, soldier.
-        </p>
-        <div className="mt-4 flex flex-col gap-2">
+      <div className="w-full max-w-sm rounded-3xl border-4 border-[#2f3d1a] bg-[#55652e]/95 p-3 text-center shadow-2xl">
+        <div className="flex flex-col gap-2">
           <button
             type="button"
             onClick={() => {
@@ -58,7 +46,7 @@ function Talk() {
             onClick={() => sniperControls.leave?.()}
             className="rounded-2xl bg-black/30 px-4 py-2 text-[12px] font-bold uppercase tracking-wider text-white/80 hover:bg-black/45"
           >
-            Not now, I'm flying
+            Not now
           </button>
         </div>
       </div>
@@ -66,12 +54,26 @@ function Talk() {
   );
 }
 
-function Scope({ zoom }: { zoom: number }) {
+function Scope({ zoom, hard }: { zoom: number; hard: boolean }) {
   if (zoom === 1) {
     return (
       <div className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2">
         <span className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/80" />
         <span className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-white/80" />
+      </div>
+    );
+  }
+  if (!hard) {
+    // A see-through sight: just the ring and the crosshair, so the whole range stays in view.
+    return (
+      <div className="absolute inset-0">
+        <div className="absolute left-1/2 top-1/2 h-[46vmin] w-[46vmin] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/70 shadow-[0_0_0_1px_rgba(0,0,0,0.45)]" />
+        <span className="absolute left-1/2 top-1/2 h-px w-[46vmin] -translate-x-1/2 -translate-y-1/2 bg-white/75 shadow-[0_0_0_1px_rgba(0,0,0,0.35)]" />
+        <span className="absolute left-1/2 top-1/2 h-[46vmin] w-px -translate-x-1/2 -translate-y-1/2 bg-white/75 shadow-[0_0_0_1px_rgba(0,0,0,0.35)]" />
+        {[-3, -2, -1, 1, 2, 3].map(i => (
+          <span key={`h${i}`} className="absolute top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/85" style={{ left: `calc(50% + ${i * 3.2}vmin)` }} />
+        ))}
+        <span className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-red-500 shadow-[0_0_6px_rgba(255,0,0,0.9)]" />
       </div>
     );
   }
@@ -118,8 +120,13 @@ export function SniperHud() {
   const need = quota(s.round);
   return (
     <div data-sniper={s.phase} className="pointer-events-none absolute inset-0 z-40 select-none text-white">
-      {playing && <Scope zoom={s.zoom} />}
-      {cine && (
+      {playing && <Scope zoom={s.zoom} hard={s.hard} />}
+      {cine && !s.hard && (
+        <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/55 px-4 py-1 text-[11px] font-black uppercase tracking-[0.4em] text-amber-200">
+          Bullet cam <span className="text-white/45">· click or Space to skip</span>
+        </p>
+      )}
+      {cine && s.hard && (
         <>
           <div className="absolute inset-x-0 top-0 h-[11vh] bg-black" />
           <div className="absolute inset-x-0 bottom-0 flex h-[11vh] items-center justify-center bg-black">
@@ -128,6 +135,9 @@ export function SniperHud() {
             </p>
           </div>
         </>
+      )}
+      {(s.phase === 'brief' || s.phase === 'talk') && s.bubble && (
+        <SpeechBubble bubble={s.bubble} onNext={s.phase === 'brief' ? () => sniperControls.nextBrief?.() : undefined} />
       )}
       {s.phase === 'talk' && <Talk />}
 
@@ -140,7 +150,16 @@ export function SniperHud() {
             {playing && (
               <>
                 <button type="button" onClick={() => sniperControls.zoom?.()} className={`${btn} text-lime-100`}>
-                  Zoom: {ZOOM_LABEL[s.zoom]}
+                  Zoom: {zoomLabel(s.zoom, s.hard)}
+                </button>
+                <button
+                  type="button"
+                  data-sniper-hard={s.hard ? 'on' : 'off'}
+                  onClick={() => setSniperHard(!s.hard)}
+                  className={`${btn} ${s.hard ? 'border-red-300/60 bg-red-800/70 text-white' : 'text-white/80'}`}
+                  title="Hard mode: tighter zoom and a black scope ring"
+                >
+                  Hard mode: {s.hard ? 'on' : 'off'}
                 </button>
                 <button type="button" onClick={() => sniperControls.cycleBulletCam?.()} className={`${btn} text-amber-100`}>
                   {BULLET_CAM_LABEL[s.bulletCam]}
@@ -224,7 +243,7 @@ export function SniperHud() {
       )}
       {s.radio && (playing || cine) && (
         <div className="absolute bottom-28 right-4 max-w-[16rem] rounded-2xl border border-lime-300/40 bg-[#2f3d1a]/90 px-3 py-2 shadow-xl">
-          <p className="text-[9px] font-black uppercase tracking-[0.25em] text-lime-200">Radio man</p>
+          <p className="text-[9px] font-black uppercase tracking-[0.25em] text-lime-200">{s.radio.who ?? 'Radio man'}</p>
           <p className="text-[13px] font-bold leading-snug">{s.radio.text}</p>
         </div>
       )}
