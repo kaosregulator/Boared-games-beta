@@ -10,6 +10,18 @@ export const RADIO_BRIEF = [
   "Go talk to the sniper when you're ready. He's the flat one, right next to me.",
 ] as const;
 
+/**
+ * With Sarge's voice loaded the briefing is his DUCK_STORY lines (a
+ * situation, a stealth approach, "we can help", "let's hit that target"),
+ * each followed in the bubble by the bit of the story his words leave out.
+ */
+export const DUCK_STORY_TAIL = [
+  'The ducks came in through the window and took the beanbag.',
+  "Keep it down, Mom thinks we're asleep.",
+  "Private Scope has the only rifle on the shelf. He's been lying down since 1994.",
+  "Go talk to the sniper when you're ready. He's the flat one, right next to me.",
+] as const;
+
 export const SNIPER_PITCH =
   "Private Scope, reporting. My legs fell asleep in '94. Ducks by the beanbag. Want the rifle?";
 
