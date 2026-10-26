@@ -23,6 +23,12 @@ import { speakerInput } from '../tv/surround';
  */
 export const MONITOR = { x: -0.156, y: 0.879, z: 0.019, w: 0.33, h: 0.2475, tilt: -0.18 };
 const SCREEN_PX = 800;
+/**
+ * The build id in the URL makes each deploy a new address, so a browser that
+ * still holds an older pc.html (it used to be cached for a day) can't keep
+ * showing the old Windows.
+ */
+const PC_SRC = `/pc.html?boot&v=${import.meta.env?.VITE_BUILD_ID ?? 'dev'}`;
 
 // ---------- power and messages ----------
 
@@ -199,7 +205,7 @@ export function PcGlass({ inRoom }: { inRoom: boolean }) {
       <iframe
         ref={ref}
         title="Windows 98"
-        src="/pc.html?boot"
+        src={PC_SRC}
         width={SCREEN_PX}
         height={600}
         allow="autoplay; fullscreen"

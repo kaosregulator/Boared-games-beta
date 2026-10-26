@@ -3,6 +3,9 @@ WORKDIR /app
 COPY package.json package-lock.json* bun.lock* ./
 RUN npm install
 COPY . .
+# Railway hands these to the build when they're declared; they stamp dist/build.json.
+ARG RAILWAY_GIT_COMMIT_SHA
+ARG RAILWAY_GIT_BRANCH
 RUN npm run build
 
 FROM node:22-bookworm-slim AS runner
