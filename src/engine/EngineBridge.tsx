@@ -9,10 +9,15 @@ import { frameFps, noteFrame, noteRenderer, startPerfObservers } from './perf';
  */
 export function EngineBridge() {
   const gl = useThree(state => state.gl);
+  const scene = useThree(state => state.scene);
   const acc = useRef(0);
   useEffect(() => {
     startPerfObservers();
   }, []);
+  // For perf scripts: window.__three.gl.info, the scene's lights and programs.
+  useEffect(() => {
+    (window as unknown as { __three?: unknown }).__three = { gl, scene };
+  }, [gl, scene]);
   useFrame((_, dt) => {
     const ms = dt * 1000;
     noteFrame(ms);

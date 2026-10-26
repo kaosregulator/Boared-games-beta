@@ -43,6 +43,24 @@ export function setGlassBig(id: string, rect: FlatRect | null) {
 
 const eps = (v: number) => (Math.abs(v) < 1e-10 ? 0 : v);
 
+/**
+ * Writes a style only when it changed. The glass is placed every frame, and
+ * re-writing the same transform still makes the browser restyle the layer;
+ * with Windows or a show in it, that is work taken from the frame for nothing
+ * whenever the camera is still.
+ */
+const written = new WeakMap<HTMLElement, Record<string, string>>();
+function put(el: HTMLElement, key: 'transform' | 'perspective' | 'width' | 'height' | 'display' | 'background' | 'transformOrigin', value: string) {
+  let rec = written.get(el);
+  if (!rec) {
+    rec = {};
+    written.set(el, rec);
+  }
+  if (rec[key] === value) return;
+  rec[key] = value;
+  el.style[key] = value;
+}
+
 function cssMatrix(m: THREE.Matrix4, mul: number[], prepend = '') {
   let out = 'matrix3d(';
   for (let i = 0; i < 16; i += 1) out += eps(mul[i] * m.elements[i]) + (i !== 15 ? ',' : ')');
@@ -141,7 +159,7 @@ export function GlassAnchor({ id, position, rotation = [0, 0, 0], width, widthPx
   useEffect(
     () => () => {
       const nodes = surfaces.get(id);
-      if (nodes) nodes.root.style.display = 'none';
+      if (nodes) put(nodes.root, 'display', 'none');
     },
     [id],
   );
@@ -168,29 +186,29 @@ export function GlassAnchor({ id, position, rotation = [0, 0, 0], width, widthPx
       const k = Math.min(big.w / nw, big.h / nh);
       const x = big.x + (big.w - nw * k) / 2;
       const y = big.y + (big.h - nh * k) / 2;
-      nodes.root.style.perspective = 'none';
-      nodes.root.style.background = '#000';
-      nodes.cam.style.transform = 'none';
-      nodes.obj.style.transformOrigin = '0 0';
-      nodes.obj.style.transform = `translate(${x}px,${y}px) scale(${k})`;
-      nodes.root.style.display = 'block';
+      put(nodes.root, 'perspective', 'none');
+      put(nodes.root, 'background', '#000');
+      put(nodes.cam, 'transform', 'none');
+      put(nodes.obj, 'transformOrigin', '0 0');
+      put(nodes.obj, 'transform', `translate(${x}px,${y}px) scale(${k})`);
+      put(nodes.root, 'display', 'block');
       return;
     }
-    nodes.root.style.background = '';
-    nodes.obj.style.transformOrigin = '';
+    put(nodes.root, 'background', '');
+    put(nodes.obj, 'transformOrigin', '');
     const cam = camera as THREE.PerspectiveCamera;
     const w = size.width;
     const h = size.height;
     const fov = cam.projectionMatrix.elements[5] * (h / 2);
-    nodes.root.style.perspective = `${fov}px`;
-    nodes.cam.style.width = `${w}px`;
-    nodes.cam.style.height = `${h}px`;
-    nodes.cam.style.transform = `translateZ(${fov}px)${cssMatrix(cam.matrixWorldInverse, CAMERA_MUL)}translate(${w / 2}px,${h / 2}px)`;
-    nodes.obj.style.transform = cssMatrix(group.matrixWorld, objectMul(factor), 'translate(-50%,-50%)');
+    put(nodes.root, 'perspective', `${fov}px`);
+    put(nodes.cam, 'width', `${w}px`);
+    put(nodes.cam, 'height', `${h}px`);
+    put(nodes.cam, 'transform', `translateZ(${fov}px)${cssMatrix(cam.matrixWorldInverse, CAMERA_MUL)}translate(${w / 2}px,${h / 2}px)`);
+    put(nodes.obj, 'transform', cssMatrix(group.matrixWorld, objectMul(factor), 'translate(-50%,-50%)'));
     // Only show the glass from in front.
     toCam.setFromMatrixPosition(cam.matrixWorld).sub(here.setFromMatrixPosition(group.matrixWorld));
     normal.set(0, 0, 1).transformDirection(group.matrixWorld);
-    nodes.root.style.display = toCam.dot(normal) > 0 ? 'block' : 'none';
+    put(nodes.root, 'display', toCam.dot(normal) > 0 ? 'block' : 'none');
   };
 
   return <group ref={anchor} position={position} rotation={rotation} />;

@@ -61,6 +61,8 @@ import { registerRoomCatalog } from '../engine/registerRoom';
 import { bootOptionalContent } from '../engine/preload';
 import { useGraphics } from '../engine/useGraphics';
 import { EngineBridge } from '../engine/EngineBridge';
+import { LightBudget, SceneWarmup } from '../engine/SceneWarmup';
+import { DemandTicker } from '../engine/DemandTicker';
 import { diagnosticsEnabled } from '../engine/diagGate';
 import { noteContextLoss, noteContextRestored } from '../engine/recovery';
 import { disposeIfUnshared } from '../engine/cache';
@@ -151,6 +153,12 @@ interface WalkRoomProps {
   onOpenBoard: (game: GameMetadata) => void;
   onOpenRulesForGame?: (game: GameMetadata) => void;
 }
+
+/**
+ * Point lights LightBudget keeps in the scene: the room's 20 and the PC's
+ * glow. A game's lamps take the place of the shelf bulbs and lava lamp glows.
+ */
+const ROOM_LIGHT_BUDGET = 21;
 
 const ALL_SLOTS = [...SHELF_SLOTS, ...SHELF_SLOTS_LOWER, ...DESK_SLOTS];
 
@@ -295,6 +303,8 @@ export function WalkRoom({
   const viewKind = seated || padUp ? 'gameboy' : tvOn || atPc ? 'tv' : device === 'boombox' ? 'radio' : null;
   const big = rig.big && (tvOn || seated || atPc);
   const [flashPhase, setFlashPhase] = useState<'idle' | 'cover' | 'reveal'>('idle');
+  /** Sat at the computer with the camera settled: the room draws on demand. */
+  const atPcStill = atPc && flashPhase === 'idle';
   const radioState = useRadio();
   const tapeOn = radioState.power;
   const radioError = radioState.error;
@@ -825,14 +835,14 @@ export function WalkRoom({
   );
   // Capture scripts open things with window.__cardAction and flip the wall
   // switch with window.__lightsOut, and boot the computer with window.__pcPower
-  // (dev server only).
+  // (dev server, or ?diag=1 on a build for the perf scripts).
   useEffect(() => {
-    if (!import.meta.env.DEV) return;
+    if (!diagOn) return;
     const w = window as unknown as { __cardAction?: typeof runCardAction; __lightsOut?: (out: boolean) => void; __pcPower?: () => void };
     w.__cardAction = runCardAction;
     w.__lightsOut = setLightsOut;
     w.__pcPower = powerOnPc;
-  }, [runCardAction]);
+  }, [runCardAction, diagOn]);
 
   // An old commercial on a card pauses the room music; closing it brings the music back.
   const onCardVideo = useCallback(
@@ -865,9 +875,20 @@ export function WalkRoom({
         style={{ touchAction: 'none' }}
         // Nothing to draw while something is held up over the whole room;
         // seated with the Game Boy, draw on demand so the emulator gets the thread.
-        // Behind the title reel the room only draws when something loads in, so
-        // it's ready the moment play is pressed without burning the GPU meanwhile.
-        frameloop={override.capture || seated || (!engaged && !scripted) ? 'demand' : holding ? 'never' : 'always'}
+        // Behind the title reel the room doesn't draw at all: SceneWarmup builds
+        // its shaders and uploads its textures in the background instead, so it
+        // is ready the moment play is pressed and the reel plays smoothly meanwhile.
+        // At the PC the view is still, so it only draws when something changes
+        // and Windows (same thread, in its iframe) gets the time.
+        frameloop={
+          !engaged && !scripted
+            ? 'never'
+            : override.capture || seated || atPcStill
+              ? 'demand'
+              : holding
+                ? 'never'
+                : 'always'
+        }
         dpr={override.capture ? override.dpr : gfx.dpr}
         camera={{ fov: 72, near: 0.08, far: 40, position: [0.02, 1.58, 1.32] }}
         // alpha so the room TV's picture can show through the hole cut for it (RoomTvGlass)
@@ -909,6 +930,10 @@ export function WalkRoom({
       >
         <color attach="background" args={['#2a2030']} />
         <EngineBridge />
+        <SceneWarmup />
+        {atPcStill && <DemandTicker idleFps={8} />}
+        {/* The light count never changes, so no shader is rebuilt when a game or the PC switches on. */}
+        <LightBudget budget={ROOM_LIGHT_BUDGET} />
         <RealRoomScene
           games={games}
           hoveredId={aimed?.inReach ? aimed.id : null}

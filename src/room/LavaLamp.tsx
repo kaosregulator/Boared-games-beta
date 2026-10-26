@@ -211,7 +211,8 @@ export function LavaLamp({ spec, light = true }: { spec: LavaSpec; light?: boole
         <shaderMaterial ref={material} vertexShader={vertex} fragmentShader={fragment} uniforms={uniforms} side={THREE.FrontSide} />
       </mesh>
       {light && (
-        <pointLight ref={glow} position={[0, H * 0.45, 0]} color={spec.wax} intensity={0.55} distance={1.5} decay={2} />
+        // Expendable: steps out while a game's own lamps are in (LightBudget).
+        <pointLight ref={glow} position={[0, H * 0.45, 0]} color={spec.wax} intensity={0.55} distance={1.5} decay={2} userData={{ expendable: 2 }} />
       )}
     </group>
   );

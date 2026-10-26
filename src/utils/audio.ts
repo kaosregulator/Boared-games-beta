@@ -200,20 +200,29 @@ class SoundEngine {
   }
 
   /** Soft footfall on bedroom floorboards; alternates weight per step. */
+  private stepScuffs: AudioBuffer[] | null = null;
+
   public playFootstep(heavy = false) {
     if (this.muted) return;
     this.initCtx();
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     const len = 0.11;
-    const buffer = this.ctx.createBuffer(1, Math.ceil(this.ctx.sampleRate * len), this.ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < data.length; i += 1) {
-      const decay = Math.pow(1 - i / data.length, 3.2);
-      data[i] = (Math.random() * 2 - 1) * decay;
+    // Two scuffs made once and alternated, instead of a fresh buffer every step.
+    if (!this.stepScuffs) {
+      const make = () => {
+        const buffer = this.ctx!.createBuffer(1, Math.ceil(this.ctx!.sampleRate * len), this.ctx!.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i += 1) {
+          const decay = Math.pow(1 - i / data.length, 3.2);
+          data[i] = (Math.random() * 2 - 1) * decay;
+        }
+        return buffer;
+      };
+      this.stepScuffs = [make(), make()];
     }
     const src = this.ctx.createBufferSource();
-    src.buffer = buffer;
+    src.buffer = this.stepScuffs[heavy ? 1 : 0];
     const filter = this.ctx.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(heavy ? 420 : 320, t);
