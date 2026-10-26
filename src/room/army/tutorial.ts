@@ -2,7 +2,9 @@
  * Sergeant Green, the glowing soldier who meets you when you shrink down.
  * Walk up to him and talk (F, or tap the bubble): the camera closes in on
  * him and he runs through moving, looking and shooting, one line at a time,
- * then the first tan wave steps out from behind the books.
+ * then the first tan wave steps out from behind the books. With Sarge's
+ * voice loaded, each of his recorded intro lines plays first and its step
+ * card (coachCards) comes up once he's said it.
  */
 
 export type Coach = 'wait' | 'talk' | 'done';
@@ -28,12 +30,17 @@ export function coachLesson(touch: boolean): string[] {
   ];
 }
 
+/** The step cards under Sarge's five intro lines: the lesson without its hello. */
+export function coachCards(touch: boolean) {
+  return coachLesson(touch).slice(1);
+}
+
 /** Seconds a line stays up before the next one, long enough to read. */
 export function lineSeconds(text: string) {
   return Math.min(7, 1.8 + text.length * 0.045);
 }
 
 /** The next line, or null once he's done talking. */
-export function nextLine(index: number, lines: readonly string[]) {
+export function nextLine(index: number, lines: readonly unknown[]) {
   return index + 1 < lines.length ? index + 1 : null;
 }

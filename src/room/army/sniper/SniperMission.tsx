@@ -32,7 +32,8 @@ import {
 } from './range';
 import { DUCK_ASPECT, DUCK_FRAMES, duckSheet, flashTexture, grassTexture, skyTexture } from './duckArt';
 import { sniperSfx } from './sniperAudio';
-import { RADIO_BRIEF, SNIPER_PITCH, emitSniper, sniper, sniperControls, zoomFov, type Zoom } from './state';
+import { DUCK_STORY_TAIL, RADIO_BRIEF, SNIPER_PITCH, emitSniper, sniper, sniperControls, zoomFov, type Zoom } from './state';
+import { DUCK_STORY, loadSarge, sargeClips, sargePlay, sargeReady, sargeSay, sargeStop, type SargeClip, type SargeTag } from '../sargeVoice';
 import { headOnScreen } from '../SpeechBubble';
 import { lineSeconds } from '../tutorial';
 import { Quipper, quipSeconds } from '../../roomQuips';
@@ -58,7 +59,23 @@ const LINES = {
   over: ['The ducks win. They’ve taken the beanbag.', 'Retreat! They’ve got the high ground… the beanbag.'],
 };
 
+/** Sarge's moment for each kind of line on the range, where he has one. */
+const VOICE: Partial<Record<keyof typeof LINES, SargeTag>> = {
+  start: 'duck-start',
+  hit: 'duck-hit',
+  miss: 'duck-miss',
+  perfect: 'duck-perfect',
+  over: 'duck-over',
+};
+
 function line(kind: keyof typeof LINES, seconds = 2.6) {
+  // Sarge says it when he's got a line for it and has been quiet long enough; otherwise the radio man's written one.
+  const tag = VOICE[kind];
+  const said = tag ? sargeSay(tag, { quiet: kind === 'start' || kind === 'over' || kind === 'perfect' ? 1 : 5, cool: kind === 'hit' || kind === 'miss' ? 8 : 0 }) : null;
+  if (said?.text) {
+    sniper.radio = { text: said.text, who: 'Sarge', until: performance.now() + Math.max(seconds, said.dur + 0.6) * 1000 };
+    return;
+  }
   const pool = LINES[kind];
   sniper.radio = { text: pool[Math.floor(Math.random() * pool.length)], until: performance.now() + seconds * 1000 };
 }
@@ -337,6 +354,8 @@ export function SniperMission({
     leaveAt: 0,
     /** Seconds the current briefing line has been up. */
     briefT: 0,
+    /** Sarge's voice for the briefing, one clip per bubble (empty without the voice). */
+    story: [] as SargeClip[],
   });
   const keys = useRef<Record<string, boolean>>({});
   const scopeQuips = useMemo(() => new Quipper({ gap: 22, cooldown: 0, chance: 0.12 }), []);
@@ -400,8 +419,28 @@ export function SniperMission({
     sniperSfx.hail();
     if (sniper.near === 'radio') {
       sniper.briefLine = 0;
+      const story = sargeReady() ? sargeClips(DUCK_STORY) : [];
+      run.current.story = story.length === DUCK_STORY.length ? story : [];
+      voiceBrief();
       setPhase('brief');
     } else setPhase('talk');
+  }
+
+  /** Sarge says this bubble's line of the story. */
+  function voiceBrief() {
+    const clip = run.current.story[sniper.briefLine];
+    if (clip) sargePlay(clip);
+  }
+
+  /** The bubble: Sarge's words, then the bit of the story they leave out (or the written briefing). */
+  function briefText(i: number) {
+    const clip = run.current.story[i];
+    return clip ? `${clip.text} ${DUCK_STORY_TAIL[i]}` : RADIO_BRIEF[i];
+  }
+
+  function briefSeconds(i: number) {
+    const clip = run.current.story[i];
+    return Math.max(lineSeconds(briefText(i)) + 0.6, clip ? clip.dur + 1.2 : 0);
   }
 
   function nextBrief() {
@@ -409,6 +448,7 @@ export function SniperMission({
     run.current.briefT = 0;
     if (sniper.briefLine + 1 < RADIO_BRIEF.length) {
       sniper.briefLine += 1;
+      voiceBrief();
       emitSniper();
     } else endBrief();
   }
@@ -418,6 +458,7 @@ export function SniperMission({
     if (sniper.phase !== 'brief') return;
     sniper.briefed = true;
     sniper.bubble = null;
+    if (run.current.story.length) sargeStop();
     restoreLens();
     sniper.phase = 'off';
     sniper.near = null;
@@ -556,6 +597,7 @@ export function SniperMission({
 
   // Controls for the HUD, keys and the pointer.
   useEffect(() => {
+    void loadSarge();
     sniperControls.talk = talk;
     sniperControls.nextBrief = nextBrief;
     sniperControls.accept = accept;
@@ -777,7 +819,7 @@ export function SniperMission({
     }
     if (sniper.phase === 'brief') {
       r.briefT += dt;
-      if (r.briefT > lineSeconds(RADIO_BRIEF[sniper.briefLine]) + 0.6) nextBrief();
+      if (r.briefT > briefSeconds(sniper.briefLine)) nextBrief();
     }
 
     // The radio man bounces while he's got something to say.
@@ -840,7 +882,7 @@ export function SniperMission({
     let next: typeof sniper.bubble = null;
     if (p === 'brief') {
       const at = radioHead();
-      if (at) next = { ...at, who: 'Radio man', text: RADIO_BRIEF[sniper.briefLine], hint: `F or tap · next (${sniper.briefLine + 1}/${RADIO_BRIEF.length})` };
+      if (at) next = { ...at, who: 'Radio man', text: briefText(sniper.briefLine), hint: `F or tap · next (${sniper.briefLine + 1}/${RADIO_BRIEF.length})` };
     } else if (p === 'talk' && run.current.t > 0.7) {
       const at = sniperHead();
       if (at) next = { ...at, who: 'Pvt. Scope', text: SNIPER_PITCH };
