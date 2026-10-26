@@ -15,6 +15,13 @@ import { DisplayProps } from './DisplayProps';
 import { RunDialog } from './RunDialog';
 import { Help } from './Help';
 import { Solitaire } from './Solitaire';
+import { CardGame } from './CardGame';
+import { Tetris } from './Tetris';
+import { TaiPei } from './TaiPei';
+import { Pegged } from './Pegged';
+import { Arcade } from './Arcade';
+import { WebGame } from './WebGame';
+import { launch } from '../os/launch';
 import { AntiVirus, Popup, Y2KClock, closePopup } from '../os/gags';
 
 /** Every open window, each wrapped in its frame. */
@@ -101,6 +108,51 @@ function AppFrame({ win }: { win: WinState }) {
       return (
         <Window win={win}>
           <Solitaire win={win} />
+        </Window>
+      );
+    case 'freecell':
+    case 'hearts':
+    case 'spider':
+      return (
+        <Window win={win}>
+          <CardGame win={win} game={win.app} />
+        </Window>
+      );
+    case 'tetris':
+      return (
+        <Window win={win} resizable={false} maximizable={false}>
+          <Tetris win={win} />
+        </Window>
+      );
+    case 'taipei':
+      return (
+        <Window win={win} resizable={false} maximizable={false}>
+          <TaiPei win={win} />
+        </Window>
+      );
+    case 'pegged':
+      return (
+        <Window win={win} resizable={false} maximizable={false}>
+          <Pegged win={win} />
+        </Window>
+      );
+    case 'arcade':
+      return (
+        <Window win={win}>
+          <Arcade win={win} />
+        </Window>
+      );
+    case 'webgame':
+      // Closing a web game lands back online, on the old-school portal page.
+      return (
+        <Window
+          win={win}
+          onClose={() => {
+            closeWindow(win.id);
+            launch('ie', 'portal');
+          }}
+        >
+          <WebGame win={win} />
         </Window>
       );
     case 'popup':

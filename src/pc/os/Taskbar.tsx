@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Flag, Icon, type IconName } from './icons';
 import { launch } from './launch';
+import { openWebGame, SANDWICH_STACKER, THING_THING } from '../apps/webgames';
 import { getSettings, setSettings, useSettings } from './settings';
 import { getVolume, setVolume, sfx } from './sound';
 import { messageBox, minimizeWindow, toggleFromTaskbar, useWm } from './wm';
@@ -33,15 +34,37 @@ function buildStart(onShutDown: () => void, onLogOff: () => void): StartItem[] {
               label: 'Games',
               icon: 'programs',
               children: [
+                { label: 'FreeCell', icon: 'freecell', onClick: () => launch('freecell') },
+                { label: 'Hearts', icon: 'hearts', onClick: () => launch('hearts') },
                 { label: 'Minesweeper', icon: 'mine', onClick: () => launch('minesweeper') },
                 { label: 'Pinball', icon: 'pinball', onClick: () => launch('pinball') },
                 { label: 'Solitaire', icon: 'solitaire', onClick: () => launch('solitaire') },
+                { label: 'Spider Solitaire', icon: 'spider', onClick: () => launch('spider') },
               ],
             },
             { label: 'Notepad', icon: 'notepad', onClick: () => launch('notepad') },
             { label: 'Paint', icon: 'paint', onClick: () => launch('paint') },
             { label: 'WordPad', icon: 'wordpad', onClick: () => launch('wordpad') },
             { label: 'WordArt', icon: 'wordart', onClick: () => launch('wordpad', { wordart: true }, 'WordArt - WordPad') },
+          ],
+        },
+        {
+          label: 'Entertainment Pack',
+          icon: 'programs',
+          children: [
+            { label: 'Pegged', icon: 'pegged', onClick: () => launch('pegged') },
+            { label: 'TaiPei', icon: 'taipei', onClick: () => launch('taipei') },
+            { label: 'Tetris', icon: 'tetris', onClick: () => launch('tetris') },
+          ],
+        },
+        {
+          label: 'Internet Games',
+          icon: 'programs',
+          children: [
+            { label: 'Cartoon Network Arcade', icon: 'arcade', onClick: () => launch('arcade') },
+            { label: 'Sandwich Stacker', icon: 'sandwich', onClick: () => openWebGame(SANDWICH_STACKER) },
+            { label: 'Thing-Thing', icon: 'thing', onClick: () => openWebGame(THING_THING) },
+            { label: 'RadNet Kids Portal', icon: 'ie', onClick: () => launch('ie', 'portal') },
           ],
         },
         { label: 'Internet Explorer', icon: 'ie', onClick: () => launch('ie') },
@@ -56,6 +79,7 @@ function buildStart(onShutDown: () => void, onLogOff: () => void): StartItem[] {
       children: [
         { label: 'Channels', icon: 'folder', onClick: () => launch('ie', 'channels') },
         { label: 'Cool Sites', icon: 'ie', onClick: () => launch('ie', 'cool') },
+        { label: 'RadNet Kids', icon: 'ie', onClick: () => launch('ie', 'portal') },
         { label: 'Under Construction', icon: 'ie', onClick: () => launch('ie') },
       ],
     },

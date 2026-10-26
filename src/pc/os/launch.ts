@@ -2,9 +2,10 @@ import type { IconName } from './icons';
 import { hourglass } from './settings';
 import { sfx } from './sound';
 import { messageBox, openWindow, type AppId } from './wm';
+import { openWebGame, SANDWICH_STACKER, THING_THING } from '../apps/webgames';
 
 /** Title, icon and opening size for every program. The components live in apps/index.tsx. */
-export type LaunchId = Exclude<AppId, 'dialog' | 'popup' | 'antivirus'>;
+export type LaunchId = Exclude<AppId, 'dialog' | 'popup' | 'antivirus' | 'webgame'>;
 
 export const APP_INFO: Record<LaunchId, { title: string; icon: IconName; w: number; h: number; single?: boolean; load?: number }> = {
   minesweeper: { title: 'Minesweeper', icon: 'mine', w: 170, h: 260, single: true },
@@ -20,6 +21,15 @@ export const APP_INFO: Record<LaunchId, { title: string; icon: IconName; w: numb
   help: { title: 'Windows Help', icon: 'help', w: 470, h: 360, single: true },
   solitaire: { title: 'Solitaire', icon: 'solitaire', w: 600, h: 470, single: true, load: 600 },
   y2k: { title: 'Y2K Countdown', icon: 'warning', w: 300, h: 250, single: true },
+  // Card games from btahir/stillplay (public/pc/stillplay/), each in an iframe.
+  freecell: { title: 'FreeCell', icon: 'freecell', w: 640, h: 500, single: true, load: 600 },
+  hearts: { title: 'The Microsoft Hearts Network', icon: 'hearts', w: 660, h: 566, single: true, load: 600 },
+  spider: { title: 'Spider Solitaire', icon: 'spider', w: 680, h: 520, single: true, load: 600 },
+  // Windows Entertainment Pack remakes.
+  tetris: { title: 'Tetris', icon: 'tetris', w: 292, h: 404, single: true, load: 500 },
+  taipei: { title: 'TaiPei', icon: 'taipei', w: 640, h: 500, single: true, load: 600 },
+  pegged: { title: 'Pegged', icon: 'pegged', w: 330, h: 390, single: true, load: 400 },
+  arcade: { title: 'Cartoon Network Arcade', icon: 'arcade', w: 520, h: 440, single: true, load: 900 },
 };
 
 export function launch(app: LaunchId, arg?: unknown, title?: string) {
@@ -52,6 +62,18 @@ export const COMMANDS: Record<string, () => void> = {
   sol: () => launch('solitaire'),
   solitaire: () => launch('solitaire'),
   y2k: () => launch('y2k'),
+  freecel: () => launch('freecell'),
+  freecell: () => launch('freecell'),
+  mshearts: () => launch('hearts'),
+  hearts: () => launch('hearts'),
+  spider: () => launch('spider'),
+  tetris: () => launch('tetris'),
+  tp: () => launch('taipei'),
+  taipei: () => launch('taipei'),
+  pegged: () => launch('pegged'),
+  arcade: () => launch('arcade'),
+  sandwich: () => openWebGame(SANDWICH_STACKER),
+  thingthing: () => openWebGame(THING_THING),
   control: () => launch('explorer', 'Control Panel', 'Control Panel'),
   winhelp: () => launch('help'),
   'desk.cpl': () => launch('display'),
@@ -82,3 +104,6 @@ export function runCommand(raw: string): boolean {
   });
   return false;
 }
+
+// Dev hook for scripts and screenshots: window.__run('taipei') is the same as typing it into Run.
+(window as unknown as { __run?: typeof runCommand }).__run = runCommand;

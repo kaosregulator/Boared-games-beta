@@ -9,7 +9,7 @@ import { Icon } from './icons';
 import { Login } from './Login';
 import { Screensaver } from './Screensaver';
 import { getSettings, hourglass, useSettings } from './settings';
-import { resume, setRoomLevel, setVolume, sfx } from './sound';
+import { preloadSamples, resume, setRoomLevel, setVolume, sfx } from './sound';
 import { StartMenu, Taskbar } from './Taskbar';
 import { closeAll, getWm } from './wm';
 import { Bsod, useGagOverlay, useRandomGags, Y2KOverlay } from './gags';
@@ -38,6 +38,8 @@ export function Shell() {
   }, [focus]);
   useEffect(() => {
     toRoom({ evt: 'power', on: phase !== 'off' && phase !== 'safe' });
+    // fetch the Windows sounds while the BIOS counts memory
+    if (phase === 'bios') preloadSamples();
   }, [phase]);
 
   const power = useCallback(() => {

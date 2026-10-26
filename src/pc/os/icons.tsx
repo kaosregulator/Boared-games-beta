@@ -1,9 +1,10 @@
 import React from 'react';
 
 /**
- * Hand-drawn 32×32 icons in the late-90s style: hard pixel edges, a light
- * source from the top left, and a black outline. Drawn for this project; none
- * are copied out of Windows.
+ * Desktop and menu icons. Where Windows had one, it's the real Microsoft icon
+ * (public/pc/icons, extracted by the wieslawsoltes/Win95 project, 16 and 32 px).
+ * Everything else is hand drawn here in the same late-90s style: hard pixel
+ * edges, light from the top left, a black outline.
  */
 
 export type IconName =
@@ -44,7 +45,51 @@ export type IconName =
   | 'question'
   | 'dialup'
   | 'solitaire'
-  | 'pipes';
+  | 'pipes'
+  | 'freecell'
+  | 'hearts'
+  | 'spider'
+  | 'tetris'
+  | 'taipei'
+  | 'pegged'
+  | 'arcade'
+  | 'sandwich'
+  | 'thing'
+  | 'dos';
+
+/** The real Windows icon for a name, by file stem in public/pc/icons. */
+const REAL: Partial<Record<IconName, string>> = {
+  computer: 'my-computer',
+  documents: 'documents',
+  recycle: 'recycle-bin-empty',
+  recycleFull: 'recycle-bin-full',
+  network: 'network-neighborhood',
+  mine: 'minesweeper',
+  paint: 'paint',
+  wordpad: 'wordpad',
+  media: 'media-player',
+  notepad: 'notepad',
+  folder: 'folder',
+  folderOpen: 'folder-open',
+  drive: 'hard-drive',
+  floppy: 'floppy',
+  cd: 'cd-drive',
+  control: 'control-panel',
+  display: 'display',
+  help: 'help',
+  run: 'run',
+  find: 'find',
+  shutdown: 'shut-down',
+  programs: 'programs',
+  settings: 'settings',
+  textfile: 'text-document',
+  docfile: 'document',
+  speaker: 'volume',
+  solitaire: 'solitaire',
+  freecell: 'freecell',
+  hearts: 'hearts',
+  dos: 'dos-prompt',
+};
 
 const O = '#000';
 
@@ -367,6 +412,72 @@ const DRAW: Record<IconName, () => React.ReactNode> = {
       <text x={7} y={14} fontSize={9} fill="#000" textAnchor="middle" shapeRendering="auto">♠</text>
     </>
   ),
+  freecell: () => DRAW.solitaire(),
+  hearts: () => DRAW.solitaire(),
+  spider: () => (
+    <>
+      <rect x={3} y={5} width={16} height={22} rx={2} fill="#fff" stroke={O} shapeRendering="auto" />
+      <rect x={12} y={3} width={16} height={22} rx={2} fill="#fff" stroke={O} shapeRendering="auto" />
+      <circle cx={20} cy={14} r={4} fill="#000" />
+      <path d="M14 10l3 3M14 18l3-2M26 10l-3 3M26 18l-3-2M15 14h-2M25 14h2" stroke="#000" />
+    </>
+  ),
+  tetris: () => (
+    <>
+      <rect x={2} y={18} width={8} height={8} fill="#e33" stroke={O} />
+      <rect x={10} y={18} width={8} height={8} fill="#e33" stroke={O} />
+      <rect x={10} y={10} width={8} height={8} fill="#e33" stroke={O} />
+      <rect x={18} y={18} width={8} height={8} fill="#36d" stroke={O} />
+      <rect x={18} y={10} width={8} height={8} fill="#fc3" stroke={O} />
+      <rect x={18} y={2} width={8} height={8} fill="#fc3" stroke={O} />
+      <rect x={2} y={26} width={28} height={4} fill="#808080" stroke={O} />
+    </>
+  ),
+  taipei: () => (
+    <>
+      <rect x={7} y={4} width={18} height={24} fill="#f4ecd0" stroke={O} />
+      <rect x={4} y={7} width={18} height={24} fill="#fffbe8" stroke={O} />
+      <text x={13} y={24} fontSize={14} fill="#a00" textAnchor="middle" shapeRendering="auto">中</text>
+    </>
+  ),
+  pegged: () => (
+    <>
+      <rect x={2} y={2} width={28} height={28} fill="#a0522d" stroke={O} />
+      {[7, 13, 19, 25].flatMap(x => [7, 13, 19, 25].map(y => <circle key={`${x}-${y}`} cx={x} cy={y} r={2.4} fill={(x + y) % 12 === 2 ? '#3a1d0c' : '#fd4'} stroke={O} strokeWidth={0.6} shapeRendering="auto" />))}
+    </>
+  ),
+  arcade: () => (
+    <>
+      <rect x={2} y={2} width={28} height={28} fill="#fff" stroke={O} />
+      {[0, 1, 2, 3].flatMap(i => [0, 1, 2, 3].map(j => ((i + j) % 2 ? <rect key={`${i}${j}`} x={2 + i * 7} y={2 + j * 7} width={7} height={7} fill="#000" /> : null)))}
+      <rect x={6} y={10} width={20} height={12} fill="#fff" stroke={O} />
+      <text x={16} y={20} fontSize={10} fontWeight="bold" fill="#000" textAnchor="middle" shapeRendering="auto">CN</text>
+    </>
+  ),
+  sandwich: () => (
+    <>
+      <path d="M3 9c0-5 26-5 26 0z" fill="#e3a857" stroke={O} />
+      <rect x={3} y={9} width={26} height={3} fill="#5c3" />
+      <rect x={3} y={12} width={26} height={3} fill="#e44" />
+      <rect x={3} y={15} width={26} height={3} fill="#fd3" />
+      <rect x={3} y={18} width={26} height={4} fill="#a0522d" />
+      <rect x={3} y={22} width={26} height={5} fill="#e3a857" stroke={O} />
+    </>
+  ),
+  thing: () => (
+    <>
+      <rect x={1} y={1} width={30} height={30} fill="#222" />
+      <circle cx={16} cy={8} r={4} fill="#fff" />
+      <path d="M16 12v9M16 21l-5 8M16 21l5 8M16 15l-7 3M16 15l9-4" stroke="#fff" strokeWidth={2} fill="none" />
+      <rect x={24} y={9} width={6} height={2} fill="#c00" />
+    </>
+  ),
+  dos: () => (
+    <>
+      <rect x={2} y={4} width={28} height={22} fill="#000" stroke="#808080" />
+      <text x={5} y={16} fontSize={8} fill="#c0c0c0" fontFamily="monospace" shapeRendering="auto">C:\&gt;_</text>
+    </>
+  ),
   pipes: () => (
     <>
       <rect x={1} y={1} width={30} height={30} fill="#000" />
@@ -378,6 +489,11 @@ const DRAW: Record<IconName, () => React.ReactNode> = {
 };
 
 export function Icon({ name, size = 32 }: { name: IconName; size?: number }) {
+  const real = REAL[name];
+  if (real) {
+    const px = size <= 20 ? 16 : 32;
+    return <img src={`/pc/icons/${real}-${px}.png`} width={size} height={size} alt="" draggable={false} style={{ display: 'block', imageRendering: 'pixelated' }} />;
+  }
   return <Svg size={size}>{DRAW[name]()}</Svg>;
 }
 

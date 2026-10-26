@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>stillplay host</title>
+<!--
+  Host page for the vendored stillplay card games (btahir/stillplay, MIT, see LICENSE.txt).
+  The PC's FreeCell / Hearts / Spider windows iframe this as play.html?game=freecell|hearts|spider.
+  stillplay draws its own Win98-style window; the PC already gives it a real one, so its
+  titlebar is hidden here and the rest fills the frame.
+-->
+<style>
+  :root { --ink: #000; --muted: #333; }
+  html, body { margin: 0; height: 100%; background: #008000; overflow: auto; font: 11px "MS Sans Serif", Tahoma, sans-serif; }
+  #game { min-height: 100%; }
+  .fc-titlebar, .hz-titlebar, .sp-titlebar { display: none !important; }
+  .fc-window, .hz-window, .sp-window { margin: 0 !important; border: 0 !important; box-shadow: none !important; max-width: none !important; width: 100% !important; }
+  .fc-below-game, .hz-below, .sp-below { padding: 2px 8px !important; margin: 0 !important; background: #c0c0c0 !important; color: #000 !important; }
+  .fc-below-game button, .hz-below button, .sp-below button { color: #000 !important; }
+  .loading { color: #fff; padding: 12px; }
+</style>
+</head>
+<body>
+<div id="game"><div class="loading">Shuffling...</div></div>
+<script type="module">
+  const game = new URLSearchParams(location.search).get('game') || 'freecell';
+  const el = document.getElementById('game');
+  const mounts = {
+    freecell: () => import('./src/freecell-ui.js').then(m => m.mountFreecell),
+    hearts: () => import('./src/hearts-ui.js').then(m => m.mountHearts),
+    spider: () => import('./src/spider-ui.js').then(m => m.mountSpider),
+  };
+  // Win98 chord on a win, played through the parent PC's sound module when it's there.
+  const tada = () => { try { parent.postMessage({ stillplay: 'win', game }, location.origin); } catch {} };
+  (mounts[game] || mounts.freecell)()
+    .then(mount => mount(el, { onWin: tada }))
+    .catch(err => { el.innerHTML = `<div class="loading">Couldn't deal the cards: ${err.message}</div>`; });
+  addEventListener('pointerdown', () => focus());
+</script>
+</body>
+</html>

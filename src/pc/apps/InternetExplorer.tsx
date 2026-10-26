@@ -29,10 +29,48 @@ const BOOKMARKS: [string, string][] = [
   ['Neopets', 'http://www.neopets.com/'],
 ];
 
-type Page = { kind: 'local'; id: string } | { kind: 'web'; url: string };
+/**
+ * Wayback snapshots for the portal and Favorites: [name, url, wayback date].
+ * Cartoon Network and Disney Channel come in several years each.
+ */
+type Site = [string, string, string];
+export const CN_YEARS: Site[] = [
+  ['Cartoon Network 1999', 'http://www.cartoonnetwork.com/', '19991013'],
+  ['Cartoon Network 2001', 'http://www.cartoonnetwork.com/', '20010401'],
+  ['Cartoon Network 2003', 'http://www.cartoonnetwork.com/', '20030801'],
+  ['Cartoon Network 2005', 'http://www.cartoonnetwork.com/', '20051101'],
+  ['Cartoon Network 2007', 'http://www.cartoonnetwork.com/', '20070601'],
+];
+export const DISNEY_YEARS: Site[] = [
+  ['Disney Channel 1999', 'http://disney.go.com/disneychannel/', '19991008'],
+  ['Zoog Disney 2000', 'http://www.zoogdisney.com/', '20001017'],
+  ['Disney Channel 2001', 'http://disney.go.com/disneychannel/', '20010301'],
+  ['Disney Channel 2003', 'http://disney.go.com/disneychannel/', '20030601'],
+  ['Disney Channel 2006', 'http://disney.go.com/disneychannel/', '20060101'],
+];
+export const GAME_SITES: Site[] = [
+  ['Miniclip', 'http://www.miniclip.com/', '20020601'],
+  ['Coolmath4kids', 'http://www.coolmath4kids.com/', '20000815'],
+  ['Newgrounds', 'http://www.newgrounds.com/', '20001018'],
+];
+export const PORTALS: Site[] = [
+  ['Yahoo!', 'http://www.yahoo.com/', '19981202'],
+  ['AOL.COM', 'http://www.aol.com/', '19990508'],
+  ['MSN', 'http://www.msn.com/', '19990501'],
+  ['Ask Jeeves', 'http://www.askjeeves.com/', '19991012'],
+];
+
+/** The page a closing web game lands on, and where IE goes online after a game. */
+export function markOnline() {
+  connected = true;
+}
+
+type Page = { kind: 'local'; id: string } | { kind: 'web'; url: string; date?: string };
 
 function pageFor(arg: unknown): Page {
   if (typeof arg === 'string' && /^(https?:|www\.)/.test(arg)) return { kind: 'web', url: arg };
+  if (arg && typeof arg === 'object' && 'url' in arg) return { kind: 'web', ...(arg as { url: string; date?: string }) };
+  if (arg === 'portal') return { kind: 'local', id: 'portal' };
   if (arg === 'update') return { kind: 'local', id: 'update' };
   if (arg === 'cool' || arg === 'channels') return { kind: 'local', id: 'cool' };
   if (arg === 'search') return { kind: 'local', id: 'search' };
@@ -40,14 +78,17 @@ function pageFor(arg: unknown): Page {
   return { kind: 'local', id: 'home' };
 }
 
-function wayback(url: string) {
+function wayback(url: string, date = '1998') {
   const u = url.startsWith('http') ? url : `http://${url}`;
   if (u.includes('spacejam.com/1996')) return u;
-  return `https://web.archive.org/web/1998if_/${u}`;
+  return `https://web.archive.org/web/${date}if_/${u}`;
 }
+
+const site = ([, url, date]: Site): Page => ({ kind: 'web', url, date });
 
 function addressOf(p: Page) {
   if (p.kind === 'web') return p.url;
+  if (p.id === 'portal') return 'http://www.radnet.com/kids/';
   return p.id === 'home' ? 'http://www.geocities.com/Area51/Rad/home.html' : `http://www.geocities.com/Area51/Rad/${p.id}.html`;
 }
 
@@ -107,7 +148,8 @@ export function InternetExplorer({ win }: { win: WinState }) {
   const go = (raw: string) => {
     const v = raw.trim();
     if (!v) return;
-    if (v.includes('geocities.com/Area51/Rad')) navigate({ kind: 'local', id: v.match(/Rad\/(\w+)/)?.[1] ?? 'home' });
+    if (v.includes('radnet.com')) navigate({ kind: 'local', id: 'portal' });
+    else if (v.includes('geocities.com/Area51/Rad')) navigate({ kind: 'local', id: v.match(/Rad\/(\w+)/)?.[1] ?? 'home' });
     else navigate({ kind: 'web', url: v });
   };
 
@@ -129,8 +171,17 @@ export function InternetExplorer({ win }: { win: WinState }) {
     { label: 'File', items: [{ label: 'Work Offline', onClick: () => { connected = false; closeWindow(win.id); } }, { label: 'Close', onClick: () => closeWindow(win.id) }] },
     { label: 'Edit', items: [{ label: 'Find (on This Page)...', onClick: () => sfx.ding() }] },
     { label: 'View', items: [{ label: 'Refresh', onClick: () => navigate(page) }] },
-    { label: 'Go', items: [{ label: 'Home Page', onClick: () => navigate({ kind: 'local', id: 'home' }) }, { label: 'Search the Web', onClick: () => navigate({ kind: 'local', id: 'search' }) }] },
-    { label: 'Favorites', items: BOOKMARKS.map(([name, url]) => ({ label: name, onClick: () => navigate({ kind: 'web', url }) })) },
+    { label: 'Go', items: [{ label: 'Home Page', onClick: () => navigate({ kind: 'local', id: 'home' }) }, { label: 'RadNet Kids Portal', onClick: () => navigate({ kind: 'local', id: 'portal' }) }, { label: 'Search the Web', onClick: () => navigate({ kind: 'local', id: 'search' }) }] },
+    {
+      label: 'Favorites',
+      items: [
+        ...[...CN_YEARS, ...DISNEY_YEARS].map(x => ({ label: x[0], onClick: () => navigate(site(x)) })),
+        { label: '', divider: true },
+        ...[...GAME_SITES, ...PORTALS].map(x => ({ label: x[0], onClick: () => navigate(site(x)) })),
+        { label: '', divider: true },
+        ...BOOKMARKS.filter(([n]) => !['Yahoo!', 'Ask Jeeves', 'Cartoon Network'].includes(n)).map(([name, url]) => ({ label: name, onClick: () => navigate({ kind: 'web', url }) })),
+      ],
+    },
     { label: 'Help', items: [{ label: 'About Internet Explorer', onClick: () => messageBox('About Internet Explorer', { icon: 'ie', text: 'Internet Explorer 4.0\nReal addresses open as they looked in 1998, from the Internet Archive.', sound: 'none' }) }] },
   ];
 
@@ -159,6 +210,14 @@ export function InternetExplorer({ win }: { win: WinState }) {
         <div className={`ie-throbber${loading ? ' spin' : ''}`}>
           <Flag size={26} />
         </div>
+      </div>
+      <div className="ie-links">
+        <span>Links</span>
+        <button type="button" onClick={() => navigate({ kind: 'local', id: 'portal' })}>RadNet Kids</button>
+        <button type="button" onClick={() => navigate(site(CN_YEARS[1]))}>Cartoon Network</button>
+        <button type="button" onClick={() => navigate(site(DISNEY_YEARS[2]))}>Disney Channel</button>
+        <button type="button" onClick={() => navigate(site(GAME_SITES[0]))}>Miniclip</button>
+        <button type="button" onClick={() => navigate(site(GAME_SITES[2]))}>Newgrounds</button>
       </div>
       <form
         className="ie-address"
@@ -205,9 +264,9 @@ export function InternetExplorer({ win }: { win: WinState }) {
       )}
       <div className="ie-view sunken">
         {page.kind === 'web' ? (
-          <iframe key={page.url} title="web" src={wayback(page.url)} className="ie-frame" referrerPolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms" />
+          <iframe key={`${page.url}@${page.date}`} title="web" src={wayback(page.url, page.date)} className="ie-frame" referrerPolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms" />
         ) : (
-          <LocalPage id={page.id} open={url => navigate({ kind: 'web', url })} openLocal={id => navigate({ kind: 'local', id })} />
+          <LocalPage id={page.id} open={(url, date) => navigate({ kind: 'web', url, date })} openLocal={id => navigate({ kind: 'local', id })} />
         )}
       </div>
       <div className="status-bar">
@@ -269,7 +328,7 @@ function DialUp({ onConnected, onCancel }: { onConnected: () => void; onCancel: 
   );
 }
 
-function LocalPage({ id, open, openLocal }: { id: string; open: (url: string) => void; openLocal: (id: string) => void }) {
+function LocalPage({ id, open, openLocal }: { id: string; open: (url: string, date?: string) => void; openLocal: (id: string) => void }) {
   const [hits] = useState(() => 1998 + Math.floor(Math.random() * 400));
   const [guest, setGuest] = useState<string[]>(['Sk8rBoi99: cool page!!!', 'xXPinballWizardXx: my high score is 2 million']);
   const [msg, setMsg] = useState('');
@@ -281,6 +340,7 @@ function LocalPage({ id, open, openLocal }: { id: string; open: (url: string) =>
     return <Inbox />;
   }
   if (id === 'capsule') return <TimeCapsule />;
+  if (id === 'portal') return <Portal open={open} openLocal={openLocal} />;
   if (id === 'update') {
     return (
       <div className="web-page web-plain">
@@ -373,6 +433,12 @@ function LocalPage({ id, open, openLocal }: { id: string; open: (url: string) =>
                   <a href="#" onClick={e => (e.preventDefault(), COMMANDS.sol())}>
                     Solitaire
                   </a>
+                </li>
+                <li>
+                  <a href="#" onClick={e => (e.preventDefault(), openLocal('portal'))}>
+                    MORE GAMES at RadNet Kids
+                  </a>{' '}
+                  <span className="geo-new">COOL!</span>
                 </li>
               </ul>
               <h3>My Stuff</h3>
@@ -524,6 +590,87 @@ function TimeCapsule() {
         ))}
       </ul>
       <p className="web-small">This page has been visited by 1,337 people since 1997.</p>
+    </div>
+  );
+}
+
+/**
+ * RadNet Kids: a made-up portal of the kind every family PC had as its
+ * home page around 2000. Web games land here when they close. Real sites
+ * open from the Wayback Machine at the date beside them.
+ */
+function Portal({ open, openLocal }: { open: (url: string, date?: string) => void; openLocal: (id: string) => void }) {
+  const [q, setQ] = useState('');
+  const link = (x: Site) => (
+    <li key={x[0]}>
+      <a href={x[1]} onClick={e => (e.preventDefault(), open(x[1], x[2]))}>
+        {x[0]}
+      </a>
+    </li>
+  );
+  const play = (label: string, fn: () => void, badge?: string) => (
+    <li key={label}>
+      <a href="#" onClick={e => (e.preventDefault(), fn())}>
+        {label}
+      </a>
+      {badge && <span className="geo-new"> {badge}</span>}
+    </li>
+  );
+  return (
+    <div className="web-page portal">
+      <div className="portal-top">
+        <div className="portal-logo">
+          Rad<span>Net</span> <small>KIDS</small>
+        </div>
+        <form
+          onSubmit={e => {
+            e.preventDefault();
+            openLocal('search');
+          }}
+        >
+          <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search the Web" /> <button type="submit">Search!</button>
+        </form>
+      </div>
+      <div className="portal-nav">Games · TV · Music · Chat · E-mail · Homework Help · Shopping</div>
+      <div className="portal-cols">
+        <div>
+          <div className="portal-box portal-cn">
+            <h3>Cartoon Network</h3>
+            <ul>{CN_YEARS.map(link)}</ul>
+            <ul>{play('Play CN Arcade games', () => COMMANDS.arcade(), 'NEW!')}</ul>
+          </div>
+          <div className="portal-box portal-disney">
+            <h3>Disney Channel</h3>
+            <ul>{DISNEY_YEARS.map(link)}</ul>
+          </div>
+        </div>
+        <div>
+          <div className="portal-box">
+            <h3>Play Now!</h3>
+            <ul>
+              {play('Sandwich Stacker', () => COMMANDS.sandwich(), 'HOT!')}
+              {play('Thing-Thing', () => COMMANDS.thingthing())}
+              {play('Tetris', () => COMMANDS.tetris())}
+              {play('TaiPei', () => COMMANDS.taipei())}
+              {play('Pegged', () => COMMANDS.pegged())}
+              {play('Space Cadet Pinball', () => COMMANDS.pinball())}
+              {play('FreeCell', () => COMMANDS.freecell())}
+              {play('Hearts', () => COMMANDS.hearts())}
+            </ul>
+          </div>
+          <div className="portal-box">
+            <h3>Game Sites</h3>
+            <ul>{GAME_SITES.map(link)}</ul>
+          </div>
+          <div className="portal-box">
+            <h3>Search &amp; More</h3>
+            <ul>{PORTALS.map(link)}</ul>
+          </div>
+        </div>
+      </div>
+      <div className="portal-foot">
+        Today's poll: Who is cooler? <b>Dexter</b> or <b>Johnny Bravo</b>? · <a href="#" onClick={e => (e.preventDefault(), openLocal('home'))}>My Home Page</a> · © 2000 RadNet. Ask a grown-up before you buy anything online!
+      </div>
     </div>
   );
 }
