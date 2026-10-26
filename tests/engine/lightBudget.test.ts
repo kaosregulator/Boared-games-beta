@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import * as THREE from 'three';
-import { balanceLights, pendingTextures } from '../../src/engine/warmup.ts';
+import { balanceLights, compileChunks, pendingTextures } from '../../src/engine/warmup.ts';
 
 function budgetScene(budget: number) {
   const scene = new THREE.Scene();
@@ -88,4 +88,24 @@ test('expendable glows step out for a game\'s lamps, lowest first, and come back
   balanceLights(scene);
   assert.equal(visiblePointLights(scene), 4);
   assert.ok(bulb.layers.isEnabled(0), 'back once the game is gone');
+});
+
+test('compileChunks splits big trees and never hands compile() a light', () => {
+  const root = new THREE.Group();
+  const mat = new THREE.MeshBasicMaterial();
+  const crowd = new THREE.Group();
+  for (let i = 0; i < 30; i++) crowd.add(new THREE.Mesh(new THREE.BoxGeometry(), mat));
+  const lamp = new THREE.Group();
+  lamp.add(new THREE.Mesh(new THREE.BoxGeometry(), mat), new THREE.PointLight());
+  root.add(crowd, lamp);
+  const pieces = compileChunks(root, 24);
+  let meshes = 0;
+  for (const piece of pieces) {
+    piece.traverse(o => {
+      assert.ok(!(o as THREE.Light).isLight, 'no lights inside a piece');
+      if ((o as THREE.Mesh).isMesh) meshes += 1;
+    });
+  }
+  assert.equal(meshes, 31, 'every mesh is in exactly one piece');
+  assert.ok(pieces.length > 2, 'the 30-mesh crowd is split up');
 });

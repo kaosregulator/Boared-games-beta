@@ -38,10 +38,26 @@ const MAP_KEYS = [
   'anisotropyMap',
 ] as const;
 
-const uploaded = new WeakSet<THREE.Texture>();
+/**
+ * What each renderer has been sent. Per renderer, because after a lost WebGL
+ * context the room builds a new one, and the cached models' textures have to
+ * go up again to that one.
+ */
+const sentTo = new WeakMap<object, WeakSet<THREE.Texture>>();
+const noRenderer = {};
+function sentSet(gl?: THREE.WebGLRenderer) {
+  const key = gl ?? noRenderer;
+  let set = sentTo.get(key);
+  if (!set) {
+    set = new WeakSet();
+    sentTo.set(key, set);
+  }
+  return set;
+}
 
-/** Textures the object's materials use that have not been sent to the GPU yet. */
-export function pendingTextures(root: THREE.Object3D): THREE.Texture[] {
+/** Textures the object's materials use that have not been sent to `gl` yet. */
+export function pendingTextures(root: THREE.Object3D, gl?: THREE.WebGLRenderer): THREE.Texture[] {
+  const uploaded = sentSet(gl);
   const out = new Set<THREE.Texture>();
   root.traverse(obj => {
     const mesh = obj as THREE.Mesh;
@@ -52,8 +68,9 @@ export function pendingTextures(root: THREE.Object3D): THREE.Texture[] {
       for (const key of MAP_KEYS) {
         const tex = rec[key];
         if (!(tex instanceof THREE.Texture) || uploaded.has(tex)) continue;
-        // Video and canvas pictures re-upload every frame anyway.
-        if ((tex as THREE.VideoTexture).isVideoTexture || (tex as THREE.CanvasTexture).isCanvasTexture) continue;
+        // Video re-uploads every frame anyway. Canvases are sent: most are
+        // painted once, and a live one simply goes up again when it changes.
+        if ((tex as THREE.VideoTexture).isVideoTexture) continue;
         const img = tex.image as { width?: number; data?: unknown } | undefined;
         if (!img || (!img.width && !img.data && !(tex as THREE.CompressedTexture).isCompressedTexture)) continue;
         out.add(tex);
@@ -67,6 +84,7 @@ const nextTick = () => new Promise<void>(resolve => setTimeout(resolve, 0));
 
 /** Uploads a few textures per task so no single task runs long. */
 export async function uploadTextures(gl: THREE.WebGLRenderer, textures: THREE.Texture[], signal?: AbortSignal, perTick = 3) {
+  const uploaded = sentSet(gl);
   for (let i = 0; i < textures.length; i++) {
     if (signal?.aborted) return;
     const tex = textures[i];
@@ -132,46 +150,85 @@ interface ProgramLike {
 const finished = new WeakSet<object>();
 
 /**
- * Like WebGLRenderer.compileAsync, and where the browser has
- * KHR_parallel_shader_compile it is the same thing: the driver builds the
- * shaders on its own threads and this only polls. Without it (some GPUs,
- * software rendering) the wait for each shader is unavoidable, but here it
- * is taken one shader per task, so the page keeps breathing, and before the
- * object is shown rather than in the middle of its first frames.
+ * Splits `root` into subtrees of at most `max` materials that hold no lights.
+ * three's compile() builds every material it is given before it returns, so
+ * one call on the whole room is one long task; a piece at a time lets the
+ * page breathe in between. No lights, because compile() counts a piece's own
+ * lights on top of the scene's, and the shaders would be built for the wrong
+ * number. (A mesh that has lights or too many children below it leaves its
+ * own material to its first draw.)
  */
-async function compileSpread(
-  gl: THREE.WebGLRenderer,
-  root: THREE.Object3D,
-  camera: THREE.Camera,
-  target: THREE.Scene | null,
-  signal?: AbortSignal,
-) {
-  const materials = gl.compile(root, camera, target);
-  const props = gl.properties as unknown as { get: (m: THREE.Material) => { currentProgram?: ProgramLike } };
-  const programs = new Set<ProgramLike>();
-  materials.forEach(m => {
-    const prog = props.get(m).currentProgram;
-    if (prog && !finished.has(prog)) programs.add(prog);
-  });
-  const parallel = gl.extensions.has('KHR_parallel_shader_compile');
-  if (parallel) {
-    while (programs.size && !signal?.aborted) {
-      programs.forEach(p => {
-        if (p.isReady()) {
-          finished.add(p);
-          programs.delete(p);
-        }
-      });
-      if (programs.size) await new Promise(resolve => setTimeout(resolve, 16));
+export function compileChunks(root: THREE.Object3D, max = 24): THREE.Object3D[] {
+  const info = new Map<THREE.Object3D, { mats: number; lit: boolean }>();
+  const measure = (node: THREE.Object3D): { mats: number; lit: boolean } => {
+    const mesh = node as THREE.Mesh;
+    let mats = mesh.material ? (Array.isArray(mesh.material) ? mesh.material.length : 1) : 0;
+    let lit = (node as THREE.Light).isLight === true;
+    for (const child of node.children) {
+      const c = measure(child);
+      mats += c.mats;
+      lit = lit || c.lit;
     }
-    return;
-  }
-  for (const p of programs) {
+    const rec = { mats, lit };
+    info.set(node, rec);
+    return rec;
+  };
+  measure(root);
+  const out: THREE.Object3D[] = [];
+  const split = (node: THREE.Object3D) => {
+    const rec = info.get(node)!;
+    if (rec.mats === 0) return;
+    if (!rec.lit && (rec.mats <= max || node.children.length === 0)) {
+      out.push(node);
+      return;
+    }
+    for (const child of node.children) split(child);
+  };
+  split(root);
+  return out;
+}
+
+/**
+ * Like WebGLRenderer.compileAsync, a piece at a time. Where the browser has
+ * KHR_parallel_shader_compile the driver builds the shaders on its own
+ * threads and this only polls. Without it (some GPUs, software rendering)
+ * the wait for each shader is unavoidable, but here it is taken one shader
+ * per task, and before the object is shown rather than in its first frames.
+ */
+async function compileSpread(gl: THREE.WebGLRenderer, root: THREE.Object3D, camera: THREE.Camera, scene: THREE.Scene, signal?: AbortSignal) {
+  const props = gl.properties as unknown as { get: (m: THREE.Material) => { currentProgram?: ProgramLike } };
+  const parallel = gl.extensions.has('KHR_parallel_shader_compile');
+  const programs = new Set<ProgramLike>();
+  for (const piece of compileChunks(root)) {
     if (signal?.aborted) return;
-    // First use: links and checks the program, waiting for the driver.
-    p.getUniforms();
-    finished.add(p);
+    const materials = gl.compile(piece, camera, scene);
+    const fresh: ProgramLike[] = [];
+    materials.forEach(m => {
+      const prog = props.get(m).currentProgram;
+      if (prog && !finished.has(prog) && !programs.has(prog)) {
+        programs.add(prog);
+        fresh.push(prog);
+      }
+    });
+    if (!parallel) {
+      for (const p of fresh) {
+        if (signal?.aborted) return;
+        // First use: links and checks the program, waiting for the driver.
+        p.getUniforms();
+        finished.add(p);
+        await nextTick();
+      }
+    }
     await nextTick();
+  }
+  while (parallel && programs.size && !signal?.aborted) {
+    programs.forEach(p => {
+      if (p.isReady()) {
+        finished.add(p);
+        programs.delete(p);
+      }
+    });
+    if (programs.size) await new Promise(resolve => setTimeout(resolve, 16));
   }
 }
 
@@ -191,11 +248,11 @@ export async function warmObject(
   balanceLights(scene);
   const work = (async () => {
     try {
-      await compileSpread(gl, root, camera, root === scene ? null : scene, signal);
+      await compileSpread(gl, root, camera, scene, signal);
     } catch {
       // Compile errors surface on first draw exactly as they would have.
     }
-    await uploadTextures(gl, pendingTextures(root), signal);
+    await uploadTextures(gl, pendingTextures(root, gl), signal);
   })();
   let timer = 0;
   const timeout = new Promise<void>(resolve => {
