@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { nowSeconds } from './channels';
-import { audio } from './noise';
+import { isRouted, routeToSpeaker, setSpeakerVolume, unroute } from './surround';
 import { adAfter, adLabel, adsOnAir, slotAfter, type Ad, type AdAir } from './lineups/ads90s';
 
 interface AdBreakTvProps {
@@ -27,9 +27,10 @@ const SNAP_SECONDS = 1.5;
  * the next spot loads behind it, so the cut between commercials is clean the
  * way Retro Viewer's VLC playlist was. Each spot plays where the shared clock
  * says it should be, spots that won't load are skipped, and the sound goes
- * through a compressor so a quiet 1993 soup ad and a loud 1999 soda ad come
- * out at about the same level (archive.org sends CORS headers; if a browser
- * won't take them, the channel plays without levelling rather than not at all).
+ * through the room's TV speaker, whose leveller brings a quiet 1993 soup ad and
+ * a loud 1999 soda ad out at about the same level (archive.org sends CORS
+ * headers; if a browser won't take them, the channel plays straight from the
+ * <video> rather than not at all).
  */
 export function AdBreakTv({ style, volume, onPlaying, onFail, onMuted, quiet = false }: AdBreakTvProps) {
   const host = useRef<HTMLDivElement>(null);
@@ -57,9 +58,6 @@ export function AdBreakTv({ style, volume, onPlaying, onFail, onMuted, quiet = f
     let held = quietRef.current;
     let standbyAd: Ad | null = null;
     const failed = new Set<number>();
-    const sources: AudioNode[] = [];
-    let level: { input: AudioNode; gain: GainNode } | null = null;
-    const routed = new WeakSet<HTMLVideoElement>();
 
     const make = () => {
       const v = document.createElement('video');
@@ -76,39 +74,16 @@ export function AdBreakTv({ style, volume, onPlaying, onFail, onMuted, quiet = f
 
     const applyVolume = (el: HTMLVideoElement) => {
       const v = volumeRef.current;
-      if (routed.has(el) && level) {
+      if (isRouted(el)) {
         el.volume = 1;
-        level.gain.gain.value = v;
-      } else el.volume = v;
+        setSpeakerVolume('tv', v);
+      } else el.volume = Math.min(1, v);
       el.muted = forcedMute;
     };
 
-    // Through the compressor once a spot has proven the browser accepts the CORS copy.
+    // Into the TV speaker once a spot has proven the browser accepts the CORS copy.
     const route = (el: HTMLVideoElement) => {
-      if (!cors || routed.has(el)) return;
-      const ctx = audio();
-      if (!ctx || ctx.state !== 'running') return;
-      try {
-        if (!level) {
-          const comp = ctx.createDynamicsCompressor();
-          comp.threshold.value = -30;
-          comp.knee.value = 12;
-          comp.ratio.value = 6;
-          comp.attack.value = 0.01;
-          comp.release.value = 0.3;
-          const makeup = ctx.createGain();
-          makeup.gain.value = 1.6;
-          const gain = ctx.createGain();
-          comp.connect(makeup).connect(gain).connect(ctx.destination);
-          level = { input: comp, gain };
-        }
-        const src = ctx.createMediaElementSource(el);
-        src.connect(level.input);
-        sources.push(src);
-        routed.add(el);
-      } catch {
-        // already wired, or the browser won't: it plays straight
-      }
+      if (cors) routeToSpeaker(el, 'tv');
       applyVolume(el);
     };
 
@@ -285,12 +260,8 @@ export function AdBreakTv({ style, volume, onPlaying, onFail, onMuted, quiet = f
         v.pause();
         v.removeAttribute('src');
         v.load();
+        unroute(v);
         v.remove();
-      }
-      for (const s of sources) s.disconnect();
-      if (level) {
-        level.gain.disconnect();
-        level.input.disconnect();
       }
     };
   }, []);

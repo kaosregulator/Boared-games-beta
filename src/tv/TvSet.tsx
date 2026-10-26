@@ -4,6 +4,7 @@ import { SafeRoomModel } from '../room/RoomModel';
 import { PanelButton, labelTexture } from '../devices/PanelButton';
 import { GlassAnchor, GlassSurface } from '../devices/GlassScreen';
 import { TvScreen, type TvCommand, type TvMode } from './TvScreen';
+import { SpeakerAnchor } from './SpeakerAnchor';
 import { pressTv, publishTvStatus, useTvCommand, useTvStatus } from './tvBus';
 
 /**
@@ -123,6 +124,7 @@ export function TvSet() {
       <SafeRoomModel id="crt" position={[0, 0, 0]} axis="x" meters={TV_METERS} tintAmount={0} />
 
       <GlassAnchor id="tv" position={[GLASS.x, GLASS.y, GLASS.z]} width={GLASS.w} widthPx={SCREEN_PX} />
+      <SpeakerAnchor id="tv" position={[GLASS.x, GLASS.y, GLASS.z]} />
       {/* power lamp */}
       <mesh position={[0.36 * S, BEZEL.y, BEZEL.z + 0.002]}>
         <sphereGeometry args={[0.004, 10, 10]} />

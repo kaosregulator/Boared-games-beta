@@ -30,6 +30,8 @@ import { ANCHORS, type Anchor } from './anchors';
 import { DynamicModel } from './UserProps';
 import { MOODS, type RoomMood } from './moods';
 import type { SavedPlacement } from './userPlacements';
+import { GLASS, RoomTvGlass } from '../tv/TvSet';
+import { SpeakerAnchor } from '../tv/SpeakerAnchor';
 import { RoomTvGlass } from '../tv/TvSet';
 import { RoomPcGlass } from '../devices/PcScreen';
 import { FilmTvPicture } from '../tv/FilmTvPicture';
@@ -574,6 +576,7 @@ export function RealRoomScene({
       {/* Switched off on the end of the dresser, beside the TV. */}
       {!clearFloor && <PoochiStatue hovered={hoveredId === POOCHI_CARD} away={poochiAway} />}
       <PlacedModel id="crt" hoveredId={hoveredId} card="crt-tv">
+        <SpeakerAnchor id="tv" position={[GLASS.x, GLASS.y, GLASS.z]} />
         {tvInRoom && <RoomTvGlass />}
         {filmTv && !tvInRoom && <FilmTvPicture />}
       </PlacedModel>
@@ -641,6 +644,8 @@ export function RealRoomScene({
       )}
 
       <PlacedModel id="desk" hoveredId={hoveredId} card="desk">
+        {/* the PC's speakers, at the monitor glass */}
+        <SpeakerAnchor id="pc" position={[-0.156, 0.88, 0.02]} />
         <PcDeskGlow lightsOut={lightsOut} />
         <RoomPcGlass />
       </PlacedModel>
@@ -694,7 +699,10 @@ export function RealRoomScene({
           label: 'Boombox',
           hint: tapeOn ? 'Radio on · lean in' : 'Lean in',
         }}
-      />
+      >
+        {/* the room music plays out of the boombox */}
+        <SpeakerAnchor id="boombox" position={[0, 0.2, 0]} />
+      </PlacedModel>
 
       )}
       {tapeOn && (
