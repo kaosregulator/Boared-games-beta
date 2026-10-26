@@ -642,8 +642,8 @@ export function RealRoomScene({
       )}
 
       <PlacedModel id="desk" hoveredId={hoveredId} card="desk">
-        {/* the PC's speakers, about where the monitor sits on the desk */}
-        <SpeakerAnchor id="pc" position={[0, 0.9, 0]} />
+        {/* the PC's speakers, at the monitor glass */}
+        <SpeakerAnchor id="pc" position={[-0.156, 0.88, 0.02]} />
         <PcDeskGlow lightsOut={lightsOut} />
       </PlacedModel>
       {!clearFloor && (
