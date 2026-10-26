@@ -35,6 +35,7 @@ import { FilmTvPicture } from '../tv/FilmTvPicture';
 import { LightSwitch, TvGlow } from './LightSwitch';
 import { BedFurby, FURBY_CARD } from './furby/BedFurby';
 import { ISpyBookProp } from './ispy/ISpyGame';
+import { POOCHI_CARD, PoochiStatue } from './poochi/PoochiStatue';
 
 function MoodFog({ color }: { color: string }) {
   const { scene } = useThree();
@@ -437,6 +438,8 @@ export interface RealRoomSceneProps {
   clearFloor?: boolean;
   /** The I Spy book is open (the game draws its own copy). */
   ispyOpen?: boolean;
+  /** Poo-Chi is off the dresser: at the table, or you're inside him. */
+  poochiAway?: boolean;
 }
 
 /**
@@ -463,6 +466,7 @@ export function RealRoomScene({
   lightsOut = false,
   clearFloor = false,
   ispyOpen = false,
+  poochiAway = false,
 }: RealRoomSceneProps) {
   const lights = MOODS[mood];
   /** Room lights (ceiling, lamps, fill) scaled by the wall switch. */
@@ -566,6 +570,8 @@ export function RealRoomScene({
       )}
 
       <PlacedModel id="dresser" hoveredId={hoveredId} card="dresser" />
+      {/* Switched off on the end of the dresser, beside the TV. */}
+      {!clearFloor && <PoochiStatue hovered={hoveredId === POOCHI_CARD} away={poochiAway} />}
       <PlacedModel id="crt" hoveredId={hoveredId} card="crt-tv">
         {tvInRoom && <RoomTvGlass />}
         {filmTv && !tvInRoom && <FilmTvPicture />}

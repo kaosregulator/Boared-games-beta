@@ -14,7 +14,8 @@ export type GameId =
   | 'clue'
   | 'life'
   | 'monopoly'
-  | 'furby';
+  | 'furby'
+  | 'poochi';
 
 export * from './trivia';
 

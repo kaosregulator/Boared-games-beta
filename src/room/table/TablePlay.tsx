@@ -15,12 +15,13 @@ const ChessTable = lazy(() => import('./ChessTable').then(m => ({ default: m.Che
 const CheckersTable = lazy(() => import('./CheckersTable').then(m => ({ default: m.CheckersTable })));
 const ClueTable = lazy(() => import('./ClueTable').then(m => ({ default: m.ClueTable })));
 const FurbyTable = lazy(() => import('../furby/FurbyTable').then(m => ({ default: m.FurbyTable })));
+const PoochiTable = lazy(() => import('../poochi/PoochiTable').then(m => ({ default: m.PoochiTable })));
 const BlackjackTable = lazy(() => import('./BlackjackTable').then(m => ({ default: m.BlackjackTable })));
 
 export { TableHudOverlay } from './tableHud';
 
-export type TableGameId = 'monopoly' | 'connect4' | 'battleship' | 'chess' | 'checkers' | 'blackjack' | 'clue' | 'furby';
-export const TABLE_GAMES = new Set<string>(['monopoly', 'connect4', 'battleship', 'chess', 'checkers', 'blackjack', 'clue', 'furby']);
+export type TableGameId = 'monopoly' | 'connect4' | 'battleship' | 'chess' | 'checkers' | 'blackjack' | 'clue' | 'furby' | 'poochi';
+export const TABLE_GAMES = new Set<string>(['monopoly', 'connect4', 'battleship', 'chess', 'checkers', 'blackjack', 'clue', 'furby', 'poochi']);
 
 /**
  * unfold — the table has spawned and the box is opening
@@ -114,7 +115,14 @@ export function PlayTable({
       <SpawnedTable leaving={false}>
         <TableWood />
         <pointLight position={[0, 1.25, 0.1]} color="#ffe2c2" intensity={1.6} distance={3.4} decay={2} />
-        {game.id === 'furby' ? (
+        {game.id === 'poochi' ? (
+          // Poo-Chi drops onto the table on his own: no box to unfold.
+          <group position={[0, PLAY_TABLE.h, 0]}>
+            <Suspense fallback={null}>
+              <PoochiTable key={session.key} phase={phase} onUnfolded={onUnfolded} onPacked={onPacked} onLeave={onLeave} />
+            </Suspense>
+          </group>
+        ) : game.id === 'furby' ? (
           // The Furbies bring their own boxes: no board to unfold.
           <group position={[0, PLAY_TABLE.h, 0]}>
             <Suspense fallback={null}>
@@ -131,7 +139,7 @@ export function PlayTable({
             />
           </Suspense>
         )}
-        {phase === 'play' && game.id !== 'furby' && (
+        {phase === 'play' && game.id !== 'furby' && game.id !== 'poochi' && (
           <group position={[0, PLAY_TABLE.h, 0]}>
             <Suspense fallback={null}>
               {game.id === 'connect4' && <ConnectFourTable onLeave={onLeave} />}
