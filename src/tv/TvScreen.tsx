@@ -10,6 +10,7 @@ import { blockOnAir, showTitleAt } from './lineups/archiveBlocks';
 import { CARTRIDGES, cartridgeSrc, type Cartridge } from '../devices/cartridges';
 import { TV247_ON } from './tv247';
 import { YouTubeTv } from './YouTubeTv';
+import { AdBreakTv } from './AdBreakTv';
 import { useTvQuiet } from './tvBus';
 import { PICK_NUMBER, setPick } from './lineups/youtube247';
 
@@ -174,8 +175,8 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
     showOsd(`CH ${String(ch.number).padStart(2, '0')}  ${ch.call}`);
     const tunedAt = performance.now();
 
-    if (ch.kind === 'youtube') {
-      // The YouTube player (rendered below) does the playing; the set just waits for it to lock.
+    if (ch.kind === 'youtube' || ch.kind === 'ads') {
+      // The YouTube player or the ad reel (rendered below) does the playing; the set just waits for it to lock.
       el.pause();
       el.removeAttribute('src');
       let ytGiveUp = window.setTimeout(() => {
@@ -496,7 +497,7 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
         ref={video}
         playsInline
         preload="auto"
-        style={{ ...videoStyle, visibility: watching && current.kind !== 'youtube' ? 'visible' : 'hidden', background: '#000' }}
+        style={{ ...videoStyle, visibility: watching && current.kind !== 'youtube' && current.kind !== 'ads' ? 'visible' : 'hidden', background: '#000' }}
         onEnded={() => {
           // SNICK rolls straight into the next archived Saturday.
           if (current.kind === 'snick' || current.kind === 'block') setRetune(r => r + 1);
@@ -511,6 +512,18 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
         <YouTubeTv
           key={`${current.number}-${retune}`}
           channel={current.yt}
+          style={videoStyle}
+          volume={volume}
+          quiet={quiet}
+          onPlaying={label => ytTune.current?.onPlaying(label)}
+          onFail={() => ytTune.current?.onFail()}
+          onMuted={() => showOsd('MUTED — PRESS VOL +', 4000)}
+        />
+      )}
+
+      {watching && current.kind === 'ads' && (
+        <AdBreakTv
+          key={`ads-${retune}`}
           style={videoStyle}
           volume={volume}
           quiet={quiet}

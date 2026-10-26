@@ -2,6 +2,7 @@ import { SNICK_DURATIONS, SNICK_EPISODES, epKey, snickShowAt, type SnickEpisode 
 import { TV247_ON } from './tv247';
 import { CCF_2000, CN_TAPES, FOX_KIDS, KIDS_WB_2001, NICK_CN_2003, blockOnAir, segmentAt, showTitleAt, type ArchiveBlock } from './lineups/archiveBlocks';
 import { ARTHUR } from './lineups/arthur';
+import { ADS_NUMBER, adsGuide } from './lineups/ads90s';
 import { MTV_CHANNEL, PICK_CHANNEL, YT_CHANNELS, ytOnAir, ytShowAt, type YtChannel } from './lineups/youtube247';
 
 /**
@@ -84,7 +85,8 @@ export type Channel =
   | { number: number; call: string; kind: 'snick'; name: string }
   | { number: number; call: string; kind: 'block'; name: string; block: ArchiveBlock }
   | { number: number; call: string; kind: 'cartoon'; name: string; cartoon: Cartoon }
-  | { number: number; call: string; kind: 'youtube'; name: string; yt: YtChannel };
+  | { number: number; call: string; kind: 'youtube'; name: string; yt: YtChannel }
+  | { number: number; call: string; kind: 'ads'; name: string };
 
 function callSign(c: Cartoon): string {
   const t = c.title.toUpperCase();
@@ -119,6 +121,8 @@ export const CHANNELS: Channel[] = [
     name: cartoon.title,
     cartoon,
   })),
+  // Nothing but 90s commercial breaks, on the channel number of the decade.
+  { number: ADS_NUMBER, call: 'ADS', kind: 'ads', name: '90s Commercial Breaks' },
   ...(TV247_ON ? [ytChannel(MTV_CHANNEL), ytChannel(PICK_CHANNEL)] : []),
 ];
 
@@ -163,6 +167,7 @@ export function guideRow(channel: Channel, at = nowSeconds()): { now: string; ne
     const after = parts[(air.index + 1) % parts.length];
     return { now: showTitleAt(air.part, air.offset), next: `${clock(at + air.part.seconds - air.offset)} ${showTitleAt(after, 0)}` };
   }
+  if (channel.kind === 'ads') return adsGuide(at);
   if (channel.kind === 'youtube') {
     const air = ytOnAir(channel.yt, at);
     if (!air) return { now: 'Paste a YouTube link from the menu', next: '' };
