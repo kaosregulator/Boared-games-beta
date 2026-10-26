@@ -1,5 +1,6 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import { execSync } from 'child_process';
 import path from 'path';
 import { defineConfig, Plugin } from 'vite';
 import { GoogleGenAI } from '@google/genai';
@@ -19,6 +20,36 @@ function radioBrowserPlugin(): Plugin {
           }),
         );
       });
+    },
+  };
+}
+
+/**
+ * Which build this is: the git commit (Railway passes RAILWAY_GIT_COMMIT_SHA
+ * as a Docker build arg), else the local checkout's, else the build time.
+ * The page gets it as import.meta.env.VITE_BUILD_ID, the server reads
+ * dist/build.json, so logs and /api/health say which deploy is running.
+ */
+function buildInfo() {
+  let commit = process.env.RAILWAY_GIT_COMMIT_SHA || process.env.SOURCE_COMMIT || '';
+  if (!commit) {
+    try {
+      commit = execSync('git rev-parse HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+    } catch {
+      commit = '';
+    }
+  }
+  const builtAt = new Date().toISOString();
+  const id = commit ? commit.slice(0, 12) : `t${Date.now().toString(36)}`;
+  return { id, commit: commit || null, branch: process.env.RAILWAY_GIT_BRANCH || null, builtAt };
+}
+
+function buildInfoPlugin(info: ReturnType<typeof buildInfo>): Plugin {
+  return {
+    name: 'build-info',
+    apply: 'build',
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'build.json', source: JSON.stringify(info, null, 2) });
     },
   };
 }
@@ -96,8 +127,11 @@ function geminiTriviaPlugin(): Plugin {
 }
 
 export default defineConfig(() => {
+  const info = buildInfo();
+  // VITE_* from the environment reach the page as import.meta.env.*
+  process.env.VITE_BUILD_ID = info.id;
   return {
-    plugins: [react(), tailwindcss(), geminiTriviaPlugin(), radioBrowserPlugin()],
+    plugins: [react(), tailwindcss(), geminiTriviaPlugin(), radioBrowserPlugin(), buildInfoPlugin(info)],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

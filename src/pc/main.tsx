@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client';
 import '98.css';
 import './pc.css';
 import { Shell } from './os/Shell';
+import { installClientErrorLog } from '../engine/log';
+
+installClientErrorLog('pc');
 
 /**
  * The family computer: a little Windows 98 that runs inside the monitor on

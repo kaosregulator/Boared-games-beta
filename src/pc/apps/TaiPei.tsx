@@ -62,7 +62,8 @@ export function isFree(i: number, present: boolean[]) {
 const group = (f: number) => (f >= 38 ? 38 : f >= 34 ? 34 : f);
 export const matches = (a: number, b: number) => group(a) === group(b);
 
-export function deal(): number[] {
+/** `moves`, when given, gets the slot pairs in the order they clear the board (for tests). */
+export function deal(moves?: [number, number][]): number[] {
   // The 72 pairs: four of each ordinary face is two pairs; flowers and seasons each make two pairs.
   const pairs: [number, number][] = [];
   for (let f = 0; f < 34; f += 1) pairs.push([f, f], [f, f]);
@@ -72,6 +73,7 @@ export function deal(): number[] {
     const present = SLOTS.map(() => true);
     const faces: number[] = SLOTS.map(() => -1);
     let ok = true;
+    const placed: [number, number][] = [];
     for (const [a, b] of order) {
       const free = SLOTS.map((_, i) => i).filter(i => present[i] && isFree(i, present));
       if (free.length < 2) {
@@ -84,8 +86,12 @@ export function deal(): number[] {
       faces[j] = b;
       present[i] = false;
       present[j] = false;
+      placed.push([i, j]);
     }
-    if (ok) return faces;
+    if (ok) {
+      moves?.push(...placed);
+      return faces;
+    }
   }
   return SLOTS.map((_, i) => Math.floor(i / 4) % 34);
 }

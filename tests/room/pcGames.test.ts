@@ -17,24 +17,20 @@ test('TaiPei deals every face the right number of times', () => {
 });
 
 test('TaiPei deals can be cleared by playing the pairs it was built from', () => {
-  // A depth-first solve with a small budget: the backwards-built deal always has a way out.
-  const faces = deal();
-  const present = SLOTS.map(() => true);
-  let budget = 200000;
-  const solve = (left: number): boolean => {
-    if (left === 0) return true;
-    if ((budget -= 1) < 0) return false;
-    const free = SLOTS.map((_, i) => i).filter(i => present[i] && isFree(i, present));
-    for (let a = 0; a < free.length; a += 1)
-      for (let b = a + 1; b < free.length; b += 1) {
-        if (!matches(faces[free[a]], faces[free[b]])) continue;
-        present[free[a]] = present[free[b]] = false;
-        if (solve(left - 2)) return true;
-        present[free[a]] = present[free[b]] = true;
-      }
-    return false;
-  };
-  assert.ok(solve(144));
+  // The deal is built by taking free pairs off a full board, so playing them in
+  // that order always works. (A blind search here used to run out of budget on some deals.)
+  for (let round = 0; round < 20; round += 1) {
+    const moves: [number, number][] = [];
+    const faces = deal(moves);
+    assert.equal(moves.length, 72);
+    const present = SLOTS.map(() => true);
+    for (const [a, b] of moves) {
+      assert.ok(isFree(a, present) && isFree(b, present), `round ${round}: ${a},${b} free`);
+      assert.ok(matches(faces[a], faces[b]), `round ${round}: ${a},${b} match`);
+      present[a] = present[b] = false;
+    }
+    assert.ok(present.every(p => !p));
+  }
 });
 
 test('Pegged starts the classic board with the middle empty', () => {
