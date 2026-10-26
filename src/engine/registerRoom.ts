@@ -1,4 +1,4 @@
-import { ROOM_TRACKS } from '../utils/audio';
+import { MENU_TRACK, ROOM_TRACKS } from '../utils/audio';
 import { MODEL_URL } from '../room/RoomModel';
 import { defineAsset } from './assets';
 import { pinAsset } from './cache';
@@ -59,7 +59,7 @@ export function registerRoomCatalog() {
     });
     pinAsset(url);
   }
-  for (const track of ROOM_TRACKS) {
+  for (const track of [MENU_TRACK, ...ROOM_TRACKS]) {
     defineAsset({
       id: `audio:${track.id}`,
       url: track.src,

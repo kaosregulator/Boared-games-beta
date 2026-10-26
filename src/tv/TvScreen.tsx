@@ -13,6 +13,7 @@ import { YouTubeTv } from './YouTubeTv';
 import { AdBreakTv } from './AdBreakTv';
 import { useTvQuiet } from './tvBus';
 import { PICK_NUMBER, setPick } from './lineups/youtube247';
+import { TV_MAX_VOLUME, isRouted, routeToSpeaker, setSpeakerVolume } from './surround';
 
 export type TvMode = 'off' | 'menu' | 'tv' | 'guide' | 'gaming' | 'emulator' | 'link';
 
@@ -41,6 +42,24 @@ const OSD_FONT = '"IBM Plex Mono", ui-monospace, monospace';
 
 /** Last channel and volume survive leaning out of the TV and back in. */
 const memory = { channel: 2, volume: 0.8 };
+
+/**
+ * Hosts whose videos wouldn't load with CORS. Those play straight out of the
+ * <video> (no surround, no boost past full); everything else goes through the
+ * room's TV speaker. Hosts that have played fine with CORS are never blamed.
+ */
+const plainHosts = new Set<string>();
+const corsHosts = new Set<string>();
+const hostOf = (url: string) => {
+  try {
+    return new URL(url, location.href).origin;
+  } catch {
+    return location.origin;
+  }
+};
+
+/** What the set's own speaker and <video>.volume can do; the rest is the room speaker's boost. */
+const plainVolume = (v: number) => Math.min(1, v);
 
 function clockLabel(at: Date) {
   return at.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -78,6 +97,10 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
   const [lowerThird, setLowerThird] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
   const video = useRef<HTMLVideoElement>(null);
+  /** The current <video> plays without CORS, so it can't be routed through the room speaker. */
+  const [plain, setPlain] = useState(false);
+  const volumeRef = useRef(volume);
+  volumeRef.current = volume;
   const quiet = useTvQuiet();
   const videoWasPlaying = useRef(false);
   const snow = useRef<HTMLCanvasElement>(null);
@@ -90,6 +113,15 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
   const ytTune = useRef<{ onPlaying: (label: string) => void; onFail: () => void } | null>(null);
   const [linkText, setLinkText] = useState('');
   const [linkError, setLinkError] = useState<string | null>(null);
+
+  /** Routed: the element runs flat out and the room speaker sets the level (boost included). */
+  const applyVolume = (el: HTMLVideoElement) => {
+    const v = volumeRef.current;
+    if (isRouted(el)) {
+      el.volume = 1;
+      setSpeakerVolume('tv', v);
+    } else el.volume = plainVolume(v);
+  };
 
   const showOsd = (text: string, ms = 2600) => {
     setOsd(text);
@@ -171,7 +203,7 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
     setSignal('ok');
     channelClick();
     hiss.current?.stop(0.02);
-    hiss.current = startStatic(volume, 'tv');
+    hiss.current = startStatic(plainVolume(volume), 'tv');
     showOsd(`CH ${String(ch.number).padStart(2, '0')}  ${ch.call}`);
     const tunedAt = performance.now();
 
@@ -183,7 +215,7 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
         if (token !== tuneToken.current) return;
         setTuning(false);
         setSignal('none');
-        hiss.current?.setLevel(volume * 0.45);
+        hiss.current?.setLevel(plainVolume(volume) * 0.45);
       }, 20000);
       ytTune.current = {
         onPlaying: label => {
@@ -205,7 +237,7 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
           window.clearTimeout(ytGiveUp);
           setTuning(false);
           setSignal('none');
-          hiss.current?.setLevel(volume * 0.45);
+          hiss.current?.setLevel(plainVolume(volume) * 0.45);
         },
       };
       return () => {
@@ -241,7 +273,7 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
       if (token !== tuneToken.current) return;
       setTuning(false);
       setSignal('none');
-      hiss.current?.setLevel(volume * 0.45);
+      hiss.current?.setLevel(plainVolume(volume) * 0.45);
     }, 14000);
 
     lookup.then(found => {
@@ -250,11 +282,19 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
         window.clearTimeout(giveUp);
         setTuning(false);
         setSignal('none');
-        hiss.current?.setLevel(volume * 0.45);
+        hiss.current?.setLevel(plainVolume(volume) * 0.45);
+        return;
+      }
+      const host = hostOf(found.file.url);
+      const wantPlain = plainHosts.has(host);
+      if (wantPlain !== plain) {
+        // swap to the other <video> (they can't be converted); this effect runs again on it
+        window.clearTimeout(giveUp);
+        setPlain(wantPlain);
         return;
       }
       el.src = found.file.url;
-      el.volume = volume;
+      applyVolume(el);
       const onMeta = () => {
         const length = Number.isFinite(el.duration) ? el.duration : found.file.length ?? 0;
         const at = found.offset >= 0 ? found.offset : length > 0 ? nowSeconds() % length : 0;
@@ -262,6 +302,7 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
       };
       const onPlaying = () => {
         if (token !== tuneToken.current) return;
+        if (!plain) corsHosts.add(host);
         // Hold the snow a beat, the way a set takes a moment to lock on.
         const wait = Math.max(0, 650 - (performance.now() - tunedAt));
         window.setTimeout(() => {
@@ -277,6 +318,13 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
       };
       const onError = () => {
         if (token !== tuneToken.current) return;
+        if (!plain && host !== location.origin && !corsHosts.has(host)) {
+          // Maybe just no CORS on this host: try it once without, before calling it dead.
+          window.clearTimeout(giveUp);
+          plainHosts.add(host);
+          setPlain(true);
+          return;
+        }
         if (isVaultUrl(found.file.url)) {
           // The home vault went away mid-session: tune again and take archive.org's copy.
           window.clearTimeout(giveUp);
@@ -287,7 +335,7 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
         window.clearTimeout(giveUp);
         setTuning(false);
         setSignal('none');
-        hiss.current?.setLevel(volume * 0.45);
+        hiss.current?.setLevel(plainVolume(volume) * 0.45);
       };
       el.addEventListener('loadedmetadata', onMeta, { once: true });
       el.addEventListener('playing', onPlaying, { once: true });
@@ -306,15 +354,15 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
     };
     // volume is applied separately; retuning on volume would restart the stream
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channel, watching, retune]);
+  }, [channel, watching, retune, plain]);
 
   useEffect(() => {
     if (video.current) {
-      video.current.volume = volume;
+      applyVolume(video.current);
       if (volume > 0) video.current.muted = false;
     }
-    hiss.current?.setLevel(volume * (signal === 'none' ? 0.45 : 1));
-    emu.current?.contentWindow?.postMessage({ source: 'room', type: 'volume', value: volume }, location.origin);
+    hiss.current?.setLevel(plainVolume(volume) * (signal === 'none' ? 0.45 : 1));
+    emu.current?.contentWindow?.postMessage({ source: 'room', type: 'volume', value: plainVolume(volume) }, location.origin);
   }, [volume, signal]);
 
   // Keep the highlighted guide row in view.
@@ -364,8 +412,10 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
     if (!command) return;
     const vol = (d: number) => {
       setVolume(v => {
-        const next = Math.round(Math.min(1, Math.max(0, v + d)) * 10) / 10;
-        showOsd(`VOL ${'|'.repeat(Math.round(next * 20)).padEnd(20, '·')}`, 1600);
+        const next = Math.round(Math.min(TV_MAX_VOLUME, Math.max(0, v + d)) * 10) / 10;
+        const bars = `VOL ${'|'.repeat(Math.round(Math.min(1, next) * 20)).padEnd(20, '·')}`;
+        // Past full, the room speaker keeps going for the shows that were taped quiet.
+        showOsd(next > 1 ? `${bars} BOOST +${Math.round((next - 1) * 100)}%` : bars, 1600);
         return next;
       });
     };
@@ -494,7 +544,14 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
   return (
     <div style={box} data-ui="tv">
       <video
+        key={plain ? 'plain' : 'room'}
         ref={video}
+        crossOrigin={plain ? undefined : 'anonymous'}
+        onPlaying={e => {
+          // Into the room speaker once the browser's audio is running (after the first tap).
+          const el = e.currentTarget;
+          if (!plain && !isRouted(el) && routeToSpeaker(el, 'tv')) applyVolume(el);
+        }}
         playsInline
         preload="auto"
         style={{ ...videoStyle, visibility: watching && current.kind !== 'youtube' && current.kind !== 'ads' ? 'visible' : 'hidden', background: '#000' }}
@@ -513,7 +570,7 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
           key={`${current.number}-${retune}`}
           channel={current.yt}
           style={videoStyle}
-          volume={volume}
+          volume={plainVolume(volume)}
           quiet={quiet}
           onPlaying={label => ytTune.current?.onPlaying(label)}
           onFail={() => ytTune.current?.onFail()}
@@ -773,7 +830,7 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
         <iframe
           ref={emu}
           title={cart.title}
-          src={cartridgeSrc(cart, volume)}
+          src={cartridgeSrc(cart, plainVolume(volume))}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0, background: '#000' }}
           allow="autoplay; gamepad"
         />

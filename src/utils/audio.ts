@@ -3,8 +3,19 @@
  * Generates tactile clicks, wood knocks, radar pings, explosions, disc drops, dice shakes, cards, chips, slots, roulette, etc.
  */
 import { CHIP_TUNES, DEFAULT_TUNE, type ChipNote } from './chiptunes';
+import { routeToSpeaker, unroute } from '../tv/surround';
 
-/** Room music. The first one plays unless the player picked another. */
+/**
+ * The title screen's song: Brahe by Punch Deck, cut to start at 0:09. It plays
+ * while the menu is up and hands over to the room music when you step in (or
+ * when it finishes first).
+ */
+export const MENU_TRACK = { id: 'menu', title: 'Brahe (Punch Deck)', src: '/room/brahe-punch-deck.mp3' } as const;
+
+/** Seconds of overlap when one song runs out and the next comes in. */
+const SONG_CROSSFADE = 4;
+
+/** Room music, played in turn from the boombox. The first one plays unless the player picked another. */
 export const ROOM_TRACKS = [
   { id: 'snowfall', title: 'Snowfall (slowed, birds)', src: '/room/snowfall.mp3' },
   { id: 'bedroom', title: 'Bedroom tape', src: '/room/bedroom.mp3' },
@@ -36,6 +47,10 @@ class SoundEngine {
   private bedFade: number | null = null;
   private bedUnlock: (() => void) | null = null;
   private track: RoomTrackId = typeof window === 'undefined' ? ROOM_TRACKS[0].id : savedTrack();
+  /** The title screen is up: the bed plays MENU_TRACK instead of the room music. */
+  private menuMusic = false;
+  /** Seconds the next fade-in of the bed takes. */
+  private nextFadeIn = 1.28;
 
   private initCtx() {
     if (!this.ctx && typeof window !== 'undefined') {
@@ -89,33 +104,74 @@ class SoundEngine {
     } catch {
       // Not saved; it still changes for this visit.
     }
+    if (!this.menuMusic) this.swapBed(0.6);
+  }
+
+  /** Title screen up or gone. Leaving it fades the menu song into the room music. */
+  public setMenuMusic(on: boolean) {
+    if (on === this.menuMusic) return;
+    this.menuMusic = on;
+    this.swapBed(on ? 0.6 : 1.4);
+  }
+
+  /** Fade the playing song out over `seconds` and bring in whatever should be on now. */
+  private swapBed(seconds: number) {
     const old = this.bedAudio;
     if (!old) return;
     this.bedAudio = null;
     if (this.bedFade !== null) window.clearInterval(this.bedFade);
     this.bedFade = null;
     const from = old.volume;
-    let i = 0;
+    const start = performance.now();
     const fade = window.setInterval(() => {
-      i += 1;
-      old.volume = Math.max(0, from * (1 - i / 10));
-      if (i >= 10) {
+      const k = Math.min(1, (performance.now() - start) / (seconds * 1000));
+      old.volume = Math.max(0, from * (1 - k));
+      if (k >= 1) {
         window.clearInterval(fade);
         old.pause();
+        unroute(old);
         old.remove();
       }
-    }, 60);
+    }, 50);
+    // the next song comes up over the same stretch the last one goes down
+    this.nextFadeIn = Math.max(1.28, seconds);
     if (this.nostalgiaOn) this.startNostalgia();
+  }
+
+  /** A song is about to run out: the menu song gives way to the room, room songs take turns. */
+  private songEnding(audio: HTMLAudioElement) {
+    if (audio !== this.bedAudio) return;
+    if (this.menuMusic) this.menuMusic = false;
+    else {
+      const i = ROOM_TRACKS.findIndex(t => t.id === this.track);
+      // just this visit; the picker's choice is still where it starts next time
+      this.track = ROOM_TRACKS[(i + 1) % ROOM_TRACKS.length].id;
+    }
+    this.swapBed(SONG_CROSSFADE);
   }
 
   private ensureBed() {
     if (this.bedAudio) return this.bedAudio;
-    const src = ROOM_TRACKS.find(t => t.id === this.track)?.src ?? ROOM_TRACKS[0].src;
+    const menu = this.menuMusic;
+    const src = menu ? MENU_TRACK.src : ROOM_TRACKS.find(t => t.id === this.track)?.src ?? ROOM_TRACKS[0].src;
     const audio = new Audio(src);
-    audio.loop = true;
     audio.preload = 'auto';
     audio.volume = 0;
-    audio.setAttribute('data-bedroom-music', 'true');
+    audio.setAttribute('data-bedroom-music', menu ? 'menu' : this.track);
+    let ending = false;
+    audio.addEventListener('timeupdate', () => {
+      if (ending || !Number.isFinite(audio.duration)) return;
+      if (audio.duration - audio.currentTime > SONG_CROSSFADE) return;
+      ending = true;
+      this.songEnding(audio);
+    });
+    audio.addEventListener('ended', () => {
+      if (ending) return;
+      ending = true;
+      this.songEnding(audio);
+    });
+    // The room music comes out of the boombox; the menu song stays plain stereo over the title screen.
+    if (!menu) audio.addEventListener('playing', () => routeToSpeaker(audio, 'boombox'));
     if (typeof document !== 'undefined') document.body.appendChild(audio);
     this.bedAudio = audio;
     return audio;
@@ -127,12 +183,14 @@ class SoundEngine {
     if (!audio) return;
     if (this.bedFade !== null) window.clearInterval(this.bedFade);
     const from = audio.volume;
-    const steps = 16;
-    let i = 0;
+    const ms = this.nextFadeIn * 1000;
+    this.nextFadeIn = 1.28;
+    // by the clock, not by ticks, so a busy frame doesn't stretch the fade
+    const start = performance.now();
     this.bedFade = window.setInterval(() => {
-      i += 1;
-      audio.volume = from + (to - from) * (i / steps);
-      if (i >= steps) {
+      const k = Math.min(1, (performance.now() - start) / ms);
+      audio.volume = Math.max(0, Math.min(1, from + (to - from) * k));
+      if (k >= 1) {
         if (this.bedFade !== null) window.clearInterval(this.bedFade);
         this.bedFade = null;
         audio.volume = Math.max(0, Math.min(1, to));

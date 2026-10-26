@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { setControlPreset, useControlSettings, type ControlPreset } from './controls';
+import { sound } from '../utils/audio';
 
 interface MenuReelProps {
   /** At full black: the room takes over underneath. */
@@ -31,6 +32,12 @@ export function MenuReel({ onEnter, onDone }: MenuReelProps) {
   const controls = useControlSettings();
   const year = new Date().getFullYear();
 
+  // The title screen has its own song; the room music takes over when it goes.
+  useEffect(() => {
+    sound.setMenuMusic(true);
+    return () => sound.setMenuMusic(false);
+  }, []);
+
   const play = useCallback(() => {
     if (phase !== 'reel') return;
     setPhase('out');
@@ -40,6 +47,7 @@ export function MenuReel({ onEnter, onDone }: MenuReelProps) {
     if (phase === 'out') {
       const id = window.setTimeout(() => {
         video.current?.pause();
+        sound.setMenuMusic(false);
         onEnter();
         window.setTimeout(() => setPhase('in'), HOLD_MS);
       }, FADE_OUT_MS);
