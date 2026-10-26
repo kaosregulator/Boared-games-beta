@@ -108,7 +108,39 @@ export const armySfx = {
   victory() {
     [392, 523, 659, 784, 659, 784].forEach((f, i) => tone(f, i === 5 ? 0.6 : 0.16, 'square', 0.08, i * 0.15));
   },
+  /** Air rushing past on the way down. */
+  whoosh() {
+    burst(0.7, 900, 0.16, 0, 0.4);
+    burst(0.5, 300, 0.12, 0.1, 0.6);
+  },
+  /** Ripcord click, then the canopy cracking open. */
+  chute() {
+    tone(2200, 0.03, 'square', 0.06);
+    burst(0.12, 1400, 0.22, 0.05, 0.9);
+    burst(0.45, 260, 0.34, 0.12, 0.5);
+    tone(95, 0.25, 'sine', 0.22, 0.12, 60);
+  },
+  /** Plastic feet on carpet. */
+  touchdown() {
+    tone(420, 0.06, 'triangle', 0.12);
+    burst(0.1, 700, 0.1, 0.02, 0.8);
+  },
 };
+
+/** A tiny plastic man's voice: the browser's speech, sped up and pitched high. Quiet no-op where it's missing. */
+export function armySay(text: string) {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+  try {
+    const u = new SpeechSynthesisUtterance(text.replace(/\.\.\./g, ', '));
+    u.pitch = 1.7;
+    u.rate = 1.25;
+    u.volume = 0.9;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+  } catch {
+    // The bubble still shows the line.
+  }
+}
 
 /** The rotor: filtered noise chopped by a low oscillator. Speed 0..1. */
 export function rotorOn() {

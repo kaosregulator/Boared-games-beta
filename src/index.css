@@ -607,3 +607,13 @@ button.tt-tile:not(:disabled):hover {
 .tt-board .tt-key {
   font-size: clamp(10px, 1.8cqmin, 14px);
 }
+
+/* Army town: the parachute shot's letterbox bars sliding in. */
+@keyframes cineBar {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
