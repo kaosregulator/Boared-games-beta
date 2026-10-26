@@ -126,6 +126,18 @@ function geminiTriviaPlugin(): Plugin {
   };
 }
 
+/** react-three and what it brings along, kept in one cached chunk. */
+const R3F_PACKAGES = new Set([
+  '@react-three/fiber',
+  '@react-three/drei',
+  'three-stdlib',
+  'zustand',
+  'suspend-react',
+  'its-fine',
+  'react-use-measure',
+  '@babel/runtime',
+]);
+
 export default defineConfig(() => {
   const info = buildInfo();
   // VITE_* from the environment reach the page as import.meta.env.*
@@ -147,10 +159,20 @@ export default defineConfig(() => {
         output: {
           // Libraries in their own files: they rarely change, so returning
           // players keep them cached across deploys and only fetch our code.
-          manualChunks: {
-            react: ['react', 'react-dom'],
-            three: ['three'],
-            r3f: ['@react-three/fiber', '@react-three/drei'],
+          // React itself has to be named by path: listed by package name it
+          // was pulled into r3f's chunk, so the desk PC's page, which never
+          // draws 3D, loaded and ran all of three.js and react-three before
+          // Windows could start.
+          manualChunks(id) {
+            // Vite's import helpers ride with React, which every page loads.
+            if (id.includes('vite/preload-helper') || id.includes('commonjsHelpers')) return 'react';
+            const m = id.match(/\/node_modules\/((?:@[^/]+\/)?[^/]+)\//);
+            if (!m) return undefined;
+            const pkg = m[1];
+            if (pkg === 'react' || pkg === 'react-dom' || pkg === 'scheduler' || pkg === 'use-sync-external-store') return 'react';
+            if (pkg === 'three') return 'three';
+            if (R3F_PACKAGES.has(pkg)) return 'r3f';
+            return undefined;
           },
         },
       },

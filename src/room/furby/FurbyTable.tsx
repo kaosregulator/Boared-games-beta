@@ -3,6 +3,7 @@ import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { useAnimations, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { pushHud } from '../table/tableHud';
+import { useWarmReveal } from '../../engine/SceneWarmup';
 import { setTableView, tableCam, type Shot } from '../table/tableCam';
 import { FURBY_SOLID, FurbyPuppet } from './FurbyPuppet';
 import { scriptedStep } from './scriptClock';
@@ -571,38 +572,49 @@ export function FurbyTable({
 
   return (
     <group>
+      {/* The box and the Furby inside it load as one and show together. */}
       <Suspense fallback={null}>
-        <FurbyBox groupRef={box} />
+        <Boxed>
+          <FurbyBox groupRef={box} />
+          <group ref={fur} position={inside}>
+            <FurbyPuppet brain={tableBrain} visible={!away} />
+            {!away && phase === 'play' && (
+              <>
+                <mesh position={[0, 0.068, 0.058]} onPointerDown={poke('feed')}>
+                  <sphereGeometry args={[0.02, 10, 8]} />
+                  <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+                </mesh>
+                <mesh position={[0, 0.12, 0]} onPointerDown={poke('pet')}>
+                  <sphereGeometry args={[0.055, 12, 10]} />
+                  <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+                </mesh>
+                <mesh position={[0, 0.03, 0.025]} onPointerDown={poke('tickle')}>
+                  <sphereGeometry args={[0.045, 12, 10]} />
+                  <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+                </mesh>
+              </>
+            )}
+          </group>
+          {/* The hand that pulls it out shows with the box, not floating over an empty table. */}
+          {phase !== 'play' && <HoldArms left={idle} right={pull} />}
+        </Boxed>
       </Suspense>
+      {/* The Boom stays off the table until the dance, so it loads behind the scenes. */}
       <Suspense fallback={null}>
         <Boom rootRef={boom} onPoke={() => scene.current.kind === 'stand' && startDance()} />
       </Suspense>
       <pointLight ref={redLight} position={[-0.35, 0.55, 0.3]} color="#ff1e1e" intensity={0} distance={3} decay={2} />
       <pointLight ref={blueLight} position={[0.6, 0.55, 0.3]} color="#2a5bff" intensity={0} distance={3} decay={2} />
-      {phase !== 'play' && <HoldArms left={idle} right={pull} />}
-      <group ref={fur} position={inside}>
-        <Suspense fallback={null}>
-          <FurbyPuppet brain={tableBrain} visible={!away} />
-        </Suspense>
-        {!away && phase === 'play' && (
-          <>
-            <mesh position={[0, 0.068, 0.058]} onPointerDown={poke('feed')}>
-              <sphereGeometry args={[0.02, 10, 8]} />
-              <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-            </mesh>
-            <mesh position={[0, 0.12, 0]} onPointerDown={poke('pet')}>
-              <sphereGeometry args={[0.055, 12, 10]} />
-              <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-            </mesh>
-            <mesh position={[0, 0.03, 0.025]} onPointerDown={poke('tickle')}>
-              <sphereGeometry args={[0.045, 12, 10]} />
-              <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-            </mesh>
-          </>
-        )}
-      </group>
     </group>
   );
 }
 
+/** Holds the box and Furby back until both are loaded and ready to draw, then shows them in one frame. */
+function Boxed({ children }: { children: React.ReactNode }) {
+  const group = useRef<THREE.Group>(null);
+  useWarmReveal(group, true, 3000);
+  return <group ref={group}>{children}</group>;
+}
+
 useGLTF.preload(BOX_URL);
+useGLTF.preload(BOOM_URL);

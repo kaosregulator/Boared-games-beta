@@ -63,6 +63,7 @@ import {
   type Siege,
 } from './waves';
 import { openMiniGame } from '../../engine/lifecycle';
+import { useWarmReveal } from '../../engine/SceneWarmup';
 import { SniperMission } from './sniper/SniperMission';
 import { SniperHud, SquadPrompt } from './sniper/SniperHud';
 import { sniper, sniperBusy, sniperControls, useSniper } from './sniper/state';
@@ -119,8 +120,20 @@ export const army = {
   radio: null as null | { text: string; until: number; who?: string },
   course: { active: false, next: 0, time: 0, best: null as number | null, last: null as null | { time: number; best: boolean } },
   banner: null as null | { text: string; sub?: string; until: number },
+  /**
+   * Landing in the town: 'wait' while its shaders and textures get onto the
+   * GPU (the room holds still, nothing is shown half built), 'rise' while you
+   * shrink and the town springs up out of the rug, null once you're down.
+   */
+  landing: null as null | 'wait' | 'rise',
   listeners: new Set<() => void>(),
 };
+
+/** How long the shrink-down glide takes, and the town's rise out of the rug (seconds). */
+const SHRINK_SEC = 3.2;
+const RISE_SEC = 2.6;
+/** The rise starts this far into the glide, once you can see the rug coming up at you. */
+const RISE_DELAY = 0.35;
 
 function emit() {
   army.listeners.forEach(fn => fn());
@@ -501,7 +514,7 @@ function clearShot(from: THREE.Vector3, to: THREE.Vector3) {
   return to;
 }
 
-function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }) {
+function Crowd({ boot, film = false, onBuilt }: { boot: ArmyBoot | null; film?: boolean; onBuilt?: () => void }) {
   const filmStep = useMemo(() => makeFilmStep(film), [film]);
   const kit = useKit();
   const { camera, size, gl } = useThree();
@@ -614,12 +627,15 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
       // A remount (React dev mode does one) stopped the actions: start the current one again.
       m.actions[m.clip].play();
     }
+    onBuilt?.();
     return () => {
       for (const m of men) {
         g.remove(m.root);
         m.mixer.stopAllAction();
       }
     };
+    // onBuilt only says the men are in; a new callback is not a new crowd.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [men]);
 
   // Start / boot state.
@@ -1247,6 +1263,8 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
   });
 
   function frame(realDt: number) {
+    // Nothing moves until the town is on the GPU and showing (ArmyTownWorld).
+    if (army.landing === 'wait' && !film) return;
     const k = keys.current;
     const h = heli.current;
     // The chute's movie shot runs on real time and slows the whole town down for the yank.
@@ -1813,8 +1831,9 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
     // The shrink-down: glide from where you stood into the town.
     const it = intro.current;
     if (it.t < 1) {
-      it.t = Math.min(1, it.t + dt / 1.6);
-      const e = it.t * it.t * (3 - 2 * it.t);
+      it.t = Math.min(1, it.t + realDt / SHRINK_SEC);
+      // Smootherstep: eases out of the room and settles gently into the town.
+      const e = it.t * it.t * it.t * (it.t * (it.t * 6 - 15) + 10);
       camera.position.lerpVectors(it.from, _cam, e);
       _b.lerpVectors(it.look, _camLook, e);
       camera.up.set(0, 1, 0);
@@ -1922,12 +1941,51 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
 }
 
 export function ArmyTownWorld({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }) {
+  const world = useRef<THREE.Group>(null);
   const town = useRef<THREE.Group>(null);
-  // In the reel the whole town springs up out of the rug, like a pop-up book.
-  useFrame(() => {
+  /** The soldiers are built (their model has loaded), so the whole town can be warmed up. */
+  const [crowdUp, setCrowdUp] = useState(false);
+  // If the soldier model is slow to arrive, land anyway rather than wait on it.
+  const [waited, setWaited] = useState(false);
+  useEffect(() => {
+    const id = window.setTimeout(() => setWaited(true), 8000);
+    return () => window.clearTimeout(id);
+  }, []);
+  // Dropped in from the room, the town is hidden until its shaders are compiled
+  // and its textures uploaded, so it never shows half built or freezes mid-glide.
+  const shown = useWarmReveal(world, crowdUp || waited, 5000);
+  /** Seconds since the town started rising. */
+  const rise = useRef(boot ? Infinity : 0);
+  if (!shown && !film && army.landing === null) army.landing = 'wait';
+
+  useEffect(() => {
+    if (!shown || film) return;
+    army.landing = rise.current >= RISE_DELAY + RISE_SEC ? null : 'rise';
+    emit();
+  }, [shown, film]);
+  useEffect(() => {
+    emit();
+    return () => {
+      army.landing = null;
+    };
+  }, []);
+
+  // The whole town springs up out of the rug, like a pop-up book: in the reel
+  // on the film clock, in play as you shrink down into it.
+  useFrame((_, dt) => {
     const g = town.current;
-    if (!g || !film) return;
-    const c = Math.min(1, filmClock.shotT / 1.3);
+    if (!g) return;
+    let c: number;
+    if (film) c = Math.min(1, filmClock.shotT / 1.3);
+    else {
+      if (!shown) return;
+      rise.current += Math.min(dt, 0.05);
+      c = THREE.MathUtils.clamp((rise.current - RISE_DELAY) / RISE_SEC, 0, 1);
+      if (c >= 1 && army.landing === 'rise') {
+        army.landing = null;
+        emit();
+      }
+    }
     const s = 1.7;
     const k = c <= 0 ? 0.001 : 1 + (s + 1) * Math.pow(c - 1, 3) + s * Math.pow(c - 1, 2);
     g.scale.set(1, Math.max(0.001, k), 1);
@@ -1937,11 +1995,11 @@ export function ArmyTownWorld({ boot, film = false }: { boot: ArmyBoot | null; f
     return () => life.close();
   }, []);
   return (
-    <group>
-      <group ref={town}>
+    <group ref={world}>
+      <group ref={town} scale={[1, boot || film ? 1 : 0.001, 1]}>
         <ArmyProps />
         <Suspense fallback={null}>
-          <Crowd boot={boot} film={film} />
+          <Crowd boot={boot} film={film} onBuilt={() => setCrowdUp(true)} />
         </Suspense>
       </group>
       {/* A bit of extra light over the rug, like a desk lamp pulled down to play. */}
@@ -2085,6 +2143,11 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
         )}
       </div>
 
+      {a.landing === 'wait' && (
+        <p className="absolute bottom-28 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-lime-300/40 bg-black/60 px-4 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-lime-200">
+          Shrinking you down…
+        </p>
+      )}
       {a.quipBubble && !a.bubble && !a.chuteBubble && <SpeechBubble bubble={a.quipBubble} tone="thought" />}
       {a.chuteBubble && <SpeechBubble bubble={a.chuteBubble} />}
       {a.radio && !a.chuteBubble && <SargeRadio text={a.radio.text} who={a.radio.who} />}

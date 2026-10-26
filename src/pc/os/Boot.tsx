@@ -31,6 +31,13 @@ const DRIVES: [number, string][] = [
 
 const MEMORY_KB = 65536;
 
+/**
+ * The boot runs at this many times the real thing. At 1x the BIOS, "Starting
+ * Windows" and the splash took twelve seconds before the login box, which
+ * felt like a slow page rather than an old PC. Every line still shows.
+ */
+const BOOT_SPEED = 2;
+
 export function Bios({ onDone }: { onDone: () => void }) {
   const [t, setT] = useState(0);
   useEffect(() => {
@@ -39,7 +46,7 @@ export function Bios({ onDone }: { onDone: () => void }) {
     const start = performance.now();
     let raf = 0;
     const tick = () => {
-      const now = performance.now() - start;
+      const now = (performance.now() - start) * BOOT_SPEED;
       setT(now);
       if (now > 5200) {
         onDone();
@@ -48,8 +55,8 @@ export function Bios({ onDone }: { onDone: () => void }) {
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
-    const beep = window.setTimeout(() => sfx.post(), 2450);
-    const disk = window.setTimeout(() => sfx.disk(2.4, 0.6), 2700);
+    const beep = window.setTimeout(() => sfx.post(), 2450 / BOOT_SPEED);
+    const disk = window.setTimeout(() => sfx.disk(2.4 / BOOT_SPEED, 0.6), 2700 / BOOT_SPEED);
     const skip = () => onDone();
     window.addEventListener('keydown', skip);
     window.addEventListener('pointerdown', skip);
@@ -93,7 +100,7 @@ export function Bios({ onDone }: { onDone: () => void }) {
 
 export function StartingWindows({ onDone }: { onDone: () => void }) {
   useEffect(() => {
-    const id = window.setTimeout(onDone, 1500);
+    const id = window.setTimeout(onDone, 1500 / BOOT_SPEED);
     return () => window.clearTimeout(id);
   }, [onDone]);
   return (
@@ -112,8 +119,8 @@ export function Splash({ onDone, shuttingDown = false }: { onDone?: () => void; 
   const sky = useMemo(() => clouds(400, 300, shuttingDown ? 31 : 98), [shuttingDown]);
   useEffect(() => {
     if (!onDone) return;
-    sfx.disk(4.5, 0.75);
-    const id = window.setTimeout(onDone, 4800);
+    sfx.disk(4.5 / BOOT_SPEED, 0.75);
+    const id = window.setTimeout(onDone, 4800 / BOOT_SPEED);
     const skip = () => onDone();
     window.addEventListener('keydown', skip);
     window.addEventListener('pointerdown', skip);

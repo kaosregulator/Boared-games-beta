@@ -157,7 +157,8 @@ function BulbFlicker({
     const dip = Math.sin(t * 29 + seed * 9) > 0.97 ? -0.28 : 0;
     bulb.intensity = Math.max(0.04, base + twinkle + dip);
   });
-  return <pointLight ref={light} position={position} color={color} intensity={base} distance={1.05} decay={2} />;
+  // The first light to step out while a game's lamps are in (LightBudget).
+  return <pointLight ref={light} position={position} color={color} intensity={base} distance={1.05} decay={2} userData={{ expendable: 1 }} />;
 }
 
 /**
@@ -208,14 +209,26 @@ function MountedShelf({
   );
 }
 
-function CeilingDome({ level = 1 }: { level?: number }) {
+/**
+ * The ceiling light. The mood's own ceiling fill used to be a second point
+ * light a hand's width below this one; they are one light now, its colour
+ * mixed by how bright each was, which looks the same and costs every lit
+ * pixel one light less.
+ */
+function CeilingDome({ level = 1, fill = 0, fillColor = '#ffe2c2' }: { level?: number; fill?: number; fillColor?: string }) {
+  const dome = 2.1 * level;
+  const total = dome + fill;
+  const color = useMemo(
+    () => new THREE.Color('#ffe2c2').lerp(new THREE.Color(fillColor), total > 0 ? fill / total : 0),
+    [fill, fillColor, total],
+  );
   return (
     <group position={[0.05, WALL.height - 0.02, 0.15]}>
       <mesh rotation={[Math.PI, 0, 0]}>
         <sphereGeometry args={[0.22, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
         <meshStandardMaterial color="#fff1dc" emissive="#ffd7a4" emissiveIntensity={0.85 * level} roughness={0.4} />
       </mesh>
-      <pointLight position={[0, -0.18, 0]} color="#ffe2c2" intensity={2.1 * level} distance={8.5} decay={2} />
+      <pointLight position={[0, total > 0 ? -0.18 - 0.25 * (fill / total) : -0.18, 0]} color={color} intensity={total} distance={8.5} decay={2} />
     </group>
   );
 }
@@ -501,7 +514,7 @@ export function RealRoomScene({
         distance={3.4}
         decay={2}
       />
-      <CeilingDome level={Math.min(1, lights.ceilI / 2.4) * on} />
+      <CeilingDome level={Math.min(1, lights.ceilI / 2.4) * on} fill={lights.ceilI * 0.45 * on} fillColor={lights.ceil} />
 
       <PlacedModel id="window" hoveredId={hoveredId} card="window" />
       <pointLight
@@ -732,7 +745,6 @@ export function RealRoomScene({
       )}
       <ISpyBookProp hovered={hoveredId === 'ispy-book'} hidden={ispyOpen} />
 
-      <pointLight position={[0.1, WALL.height - 0.45, 0.2]} color={lights.ceil} intensity={lights.ceilI * 0.45 * on} distance={8} decay={2} />
       <pointLight position={[-1.6, 1.9, -0.2]} color="#e7b08a" intensity={(mood === 'afternoon' ? 0.35 : 0.5) * on} distance={4} decay={2} />
 
       {!clearFloor && placed.map(item => (

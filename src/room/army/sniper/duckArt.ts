@@ -12,7 +12,10 @@ function canvas(w: number, h: number) {
   const c = document.createElement('canvas');
   c.width = w;
   c.height = h;
-  return { c, g: c.getContext('2d')! };
+  // willReadFrequently keeps the canvas on the CPU. pixelate() reads it back,
+  // and reading back a GPU canvas waits for everything the GPU has queued:
+  // landing in the town, that was every shader being built, a long freeze.
+  return { c, g: c.getContext('2d', { willReadFrequently: true })! };
 }
 
 function texture(c: HTMLCanvasElement, pixel = false) {

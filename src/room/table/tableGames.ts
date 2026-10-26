@@ -7,6 +7,10 @@ let warmPromise: Promise<void> | null = null;
 let warmCursor = 0;
 
 const TABLE_LOADS: (() => Promise<unknown>)[] = [
+  // First, because their models are fetched as the module loads: the Furby's
+  // display box has to be here before the Furby that sits inside it is shown.
+  () => import('../furby/FurbyTable'),
+  () => import('../poochi/PoochiTable'),
     () => import('./ConnectFourTable'),
     () => import('./BattleshipTable'),
     () => import('./MonopolyTable'),
