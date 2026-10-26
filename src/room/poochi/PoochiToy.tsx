@@ -129,13 +129,22 @@ function setKey(rig: Rig, key: string, v: number) {
   }
 }
 
+/** Where the propeller's rod sits tucked in, how far it rises, and its length. */
+const MAST_IN = 0.088;
+const MAST_RISE = 0.024;
+const ROD = 0.062;
+
 const SILVER = new THREE.MeshStandardMaterial({ color: '#b9bcc2', metalness: 0.9, roughness: 0.32 });
 const TEAL = new THREE.MeshStandardMaterial({ color: '#0e7fa6', metalness: 0.1, roughness: 0.25, transparent: true, opacity: 0.88 });
 const RED = new THREE.MeshStandardMaterial({ color: '#d21f1f', metalness: 0.3, roughness: 0.4, emissive: '#5a0000' });
 const FLAME = new THREE.MeshBasicMaterial({ color: '#ffb347', transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false });
 const FLAME_CORE = new THREE.MeshBasicMaterial({ color: '#fff4c2', transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false });
 
-/** Propeller: mast, hub and two blades, in the toy's own space (metres). */
+/**
+ * Propeller: a thin rod up out of his back, hub and two blades, in the toy's
+ * own space (metres). The blades spin clear over the top of his head (16 cm),
+ * so none of it is buried inside him.
+ */
 function Propeller({
   mast,
   rotor,
@@ -146,11 +155,15 @@ function Propeller({
   blur: React.RefObject<THREE.MeshBasicMaterial | null>;
 }) {
   return (
-    <group ref={mast} position={[0, 0.088, -0.035]}>
-      <mesh material={SILVER} position={[0, 0.02, 0]}>
-        <cylinderGeometry args={[0.0035, 0.0045, 0.04, 10]} />
+    <group ref={mast} position={[0, MAST_IN, -0.04]}>
+      {/* The collar where the rod comes out of his shell. */}
+      <mesh material={SILVER} position={[0, 0.002, 0]}>
+        <cylinderGeometry args={[0.008, 0.009, 0.004, 14]} />
       </mesh>
-      <group ref={rotor} position={[0, 0.042, 0]}>
+      <mesh material={SILVER} position={[0, ROD / 2, 0]}>
+        <cylinderGeometry args={[0.0028, 0.0035, ROD, 10]} />
+      </mesh>
+      <group ref={rotor} position={[0, ROD + 0.002, 0]}>
         <mesh material={RED}>
           <cylinderGeometry args={[0.007, 0.007, 0.006, 14]} />
         </mesh>
@@ -161,7 +174,7 @@ function Propeller({
         ))}
       </group>
       {/* The blur of the blades at full spin, so you can see it from anywhere. */}
-      <mesh position={[0, 0.042, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[0, ROD + 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.009, 0.094, 40]} />
         <meshBasicMaterial ref={blur} color="#5fd3ff" transparent opacity={0} side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
@@ -298,7 +311,7 @@ export function PoochiToy({ drive, showBone = false }: { drive: React.RefObject<
       const out = THREE.MathUtils.smoothstep(d.prop, 0, 1);
       m.visible = out > 0.01;
       m.scale.setScalar(Math.max(0.001, out));
-      m.position.y = 0.07 + out * 0.018;
+      m.position.y = MAST_IN - 0.018 + out * (0.018 + MAST_RISE);
     }
     L.rotor += dt * d.spin * 55;
     if (rotor.current) rotor.current.rotation.y = L.rotor;

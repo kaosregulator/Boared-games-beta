@@ -18,7 +18,7 @@ import {
   canopyOpen,
   chopperSpot,
   cineTimeScale,
-  glideSpeed,
+  chuteDrift,
   needsChute,
   pickLine,
   stepFall,
@@ -520,7 +520,7 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
    * The parachute. t counts real seconds from the jump (the movie shot runs on
    * it, slow-mo or not); pulled is the t he yanked the cord at, -1 before.
    */
-  const chute = useRef({ on: false, cine: false, t: 0, pulled: -1, fold: 0, sway: 0, lean: 0, line: '', lineLeft: 0, last: null as string | null });
+  const chute = useRef({ on: false, cine: false, t: 0, pulled: -1, vx: 0, vz: 0, fold: 0, sway: 0, lean: 0, line: '', lineLeft: 0, last: null as string | null });
   const chuteRig = useChuteRig();
   /** Chopper with nobody in it: coming down by itself (you jumped, or you called it in). */
   const autopilot = useRef(false);
@@ -897,6 +897,9 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
     c.fold = 0;
     c.sway = 0;
     c.lean = 0;
+    // Off the edge with whatever speed you had walking (none out of the chopper).
+    c.vx = bail ? 0 : Math.sin(player.heading) * player.speed;
+    c.vz = bail ? 0 : Math.cos(player.heading) * player.speed;
     army.chute = c.cine ? 'cine' : 'glide';
     army.quip = null;
     shout(bail ? BAIL_LINES : CHUTE_LINES, 2.6);
@@ -1211,15 +1214,22 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
     if (army.mode === 'ground') {
       const p = player;
       if (ch.on && army.chute !== 'fold') {
-        // Under the canopy: it drifts along your heading, A/D (or the turn keys) steer,
-        // W/S drift more or less. The movie shot keeps your hands off the controls.
-        const steer = ch.cine ? 0 : Math.max(-1, Math.min(1, turnIn + strafe));
-        p.heading = wrap(p.heading - steer * 1.5 * dt - (ch.cine ? 0 : nudge));
-        const want = ch.pulled >= 0 ? glideSpeed(ch.cine ? 0 : fwdIn) : p.speed * 0.98;
-        p.speed += (want - p.speed) * Math.min(1, dt * 2.5);
-        p.pos.x += Math.sin(p.heading) * p.speed * dt;
-        p.pos.z += Math.cos(p.heading) * p.speed * dt;
-      } else if (p.fall === 0 && !p.falling && !ch.on) {
+        // Under the canopy you fly it: WASD push it any way, arrows (Q/E, drag) turn, and
+        // hands off it just sinks. The controls come back the moment the canopy's open,
+        // even while the movie shot is still rolling. Until then he keeps the speed he
+        // stepped off with.
+        const flying = ch.pulled >= 0 && canopyOpen(ch.t - ch.pulled) > 0.8;
+        if (flying) {
+          p.heading = wrap(p.heading - turnIn * 1.8 * dt - nudge);
+          const want = chuteDrift(fwdIn, strafe, p.heading);
+          const ease = Math.min(1, dt * 3);
+          ch.vx += (want.x - ch.vx) * ease;
+          ch.vz += (want.z - ch.vz) * ease;
+        }
+        p.pos.x += ch.vx * dt;
+        p.pos.z += ch.vz * dt;
+        p.speed = ch.vx * Math.sin(p.heading) + ch.vz * Math.cos(p.heading);
+      } else if (p.fall === 0 && !p.falling && (!ch.on || army.chute === 'fold')) {
         const run = Boolean(k.ShiftLeft || k.ShiftRight);
         p.heading = wrap(p.heading - turnIn * 2.6 * dt - (listening ? 0 : nudge));
         const top = run ? 0.24 : 0.11;
@@ -1938,7 +1948,7 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
       {a.chuteBubble && <SpeechBubble bubble={a.chuteBubble} />}
       {a.chute === 'glide' && (
         <p className="absolute bottom-28 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-amber-500 px-4 py-1 text-[12px] font-black uppercase tracking-[0.2em] text-black">
-          Chute open · {isTouch ? 'arrows steer · hold Faster to drop' : 'A/D steer · W drift · Shift drop faster'}
+          Chute open · {isTouch ? 'arrows fly it · hold Faster to drop' : 'WASD fly it any way · arrows turn · Shift drop faster'}
         </p>
       )}
       {a.bubble && !flying && (

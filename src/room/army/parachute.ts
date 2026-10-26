@@ -15,9 +15,10 @@ export const CHUTE = {
   /** Sink rate under the canopy, and with Shift held to spill air. */
   sink: 0.36,
   sinkFast: 0.8,
-  /** Drift along the heading under the canopy; W/S add or take some off. */
-  glide: 0.09,
-  glideExtra: 0.07,
+  /** Under the canopy you fly it: WASD push it any way at up to this, hands off it hangs still. */
+  drift: 0.17,
+  driftSide: 0.14,
+  driftBack: 0.11,
   /** Never open later than this far off the ground. */
   lastChance: 0.12,
   /** Canopy folding up after touchdown. */
@@ -110,9 +111,16 @@ export function stepFall(vy: number, dt: number, open: number, fast: boolean) {
   return vy + (sink - vy) * pull;
 }
 
-/** Forward drift under the canopy for a W/S stick of -1..1. */
-export function glideSpeed(forward: number) {
-  return Math.max(0.02, CHUTE.glide + forward * CHUTE.glideExtra);
+/**
+ * Where the canopy wants to go for this stick: W/S forward and back along your
+ * heading, A/D sideways. Hands off, it just sinks. Metres a second, room x/z.
+ */
+export function chuteDrift(forward: number, strafe: number, heading: number) {
+  const along = forward >= 0 ? forward * CHUTE.drift : forward * CHUTE.driftBack;
+  const side = strafe * CHUTE.driftSide;
+  const s = Math.sin(heading);
+  const c = Math.cos(heading);
+  return { x: s * along - c * side, z: c * along + s * side };
 }
 
 /**
