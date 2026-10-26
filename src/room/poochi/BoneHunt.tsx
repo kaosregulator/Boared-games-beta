@@ -61,7 +61,7 @@ export function useHunt() {
 
 /** Shared with the on-screen buttons on a phone. */
 const touchDog = { fly: false, jet: false, left: false, right: false, go: false, back: false };
-const huntControls = { sniff: null as null | (() => void), reset: null as null | (() => void) };
+const huntControls = { sniff: null as null | (() => void), reset: null as null | (() => void), wake: null as null | (() => void) };
 
 const CAM_ORDER: DogCam[] = ['chase', 'nose', 'high'];
 function cycleCam() {
@@ -127,6 +127,7 @@ export function BoneHuntWorld({ onDone }: { onDone?: () => void }) {
   const glintAt = useRef(0);
   const motors = useRef<{ prop: ReturnType<typeof propellerMotor>; jet: ReturnType<typeof jetMotor> } | null>(null);
   const happyUntil = useRef(0);
+  const timers = useRef<number[]>([]);
 
   useEffect(() => {
     const life = openMiniGame('poochi-bones');
@@ -173,15 +174,22 @@ export function BoneHuntWorld({ onDone }: { onDone?: () => void }) {
     window.addEventListener('keydown', down);
     window.addEventListener('keyup', up);
     huntControls.sniff = sniff;
+    huntControls.wake = wake;
     huntControls.reset = reset;
     return () => {
       window.removeEventListener('keydown', down);
       window.removeEventListener('keyup', up);
       huntControls.sniff = null;
       huntControls.reset = null;
+      huntControls.wake = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /** A delayed bark or song, dropped if you grow back before it plays. */
+  function later(ms: number, fn: () => void) {
+    timers.current.push(window.setTimeout(fn, ms));
+  }
 
   /** The motors start on the first key or tap (browsers need a gesture for sound). */
   function wake() {
@@ -231,20 +239,20 @@ export function BoneHuntWorld({ onDone }: { onDone?: () => void }) {
     const d = drive.current;
     d.eyes = 'happy';
     happyUntil.current = clock.current + 1.8;
-    window.setTimeout(() => {
+    later(250, () => {
       d.voice = poochiSay('bark');
-    }, 250);
+    });
     hunt.last = { label: spot.label, at: performance.now() };
     hunt.sniff = null;
     if (hunt.found.size === BONE_SPOTS.length) {
       hunt.done = true;
       banner('You found all my bones!', 'Poo-Chi sings you a song', 5);
-      window.setTimeout(() => {
+      later(1400, () => {
         d.voice = poochiSay('song1');
         d.eyes = 'heart';
         d.dance = 1;
         happyUntil.current = clock.current + 24;
-      }, 1400);
+      });
       onDone?.();
     } else {
       banner(`Bone ${hunt.found.size} of ${BONE_SPOTS.length}!`, `Found it ${spot.label}`, 2);
@@ -407,6 +415,7 @@ export function BoneHuntWorld({ onDone }: { onDone?: () => void }) {
 
   useEffect(() => {
     return () => {
+      timers.current.forEach(t => window.clearTimeout(t));
       motors.current?.prop.stop();
       motors.current?.jet.stop();
       drive.current.voice?.stop();
@@ -457,7 +466,7 @@ function HoldButton({ label, onHold, className }: { label: string; onHold: (on: 
       className={`pointer-events-auto select-none touch-none rounded-2xl border border-white/25 bg-black/55 text-sm font-black uppercase text-white active:bg-sky-500/70 ${className}`}
       onPointerDown={e => {
         e.preventDefault();
-        wakeISpyAudio();
+        huntControls.wake?.();
         onHold(true);
       }}
       onPointerUp={() => onHold(false)}
