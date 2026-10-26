@@ -632,6 +632,9 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
     army.invadersLeft = 0;
     army.course = { active: false, next: 0, time: 0, best: readBest(), last: null };
     army.banner = null;
+    // Left mid-glide last time: the chute was never folded up.
+    army.chute = null;
+    army.chuteBubble = null;
     if (boot?.ring !== null && boot?.ring !== undefined && RINGS[boot.ring]) {
       const r = RINGS[boot.ring];
       const back = r.p.clone().addScaledVector(r.n, -0.5);
@@ -1051,6 +1054,8 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
     const canvas = gl.domElement;
     return () => {
       rotorOff();
+      army.chute = null;
+      army.chuteBubble = null;
       const persp = camera as THREE.PerspectiveCamera;
       if (saved.current) {
         persp.near = saved.current.near;
@@ -1206,9 +1211,9 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
     if (army.mode === 'ground') {
       const p = player;
       if (ch.on && army.chute !== 'fold') {
-        // Under the canopy: it drifts along your heading, A/D steer, W/S drift more or less.
-        // The movie shot keeps your hands off the controls.
-        const steer = ch.cine ? 0 : turnIn;
+        // Under the canopy: it drifts along your heading, A/D (or the turn keys) steer,
+        // W/S drift more or less. The movie shot keeps your hands off the controls.
+        const steer = ch.cine ? 0 : Math.max(-1, Math.min(1, turnIn + strafe));
         p.heading = wrap(p.heading - steer * 1.5 * dt - (ch.cine ? 0 : nudge));
         const want = ch.pulled >= 0 ? glideSpeed(ch.cine ? 0 : fwdIn) : p.speed * 0.98;
         p.speed += (want - p.speed) * Math.min(1, dt * 2.5);
@@ -1510,7 +1515,8 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
           }
         }
         const swing = since >= 0 ? Math.sin(since * 2.8) * 0.3 * Math.exp(-since * 0.8) : 0;
-        ch.sway += (swing + (ch.cine ? 0 : turnIn) * 0.18 - ch.sway) * Math.min(1, dt * 6);
+        const steer = ch.cine ? 0 : Math.max(-1, Math.min(1, turnIn + strafe));
+        ch.sway += (swing + steer * 0.18 - ch.sway) * Math.min(1, dt * 6);
         // Belly-down and flailing until the canopy bites, then jerked upright and swinging.
         const wantLean = open < 0.35 ? 0.85 + Math.sin(ch.t * 9) * 0.12 : 0.06;
         ch.lean += (wantLean - ch.lean) * Math.min(1, realDt * (open < 0.35 ? 8 : 12));
