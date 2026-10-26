@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { clouds, sunset, tile } from './art';
 import { Icon, type IconName } from './icons';
 import { launch } from './launch';
-import { openWebGame, SANDWICH_STACKER, THING_THING } from '../apps/webgames';
+import { CRUNCHLING, openWebGame, SANDWICH_STACKER, THING_THING } from '../apps/webgames';
 import { readStore, useSettings, type Wallpaper } from './settings';
 import { sfx } from './sound';
 import { focusWindow, messageBox } from './wm';
@@ -24,6 +24,7 @@ export const DESK_ICONS: DeskIcon[] = [
   { id: 'pinball', label: 'Pinball', icon: 'pinball', open: () => launch('pinball') },
   { id: 'sandwich', label: 'Sandwich Stacker', icon: 'sandwich', open: () => openWebGame(SANDWICH_STACKER) },
   { id: 'thing', label: 'Thing-Thing', icon: 'thing', open: () => openWebGame(THING_THING) },
+  { id: 'crunch', label: "Cap'n Crunch", icon: 'crunch', open: () => openWebGame(CRUNCHLING) },
   { id: 'arcade', label: 'CN Arcade', icon: 'arcade', open: () => launch('arcade') },
   { id: 'tetris', label: 'Tetris', icon: 'tetris', open: () => launch('tetris') },
   { id: 'mine', label: 'Minesweeper', icon: 'mine', open: () => launch('minesweeper') },

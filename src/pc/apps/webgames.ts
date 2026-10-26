@@ -49,6 +49,17 @@ export const THING_THING: WebGameSpec = {
   credit: 'Thing-Thing by Diseased Productions (2006), from the Internet Archive Flash collection.',
 };
 
+export const CRUNCHLING: WebGameSpec = {
+  title: "Cap'n Crunch's Crunchling Adventure",
+  icon: 'crunch',
+  // The 1999 cereal-box CD game, streamed by yag.im (Windows run in DOSBox-X on their servers).
+  // The user's own copy (a Drive zip) can't run in a browser without a Windows emulator; see HANDOFF.md.
+  url: 'https://yag.im/games/789/capn-crunchs-crunchling-adventure',
+  w: 700,
+  h: 540,
+  credit: "Cap'n Crunch's Crunchling Adventure (Quaker Oats / Cobalt Interactive, 1999), from a specially marked cereal box. Streamed by yag.im: press PLAY.",
+};
+
 const FLASHPOINT = 'https://ooooooooo.ooo/';
 
 export function flashpoint(id: string) {

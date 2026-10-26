@@ -649,6 +649,7 @@ function Portal({ open, openLocal }: { open: (url: string, date?: string) => voi
             <h3>Play Now!</h3>
             <ul>
               {play('Sandwich Stacker', () => COMMANDS.sandwich(), 'HOT!')}
+              {play("Cap'n Crunch's Crunchling Adventure", () => COMMANDS.crunch(), 'CLASSIC!')}
               {play('Thing-Thing', () => COMMANDS.thingthing())}
               {play('Tetris', () => COMMANDS.tetris())}
               {play('TaiPei', () => COMMANDS.taipei())}
