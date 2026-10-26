@@ -20,7 +20,7 @@ export interface CardVideo {
   title: string;
 }
 
-export type CardAction = 'tv' | 'nes' | 'radio' | 'gameboy' | 'tamagotchi' | 'rubik' | 'hotwheels' | 'army' | 'furby' | 'ispy' | 'poochi';
+export type CardAction = 'tv' | 'nes' | 'radio' | 'gameboy' | 'tamagotchi' | 'rubik' | 'hotwheels' | 'army' | 'furby' | 'ispy' | 'poochi' | 'pc';
 
 export interface PropCard {
   id: string;
@@ -840,6 +840,7 @@ const CARDS: PropCard[] = [
     story:
       'The computer desk in the corner, where the whole house took turns. Somebody always picked up the phone in the middle of a download and the whole thing started over.',
     memories: ['That dial-up screech meant you were about to be online.', 'Get off the internet, I need to use the phone!'],
+    action: { kind: 'pc', label: 'Use the computer' },
   },
   {
     id: 'pc-monitor',
@@ -848,6 +849,7 @@ const CARDS: PropCard[] = [
     story:
       'Heavier than you were. The Windows 98 logo came up and you waited, and waited, and then the desktop showed up and you waited some more. The screen buzzed and made the hair on your arm stand up.',
     memories: ['3D Pipes screensaver, for hours.', 'Wallpapers you set and forgot for a whole year.'],
+    action: { kind: 'pc', label: 'Turn on the computer' },
   },
   {
     id: 'pc-tower',
@@ -856,6 +858,7 @@ const CARDS: PropCard[] = [
     story:
       'A beige box with a Turbo button nobody understood and a CD tray that made a perfect cup holder. The sticker on the front was more important than anything inside it.',
     memories: ['Pressing the power button and hearing every fan in the house wake up.'],
+    action: { kind: 'pc', label: 'Press the power button' },
   },
   {
     id: 'pc-printer',
@@ -872,6 +875,7 @@ const CARDS: PropCard[] = [
     story:
       'Loud enough to wake the house at midnight. You learned to type on Mavis Beacon and on instant messages, mostly the instant messages.',
     memories: ['Crumbs between the keys. All of them.'],
+    action: { kind: 'pc', label: 'Use the computer' },
   },
   {
     id: 'pc-mouse',
@@ -880,6 +884,7 @@ const CARDS: PropCard[] = [
     story:
       'When the cursor started skipping, you popped out the ball and scraped the gunk off the rollers with a fingernail. Good as new.',
     memories: ['The mouse pad was a free one from a bank.'],
+    action: { kind: 'pc', label: 'Use the computer' },
   },
   {
     id: 'pc-cds',

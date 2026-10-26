@@ -32,6 +32,8 @@ import { MOODS, type RoomMood } from './moods';
 import type { SavedPlacement } from './userPlacements';
 import { GLASS, RoomTvGlass } from '../tv/TvSet';
 import { SpeakerAnchor } from '../tv/SpeakerAnchor';
+import { RoomTvGlass } from '../tv/TvSet';
+import { RoomPcGlass } from '../devices/PcScreen';
 import { FilmTvPicture } from '../tv/FilmTvPicture';
 import { LightSwitch, TvGlow } from './LightSwitch';
 import { BedFurby, FURBY_CARD } from './furby/BedFurby';
@@ -645,6 +647,7 @@ export function RealRoomScene({
         {/* the PC's speakers, at the monitor glass */}
         <SpeakerAnchor id="pc" position={[-0.156, 0.88, 0.02]} />
         <PcDeskGlow lightsOut={lightsOut} />
+        <RoomPcGlass />
       </PlacedModel>
       {!clearFloor && (
       <PlacedModel

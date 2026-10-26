@@ -105,6 +105,11 @@ export default defineConfig(() => {
     },
     build: {
       rollupOptions: {
+        // pc.html is the Windows 98 computer on the desk, framed into the room.
+        input: {
+          main: path.resolve(__dirname, 'index.html'),
+          pc: path.resolve(__dirname, 'pc.html'),
+        },
         output: {
           // Libraries in their own files: they rarely change, so returning
           // players keep them cached across deploys and only fetch our code.
