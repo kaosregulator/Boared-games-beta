@@ -21,6 +21,7 @@ This is the running record for the room and the mini-games. A row stays here unt
 | Corner desk | The plain desk by the toy shelf looked low quality. | Old Tripo mesh at 8k triangles. | The retro PC desk: 1.65 m, in the south-east corner, the CRT lit by its own glow, new memory cards for the computer bits. The race now runs along its front lip. | Screenshot from the room. Lap test above. |
 | Shelf army men | The two army men were primitives. | Built from capsules. | The two uploaded figures, shrunk to about 8.5 cm; the standing one waddles as you come close. | Screenshot with the camera on the shelf. |
 | Furby Boom visit | The grey Furby stood inside a box the whole visit. | The Boom rig carries its own box on its left, and the Boom parked so that box sat on the grey Furby. | The grey Furby sits further forward; the Boom parks back and to the right, so its box is behind him. Camera shots follow. | `tests/room/furbyDance.test.ts`, screenshot of the dance. |
+| Poo-Chi eyes | At the table his eyes did not read: the hearts were faint white lines behind a grey visor, and the close shot sat too low to see the visor at all. | The model's visor is see-through plastic on top of his head, behind the snout. The LED material was pushed past tone mapping, so the red washed out to white, and the visor's mirror finish hid what was behind it. | The LEDs skip tone mapping and glow at a lower strength, so they stay red. The visor is smoky red and less shiny. The table shot looks down at 0.55 rad so the visor faces the camera. | Browser: press his head, then Sing. The red hearts show through the visor. The statue on the dresser, the table wake-up, the bone hunt fly and jet, and one bone found (the sparkle, the 1/10 count and "in the bean bag") were each screenshotted. `tests/room/poochiDog.test.ts` covers walking, the jet, the propeller and landing, the walls, and where the bones sit. |
 
 ## Still open
 
@@ -31,6 +32,7 @@ This is the running record for the room and the mini-games. A row stays here unt
 | Table open | The box always unfolds from the same click. | Furby from the hands is fixed above. The shelf boxes were not re-tried here. | Click each shelf box once and record which ones fail. |
 | Phone, tablet, and a 2x laptop | Layouts and the new presets match the device. | The Furby card was checked at 390 and 375 CSS pixels. This environment's pixel ratio is 1. Crouch and the presets were not repeated on a real phone or tablet. | Repeat crouch and presets on a phone and a tablet. |
 | Performance | Frame time before and after on the same scene. | Not measured. The pixel-ratio work from the engine layer is unchanged. | Sample the same bedroom view before further rendering changes. |
+| Poo-Chi bone hunt | All ten bones found in one run, with the finale song. | One bone was found after moving him next to it. The other nine were not flown to in a browser, so the high ones (the game shelf at 2.05 m, top of the TV) are only checked by the unit test. | Fly to each bone in a browser and play the finale. |
 
 ## Left alone on purpose
 

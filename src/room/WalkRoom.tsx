@@ -50,6 +50,8 @@ import { furbyMuteAvailable } from './furby/furbyQuiet';
 import { FurbyBubble, FurbyHoldHud } from './furby/FurbyHud';
 import { anchorPose, requestFurbyPutdown, setFurby, useFurby } from './furby/furbyStore';
 import { FURBY_GAME } from './furby/furbyGame';
+import { POOCHI_GAME, poochiBus } from './poochi/poochiGame';
+import { BoneHuntHud, BoneHuntWorld } from './poochi/BoneHunt';
 import { TABLE_SEAT } from './roomLayout';
 import { ANCHORS, anchorById, type Anchor } from './anchors';
 import { deletePlacement, loadPlacements, savePlacement, type SavedPlacement } from './userPlacements';
@@ -161,6 +163,7 @@ function tableFromQuery(games: GameMetadata[]): GameMetadata | null {
   const id = params.get('play') ?? (game && TABLE_GAMES.has(game) ? game : null);
   if (!id) return null;
   if (id === 'furby') return FURBY_GAME;
+  if (id === 'poochi') return POOCHI_GAME;
   return games.find(g => g.id === id) ?? null;
 }
 
@@ -186,6 +189,8 @@ export function WalkRoom({
     return { spot: params.get('spot') };
   }, []);
   const armyBoot = useMemo(readArmyBoot, []);
+  /** ?bones=1 starts shrunk down inside Poo-Chi (for testing and capture). */
+  const bonesBoot = useMemo(() => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('bones') === '1', []);
   const ispyBoot = useMemo(readISpyBoot, []);
   const [session, setSession] = useState<TableSession | null>(null);
   const sessionKey = useRef(0);
@@ -212,6 +217,7 @@ export function WalkRoom({
       Boolean(queryTable) ||
       Boolean(raceBoot) ||
       Boolean(armyBoot) ||
+      bonesBoot ||
       Boolean(ispyBoot) ||
       // Back after a reload: skip the title card and stand where you were.
       Boolean(resumedSession()?.engaged),
@@ -267,7 +273,9 @@ export function WalkRoom({
   /** Eyes shut or playing: everything but the furniture is off the floor. */
   const ispyPage = (ispyOn || filmWorld === 'ispy') && ispyRoom.page;
   const ispyDim = (ispyOn || filmWorld === 'ispy') && ispyRoom.dim;
-  const toyMode = racing || armyOn || armyAlert !== null || ispyOn;
+  /** Shrunk down inside Poo-Chi, hunting for his bones. */
+  const [boneHunt, setBoneHunt] = useState(bonesBoot);
+  const toyMode = racing || armyOn || armyAlert !== null || ispyOn || boneHunt;
   /** Something held up close (Tamagotchi, Rubik's Cube): the room waits behind it. */
   const holding = tamagotchi || rubik;
   /** The Furby in your hands: the room keeps drawing behind it, you just can't walk off. */
@@ -518,6 +526,19 @@ export function WalkRoom({
     setSession(cur => (cur && cur.phase !== 'pack' ? { ...cur, phase: 'pack' } : cur));
   }, []);
 
+  // "Find my bones" at the table: the table goes, and you're shrunk down into him.
+  useEffect(() => {
+    poochiBus.hunt = () => {
+      setSession(null);
+      walkRig.tableActive = false;
+      walkRig.setCrouch(false);
+      setBoneHunt(true);
+    };
+    return () => {
+      poochiBus.hunt = null;
+    };
+  }, []);
+
   const onPacked = useCallback(() => {
     setSession(null);
     walkRig.tableActive = false;
@@ -764,6 +785,10 @@ export function WalkRoom({
         setPinned(null);
         sound.playButtonClick();
         setIspyOn(true);
+      } else if (kind === 'poochi') {
+        setPinned(null);
+        sound.playButtonClick();
+        if (!session) startTable(POOCHI_GAME);
       } else if (kind === 'furby') {
         const from = anchorPose('bed');
         if (!from) return;
@@ -772,7 +797,7 @@ export function WalkRoom({
         setFurby({ held: 'bed', from });
       }
     },
-    [enterDevice, sitDown],
+    [enterDevice, sitDown, session, startTable],
   );
   // Capture scripts open things with window.__cardAction and flip the wall
   // switch with window.__lightsOut (dev server only).
@@ -879,6 +904,7 @@ export function WalkRoom({
           lightsOut={lightsOut || ispyDim}
           clearFloor={ispyPage}
           ispyOpen={ispyOn || filmWorld === 'ispy'}
+          poochiAway={boneHunt || session?.game.id === 'poochi'}
         />
         <FurbyHold />
         <DeviceFocus device={scripted ? null : device} />
@@ -918,6 +944,7 @@ export function WalkRoom({
             {racing && <HotWheelsWorld spot={raceBoot?.spot ?? null} skipCountdown={Boolean(raceBoot)} />}
             {armyOn && <ArmyTownWorld boot={armyBoot} />}
             {ispyOn && <ISpyWorld boot={ispyBoot} />}
+            {boneHunt && <BoneHuntWorld />}
             <ReachRaycaster
               // Mid-game, only the game's own box beside the table can be picked.
               enabled={
@@ -959,6 +986,7 @@ export function WalkRoom({
       {racing && <HotWheelsHud onExit={() => setRacing(false)} />}
       {armyOn && <ArmyHud onExit={() => setArmyOn(false)} />}
       {ispyOn && <ISpyHud onExit={() => setIspyOn(false)} />}
+      {boneHunt && <BoneHuntHud onExit={() => setBoneHunt(false)} />}
       {armyAlert && (
         <ArmyAlert
           onSend={() => {

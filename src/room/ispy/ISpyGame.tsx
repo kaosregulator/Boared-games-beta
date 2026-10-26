@@ -599,7 +599,7 @@ function makeKid() {
 // ---------------------------------------------------------------------------
 // Sparkles: the stars from Cake Jam, popping off whatever you found.
 
-const starFrames = (() => {
+export const starFrames = (() => {
   let frames: THREE.Texture[] | null = null;
   return () => {
     if (!frames) {

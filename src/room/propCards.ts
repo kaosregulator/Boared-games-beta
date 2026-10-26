@@ -20,7 +20,7 @@ export interface CardVideo {
   title: string;
 }
 
-export type CardAction = 'tv' | 'nes' | 'radio' | 'gameboy' | 'tamagotchi' | 'rubik' | 'hotwheels' | 'army' | 'furby' | 'ispy';
+export type CardAction = 'tv' | 'nes' | 'radio' | 'gameboy' | 'tamagotchi' | 'rubik' | 'hotwheels' | 'army' | 'furby' | 'ispy' | 'poochi';
 
 export interface PropCard {
   id: string;
@@ -72,6 +72,10 @@ const P = {
   // No free photo of a 1998 Furby exists, so these are renders of the room's own.
   furby: { src: '/cards/furby-1998.jpg', credit: 'The Furby from this room', alt: 'A grey spotted 1998 Furby' },
   furbyBoxed: { src: '/cards/furby-1998-boxed.jpg', credit: 'The Furby from this room', alt: 'A 1998 Furby in its window box' },
+  // The room's own Poo-Chi (renders of the user's model), and a real pair from Commons.
+  poochi: { src: '/cards/poochi-bone.jpg', credit: 'The Poo-Chi from this room', alt: 'A silver and blue Poo-Chi robot dog with his toy bone' },
+  poochiHearts: { src: '/cards/poochi.jpg', credit: 'The Poo-Chi from this room', alt: 'Poo-Chi with red heart eyes' },
+  poochiPair: wm('Poo-Chi.jpg', 'VofDoom, CC BY-SA 3.0', 'Two Poo-Chi robot dogs'),
   hotPocket: wm('Hot pocket.jpg', 'Schuym1, CC BY-SA 3.0', 'A Hot Pocket'),
   hotPocketBox: wm('Hot Pocket Pepperoni Pizzeria.jpg', 'Lenin and McCarthy, CC BY-SA 3.0', 'Pepperoni Hot Pocket'),
   pizzaRolls: wm("Totino's Pizza Rolls, May 2019.jpg", 'Thomson200, CC0', "Totino's Pizza Rolls"),
@@ -1019,6 +1023,23 @@ const CARDS: PropCard[] = [
     photos: [P.furby, P.furbyBoxed],
     video: V('youtube-ouh2Q_-pYLQ', 'Tiger Electronics Furby TV commercial'),
     action: { kind: 'furby', label: 'Pick it up' },
+  },
+  {
+    id: 'poochi',
+    title: 'Poo-Chi',
+    era: '2000 · Sega Toys and Tiger Electronics · $24.99',
+    story:
+      'Everybody had a Furby, so this was the cool new thing: a robot puppy with red LED eyes that turned into hearts. Press the button on his head and he wakes up, barks, and sings. He came with his own bone, and he loved that bone more than he loved you. The box said Poo-Chis could talk to each other. Every kid on the street tried it. Ours never did. We never got the version that could, and nobody ever sent the update.',
+    memories: [
+      'He sang six songs: the Wedding March, Camptown Races, Bingo, the Railroad and Home on the Range, Ode to Joy, and When the Saints Go Marching In. All in beeps.',
+      'Ten million of them sold in eight months. Then in 2002 they were just gone, and nobody ever made him better.',
+      'His "voice" was a speaker the size of a dime, so a bark sounded like a calculator having feelings.',
+      'Held two of them nose to nose for a whole recess, waiting for them to talk. One of them fell asleep.',
+      'His bones are all over this room somewhere. He never could find them on his own.',
+    ],
+    photos: [P.poochi, P.poochiHearts, P.poochiPair],
+    video: V('2001-commercial-for-robo-chi-pets', 'Robo-Chi Pets commercial, 2001'),
+    action: { kind: 'poochi', label: 'Play with him' },
   },
   {
     id: 'armor',
