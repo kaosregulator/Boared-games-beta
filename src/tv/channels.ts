@@ -2,7 +2,7 @@ import { SNICK_DURATIONS, SNICK_EPISODES, epKey, snickShowAt, type SnickEpisode 
 import { TV247_ON } from './tv247';
 import { CCF_2000, CN_TAPES, FOX_KIDS, KIDS_WB_2001, NICK_CN_2003, blockOnAir, segmentAt, showTitleAt, type ArchiveBlock } from './lineups/archiveBlocks';
 import { ARTHUR } from './lineups/arthur';
-import { PICK_CHANNEL, YT_CHANNELS, ytOnAir, ytShowAt, type YtChannel } from './lineups/youtube247';
+import { MTV_CHANNEL, PICK_CHANNEL, YT_CHANNELS, ytOnAir, ytShowAt, type YtChannel } from './lineups/youtube247';
 
 /**
  * The cable lineup. Channel 2 is SNICK, running the archived Saturday nights
@@ -119,7 +119,7 @@ export const CHANNELS: Channel[] = [
     name: cartoon.title,
     cartoon,
   })),
-  ...(TV247_ON ? [ytChannel(PICK_CHANNEL)] : []),
+  ...(TV247_ON ? [ytChannel(MTV_CHANNEL), ytChannel(PICK_CHANNEL)] : []),
 ];
 
 export function channelByNumber(n: number) {
