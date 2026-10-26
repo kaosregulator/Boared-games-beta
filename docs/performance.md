@@ -41,6 +41,10 @@ Test hooks with `?diag=1` on a build: `window.__cardAction('army' | 'pc' | 'furb
 | Sitting at the PC: room frames drawn per 6 s on a real GPU | about 360 | about 48 |
 | Sitting at the PC: until the desktop shows | 32.5 s | 24.1 s (software; boot animation now 2x) |
 
+Single runs in the test browser are noisy: a later re-run of the same merged build gave a 3.6 s worst frame on pressing play and a 6 s worst army stall, so compare builds back to back on the same machine and repeat a run before trusting a difference.
+
+The follow-up to PR #54 (warm-up in light-free pieces, canvas textures warmed too, uploads tracked per renderer after a graphics reset) measured the same as the merged build within that noise: pressing play 2.0 to 3.7 s worst frame against 3.6 s, army worst stall 5.3 to 6.5 s against 6.0 s.
+
 Scripts are in the session's scratchpad (`perf.cjs`, `pc.cjs`, `walk.cjs`), not in the repo; they are short Playwright scripts that use the hooks above.
 
 ## Left to do / ideas
