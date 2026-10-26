@@ -8,6 +8,7 @@ import {
   executeCheckerMove,
   getAIMove,
   getAllLegalMovesForColor,
+  continuationAfter,
   getContinuationJumps,
 } from '../../games/checkers/checkersLogic';
 import { sound } from '../../utils/audio';
@@ -228,7 +229,7 @@ export function CheckersTable({ onLeave }: { onLeave: () => void }) {
     else sound.playChessMove();
     setBoard(next);
     setSelected(null);
-    const more = m.captured && !m.becomesKing ? getContinuationJumps(next, m.to.r, m.to.c) : [];
+    const more = continuationAfter(next, m);
     if (more.length) {
       setChain({ r: m.to.r, c: m.to.c });
       setNote(ai ? 'They jump again…' : 'Jump again with the same man.');

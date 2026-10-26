@@ -83,7 +83,7 @@ export function Bios({ onDone }: { onDone: () => void }) {
         <div key={i}>{line}&nbsp;</div>
       ))}
       <div className="bios-foot">
-        Press <b>DEL</b> to enter SETUP
+        Press <b>any key</b> or click to skip ahead
         <br />
         10/26/98-i440BX-BOARED-2A69KB0FC-00
       </div>
@@ -114,13 +114,13 @@ export function Splash({ onDone, shuttingDown = false }: { onDone?: () => void; 
     if (!onDone) return;
     sfx.disk(4.5, 0.75);
     const id = window.setTimeout(onDone, 4800);
-    const skip = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' || e.key === 'Enter') onDone();
-    };
+    const skip = () => onDone();
     window.addEventListener('keydown', skip);
+    window.addEventListener('pointerdown', skip);
     return () => {
       window.clearTimeout(id);
       window.removeEventListener('keydown', skip);
+      window.removeEventListener('pointerdown', skip);
     };
   }, [onDone]);
   return (
@@ -141,6 +141,7 @@ export function Splash({ onDone, shuttingDown = false }: { onDone?: () => void; 
           <div className="splash-bar-run" />
         </div>
       )}
+      {!shuttingDown && <div className="splash-msg">Click or press a key</div>}
     </div>
   );
 }

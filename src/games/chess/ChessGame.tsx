@@ -1,12 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChessBoard, ChessPiece, ChessPieceColor, ChessPieceType, ChessState, ViewMode } from '../../types';
-import {
-  initializeChess,
-  getLegalMoves,
-  getBestChessMove,
-  findKing,
-  isSquareUnderAttack
-} from './chessLogic';
+import { initializeChess, getLegalMoves, getBestChessMove, applyChessMove, sideStatus } from './chessLogic';
 import { sound } from '../../utils/audio';
 import { AnimatedHand } from '../../components/HandCursor';
 import confetti from 'canvas-confetti';
@@ -158,8 +152,9 @@ export const ChessGame: React.FC<ChessGameProps> = ({
   ) => {
     triggerHandMove(from, to, isAI);
 
-    const nextBoard = state.board.map(row => [...row]);
-    const captured = nextBoard[to.r][to.c];
+    const played = applyChessMove(state.board, from, to, promotedTo ?? 'q');
+    const nextBoard = played.board;
+    const captured = played.captured;
 
     if (captured) {
       sound.playChessCapture();
@@ -167,49 +162,11 @@ export const ChessGame: React.FC<ChessGameProps> = ({
       sound.playChessMove();
     }
 
-    const movingPiece: ChessPiece = {
-      ...piece,
-      type: promotedTo || piece.type,
-      hasMoved: true
-    };
-
-    nextBoard[from.r][from.c] = null;
-    nextBoard[to.r][to.c] = movingPiece;
-
-    // Castling rook repositioning
-    if (piece.type === 'k' && Math.abs(to.c - from.c) === 2) {
-      if (to.c === 6) {
-        nextBoard[to.r][5] = { ...nextBoard[to.r][7]!, hasMoved: true };
-        nextBoard[to.r][7] = null;
-      } else if (to.c === 2) {
-        nextBoard[to.r][3] = { ...nextBoard[to.r][0]!, hasMoved: true };
-        nextBoard[to.r][0] = null;
-      }
-    }
-
     const nextTurn: ChessPieceColor = state.turn === 'w' ? 'b' : 'w';
-
-    // Check check and checkmate
-    const enemyKingPos = findKing(nextBoard, nextTurn);
-    const inCheck = enemyKingPos
-      ? isSquareUnderAttack(nextBoard, enemyKingPos.r, enemyKingPos.c, state.turn)
-      : false;
-
-    let hasLegalMoves = false;
-    for (let r = 0; r < 8; r++) {
-      for (let c = 0; c < 8; c++) {
-        if (nextBoard[r][c]?.color === nextTurn) {
-          if (getLegalMoves(nextBoard, r, c).length > 0) {
-            hasLegalMoves = true;
-            break;
-          }
-        }
-      }
-      if (hasLegalMoves) break;
-    }
-
-    const isCheckmate = inCheck && !hasLegalMoves;
-    const isStalemate = !inCheck && !hasLegalMoves;
+    const st = sideStatus(nextBoard, nextTurn);
+    const inCheck = st.inCheck;
+    const isCheckmate = st.mate;
+    const isStalemate = st.stalemate;
 
     if (inCheck && !isCheckmate) {
       sound.playChessCheck();
@@ -324,6 +281,34 @@ export const ChessGame: React.FC<ChessGameProps> = ({
           </button>
         </div>
       </div>
+
+      {promotionPending && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-amber-400/40 bg-slate-900/95 px-3 py-2 shadow-xl">
+          <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-amber-200">Promote to</span>
+          {(['q', 'r', 'b', 'n'] as const).map(type => (
+            <button
+              key={type}
+              type="button"
+              aria-label={type === 'q' ? 'Queen' : type === 'r' ? 'Rook' : type === 'b' ? 'Bishop' : 'Knight'}
+              onClick={() => {
+                const pending = promotionPending;
+                setPromotionPending(null);
+                executeMove(pending.from, pending.to, pending.piece, type, false);
+              }}
+              className="flex h-11 min-w-11 items-center justify-center rounded-xl border border-amber-200/40 bg-[#f0d9b5] text-3xl text-neutral-900"
+            >
+              {PIECE_UNICODE[promotionPending.piece.color][type]}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setPromotionPending(null)}
+            className="ml-auto h-11 rounded-xl border border-slate-600 px-3 text-[11px] font-bold uppercase tracking-wider text-slate-300"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {/* Main Wooden Chessboard */}
       <div

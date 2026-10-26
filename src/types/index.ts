@@ -318,6 +318,8 @@ export interface ChessPiece {
   type: ChessPieceType;
   color: ChessPieceColor;
   hasMoved?: boolean;
+  /** Set on a pawn that just stepped two squares. The other side may take it en passant, and only on the next move. */
+  ep?: boolean;
 }
 
 export type ChessBoard = (ChessPiece | null)[][];

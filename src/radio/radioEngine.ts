@@ -146,7 +146,9 @@ class RadioEngine {
       };
       const onPlaying = () => finish('playing');
       const onError = () => finish('failed');
-      const timer = window.setTimeout(() => finish(token === this.loadToken ? 'failed' : 'blocked'), 6500);
+      // A dead host should not hold the dial. Four seconds is long enough for a
+      // slow stream to start and short enough to try the next one.
+      const timer = window.setTimeout(() => finish(token === this.loadToken ? 'failed' : 'blocked'), 4000);
       el.addEventListener('playing', onPlaying);
       el.addEventListener('error', onError);
       el.onloadedmetadata = src.seekLive
@@ -183,7 +185,7 @@ class RadioEngine {
     };
     const onWait = () => {
       window.clearTimeout(stallTimer);
-      stallTimer = window.setTimeout(onDead, 10000);
+      stallTimer = window.setTimeout(onDead, 5500);
     };
     const onPlay = () => window.clearTimeout(stallTimer);
     el.addEventListener('waiting', onWait);

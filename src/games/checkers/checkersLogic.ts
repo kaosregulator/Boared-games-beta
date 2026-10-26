@@ -110,6 +110,15 @@ export const getContinuationJumps = (board: CheckerBoard, r: number, c: number):
   return getLegalMovesForPiece(board, r, c, piece).filter(m => !!m.captured);
 };
 
+/**
+ * Jumps the same man must still take after `move` has been played on `boardAfter`.
+ * Crowning ends the turn immediately, even if the new king could jump again.
+ */
+export const continuationAfter = (boardAfter: CheckerBoard, move: CheckerMove): CheckerMove[] => {
+  if (!move.captured || move.becomesKing) return [];
+  return getContinuationJumps(boardAfter, move.to.r, move.to.c);
+};
+
 export const executeCheckerMove = (board: CheckerBoard, move: CheckerMove): CheckerBoard => {
   const newBoard = board.map(row => [...row]);
   const piece = newBoard[move.from.r][move.from.c];

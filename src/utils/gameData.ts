@@ -128,8 +128,8 @@ export const GAME_CATALOG: GameMetadata[] = [
     description: 'Classic 8x8 checkers on dark walnut squares. Slide diagonal pieces with hand animations, capture opponent pieces with double jumps, and reach the back row to get Kinged with a golden crown!',
     rules: [
       'Pieces move diagonally forward one square onto dark squares.',
-      'Jump over an opponent’s adjacent piece into an open space to capture and remove it.',
-      'Chain multiple jumps in a single turn if more opponent pieces can be captured.',
+      'If a jump is available it must be taken. Jump an adjacent opponent into the empty square beyond, and keep jumping with that same piece.',
+      'Crowning ends the turn, even when the new king could jump again.',
       'Reach the opposing back rank to be crowned KING—Kings can move and jump both forwards and backwards!',
       'Capture all enemy pieces or block all legal opponent moves to win.'
     ],
@@ -145,7 +145,7 @@ export const GAME_CATALOG: GameMetadata[] = [
     boxColor: 'from-emerald-950 via-green-950 to-slate-900',
     boxAccent: 'border-emerald-400/40 text-emerald-300',
     badge: 'Casino Felt',
-    description: 'Step up to the velvet green blackjack table! Place your bets with realistic poker chips ($5, $25, $100, $500), hit, stand, double down, or split. Dealer stands on 17.',
+    description: 'Step up to the velvet green blackjack table! Place your bets with realistic poker chips ($5, $25, $100, $500), hit, stand, or double down. Dealer stands on every 17.',
     rules: [
       'Place your wager using poker chips and receive 2 initial cards.',
       'Goal: Get your hand value closer to 21 than the dealer without going over (busting).',
@@ -185,13 +185,13 @@ export const GAME_CATALOG: GameMetadata[] = [
     boxColor: 'from-rose-950 via-emerald-950 to-blue-950',
     boxAccent: 'border-emerald-400/40 text-emerald-300',
     badge: '4-Player Party',
-    description: 'The ultimate party game of sweet revenge! Draw numbered action cards (1, 2, 4 Backwards, 7 Split, 11 Swap, SORRY!), navigate treacherous slide tracks, bump opponents back to Start, and race your pawns to Home.',
+    description: 'The ultimate party game of sweet revenge! Draw numbered action cards (1, 2, 4 Backwards, 10 either way, 11 Swap, SORRY!), bump opponents back to Start, and race your pawns to Home.',
     rules: [
-      'Draw a card on your turn. Use numbers 1 or 2 to move a pawn out of START.',
-      'Card 4 moves backwards 4 spaces; Card 7 can split steps; Card 11 can swap places with an opponent!',
-      'Drawing "SORRY!" moves a pawn from your Start to bump ANY opponent pawn back to their Start.',
-      'Slide tracks automatically boost your pawn forward while wiping out all pawns in the slide path.',
-      'First player to guide all 3 pawns safely into HOME wins!'
+      'Draw a card. A 1 or a 2 starts a pawn. Every other number moves a pawn that is already on the track.',
+      'A 4 moves back 4. A 10 may go forward 10 or back 1. An 11 may move 11 or swap with an opponent on the track.',
+      'A 7 moves one pawn forward 7. SORRY! jumps a pawn from Start onto an opponent and sends that pawn back to Start.',
+      'Near your own start, an exact count turns into the safety lane. Landing on the last step is HOME.',
+      'First player to guide all 3 pawns into HOME wins.'
     ],
     icon: 'Sparkles',
     rating: '4.9 ★★★★★'
@@ -263,12 +263,12 @@ export const GAME_CATALOG: GameMetadata[] = [
     boxColor: 'from-lime-950 via-green-950 to-slate-950',
     boxAccent: 'border-lime-400/40 text-lime-200',
     badge: 'Spinner',
-    description: 'Spin and move along the track. Paydays, taxes, a career, and a house change your cash. Most money at retirement wins.',
+    description: 'Spin 1 to 10 and move along the track. Paydays, taxes, a career, and a house change your cash. Highest net worth at retirement wins.',
     rules: [
-      'Spin 1 to 6 and move that many spaces.',
-      'The space pays or costs the amount printed on it.',
-      'A rival spins on your turn.',
-      'When both pegs reach Retirement, the higher cash total wins.'
+      'The spinner is 1 to 10. A Stop space (career, marriage, a house, family, retirement) ends the move even if the spin was longer.',
+      'Pay Day pays your salary when you land on it and when you pass it. Other spaces pay or cost what they say.',
+      'College costs $100,000 before you spin and unlocks the degree careers. Skipping college sends you straight to work.',
+      'Turns go around the table. At retirement the higher net worth wins, counting cash, the house, Life tiles, and loans.'
     ],
     icon: 'Sparkles',
     rating: '4.8 ★★★★★'
@@ -282,12 +282,12 @@ export const GAME_CATALOG: GameMetadata[] = [
     boxColor: 'from-sky-950 via-blue-950 to-slate-950',
     boxAccent: 'border-sky-400/40 text-sky-100',
     badge: 'Deeds',
-    description: 'A short Monopoly circuit on the table. Pass Go for $200, buy unowned deeds, and pay rent on a rival color.',
+    description: 'Monopoly on the table. Two dice, pass GO for $200, buy deeds, build houses, and pay rent. Last player standing wins.',
     rules: [
-      'Roll one die and move. Passing Go pays $200.',
-      'Landing on an unowned deed buys it if you can afford it.',
-      'Landing on a rival deed pays that rent.',
-      'Tax and Community Chest change your cash. The first player below $0 is out.'
+      'Roll two dice and move. Passing GO pays $200. Doubles give another turn, and a third double in a row sends you to jail.',
+      'An unowned deed is offered for sale. Owning a whole color charges double rent, and houses have to be built evenly across that color.',
+      'A rival deed charges its rent. One utility charges 4 times the dice, both charge 10 times.',
+      'Tax money sits on Free Parking until someone lands there. The player who cannot pay, even after selling buildings, is bankrupt. Last one standing wins.'
     ],
     icon: 'Landmark',
     rating: '4.8 ★★★★★'
