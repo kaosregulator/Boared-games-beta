@@ -17,6 +17,7 @@ const HINT: Record<DeviceId, string> = {
   crt: 'Buttons on the TV and cable box · arrows change channel · G guide · scroll to zoom · F big screen',
   nes: 'Pick a cartridge · arrows, Z, X, Enter play · scroll to zoom · F big screen',
   boombox: 'Turn the dial, press SCAN, or tap a preset · scroll to zoom',
+  pc: 'Point and click on the screen · Win key opens Start · F big screen',
 };
 
 /**

@@ -5,6 +5,7 @@ import { SafeRoomModel } from './RoomModel';
 import { frameSubject, freeArea, resetView, viewRig } from '../devices/viewRig';
 import type { DeviceId } from './devices';
 import { TvSet } from '../tv/TvSet';
+import { MONITOR, PC_SUBJECT, PcStudio } from '../devices/PcScreen';
 import { radio, useRadio, type RadioSnapshot } from '../radio/radioEngine';
 import { FM_MAX, FM_MIN, STATIONS } from '../radio/stations';
 
@@ -19,6 +20,8 @@ const POSE: Record<
   crt: { meters: 0.62, axis: 'x', fov: 40, at: [0.04, 0.58, 1.72], look: [0.04, 0.22, 0] },
   nes: { meters: 0.62, axis: 'x', fov: 40, at: [0.04, 0.58, 1.72], look: [0.04, 0.22, 0] },
   boombox: { meters: 0.38, axis: 'x', fov: 32, at: [0, 0.15, 0.72], look: [0, 0.12, 0] },
+  // Sat at the desk, square on to the tube (it leans back a touch).
+  pc: { meters: 1.65, axis: 'x', fov: 36, at: [MONITOR.x, MONITOR.y + 0.1, 0.62], look: [MONITOR.x, MONITOR.y, MONITOR.z] },
 };
 
 /**
@@ -52,7 +55,8 @@ function applyPose(cam: THREE.PerspectiveCamera, device: DeviceId, size: { width
   cam.position.set(pose.at[0], STUDIO_Y + pose.at[1], pose.at[2]);
   const free = freeArea(viewRig.insets, size.width, size.height);
   const freeAspect = (free.fw * size.width) / Math.max(1, free.fh * size.height);
-  const subject = device === 'boombox' ? SUBJECT.boombox : freeAspect < 1.15 ? SUBJECT.tv : SUBJECT.wide;
+  const subject =
+    device === 'pc' ? PC_SUBJECT : device === 'boombox' ? SUBJECT.boombox : freeAspect < 1.15 ? SUBJECT.tv : SUBJECT.wide;
   CENTRE.set(subject.centre[0], STUDIO_Y + subject.centre[1], subject.centre[2]);
   frameSubject(cam, CENTRE, subject, viewRig.insets, size);
 }
@@ -103,6 +107,8 @@ function Studio({ device }: { device: DeviceId }) {
       <pointLight position={[-0.5, 0.4, 0.4]} color="#c9a0ff" intensity={2.2} distance={2.4} decay={2} />
       {device === 'crt' || device === 'nes' ? (
         <TvSet />
+      ) : device === 'pc' ? (
+        <PcStudio />
       ) : (
         <>
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.002, 0]}>

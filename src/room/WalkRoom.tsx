@@ -17,6 +17,7 @@ import { RubikPlay } from '../devices/RubikPlay';
 import { DeviceFocus } from './DeviceFocus';
 import { DeviceOverlay } from './DeviceOverlay';
 import { TvGlass } from '../tv/TvSet';
+import { PcGlass, powerOnPc, setPcEscape, usePc } from '../devices/PcScreen';
 import { ParentYell } from './ParentYell';
 import { MenuReel } from './MenuReel';
 import { GameBoySeat } from '../devices/GameBoySeat';
@@ -106,7 +107,7 @@ function readCameraOverride() {
   const shotRaw = params.get('shot');
   const deviceRaw = params.get('device');
   const device: DeviceId | null =
-    deviceRaw === 'crt' || deviceRaw === 'nes' || deviceRaw === 'boombox' ? deviceRaw : null;
+    deviceRaw === 'crt' || deviceRaw === 'nes' || deviceRaw === 'boombox' || deviceRaw === 'pc' ? deviceRaw : null;
   return {
     tour: params.has('tour'),
     film: params.has('film'),
@@ -285,11 +286,13 @@ export function WalkRoom({
   const [furbyToTable, setFurbyToTable] = useState(false);
   const emulatorOn = (device === 'crt' || device === 'nes') && tvStatus.mode === 'emulator';
   const tvOn = (device === 'crt' || device === 'nes') && !scripted;
+  const pc = usePc();
+  const atPc = device === 'pc' && !scripted;
   // Stepping back with the set on leaves it playing on the room's TV until POWER.
   const tvInRoom = !tvOn && !scripted && tvStatus.mode !== 'off';
   const padUp = touch && (seated || emulatorOn);
-  const viewKind = seated || padUp ? 'gameboy' : tvOn ? 'tv' : device === 'boombox' ? 'radio' : null;
-  const big = rig.big && (tvOn || seated);
+  const viewKind = seated || padUp ? 'gameboy' : tvOn || atPc ? 'tv' : device === 'boombox' ? 'radio' : null;
+  const big = rig.big && (tvOn || seated || atPc);
   const [flashPhase, setFlashPhase] = useState<'idle' | 'cover' | 'reveal'>('idle');
   const radioState = useRadio();
   const tapeOn = radioState.power;
@@ -623,7 +626,8 @@ export function WalkRoom({
     (id: DeviceId) => {
       document.exitPointerLock?.();
       setCardOpen(false);
-      if (id === 'boombox') sound.stopNostalgia();
+      if (id === 'boombox' || id === 'pc') sound.stopNostalgia();
+      if (id === 'pc') powerOnPc();
       sound.playButtonClick();
       runFlash(() => setDevice(id));
     },
@@ -679,6 +683,17 @@ export function WalkRoom({
     return () => window.removeEventListener('keydown', onKey);
   }, [device, exitDevice]);
 
+  // Windows has the keyboard while you're at the computer, so its Escape
+  // comes over from the iframe: big screen first, then back to the room.
+  useEffect(() => {
+    if (device !== 'pc') return;
+    setPcEscape(() => {
+      if (viewRig.big) setBig(false);
+      else exitDevice();
+    });
+    return () => setPcEscape(null);
+  }, [device, exitDevice]);
+
   // Frame the close-up around whatever the controls cover, for this
   // orientation; in big screen, lay the picture flat over the free area.
   useEffect(() => {
@@ -688,13 +703,13 @@ export function WalkRoom({
       ? { top: 0, right: 0, bottom: 0, left: 0 }
       : insetsFor(viewKind, touch, vp, big);
     setInsets(insets);
-    const glassId = seated ? 'gameboy' : 'tv';
+    const glassId = seated ? 'gameboy' : atPc ? 'pc' : 'tv';
     setGlassBig(
       glassId,
       big ? { x: insets.left, y: insets.top, w: vp.w - insets.left - insets.right, h: vp.h - insets.top - insets.bottom } : null,
     );
     return () => setGlassBig(glassId, null);
-  }, [viewKind, touch, vp, big, seated]);
+  }, [viewKind, touch, vp, big, seated, atPc]);
 
   // A walking zoom doesn't carry into close-ups.
   useEffect(() => {
@@ -703,10 +718,10 @@ export function WalkRoom({
 
   // Leaving the device always leaves big screen and real full screen.
   useEffect(() => {
-    if (tvOn || seated) return;
+    if (tvOn || seated || atPc) return;
     if (viewRig.big) setBig(false);
     resetView();
-  }, [tvOn, seated]);
+  }, [tvOn, seated, atPc]);
 
   const toggleBig = useCallback(
     (on: boolean) => {
@@ -719,7 +734,7 @@ export function WalkRoom({
 
   // F toggles big screen on a keyboard.
   useEffect(() => {
-    if (!tvOn && !seated) return;
+    if (!tvOn && !seated && !atPc) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.code !== 'KeyF' || event.repeat) return;
       const el = event.target as HTMLElement | null;
@@ -728,7 +743,7 @@ export function WalkRoom({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [tvOn, seated, toggleBig]);
+  }, [tvOn, seated, atPc, toggleBig]);
 
   const handleSelect = useCallback(
     (target: Aimed) => {
@@ -763,6 +778,7 @@ export function WalkRoom({
       if (kind === 'tv') enterDevice('crt');
       else if (kind === 'nes') enterDevice('nes');
       else if (kind === 'radio') enterDevice('boombox');
+      else if (kind === 'pc') enterDevice('pc');
       else if (kind === 'gameboy') sitDown();
       else if (kind === 'tamagotchi') {
         setPinned(null);
@@ -800,12 +816,14 @@ export function WalkRoom({
     [enterDevice, sitDown, session, startTable],
   );
   // Capture scripts open things with window.__cardAction and flip the wall
-  // switch with window.__lightsOut (dev server only).
+  // switch with window.__lightsOut, and boot the computer with window.__pcPower
+  // (dev server only).
   useEffect(() => {
     if (!import.meta.env.DEV) return;
-    const w = window as unknown as { __cardAction?: typeof runCardAction; __lightsOut?: (out: boolean) => void };
+    const w = window as unknown as { __cardAction?: typeof runCardAction; __lightsOut?: (out: boolean) => void; __pcPower?: () => void };
     w.__cardAction = runCardAction;
     w.__lightsOut = setLightsOut;
+    w.__pcPower = powerOnPc;
   }, [runCardAction]);
 
   // An old commercial on a card pauses the room music; closing it brings the music back.
@@ -1033,6 +1051,7 @@ export function WalkRoom({
       {tvOn && (touch || big) && flashPhase !== 'cover' && (
         <TvRemote landscape={vp.landscape} big={big} onBig={toggleBig} padUp={padUp} />
       )}
+      {(pc.on || atPc) && <PcGlass inRoom={!atPc} />}
       {(tvOn || tvInRoom) && <TvGlass initialMode={device === 'nes' ? 'gaming' : 'menu'} inRoom={tvInRoom} />}
       {furbyMuteAvailable({ tvMode: tvStatus.mode, atTelevision: tvOn || tvInRoom, radioOn: tapeOn }) && <FurbyQuiet />}
       {/* The Furby waits in its box for Unbox, so its HUD is up during the unfold too. */}
@@ -1177,7 +1196,7 @@ export function WalkRoom({
       {device && flashPhase !== 'cover' && (
         <DeviceOverlay
           big={big}
-          onBig={tvOn ? toggleBig : undefined}
+          onBig={tvOn || atPc ? toggleBig : undefined}
           touch={touch}
           device={device}
           radioError={radioError}
