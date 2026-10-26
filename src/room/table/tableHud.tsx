@@ -110,7 +110,7 @@ export function TableHudOverlay({
         <button
           type="button"
           onClick={model.onLeave}
-          className="shrink-0 rounded-xl bg-amber-400 px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-black"
+          className="min-h-11 shrink-0 rounded-xl bg-amber-400 px-3 text-[11px] font-black uppercase tracking-wider text-black"
         >
           Pack up
         </button>
@@ -121,7 +121,7 @@ export function TableHudOverlay({
             key={action.label}
             type="button"
             onClick={action.onClick}
-            className={`rounded-xl px-3 py-1.5 text-xs font-bold ${
+            className={`min-h-11 rounded-xl px-3 text-xs font-bold ${
               action.tone === 'ghost' ? 'border border-white/20 bg-white/10 text-white' : 'bg-amber-400 text-black'
             }`}
           >
@@ -132,7 +132,7 @@ export function TableHudOverlay({
           <button
             type="button"
             onClick={crouched ? onStand : onCrouch}
-            className="rounded-xl border border-white/20 bg-white/5 px-3 py-1.5 text-xs font-bold text-white/80"
+            className="min-h-11 rounded-xl border border-white/20 bg-white/5 px-3 text-xs font-bold text-white/80"
           >
             {crouched ? 'Stand up (Space)' : 'Back to the table'}
           </button>

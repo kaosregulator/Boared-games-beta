@@ -1136,24 +1136,51 @@ class SoundEngine {
     });
   }
 
+  /** One soft key-tick, reused so a menu click does not allocate a new buffer every time. */
+  private clickTick: AudioBuffer | null = null;
+
   public playButtonClick() {
     if (this.muted) return;
     this.initCtx();
     if (!this.ctx) return;
 
     const t = this.ctx.currentTime;
+    if (!this.clickTick) {
+      const frames = Math.floor(this.ctx.sampleRate * 0.018);
+      const buffer = this.ctx.createBuffer(1, frames, this.ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < frames; i++) {
+        const env = 1 - i / frames;
+        data[i] = (Math.random() * 2 - 1) * env * env;
+      }
+      this.clickTick = buffer;
+    }
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = this.clickTick;
+    const noiseGain = this.ctx.createGain();
+    const body = this.ctx.createBiquadFilter();
+    body.type = 'highpass';
+    body.frequency.setValueAtTime(900, t);
+    noiseGain.gain.setValueAtTime(0.045 * this.volume, t);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.018);
+    noise.connect(body);
+    body.connect(noiseGain);
+    noiseGain.connect(this.ctx.destination);
+    noise.start(t);
+    noise.stop(t + 0.02);
+
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(800, t);
-    osc.frequency.exponentialRampToValueAtTime(400, t + 0.04);
-    gain.gain.setValueAtTime(0.15 * this.volume, t);
-    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.04);
+    osc.frequency.setValueAtTime(740, t);
+    osc.frequency.exponentialRampToValueAtTime(420, t + 0.045);
+    gain.gain.setValueAtTime(0.07 * this.volume, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
 
     osc.connect(gain);
     gain.connect(this.ctx.destination);
     osc.start(t);
-    osc.stop(t + 0.04);
+    osc.stop(t + 0.05);
   }
 
   // --- Throwback Trivia buzzers and stingers ---

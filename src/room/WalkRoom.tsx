@@ -20,6 +20,7 @@ import { TvGlass } from '../tv/TvSet';
 import { PcGlass, powerOnPc, setPcBig, setPcEscape, usePc } from '../devices/PcScreen';
 import { ParentYell } from './ParentYell';
 import { MenuReel } from './MenuReel';
+import { WalkKeys } from './WalkKeys';
 import { GameBoySeat } from '../devices/GameBoySeat';
 import { GameBoyGlass } from '../devices/GameBoyGlass';
 import { DEVICE_FROM_PROP, type DeviceId } from './devices';
@@ -1098,7 +1099,7 @@ export function WalkRoom({
       )}
 
       {/* Glass flash card — games + nostalgia props */}
-      {!toyMode && !overlayGame && (engaged || scripted) && !device && !seated && !holding && !furbyHeld && (
+      {!toyMode && !overlayGame && !menuOpen && (engaged || scripted) && !device && !seated && !holding && !furbyHeld && (
       <button
         type="button"
         onClick={openMenu}
@@ -1184,21 +1185,7 @@ export function WalkRoom({
         <ViewControls immersive={immersiveOn} onImmersive={setImmersiveOn} />
       )}
 
-      {walking && !touch && !showCard && !immersive && (
-        <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 flex w-[calc(100%-2rem)] flex-wrap items-center justify-center gap-2 text-[10px] uppercase tracking-[0.2em] font-bold text-white/70">
-          {[
-            ['W A S D', 'walk'],
-            ['Arrows · drag · 2-finger swipe', 'look'],
-            ['Click', 'use things'],
-            ['Pinch · + −', 'zoom'],
-            ['C', 'duck or stand'],
-          ].map(([key, what]) => (
-            <span key={key} className="rounded-lg bg-black/55 border border-white/10 px-2.5 py-1">
-              <span className="text-amber-200">{key}</span> {what}
-            </span>
-          ))}
-        </div>
-      )}
+      {walking && !touch && !showCard && !immersive && !menuOpen && <WalkKeys />}
 
       {device && flashPhase !== 'cover' && (
         <DeviceOverlay

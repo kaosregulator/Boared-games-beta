@@ -36,6 +36,32 @@ export function Shell() {
   useEffect(() => {
     setRoomLevel(focus ? 1 : 0.35);
   }, [focus]);
+
+  // Across the room the tube only has to glow: Windows is ready when you sit
+  // down. At the desk, the first boot still plays. Later boots in this visit
+  // skip to the desktop after a short warm-up, and any key still skips the
+  // long one.
+  useEffect(() => {
+    if (phase !== 'bios') return;
+    let quick = !focus;
+    try {
+      if (focus && sessionStorage.getItem('pc98-seen') === '1') quick = true;
+    } catch {
+      // Private mode keeps the full boot.
+    }
+    if (!quick) return;
+    const id = window.setTimeout(() => setPhase('desktop'), focus ? 800 : 420);
+    return () => window.clearTimeout(id);
+  }, [phase, focus]);
+
+  useEffect(() => {
+    if (phase !== 'desktop' || !focus) return;
+    try {
+      sessionStorage.setItem('pc98-seen', '1');
+    } catch {
+      // Not remembered; the next boot is simply the long one again.
+    }
+  }, [phase, focus]);
   useEffect(() => {
     toRoom({ evt: 'power', on: phase !== 'off' && phase !== 'safe' });
     // fetch the Windows sounds while the BIOS counts memory

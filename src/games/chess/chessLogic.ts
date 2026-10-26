@@ -91,13 +91,18 @@ export function getRawMoves(
           moves.push({ r: f2, c });
         }
       }
-      // Diagonal Captures
+      // Diagonal captures, including en passant on the square behind a pawn that just stepped two.
       [-1, 1].forEach(dc => {
         const nc = c + dc;
         if (nc >= 0 && nc < 8 && f1 >= 0 && f1 < 8) {
           const target = board[f1][nc];
           if (target && target.color === oppColor) {
             moves.push({ r: f1, c: nc });
+          } else if (!target) {
+            const side = board[r][nc];
+            if (side?.type === 'p' && side.color === oppColor && side.ep) {
+              moves.push({ r: f1, c: nc, isEnPassant: true });
+            }
           }
         }
       });
@@ -202,16 +207,29 @@ export function getRawMoves(
         }
       }
 
-      // Castling
+      // Castling. The rook has to be this side's own rook, still on its corner.
       if (includeCastling && !piece.hasMoved) {
-        // Kingside
-        if (!board[r][c + 1] && !board[r][c + 2] && board[r][c + 3]?.type === 'r' && !board[r][c + 3]?.hasMoved) {
+        const kingside = board[r][c + 3];
+        if (
+          !board[r][c + 1] &&
+          !board[r][c + 2] &&
+          kingside?.type === 'r' &&
+          kingside.color === piece.color &&
+          !kingside.hasMoved
+        ) {
           if (!isSquareUnderAttack(board, r, c, oppColor) && !isSquareUnderAttack(board, r, c + 1, oppColor)) {
             moves.push({ r, c: c + 2, isCastle: true });
           }
         }
-        // Queenside
-        if (!board[r][c - 1] && !board[r][c - 2] && !board[r][c - 3] && board[r][c - 4]?.type === 'r' && !board[r][c - 4]?.hasMoved) {
+        const queenside = board[r][c - 4];
+        if (
+          !board[r][c - 1] &&
+          !board[r][c - 2] &&
+          !board[r][c - 3] &&
+          queenside?.type === 'r' &&
+          queenside.color === piece.color &&
+          !queenside.hasMoved
+        ) {
           if (!isSquareUnderAttack(board, r, c, oppColor) && !isSquareUnderAttack(board, r, c - 1, oppColor)) {
             moves.push({ r, c: c - 2, isCastle: true });
           }
@@ -224,6 +242,82 @@ export function getRawMoves(
   return moves;
 }
 
+export interface AppliedChessMove {
+  board: ChessBoard;
+  captured: ChessPiece | null;
+  /** Where the captured piece stood. En passant takes the pawn beside the mover, not the landing square. */
+  capturedAt: { r: number; c: number } | null;
+  castle: 'k' | 'q' | null;
+  enPassant: boolean;
+  promoted: ChessPieceType | null;
+}
+
+/**
+ * Play one move on a copy of the board: captures, castling's rook, promotion,
+ * and the en-passant flag. A pawn that is not promoting ignores `promoteTo`.
+ */
+export function applyChessMove(
+  board: ChessBoard,
+  from: { r: number; c: number },
+  to: { r: number; c: number },
+  promoteTo: ChessPieceType = 'q',
+): AppliedChessMove {
+  const next: ChessBoard = board.map(row =>
+    row.map(p => (p ? { type: p.type, color: p.color, ...(p.hasMoved ? { hasMoved: true as const } : {}) } : null)),
+  );
+  const piece = next[from.r]?.[from.c];
+  if (!piece) {
+    return { board: next, captured: null, capturedAt: null, castle: null, enPassant: false, promoted: null };
+  }
+
+  let captured = next[to.r][to.c];
+  let capturedAt = captured ? { r: to.r, c: to.c } : null;
+  let enPassant = false;
+  if (piece.type === 'p' && from.c !== to.c && !captured) {
+    const victim = board[from.r][to.c];
+    if (victim?.type === 'p' && victim.color !== piece.color && victim.ep) {
+      captured = victim;
+      capturedAt = { r: from.r, c: to.c };
+      next[from.r][to.c] = null;
+      enPassant = true;
+    }
+  }
+
+  const promoting = piece.type === 'p' && (to.r === 0 || to.r === 7);
+  const placed: ChessPiece = {
+    type: promoting ? promoteTo : piece.type,
+    color: piece.color,
+    hasMoved: true,
+  };
+  next[from.r][from.c] = null;
+  next[to.r][to.c] = placed;
+
+  let castle: 'k' | 'q' | null = null;
+  if (piece.type === 'k' && Math.abs(to.c - from.c) === 2) {
+    castle = to.c > from.c ? 'k' : 'q';
+    const fromC = castle === 'k' ? 7 : 0;
+    const toC = castle === 'k' ? 5 : 3;
+    const rook = next[to.r][fromC];
+    if (rook?.type === 'r' && rook.color === piece.color) {
+      next[to.r][toC] = { ...rook, hasMoved: true };
+      next[to.r][fromC] = null;
+    }
+  }
+
+  if (piece.type === 'p' && Math.abs(to.r - from.r) === 2) {
+    next[to.r][to.c] = { ...placed, ep: true };
+  }
+
+  return {
+    board: next,
+    captured,
+    capturedAt,
+    castle,
+    enPassant,
+    promoted: promoting ? placed.type : null,
+  };
+}
+
 export function getLegalMoves(board: ChessBoard, r: number, c: number): { r: number; c: number }[] {
   const piece = board[r][c];
   if (!piece) return [];
@@ -233,18 +327,28 @@ export function getLegalMoves(board: ChessBoard, r: number, c: number): { r: num
   const oppColor = piece.color === 'w' ? 'b' : 'w';
 
   for (const move of rawMoves) {
-    // Simulate move
-    const cloneBoard = board.map(row => [...row]);
-    cloneBoard[move.r][move.c] = piece;
-    cloneBoard[r][c] = null;
-
-    const kingPos = findKing(cloneBoard, piece.color);
-    if (kingPos && !isSquareUnderAttack(cloneBoard, kingPos.r, kingPos.c, oppColor)) {
+    const played = applyChessMove(board, { r, c }, move);
+    const kingPos = findKing(played.board, piece.color);
+    if (kingPos && !isSquareUnderAttack(played.board, kingPos.r, kingPos.c, oppColor)) {
       legalMoves.push({ r: move.r, c: move.c });
     }
   }
 
   return legalMoves;
+}
+
+/** Check, checkmate, and stalemate for the side about to move. */
+export function sideStatus(board: ChessBoard, toMove: ChessPieceColor) {
+  const king = findKing(board, toMove);
+  const opp = toMove === 'w' ? 'b' : 'w';
+  const inCheck = king ? isSquareUnderAttack(board, king.r, king.c, opp) : false;
+  let any = false;
+  for (let r = 0; r < 8 && !any; r++) {
+    for (let c = 0; c < 8 && !any; c++) {
+      if (board[r][c]?.color === toMove && getLegalMoves(board, r, c).length > 0) any = true;
+    }
+  }
+  return { inCheck, mate: inCheck && !any, stalemate: !inCheck && !any };
 }
 
 export function evaluateBoardScore(board: ChessBoard): number {
@@ -289,14 +393,9 @@ export function getBestChessMove(
       if (p && p.color === color) {
         const legals = getLegalMoves(board, r, c);
         for (const to of legals) {
-          // Simulate
-          const clone = board.map(row => [...row]);
-          const captured = clone[to.r][to.c];
-          clone[to.r][to.c] = p;
-          clone[r][c] = null;
-
-          let moveScore = evaluateBoardScore(clone);
-          if (captured) {
+          const played = applyChessMove(board, { r, c }, to);
+          let moveScore = evaluateBoardScore(played.board);
+          if (played.captured) {
             moveScore += color === 'b' ? 15 : -15;
           }
 

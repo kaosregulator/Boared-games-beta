@@ -353,11 +353,11 @@ function resolve(s: LifeState, p: LifePlayer): void {
   nextTurn(s);
 }
 
-export function spin(state: LifeState): LifeState {
+export function spin(state: LifeState, roll?: number): LifeState {
   const s = clone(state);
   if (s.stage !== 'spin') return state;
   const p = s.players[s.turn];
-  const n = 1 + Math.floor(Math.random() * 10);
+  const n = roll !== undefined ? Math.max(1, Math.min(10, Math.round(roll))) : 1 + Math.floor(Math.random() * 10);
   s.spin = n;
   let target = Math.min(p.at + n, TRACK.length - 1);
 

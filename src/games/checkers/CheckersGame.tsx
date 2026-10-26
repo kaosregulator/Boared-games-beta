@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CheckerBoard, CheckerPieceColor, CheckerMove, ViewMode, GameMode } from '../../types';
-import { createInitialCheckersBoard, getAllLegalMovesForColor, executeCheckerMove, getAIMove, getLegalMovesForPiece, getContinuationJumps } from './checkersLogic';
+import { createInitialCheckersBoard, getAllLegalMovesForColor, executeCheckerMove, getAIMove, getLegalMovesForPiece, getContinuationJumps, continuationAfter } from './checkersLogic';
 import { sound } from '../../utils/audio';
 import { AnimatedHand } from '../../components/HandCursor';
 import { RotateCcw, Eye, Shield, Crown, Sparkles, User, Bot, HelpCircle, Trophy } from 'lucide-react';
@@ -131,8 +131,7 @@ export const CheckersGame: React.FC<CheckersGameProps> = ({ onBackToShelf }) => 
 
     // A capture that opens another jump must be continued by the same piece,
     // unless the piece was crowned on the way, which ends the move.
-    const chain =
-      move.captured && !move.becomesKing ? getContinuationJumps(nextBoard, move.to.r, move.to.c) : [];
+    const chain = continuationAfter(nextBoard, move);
     if (chain.length > 0) {
       setChainFrom({ r: move.to.r, c: move.to.c });
       setSelectedSquare({ r: move.to.r, c: move.to.c });

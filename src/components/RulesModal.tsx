@@ -3,6 +3,9 @@ import { GameMetadata } from '../types';
 import { sound } from '../utils/audio';
 import { X, BookOpen, CheckCircle, Lightbulb, Shield } from 'lucide-react';
 
+/** Games played on the rug table. Kept here so the rules card does not pull the 3D table into its download. */
+const ON_THE_TABLE = new Set(['monopoly', 'connect4', 'battleship', 'chess', 'checkers', 'blackjack', 'clue', 'furby', 'poochi']);
+
 interface RulesModalProps {
   game: GameMetadata;
   onClose: () => void;
@@ -17,7 +20,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ game, onClose }) => {
             sound.playButtonClick();
             onClose();
           }}
-          className="absolute top-5 right-5 w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors border border-slate-700"
+          className="absolute top-4 right-4 flex h-11 w-11 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-slate-400 transition-colors hover:bg-slate-700 hover:text-white"
         >
           <X className="w-4 h-4" />
         </button>
@@ -51,7 +54,10 @@ export const RulesModal: React.FC<RulesModalProps> = ({ game, onClose }) => {
         <div className="bg-slate-900/80 border border-slate-700/60 p-3.5 rounded-xl flex items-start gap-2.5">
           <Lightbulb className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
           <div className="text-xs text-slate-300">
-            <strong className="text-blue-300">Pro-Tip:</strong> You can toggle between 3D Isometric View and 2D Tactical View at any time using the camera button in the top bar.
+            <strong className="text-blue-300">At the table:</strong>{' '}
+            {ON_THE_TABLE.has(game.id)
+              ? 'Drag to look around the board, scroll or pinch to zoom, and press V to change the camera. Space stands you up. Pack up puts the box away.'
+              : 'The board opens over the room. Use the buttons on the board for each move. Pack up puts the box away.'}
           </div>
         </div>
 

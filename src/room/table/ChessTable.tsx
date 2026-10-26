@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import type { ChessBoard, ChessPieceColor, ChessPieceType } from '../../types';
-import { createInitialBoard, findKing, getBestChessMove, getLegalMoves, isSquareUnderAttack } from '../../games/chess/chessLogic';
+import { applyChessMove, createInitialBoard, getBestChessMove, getLegalMoves, sideStatus } from '../../games/chess/chessLogic';
 import { sound } from '../../utils/audio';
 import { PLAY_TABLE } from '../roomLayout';
 import { pushHud } from './tableHud';
@@ -60,29 +60,20 @@ function piecesFrom(board: ChessBoard): Piece[] {
 
 /** The engine's move, with castling's rook, promotion to a queen, and the taken piece. */
 function applyMove(board: ChessBoard, m: Move) {
-  const next = board.map(row => [...row]);
-  const piece = next[m.from.r][m.from.c]!;
-  const captured = next[m.to.r][m.to.c];
-  const promote = piece.type === 'p' && (m.to.r === 0 || m.to.r === 7);
-  next[m.from.r][m.from.c] = null;
-  next[m.to.r][m.to.c] = { ...piece, type: promote ? 'q' : piece.type, hasMoved: true };
+  const played = applyChessMove(board, m.from, m.to);
   let rook: Move | null = null;
-  if (piece.type === 'k' && Math.abs(m.to.c - m.from.c) === 2) {
-    const fromC = m.to.c === 6 ? 7 : 0;
-    const toC = m.to.c === 6 ? 5 : 3;
-    next[m.to.r][toC] = { ...next[m.to.r][fromC]!, hasMoved: true };
-    next[m.to.r][fromC] = null;
+  if (played.castle) {
+    const fromC = played.castle === 'k' ? 7 : 0;
+    const toC = played.castle === 'k' ? 5 : 3;
     rook = { from: { r: m.to.r, c: fromC }, to: { r: m.to.r, c: toC } };
   }
-  return { next, captured, rook, promote };
-}
-
-function status(board: ChessBoard, toMove: ChessPieceColor) {
-  const king = findKing(board, toMove);
-  const inCheck = king ? isSquareUnderAttack(board, king.r, king.c, toMove === 'w' ? 'b' : 'w') : false;
-  let any = false;
-  for (let r = 0; r < 8 && !any; r++) for (let c = 0; c < 8 && !any; c++) if (board[r][c]?.color === toMove && getLegalMoves(board, r, c).length) any = true;
-  return { inCheck, mate: inCheck && !any, stalemate: !inCheck && !any };
+  return {
+    next: played.board,
+    captured: played.captured,
+    capturedAt: played.capturedAt,
+    rook,
+    promoted: played.promoted,
+  };
 }
 
 /** Taken pieces line up beside the board on the side of whoever took them. */
@@ -260,13 +251,15 @@ export function ChessTable({ onLeave }: { onLeave: () => void }) {
 
   /** Commit a move on the board and the pieces; returns the new board. */
   const play = (m: Move, ai: boolean) => {
-    const { next, captured, rook, promote } = applyMove(board, m);
+    const { next, captured, capturedAt, rook, promoted } = applyMove(board, m);
     const mover = at(m.from.r, m.from.c)!;
     setPieces(list => {
       const takenCount = list.filter(p => p.out !== null && captured && p.color === captured.color).length;
       return list.map(p => {
-        if (captured && p.out === null && p.r === m.to.r && p.c === m.to.c) return { ...p, out: takenCount };
-        if (p.id === mover.id) return { ...p, r: m.to.r, c: m.to.c, type: promote ? 'q' : p.type };
+        if (capturedAt && p.out === null && p.id !== mover.id && p.r === capturedAt.r && p.c === capturedAt.c) {
+          return { ...p, out: takenCount };
+        }
+        if (p.id === mover.id) return { ...p, r: m.to.r, c: m.to.c, type: promoted ?? p.type };
         if (rook && p.out === null && p.r === rook.from.r && p.c === rook.from.c) return { ...p, c: rook.to.c };
         return p;
       });
@@ -275,7 +268,7 @@ export function ChessTable({ onLeave }: { onLeave: () => void }) {
     else sound.playChessMove();
     setBoard(next);
     const nextTurn: ChessPieceColor = turn === 'w' ? 'b' : 'w';
-    const st = status(next, nextTurn);
+    const st = sideStatus(next, nextTurn);
     if (st.mate) {
       setOver(ai ? 'Checkmate. The ghost wins this one.' : 'Checkmate! You win.');
       setScore(s => (ai ? { ...s, them: s.them + 1 } : { ...s, you: s.you + 1 }));
