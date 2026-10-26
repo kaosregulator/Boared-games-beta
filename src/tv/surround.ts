@@ -175,6 +175,25 @@ export function routeToSpeaker(el: HTMLMediaElement, id: SpeakerId): boolean {
   }
 }
 
+/**
+ * routeToSpeaker, or as soon as the audio context is running if it's still
+ * waiting on the first tap. `then` runs once routed.
+ */
+export function routeWhenReady(el: HTMLMediaElement, id: SpeakerId, then?: () => void) {
+  if (routeToSpeaker(el, id)) {
+    then?.();
+    return;
+  }
+  const ctx = audio();
+  if (!ctx || ctx.state === 'closed') return;
+  const retry = () => {
+    if (ctx.state !== 'running') return;
+    ctx.removeEventListener('statechange', retry);
+    if (el.isConnected && routeToSpeaker(el, id)) then?.();
+  };
+  ctx.addEventListener('statechange', retry);
+}
+
 /** For media elements being thrown away, so the graph doesn't keep them alive. */
 export function unroute(el: HTMLMediaElement) {
   routed.get(el)?.disconnect();

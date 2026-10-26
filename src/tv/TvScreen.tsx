@@ -13,7 +13,7 @@ import { YouTubeTv } from './YouTubeTv';
 import { AdBreakTv } from './AdBreakTv';
 import { useTvQuiet } from './tvBus';
 import { PICK_NUMBER, setPick } from './lineups/youtube247';
-import { TV_MAX_VOLUME, isRouted, routeToSpeaker, setSpeakerVolume } from './surround';
+import { TV_MAX_VOLUME, isRouted, routeWhenReady, setSpeakerVolume } from './surround';
 
 export type TvMode = 'off' | 'menu' | 'tv' | 'guide' | 'gaming' | 'emulator' | 'link';
 
@@ -550,7 +550,7 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
         onPlaying={e => {
           // Into the room speaker once the browser's audio is running (after the first tap).
           const el = e.currentTarget;
-          if (!plain && !isRouted(el) && routeToSpeaker(el, 'tv')) applyVolume(el);
+          if (!plain && !isRouted(el)) routeWhenReady(el, 'tv', () => applyVolume(el));
         }}
         playsInline
         preload="auto"

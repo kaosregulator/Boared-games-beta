@@ -3,7 +3,7 @@
  * Generates tactile clicks, wood knocks, radar pings, explosions, disc drops, dice shakes, cards, chips, slots, roulette, etc.
  */
 import { CHIP_TUNES, DEFAULT_TUNE, type ChipNote } from './chiptunes';
-import { routeToSpeaker, unroute } from '../tv/surround';
+import { routeWhenReady, unroute } from '../tv/surround';
 
 /**
  * The title screen's song: Brahe by Punch Deck, cut to start at 0:09. It plays
@@ -171,7 +171,7 @@ class SoundEngine {
       this.songEnding(audio);
     });
     // The room music comes out of the boombox; the menu song stays plain stereo over the title screen.
-    if (!menu) audio.addEventListener('playing', () => routeToSpeaker(audio, 'boombox'));
+    if (!menu) audio.addEventListener('playing', () => routeWhenReady(audio, 'boombox'), { once: true });
     if (typeof document !== 'undefined') document.body.appendChild(audio);
     this.bedAudio = audio;
     return audio;
