@@ -6,7 +6,7 @@
 let ctx: AudioContext | null = null;
 let noiseBuffer: AudioBuffer | null = null;
 
-function audio(): AudioContext | null {
+export function audio(): AudioContext | null {
   if (typeof window === 'undefined') return null;
   if (!ctx) {
     const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
