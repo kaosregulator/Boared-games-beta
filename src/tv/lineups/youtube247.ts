@@ -131,6 +131,30 @@ export const YT_CHANNELS: YtChannel[] = [
   },
 ];
 
+/**
+ * MTV: retro music TV, looping on the shared clock like channel 1. It sits at
+ * the top of the dial, next to "Your pick". New tapes are one line each.
+ */
+export const MTV_CHANNEL: YtChannel = {
+  number: 98,
+  call: 'MTV',
+  name: 'MTV · Music Television',
+  links: [
+    {
+      id: 'Dlxawkm28mE',
+      title: 'MTV TRL · March 31, 1999',
+      seconds: 2816,
+      shows: [show(0, 'TRL · Total Request Live (Mar 31, 1999)')],
+    },
+    {
+      id: 'BZutcHaHQT8',
+      title: 'MTV 1999 · VHS tape with commercials',
+      seconds: 7787,
+      shows: [show(0, 'MTV 1999 · The Real World Hawaii, Tom Green & commercials')],
+    },
+  ],
+};
+
 /** "Your pick": whatever link was pasted on the TV, remembered in this browser. */
 /** After the last cable channel, so it never takes another channel's number. */
 export const PICK_NUMBER = 99;
