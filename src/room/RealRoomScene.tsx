@@ -31,6 +31,7 @@ import { DynamicModel } from './UserProps';
 import { MOODS, type RoomMood } from './moods';
 import type { SavedPlacement } from './userPlacements';
 import { RoomTvGlass } from '../tv/TvSet';
+import { RoomPcGlass } from '../devices/PcScreen';
 import { FilmTvPicture } from '../tv/FilmTvPicture';
 import { LightSwitch, TvGlow } from './LightSwitch';
 import { BedFurby, FURBY_CARD } from './furby/BedFurby';
@@ -641,6 +642,7 @@ export function RealRoomScene({
 
       <PlacedModel id="desk" hoveredId={hoveredId} card="desk">
         <PcDeskGlow lightsOut={lightsOut} />
+        <RoomPcGlass />
       </PlacedModel>
       {!clearFloor && (
       <PlacedModel
