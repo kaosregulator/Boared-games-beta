@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { GlassAnchor, GlassSurface } from './GlassScreen';
 import { SafeRoomModel } from '../room/RoomModel';
 import { audio } from '../tv/noise';
+import { speakerInput } from '../tv/surround';
 
 /**
  * The family computer on the desk. Its Windows 98 (pc.html, src/pc/) runs in
@@ -60,7 +61,8 @@ export function powerOnPc() {
   const ctx = audio();
   if (ctx) {
     w.__pcAudio = ctx;
-    w.__pcAudioOut = w.__pcAudioOut ?? ctx.destination;
+    // Out of the PC's own spot in the room's surround (SpeakerAnchor 'pc' sits in the monitor).
+    w.__pcAudioOut = speakerInput('pc') ?? ctx.destination;
   }
   if (!state.on) set({ ...state, on: true });
 }

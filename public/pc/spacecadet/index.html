@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>3D Pinball for Windows - Space Cadet</title>
+<!--
+  alula/SpaceCadetPinball (MIT, see LICENSE.txt): a decompilation of the
+  Windows pinball game, built for the web with Emscripten. The .data file
+  carries Microsoft's original table art and sounds.
+-->
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  canvas { display: block; width: 100%; height: 100%; outline: none; }
+  #status { position: absolute; inset: 0; display: grid; place-items: center; color: #c0c0c0; font: 12px 'MS Sans Serif', Tahoma, sans-serif; }
+</style>
+</head>
+<body>
+<div id="status">Loading Space Cadet...</div>
+<canvas id="canvas" tabindex="-1" oncontextmenu="event.preventDefault()"></canvas>
+<script>
+  var statusEl = document.getElementById('status');
+  var Module = {
+    canvas: document.getElementById('canvas'),
+    print: function () {},
+    printErr: function (t) { console.warn('[pinball]', t); },
+    setStatus: function (t) { statusEl.textContent = t || ''; statusEl.style.display = t ? '' : 'none'; },
+    monitorRunDependencies: function (left) { Module.setStatus(left ? 'Loading Space Cadet...' : ''); },
+  };
+  // keys go to the game as soon as the window is clicked
+  addEventListener('pointerdown', function () { Module.canvas.focus(); });
+  addEventListener('load', function () { Module.canvas.focus(); });
+</script>
+<script async src="SpaceCadetPinball.js"></script>
+</body>
+</html>

@@ -1,7 +1,9 @@
 /**
  * Every sound the computer makes, synthesized: the CRT thunk, the POST beep,
- * the hard drive chattering through boot, the startup chime, dings, chords,
- * and the dial-up handshake. Nothing is sampled from Windows.
+ * the hard drive chattering through boot, dings, chords, and the dial-up
+ * handshake. The system sounds (startup, ding, chord, tada and the rest) are
+ * the real Windows 98 ones from public/pc/sounds/win98, preloaded on first
+ * use; until they've loaded, or if they can't, the synthesized ones play.
  *
  * The room hands us its AudioContext (window.parent.__pcAudio) when it can,
  * because the click that turned the computer on happened up there and the
@@ -190,45 +192,51 @@ export const sfx = {
   },
   /** Default beep. */
   ding() {
+    if (sample('ding')) return;
     tone(hz(88), 0, 0.5, { type: 'sine', gain: 0.18, release: 0.4, wet: 0.2 });
     tone(hz(76), 0, 0.5, { type: 'sine', gain: 0.08, release: 0.4 });
   },
   /** Something went wrong. */
   chord() {
+    if (sample('chord')) return;
     [hz(72), hz(76), hz(79), hz(84)].forEach((f, i) => tone(f, i * 0.008, 0.6, { type: 'triangle', gain: 0.09, release: 0.45, wet: 0.25 }));
   },
   /** Exclamation: a quick two-note rise. */
   exclaim() {
+    if (sample('notify')) return;
     tone(hz(79), 0, 0.12, { type: 'triangle', gain: 0.12 });
     tone(hz(86), 0.1, 0.35, { type: 'triangle', gain: 0.12, release: 0.3, wet: 0.2 });
   },
   /** Recycle bin crunch. */
   crumple() {
+    if (sample('recycle')) return;
     for (let i = 0; i < 7; i += 1) noise(i * 0.035 + Math.random() * 0.02, 0.05, 0.12, 'bandpass', 1500 + Math.random() * 3000, 1.5);
   },
   menu() {
+    if (sample('start')) return;
     tone(hz(96), 0, 0.04, { type: 'sine', gain: 0.03 });
   },
   /** Fanfare when you win something. */
   tada() {
+    if (sample('tada')) return;
     const notes = [72, 76, 79, 84];
     notes.forEach((n, i) => tone(hz(n), i * 0.09, 0.9 - i * 0.1, { type: 'sawtooth', gain: 0.05, release: 0.5, wet: 0.35 }));
     tone(hz(48), 0.27, 1.0, { type: 'triangle', gain: 0.12, release: 0.7, wet: 0.3 });
   },
   /** Shutting down: a slow falling glide. */
   shutdown() {
+    if (sample('logoff')) return;
     const notes = [79, 74, 71, 67, 62];
     notes.forEach((n, i) => tone(hz(n), i * 0.22, 1.4, { type: 'sine', gain: 0.1, attack: 0.05, release: 1, wet: 0.5 }));
     tone(hz(43), 0.6, 2.2, { type: 'triangle', gain: 0.08, attack: 0.4, release: 1.6, wet: 0.4 });
   },
 
   /**
-   * The startup chime. An original piece in the spirit of the late-90s ones:
-   * a warm pad swelling under a bell arpeggio, about five seconds, with a big
-   * reverb tail. Dropping a file at /pc/sounds/startup.mp3 plays that instead.
+   * The Microsoft Sound. If it can't load, an original stand-in: a warm pad
+   * swelling under a bell arpeggio, about five seconds, with a big reverb tail.
    */
   async startup() {
-    if (await playFile('/pc/sounds/startup.mp3')) return;
+    if (await playFile(`${WIN98}startup.mp3`)) return;
     const c = audio();
     const t0 = c.currentTime + 0.05;
     const pad = c.createGain();
@@ -307,7 +315,31 @@ export const sfx = {
 const fileCache = new Map<string, AudioBuffer | null>();
 
 /** Plays an optional override file once it exists; false when there is none. */
-async function playFile(url: string): Promise<boolean> {
+const WIN98 = '/pc/sounds/win98/';
+const SAMPLES = ['chord', 'ding', 'logoff', 'notify', 'recycle', 'start', 'tada'] as const;
+type Sample = (typeof SAMPLES)[number];
+let preloading = false;
+
+/** Fetch and decode the short system sounds once, so a ding plays the moment it's asked for. */
+export function preloadSamples() {
+  if (preloading) return;
+  preloading = true;
+  for (const name of [...SAMPLES, 'startup']) void loadFile(`${WIN98}${name}.mp3`);
+}
+
+/** Play a preloaded Windows sound; false when it isn't ready (the caller synthesizes instead). */
+function sample(name: Sample): boolean {
+  preloadSamples();
+  const buf = fileCache.get(`${WIN98}${name}.mp3`);
+  if (!buf) return false;
+  const src = audio().createBufferSource();
+  src.buffer = buf;
+  src.connect(out());
+  src.start();
+  return true;
+}
+
+async function loadFile(url: string): Promise<AudioBuffer | null> {
   const c = audio();
   let buf = fileCache.get(url);
   if (buf === undefined) {
@@ -320,6 +352,12 @@ async function playFile(url: string): Promise<boolean> {
     }
     fileCache.set(url, buf);
   }
+  return buf;
+}
+
+async function playFile(url: string): Promise<boolean> {
+  const c = audio();
+  const buf = await loadFile(url);
   if (!buf) return false;
   const src = c.createBufferSource();
   src.buffer = buf;

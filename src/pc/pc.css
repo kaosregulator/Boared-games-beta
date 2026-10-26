@@ -2164,3 +2164,386 @@ textarea {
     transform: rotate(-6deg);
   }
 }
+
+/* ---- Round two: framed apps, web games, arcade, portal, Entertainment Pack ---- */
+
+/* Pinball, the stillplay card games: a page in a frame that fills the window body. */
+.app-frame {
+  display: block;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  background: #000;
+}
+
+.ie-links {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  padding: 1px 2px;
+  border-bottom: 1px solid grey;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.ie-links span {
+  padding: 0 6px 0 2px;
+  color: #444;
+}
+.ie-links button {
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 1px 6px !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+.ie-links button:hover {
+  box-shadow: inset -1px -1px grey, inset 1px 1px #fff !important;
+}
+
+.webgame-view {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  background: #000;
+}
+.webgame-frame {
+  border: 0;
+  display: block;
+  background: #000;
+}
+.webgame-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #c0c0c0;
+  pointer-events: none;
+}
+
+.arcade {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.arcade-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  background: #000;
+  color: #fff;
+}
+.arcade-cn {
+  display: flex;
+}
+.arcade-cn b {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 30px;
+  font: 900 24px Arial Black, Arial, sans-serif;
+}
+.arcade-cn b:first-child {
+  background: #000;
+  color: #fff;
+  border: 2px solid #fff;
+}
+.arcade-cn b:last-child {
+  background: #fff;
+  color: #000;
+}
+.arcade-title {
+  font: bold 16px Arial, sans-serif;
+}
+.arcade-sub {
+  color: #ccc;
+}
+.arcade-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: #fff;
+  margin: 4px;
+  padding: 2px 4px;
+}
+.arcade-show {
+  font-weight: bold;
+  margin: 6px 0 2px;
+  color: #000080;
+}
+.arcade-game {
+  display: flex !important;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 0 !important;
+  padding: 1px 4px 1px 14px !important;
+  text-align: left;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.arcade-game.on {
+  background: #000080 !important;
+  color: #fff;
+}
+.arcade-foot {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 2px 4px 4px;
+}
+.arcade-count {
+  margin-left: auto;
+  color: #444;
+}
+
+.portal {
+  background: #fff;
+  color: #000;
+  font-family: Verdana, Arial, sans-serif;
+  font-size: 12px;
+  padding: 0 !important;
+}
+.portal a {
+  color: #00c;
+}
+.portal-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: linear-gradient(#ffcc00, #ff9900);
+}
+.portal-logo {
+  font: italic 900 26px 'Arial Black', Arial, sans-serif;
+  color: #c00;
+  text-shadow: 2px 2px #fff;
+}
+.portal-logo span {
+  color: #00c;
+}
+.portal-logo small {
+  font-size: 12px;
+  color: #000;
+  text-shadow: none;
+  vertical-align: top;
+}
+.portal-nav {
+  background: #003399;
+  color: #fff;
+  font-weight: bold;
+  padding: 3px 10px;
+  font-size: 11px;
+}
+.portal-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 8px;
+}
+.portal-box {
+  border: 1px solid #99c;
+  margin-bottom: 8px;
+}
+.portal-box h3 {
+  margin: 0;
+  padding: 2px 6px;
+  background: #ccd9ff;
+  font-size: 12px;
+}
+.portal-box ul {
+  margin: 4px 0;
+  padding-left: 22px;
+}
+.portal-cn h3 {
+  background: #000;
+  color: #fff;
+}
+.portal-disney h3 {
+  background: #2d52b8;
+  color: #fff;
+}
+.portal-foot {
+  border-top: 1px solid #99c;
+  padding: 6px 10px;
+  font-size: 10px;
+  color: #444;
+}
+
+.tetris,
+.taipei,
+.pegged {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  outline: none;
+}
+.tetris-body {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  flex: 1;
+  background: #808080;
+}
+.tetris-well {
+  box-shadow: inset 1px 1px #000, 0 0 0 2px #c0c0c0, 0 0 0 3px #fff;
+}
+.tetris-side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 92px;
+  color: #fff;
+}
+.tetris-side fieldset {
+  margin: 0;
+  padding: 4px;
+  background: #c0c0c0;
+  color: #000;
+}
+.tetris-stat {
+  background: #c0c0c0;
+  color: #000;
+  padding: 2px 4px;
+  box-shadow: inset -1px -1px #fff, inset 1px 1px grey;
+  display: flex;
+  justify-content: space-between;
+}
+
+.tp-board {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: #008040;
+  display: grid;
+  place-items: center;
+}
+.tp-field {
+  position: relative;
+}
+.tp-tile {
+  position: absolute;
+  padding: 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  background: #fffbe8 !important;
+  border-radius: 3px;
+  box-shadow: 1px 1px 0 #d8cfa0, -4px 4px 0 #b9ad78, -5px 5px 0 #000 !important;
+  display: grid !important;
+  place-items: center;
+  overflow: hidden;
+  font-family: 'MS Mincho', 'SimSun', serif;
+}
+.tp-tile.on {
+  background: #ffd040 !important;
+}
+.tp-tile.hint {
+  background: #a0e0ff !important;
+}
+.tp-tile.dim {
+  filter: brightness(0.75);
+}
+.tp-big {
+  font-size: 22px;
+  line-height: 1;
+}
+.tp-wind {
+  color: #000080;
+}
+.tp-flower {
+  color: #a000a0;
+}
+.tp-season {
+  color: #c06000;
+}
+.tp-white {
+  width: 20px;
+  height: 28px;
+  border: 2px solid #3050c0;
+}
+.tp-char {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  font-size: 13px;
+}
+.tp-char b {
+  color: #000080;
+  font-size: 14px;
+}
+.tp-char span {
+  color: #c00000;
+}
+.tp-dots,
+.tp-bam {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-content: center;
+  gap: 2px;
+  width: 30px;
+  height: 40px;
+}
+.tp-dots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 1px, #c00000 2px, #0050a0 3px);
+}
+.tp-bam i {
+  width: 4px;
+  height: 11px;
+  border-radius: 2px;
+  background: linear-gradient(#007000, #20a020 50%, #007000);
+}
+.tp-bird {
+  font-size: 18px;
+}
+
+.pg-board {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(7, 38px);
+  grid-template-rows: repeat(7, 38px);
+  justify-content: center;
+  align-content: center;
+  background: #804000 radial-gradient(ellipse at 30% 20%, #b0702a, #603000);
+}
+.pg-hole {
+  padding: 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  display: grid !important;
+  place-items: center;
+}
+.pg-hole i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #301800;
+  box-shadow: inset 1px 1px 2px #000;
+}
+.pg-hole.peg i {
+  width: 26px;
+  height: 26px;
+  background: radial-gradient(circle at 35% 30%, #fff, #4060ff 30%, #000080);
+  box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.6);
+}
+.pg-hole.on i {
+  background: radial-gradient(circle at 35% 30%, #fff, #ff6040 30%, #800000);
+}
+.pg-hole.target i {
+  background: #ffd040;
+  box-shadow: 0 0 0 3px rgba(255, 208, 64, 0.5);
+}

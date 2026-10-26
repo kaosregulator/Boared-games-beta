@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { clouds, sunset, tile } from './art';
 import { Icon, type IconName } from './icons';
 import { launch } from './launch';
+import { openWebGame, SANDWICH_STACKER, THING_THING } from '../apps/webgames';
 import { readStore, useSettings, type Wallpaper } from './settings';
 import { sfx } from './sound';
 import { focusWindow, messageBox } from './wm';
@@ -21,6 +22,10 @@ export const DESK_ICONS: DeskIcon[] = [
   { id: 'recycle', label: 'Recycle Bin', icon: 'recycleFull', open: () => launch('explorer', 'Recycle Bin', 'Recycle Bin') },
   { id: 'media', label: 'Media Player', icon: 'media', open: () => launch('media') },
   { id: 'pinball', label: 'Pinball', icon: 'pinball', open: () => launch('pinball') },
+  { id: 'sandwich', label: 'Sandwich Stacker', icon: 'sandwich', open: () => openWebGame(SANDWICH_STACKER) },
+  { id: 'thing', label: 'Thing-Thing', icon: 'thing', open: () => openWebGame(THING_THING) },
+  { id: 'arcade', label: 'CN Arcade', icon: 'arcade', open: () => launch('arcade') },
+  { id: 'tetris', label: 'Tetris', icon: 'tetris', open: () => launch('tetris') },
   { id: 'mine', label: 'Minesweeper', icon: 'mine', open: () => launch('minesweeper') },
   { id: 'paint', label: 'Paint', icon: 'paint', open: () => launch('paint') },
   { id: 'wordart', label: 'WordArt', icon: 'wordart', open: () => launch('wordpad', { wordart: true }, 'WordArt - WordPad') },
@@ -29,7 +34,7 @@ export const DESK_ICONS: DeskIcon[] = [
   { id: 'y2k', label: 'Y2K_COUNTDOWN.EXE', icon: 'warning', open: () => launch('y2k') },
 ];
 
-const ROWS = 6;
+const ROWS = 7;
 
 export function wallpaperStyle(w: Wallpaper): React.CSSProperties {
   switch (w) {
