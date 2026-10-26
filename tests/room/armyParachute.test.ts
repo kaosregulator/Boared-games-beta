@@ -7,7 +7,7 @@ import {
   canopyOpen,
   chopperSpot,
   cineTimeScale,
-  glideSpeed,
+  chuteDrift,
   needsChute,
   pickLine,
   stepFall,
@@ -51,9 +51,15 @@ test('falling: terminal speed shut, the sink rate open, faster with Shift', () =
   assert.ok(1.94 / CHUTE.sink < 7);
 });
 
-test('gliding always drifts a little forward', () => {
-  assert.ok(glideSpeed(-1) > 0);
-  assert.ok(glideSpeed(1) > glideSpeed(0));
+test('under the canopy you go where you push: forward, back, sideways, or nowhere', () => {
+  assert.deepEqual(chuteDrift(0, 0, 0), { x: 0, z: 0 });
+  const fwd = chuteDrift(1, 0, 0);
+  assert.ok(fwd.z > 0.1 && Math.abs(fwd.x) < 1e-9);
+  assert.ok(chuteDrift(-1, 0, 0).z < 0);
+  // Same sideways sense as walking: D (strafe +1) at heading 0 goes to -x.
+  assert.ok(chuteDrift(0, 1, 0).x < 0);
+  const turned = chuteDrift(1, 0, Math.PI / 2);
+  assert.ok(turned.x > 0.1 && Math.abs(turned.z) < 1e-9);
 });
 
 test('lines never repeat twice running', () => {

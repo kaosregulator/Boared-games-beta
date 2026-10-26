@@ -18,7 +18,7 @@ import {
   canopyOpen,
   chopperSpot,
   cineTimeScale,
-  glideSpeed,
+  chuteDrift,
   needsChute,
   pickLine,
   stepFall,
@@ -44,6 +44,7 @@ import {
   roofAt,
 } from './town';
 import { armySay, armySfx, rotorLevel, rotorOff, rotorOn, wakeArmyAudio } from './armyAudio';
+import { loadSarge, sargeBusy, sargeLines, sargePlay, sargeSay, sargeStop, type SargeClip, type SargeTag } from './sargeVoice';
 import { SHOT_RANGE, chestPoint, muzzlePoint, pickAlongBarrel, shotPoint } from './aim';
 import { COACH_NAME, COACH_REACH, COACH_SPOT, coachLesson, lineSeconds, nextLine, type Coach } from './tutorial';
 import { readArmyKeys, stepLook } from './armyKeys';
@@ -112,6 +113,8 @@ export const army = {
   chute: null as null | 'cine' | 'glide' | 'fold',
   /** What he shouts on the way down, over his head. */
   chuteBubble: null as Bubble | null,
+  /** Sarge over the radio: his words along the top while his line plays. */
+  radio: null as null | { text: string; until: number },
   course: { active: false, next: 0, time: 0, best: null as number | null, last: null as null | { time: number; best: boolean } },
   banner: null as null | { text: string; sub?: string; until: number },
   listeners: new Set<() => void>(),
@@ -520,7 +523,7 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
    * The parachute. t counts real seconds from the jump (the movie shot runs on
    * it, slow-mo or not); pulled is the t he yanked the cord at, -1 before.
    */
-  const chute = useRef({ on: false, cine: false, t: 0, pulled: -1, fold: 0, sway: 0, lean: 0, line: '', lineLeft: 0, last: null as string | null });
+  const chute = useRef({ on: false, cine: false, t: 0, pulled: -1, vx: 0, vz: 0, fold: 0, sway: 0, lean: 0, line: '', who: 'You', lineLeft: 0, last: null as string | null });
   const chuteRig = useChuteRig();
   /** Chopper with nobody in it: coming down by itself (you jumped, or you called it in). */
   const autopilot = useRef(false);
@@ -632,8 +635,10 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
     army.invadersLeft = 0;
     army.course = { active: false, next: 0, time: 0, best: readBest(), last: null };
     army.banner = null;
+    if (!film) void loadSarge();
     // Left mid-glide last time: the chute was never folded up.
     army.chute = null;
+    army.radio = null;
     army.chuteBubble = null;
     if (boot?.ring !== null && boot?.ring !== undefined && RINGS[boot.ring]) {
       const r = RINGS[boot.ring];
@@ -684,6 +689,10 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
     });
     army.invadersLeft = count;
     armySfx.wave();
+    // A siege already got its "here we go" when it was called.
+    if (n > 1) sarge('wave', true);
+    else if (army.siege === 'story') sarge('start', true);
+    combatT.current = 4 + Math.random() * 4;
     const label = army.siege === 'story' ? `Wave ${n}` : `${army.siege} · wave ${n}`;
     banner(label, `${count} tan soldiers incoming`, 2.2);
   }
@@ -703,14 +712,28 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
       t.fall = 0;
       t.falling = false;
     }
+    sarge('start', true);
     const name = level === 'easy' ? 'Easy' : level === 'medium' ? 'Medium' : 'Hard';
     banner(name, 'They keep coming. Clear a wave and the next one steps out.', 2.4);
     emit();
   }
 
   // --- Sergeant Green ---------------------------------------------------------
-  const lesson = useMemo(() => coachLesson(isTouchDevice()), []);
+  const baseLesson = useMemo(() => coachLesson(isTouchDevice()), []);
+  /** His talk: Sarge's own opening lines first (voiced), then how the controls work. */
+  const lessonVoice = useRef<SargeClip[]>([]);
+  const lessonRef = useRef<string[]>(baseLesson);
   const coachT = useRef(0);
+  /** Seconds to the next line Sarge barks while the shooting's on. */
+  const combatT = useRef(5);
+
+  /** Sarge says a line for this moment, with his words up top. */
+  function sarge(tag: SargeTag, cut = false) {
+    if (film) return null;
+    const clip = sargeSay(tag, { cut });
+    if (clip?.text) army.radio = { text: clip.text, until: performance.now() + Math.max(2.2, clip.dur + 0.9) * 1000 };
+    return clip;
+  }
   const quipper = useMemo(() => new Quipper(), []);
 
   /** Talk to yourself about the room now and then: the mess from the air, the Hot Pockets, under the bed. */
@@ -726,7 +749,9 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
       const at = flying ? h.pos : player.pos;
       const who = flying ? (h.pos.y > 0.3 ? 'fly' : null) : 'walk';
       const line = who ? quipper.tick(dt, who, at.x, at.y, at.z) : null;
-      if (line) army.quip = { text: line.text, then: line.then, until: now + quipSeconds(line.text) * 1000 };
+      // Half the time it's Sarge on the radio instead, when he's got a line and isn't mid-sentence.
+      const radio = line && !flying && army.waveState !== 'attack' && Math.random() < 0.5 ? sarge('explore') : null;
+      if (line && !radio) army.quip = { text: line.text, then: line.then, until: now + quipSeconds(line.text) * 1000 };
     }
     if (army.quip) {
       const head = flying
@@ -744,17 +769,34 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
     army.coachLine = 0;
     coachT.current = 0;
     armySfx.radio();
+    // Sarge's own words open the talk, in the order he recorded them.
+    lessonVoice.current = sargeLines('lesson').filter(c => c.text);
+    lessonRef.current = [...lessonVoice.current.map(c => c.text), ...baseLesson];
+    voiceCoachLine();
     camReady.current = true;
     emit();
   }
 
+  function voiceCoachLine() {
+    const clip = lessonVoice.current[army.coachLine];
+    if (clip) sargePlay(clip);
+    else sargeStop();
+  }
+
+  /** How long a line of the talk stays up: long enough for Sarge to finish it. */
+  function coachSeconds(i: number) {
+    const clip = lessonVoice.current[i];
+    return Math.max(lineSeconds(lessonRef.current[i] ?? ''), clip ? clip.dur + 0.6 : 0);
+  }
+
   function nextCoach() {
     if (army.coach !== 'talk') return;
-    const n = nextLine(army.coachLine, lesson);
+    const n = nextLine(army.coachLine, lessonRef.current);
     coachT.current = 0;
     if (n === null) finishCoach();
     else {
       army.coachLine = n;
+      voiceCoachLine();
       emit();
     }
   }
@@ -765,6 +807,7 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
     army.coach = 'done';
     army.bubble = null;
     army.coachNear = false;
+    if (lessonVoice.current.length) sargeStop();
     if (army.siege === 'story' && army.wave === 0) {
       waveTimer.current = 2;
       armySfx.alarm();
@@ -796,6 +839,7 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
     }
     army.invadersLeft = 0;
     armySfx.victory();
+    sarge('end', true);
     banner('Ceasefire!', `You held to wave ${reached} and toppled ${army.toppled} tan soldiers`, 3.4);
     emit();
   }
@@ -884,6 +928,7 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
     c.last = line;
     c.line = line;
     c.lineLeft = seconds;
+    c.who = 'You';
     if (!film) armySay(line);
   }
 
@@ -897,9 +942,18 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
     c.fold = 0;
     c.sway = 0;
     c.lean = 0;
+    // Off the edge with whatever speed you had walking (none out of the chopper).
+    c.vx = bail ? 0 : Math.sin(player.heading) * player.speed;
+    c.vz = bail ? 0 : Math.cos(player.heading) * player.speed;
     army.chute = c.cine ? 'cine' : 'glide';
     army.quip = null;
-    shout(bail ? BAIL_LINES : CHUTE_LINES, 2.6);
+    // Sarge yells it if he's loaded; the old lines (and the little voice) are the fallback.
+    const yell = film ? null : sargeSay(bail ? 'bail' : 'fall', { cut: true });
+    if (yell?.text) {
+      c.line = yell.text;
+      c.who = 'Sarge';
+      c.lineLeft = Math.max(2.4, yell.dur + 0.6);
+    } else shout(bail ? BAIL_LINES : CHUTE_LINES, 2.6);
     armySfx.whoosh();
     emit();
   }
@@ -928,7 +982,12 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
     army.chute = 'fold';
     c.fold = 0.001;
     armySfx.touchdown();
-    shout(LAND_LINES, 2.2);
+    const nice = film ? null : sargeSay('land', { cut: true });
+    if (nice?.text) {
+      c.line = nice.text;
+      c.who = 'Sarge';
+      c.lineLeft = Math.max(2.2, nice.dur + 0.5);
+    } else shout(LAND_LINES, 2.2);
     emit();
   }
 
@@ -1056,6 +1115,8 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
       rotorOff();
       army.chute = null;
       army.chuteBubble = null;
+      army.radio = null;
+      sargeStop();
       const persp = camera as THREE.PerspectiveCamera;
       if (saved.current) {
         persp.near = saved.current.near;
@@ -1078,6 +1139,7 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
       if (miss) _b.x += (Math.random() - 0.5) * 0.05;
       tracers.fire(_a, _b);
       if (!miss) {
+        if (target === player && !target.falling && target.fall === 0) sarge('hurt', true);
         knockDown(target);
       }
     } else {
@@ -1171,6 +1233,7 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
         if (army.waveState === 'cleared' && storyOver(army.siege, army.wave)) {
           army.waveState = 'won';
           armySfx.victory();
+          sarge('end', true);
           banner('Town saved!', 'The tan army is flat on the carpet. Go fly the chopper!', 4);
           waveTimer.current = 3;
         } else {
@@ -1180,6 +1243,7 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
     } else if (army.waveState === 'attack' && army.invadersLeft === 0) {
       army.waveState = 'cleared';
       waveTimer.current = betweenWaves(army.siege, army.wave);
+      sarge('end', true);
       if (!storyOver(army.siege, army.wave)) {
         armySfx.radio();
         banner(`Wave ${army.wave} cleared`, army.siege === 'story' ? 'Reload. More coming…' : 'Reload. The next wave is already on its way.', 2.4);
@@ -1194,6 +1258,14 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
       }
     }
     const fighting = army.waveState === 'attack' || (army.waveState === 'cleared' && !storyOver(army.siege, army.wave));
+    // Sarge keeps up the chatter while the shooting's on.
+    if (army.waveState === 'attack' && !chute.current.on) {
+      combatT.current -= dt;
+      if (combatT.current <= 0 && !sargeBusy()) {
+        sarge('combat');
+        combatT.current = 7 + Math.random() * 7;
+      }
+    }
 
     // --- Player on foot ----------------------------------------------------
     // WASD moves, arrows look (left/right turn, up/down tilt), like the main room.
@@ -1206,20 +1278,27 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
     lookPitch.current = stepLook(lookPitch.current, keyIn.look, dt);
     if (listening) {
       coachT.current += dt;
-      if (coachT.current > lineSeconds(lesson[army.coachLine] ?? '')) nextCoach();
+      if (coachT.current > coachSeconds(army.coachLine)) nextCoach();
     }
     if (army.mode === 'ground') {
       const p = player;
       if (ch.on && army.chute !== 'fold') {
-        // Under the canopy: it drifts along your heading, A/D (or the turn keys) steer,
-        // W/S drift more or less. The movie shot keeps your hands off the controls.
-        const steer = ch.cine ? 0 : Math.max(-1, Math.min(1, turnIn + strafe));
-        p.heading = wrap(p.heading - steer * 1.5 * dt - (ch.cine ? 0 : nudge));
-        const want = ch.pulled >= 0 ? glideSpeed(ch.cine ? 0 : fwdIn) : p.speed * 0.98;
-        p.speed += (want - p.speed) * Math.min(1, dt * 2.5);
-        p.pos.x += Math.sin(p.heading) * p.speed * dt;
-        p.pos.z += Math.cos(p.heading) * p.speed * dt;
-      } else if (p.fall === 0 && !p.falling && !ch.on) {
+        // Under the canopy you fly it: WASD push it any way, arrows (Q/E, drag) turn, and
+        // hands off it just sinks. The controls come back the moment the canopy's open,
+        // even while the movie shot is still rolling. Until then he keeps the speed he
+        // stepped off with.
+        const flying = ch.pulled >= 0 && canopyOpen(ch.t - ch.pulled) > 0.8;
+        if (flying) {
+          p.heading = wrap(p.heading - turnIn * 1.8 * dt - nudge);
+          const want = chuteDrift(fwdIn, strafe, p.heading);
+          const ease = Math.min(1, dt * 3);
+          ch.vx += (want.x - ch.vx) * ease;
+          ch.vz += (want.z - ch.vz) * ease;
+        }
+        p.pos.x += ch.vx * dt;
+        p.pos.z += ch.vz * dt;
+        p.speed = ch.vx * Math.sin(p.heading) + ch.vz * Math.cos(p.heading);
+      } else if (p.fall === 0 && !p.falling && (!ch.on || army.chute === 'fold')) {
         const run = Boolean(k.ShiftLeft || k.ShiftRight);
         p.heading = wrap(p.heading - turnIn * 2.6 * dt - (listening ? 0 : nudge));
         const top = run ? 0.24 : 0.11;
@@ -1490,6 +1569,8 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
           m.pos.y = Math.max(ground, m.pos.y + playerVy.current * dt);
         } else {
           m.pos.y = ground;
+          // A hard landing without the chute (off a stack of blocks, the HQ roof): oof.
+          if (!ch.on && playerVy.current < -1.2) sarge('hurt', true);
           playerVy.current = 0;
           if (ch.on && army.chute !== 'fold') landChute();
         }
@@ -1708,8 +1789,8 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
         army.bubble = {
           ...at,
           who: COACH_NAME,
-          text: talking ? lesson[army.coachLine] : army.coachNear ? 'Over here, soldier! Talk to me.' : 'TALK HERE',
-          hint: talking ? `F or tap · next (${army.coachLine + 1}/${lesson.length})` : army.coachNear ? 'F or tap to talk' : 'Walk over to me',
+          text: talking ? lessonRef.current[army.coachLine] : army.coachNear ? 'Over here, soldier! Talk to me.' : 'TALK HERE',
+          hint: talking ? `F or tap · next (${army.coachLine + 1}/${lessonRef.current.length})` : army.coachNear ? 'F or tap to talk' : 'Walk over to me',
         };
       } else army.bubble = null;
     } else if (army.bubble) army.bubble = null;
@@ -1718,7 +1799,7 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
     ch.lineLeft -= realDt;
     if (ch.line && ch.lineLeft > 0 && !flying) {
       const at = headOnScreen(camera, player.pos.x, player.pos.y + MAN_HEIGHT * 1.15, player.pos.z);
-      army.chuteBubble = at ? { ...at, who: 'You', text: ch.line } : null;
+      army.chuteBubble = at ? { ...at, who: ch.who, text: ch.line } : null;
     } else if (army.chuteBubble) {
       army.chuteBubble = null;
       ch.line = '';
@@ -1732,6 +1813,7 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
     if (now - lastEmit.current > 80) {
       lastEmit.current = now;
       if (army.banner && now > army.banner.until) army.banner = null;
+      if (army.radio && now > army.radio.until) army.radio = null;
       emit();
     }
   }
@@ -1936,9 +2018,10 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
 
       {a.quipBubble && !a.bubble && !a.chuteBubble && <SpeechBubble bubble={a.quipBubble} tone="thought" />}
       {a.chuteBubble && <SpeechBubble bubble={a.chuteBubble} />}
+      {a.radio && !a.chuteBubble && <SargeRadio text={a.radio.text} />}
       {a.chute === 'glide' && (
         <p className="absolute bottom-28 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-amber-500 px-4 py-1 text-[12px] font-black uppercase tracking-[0.2em] text-black">
-          Chute open · {isTouch ? 'arrows steer · hold Faster to drop' : 'A/D steer · W drift · Shift drop faster'}
+          Chute open · {isTouch ? 'arrows fly it · hold Faster to drop' : 'WASD fly it any way · arrows turn · Shift drop faster'}
         </p>
       )}
       {a.bubble && !flying && (
@@ -2015,6 +2098,16 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/** Sarge over the radio: his words in a strip under the top buttons. */
+function SargeRadio({ text }: { text: string }) {
+  return (
+    <div data-army-radio className="absolute left-1/2 top-[4.5rem] flex max-w-[min(34rem,88vw)] -translate-x-1/2 items-start gap-2 rounded-2xl border-2 border-[#2f3d1a] bg-[#f3f7e4]/95 px-3 py-2 text-[#1d2a12] shadow-[3px_4px_0_rgba(0,0,0,0.55)]">
+      <span className="mt-0.5 shrink-0 rounded bg-[#2f3d1a] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.2em] text-lime-200">Sarge · radio</span>
+      <span className="text-[13px] font-bold leading-snug">{text}</span>
     </div>
   );
 }
