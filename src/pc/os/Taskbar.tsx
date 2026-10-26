@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Flag, Icon, type IconName } from './icons';
 import { launch } from './launch';
-import { openWebGame, SANDWICH_STACKER, THING_THING } from '../apps/webgames';
+import { CRUNCHLING, openWebGame, SANDWICH_STACKER, THING_THING } from '../apps/webgames';
 import { getSettings, setSettings, useSettings } from './settings';
 import { getVolume, setVolume, sfx } from './sound';
 import { messageBox, minimizeWindow, toggleFromTaskbar, useWm } from './wm';
@@ -61,6 +61,7 @@ function buildStart(onShutDown: () => void, onLogOff: () => void): StartItem[] {
           label: 'Internet Games',
           icon: 'programs',
           children: [
+            { label: "Cap'n Crunch's Crunchling Adventure", icon: 'crunch', onClick: () => openWebGame(CRUNCHLING) },
             { label: 'Cartoon Network Arcade', icon: 'arcade', onClick: () => launch('arcade') },
             { label: 'Sandwich Stacker', icon: 'sandwich', onClick: () => openWebGame(SANDWICH_STACKER) },
             { label: 'Thing-Thing', icon: 'thing', onClick: () => openWebGame(THING_THING) },
