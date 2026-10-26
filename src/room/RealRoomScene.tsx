@@ -32,7 +32,6 @@ import { MOODS, type RoomMood } from './moods';
 import type { SavedPlacement } from './userPlacements';
 import { GLASS, RoomTvGlass } from '../tv/TvSet';
 import { SpeakerAnchor } from '../tv/SpeakerAnchor';
-import { RoomTvGlass } from '../tv/TvSet';
 import { RoomPcGlass } from '../devices/PcScreen';
 import { FilmTvPicture } from '../tv/FilmTvPicture';
 import { LightSwitch, TvGlow } from './LightSwitch';
