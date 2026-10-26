@@ -35,6 +35,7 @@ interface PcState {
 let state: PcState = { on: false, near: false };
 const listeners = new Set<() => void>();
 let onEscape: (() => void) | null = null;
+let onBig: (() => void) | null = null;
 
 function set(next: PcState) {
   state = next;
@@ -69,12 +70,18 @@ export function setPcEscape(fn: (() => void) | null) {
   onEscape = fn;
 }
 
+/** F pressed inside Windows (and not into a text box): the room toggles big screen. */
+export function setPcBig(fn: (() => void) | null) {
+  onBig = fn;
+}
+
 if (typeof window !== 'undefined') {
   window.addEventListener('message', e => {
     if (e.origin !== location.origin) return;
     const d = e.data as { source?: string; evt?: string; on?: boolean } | undefined;
     if (d?.source !== 'pc98') return;
     if (d.evt === 'escape') onEscape?.();
+    else if (d.evt === 'big') onBig?.();
     else if (d.evt === 'power' && d.on === false && state.on) set({ ...state, on: false });
   });
 }

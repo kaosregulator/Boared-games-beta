@@ -17,7 +17,7 @@ import { RubikPlay } from '../devices/RubikPlay';
 import { DeviceFocus } from './DeviceFocus';
 import { DeviceOverlay } from './DeviceOverlay';
 import { TvGlass } from '../tv/TvSet';
-import { PcGlass, powerOnPc, setPcEscape, usePc } from '../devices/PcScreen';
+import { PcGlass, powerOnPc, setPcBig, setPcEscape, usePc } from '../devices/PcScreen';
 import { ParentYell } from './ParentYell';
 import { MenuReel } from './MenuReel';
 import { GameBoySeat } from '../devices/GameBoySeat';
@@ -744,6 +744,13 @@ export function WalkRoom({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [tvOn, seated, atPc, toggleBig]);
+
+  // At the computer the keyboard is Windows', so its F comes over from the iframe.
+  useEffect(() => {
+    if (!atPc) return;
+    setPcBig(() => toggleBig(!viewRig.big));
+    return () => setPcBig(null);
+  }, [atPc, toggleBig]);
 
   const handleSelect = useCallback(
     (target: Aimed) => {

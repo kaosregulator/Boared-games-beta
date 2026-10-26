@@ -47,7 +47,8 @@ export function Shell() {
   }, []);
   useEffect(() => onPowerButton(power), [power]);
 
-  // Escape steps back to the room; Ctrl+Esc and the Windows key open Start.
+  // Escape steps back to the room, F asks it for big screen; Ctrl+Esc and the
+  // Windows key open Start.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       lastInput.current = performance.now();
@@ -58,6 +59,12 @@ export function Shell() {
       if ((e.key === 'Escape' && e.ctrlKey) || e.key === 'Meta' || e.key === 'OS') {
         e.preventDefault();
         if (phase === 'desktop') setStartOpen(o => !o);
+        return;
+      }
+      // F is the room's big-screen key, unless you're typing into something.
+      if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.altKey && !e.metaKey && !e.repeat) {
+        const el = document.activeElement as HTMLElement | null;
+        if (!el?.closest('input, textarea, select, [contenteditable="true"]')) toRoom({ evt: 'big' });
         return;
       }
       if (e.key !== 'Escape') return;

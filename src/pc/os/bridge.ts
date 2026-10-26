@@ -25,7 +25,7 @@ window.addEventListener('message', e => {
   }
 });
 
-export function toRoom(evt: { evt: 'escape' } | { evt: 'power'; on: boolean }) {
+export function toRoom(evt: { evt: 'escape' } | { evt: 'big' } | { evt: 'power'; on: boolean }) {
   if (window.parent === window) return;
   window.parent.postMessage({ source: 'pc98', ...evt }, location.origin);
 }
