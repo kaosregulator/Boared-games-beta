@@ -7,7 +7,22 @@ import { fitFov, isTouchDevice } from '../input';
 import { walkRig } from '../WalkController';
 import { ArmyProps, GREEN, TAN, plastic } from './ArmyProps';
 import { ToyHelicopter, type HeliParts } from './Helicopter';
-import { NO_INPUT, heliForward, newHeli, placeHeli, stepHeli, type HeliInput, type HeliState } from './flight';
+import { HELI, NO_INPUT, heliForward, newHeli, placeHeli, stepHeli, type HeliInput, type HeliState } from './flight';
+import { useChuteRig } from './ChuteRig';
+import {
+  BAIL_LINES,
+  CHUTE,
+  CHUTE_LINES,
+  CINE,
+  LAND_LINES,
+  canopyOpen,
+  chopperSpot,
+  cineTimeScale,
+  glideSpeed,
+  needsChute,
+  pickLine,
+  stepFall,
+} from './parachute';
 import { RINGS, throughRing } from './rings';
 import {
   FOXHOLES,
@@ -26,8 +41,9 @@ import {
   insideAny,
   invaderSpawn,
   pushOut,
+  roofAt,
 } from './town';
-import { armySfx, rotorLevel, rotorOff, rotorOn, wakeArmyAudio } from './armyAudio';
+import { armySay, armySfx, rotorLevel, rotorOff, rotorOn, wakeArmyAudio } from './armyAudio';
 import { SHOT_RANGE, chestPoint, muzzlePoint, pickAlongBarrel, shotPoint } from './aim';
 import { COACH_NAME, COACH_REACH, COACH_SPOT, coachLesson, lineSeconds, nextLine, type Coach } from './tutorial';
 import { readArmyKeys, stepLook } from './armyKeys';
@@ -92,6 +108,10 @@ export const army = {
   heliHigh: false,
   heliSpeed: 0,
   heliAlt: 0,
+  /** The parachute: the movie shot of him pulling the cord, gliding down, folding it up on the carpet. */
+  chute: null as null | 'cine' | 'glide' | 'fold',
+  /** What he shouts on the way down, over his head. */
+  chuteBubble: null as Bubble | null,
   course: { active: false, next: 0, time: 0, best: null as number | null, last: null as null | { time: number; best: boolean } },
   banner: null as null | { text: string; sub?: string; until: number },
   listeners: new Set<() => void>(),
@@ -149,6 +169,9 @@ const controls = {
   endSiege: null as null | (() => void),
   startSiege: null as null | ((level: Exclude<Siege, 'story'>) => void),
   resetHeli: null as null | (() => void),
+  /** On foot: bring the chopper down next to you, wherever you left it. */
+  callChopper: null as null | (() => void),
+  skipCine: null as null | (() => void),
   quitCourse: null as null | (() => void),
   /** F, or a tap on a bubble: talk to whoever's close, else the chopper. */
   interact: null as null | (() => void),
@@ -493,6 +516,14 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
   const tanMat = useMemo(() => plastic(TAN), []);
 
   const heli = useRef<HeliState>(newHeli(HELIPAD.x, 0, HELIPAD.z, Math.PI));
+  /**
+   * The parachute. t counts real seconds from the jump (the movie shot runs on
+   * it, slow-mo or not); pulled is the t he yanked the cord at, -1 before.
+   */
+  const chute = useRef({ on: false, cine: false, t: 0, pulled: -1, fold: 0, sway: 0, lean: 0, line: '', lineLeft: 0, last: null as string | null });
+  const chuteRig = useChuteRig();
+  /** Chopper with nobody in it: coming down by itself (you jumped, or you called it in). */
+  const autopilot = useRef(false);
 
   const men = useMemo(() => {
     const list: Man[] = [];
@@ -687,7 +718,7 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
     if (q && now > q.until) {
       army.quip = q.then ? { text: q.then, until: now + quipSeconds(q.then) * 1000 } : null;
     }
-    const busy = army.coach === 'talk' || army.bubble !== null || player.fall > 0;
+    const busy = army.coach === 'talk' || army.bubble !== null || player.fall > 0 || chute.current.on;
     if (!army.quip && !busy) {
       const at = flying ? h.pos : player.pos;
       const who = flying ? (h.pos.y > 0.3 ? 'fly' : null) : 'walk';
@@ -741,6 +772,7 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
 
   /** F: talk to whoever's close, or the chopper. */
   function interact() {
+    if (chute.current.cine) return skipCine();
     if (army.mode === 'ground' && army.coach === 'wait' && army.coachNear) return startCoach();
     if (army.coach === 'talk') return nextCoach();
     if (army.mode === 'ground' && sniper.phase === 'near' && (sniper.near === 'radio' || sniper.near === 'sniper')) return sniperControls.talk?.();
@@ -782,8 +814,9 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
   function board() {
     const h = heli.current;
     if (army.mode === 'ground') {
-      if (!army.nearChopper || player.fall > 0) return;
+      if (!army.nearChopper || player.fall > 0 || chute.current.on) return;
       army.mode = 'heli';
+      autopilot.current = false;
       player.root.visible = false;
       h.rotor = Math.min(h.rotor, 0.2);
       rotorOn();
@@ -791,7 +824,24 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
       banner('Chopper ready', 'Space to lift off · fly the rings or just fly', 2.8);
     } else {
       if (!h.grounded) {
-        banner('Land first', 'Shift to come down, then F to hop out', 1.8);
+        const below = floorAt(h.pos.x, h.pos.z, h.pos.y);
+        if (!needsChute(h.pos.y - below)) {
+          banner('Too low to jump', 'Shift to come down, then F to hop out · or climb higher and F to bail out', 2);
+          return;
+        }
+        // Bail out: step off the side, the chopper flies itself down, and the chute opens.
+        army.mode = 'ground';
+        const f = heliForward(h.yaw);
+        player.pos.set(h.pos.x - f.z * 0.075, h.pos.y - 0.02, h.pos.z + f.x * 0.075);
+        pushOut(player.pos, MAN_RADIUS, player.pos.y, player.pos.y + MAN_HEIGHT);
+        player.heading = h.yaw;
+        player.speed = 0;
+        player.root.visible = true;
+        playerVy.current = 0;
+        autopilot.current = true;
+        army.course.active = false;
+        camReady.current = false;
+        startChute(true);
         return;
       }
       army.mode = 'ground';
@@ -824,6 +874,94 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
     banner('Back on the pad', undefined, 1.2);
   }
 
+  /** Something to shout, in a bubble and in a tiny plastic voice. */
+  function shout(lines: readonly string[], seconds: number) {
+    const c = chute.current;
+    const line = pickLine(lines, c.last);
+    c.last = line;
+    c.line = line;
+    c.lineLeft = seconds;
+    if (!film) armySay(line);
+  }
+
+  /** Off a ledge or out of the chopper: the chute, and (outside the reel) the movie shot. */
+  function startChute(bail: boolean) {
+    const c = chute.current;
+    c.on = true;
+    c.cine = !film;
+    c.t = 0;
+    c.pulled = -1;
+    c.fold = 0;
+    c.sway = 0;
+    c.lean = 0;
+    army.chute = c.cine ? 'cine' : 'glide';
+    army.quip = null;
+    shout(bail ? BAIL_LINES : CHUTE_LINES, 2.6);
+    armySfx.whoosh();
+    emit();
+  }
+
+  function pullCord() {
+    const c = chute.current;
+    if (!c.on || c.pulled >= 0) return;
+    c.pulled = c.t;
+    armySfx.chute();
+  }
+
+  /** F, Space or the button: straight to the gliding, chute open. */
+  function skipCine() {
+    const c = chute.current;
+    if (!c.cine) return;
+    pullCord();
+    c.cine = false;
+    army.chute = 'glide';
+    camReady.current = false;
+    emit();
+  }
+
+  function landChute() {
+    const c = chute.current;
+    if (c.cine) skipCine();
+    army.chute = 'fold';
+    c.fold = 0.001;
+    armySfx.touchdown();
+    shout(LAND_LINES, 2.2);
+    emit();
+  }
+
+  const _probe = useMemo(() => new THREE.Vector3(), []);
+  /** The chopper won't fit here: furniture in the way, or it would hang off an edge. */
+  function chopperBlocked(x: number, y: number, z: number) {
+    _probe.set(x, y, z);
+    pushOut(_probe, HELI.radius, y + 0.005, y + HELI.height);
+    if (Math.abs(_probe.x - x) > 1e-6 || Math.abs(_probe.z - z) > 1e-6) return true;
+    const r = HELI.radius * 0.7;
+    for (const [ox, oz] of [[r, 0], [-r, 0], [0, r], [0, -r]]) {
+      if (Math.abs(floorAt(x + ox, z + oz, y + 0.01) - y) > 0.01) return true;
+    }
+    return roofAt(x, z, y + 0.005) - y < HELI.height + 0.02;
+  }
+
+  /** R on foot: the chopper flies itself down next to you, wherever you left it. */
+  function callChopper() {
+    if (army.mode !== 'ground' || chute.current.on || player.fall > 0 || player.falling) return;
+    const h = heli.current;
+    const p = player.pos;
+    const spot = chopperSpot(p.x, p.y, p.z, player.heading, floorAt, chopperBlocked);
+    const at = spot ?? { x: HELIPAD.x, y: 0, z: HELIPAD.z, yaw: Math.PI };
+    const top = Math.min(at.y + 0.45, roofAt(at.x, at.z, at.y + 0.02) - HELI.height - 0.01);
+    placeHeli(h, at.x, Math.max(at.y + HELI.skid, top), at.z, at.yaw);
+    h.grounded = false;
+    h.rotor = 1;
+    autopilot.current = true;
+    army.course.active = false;
+    army.course.next = 0;
+    rotorOn();
+    armySfx.radio();
+    banner(spot ? 'Chopper inbound!' : 'Chopper sent to the pad', spot ? 'Setting down right next to you' : 'No room to land here: it went back to the helipad', 2.2);
+    emit();
+  }
+
   function quitCourse() {
     army.course.active = false;
     army.course.next = 0;
@@ -843,6 +981,8 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
       if (e.code === 'KeyF') interact();
       if ((e.code === 'Enter' || e.code === 'Space') && army.coach === 'talk') nextCoach();
       if (e.code === 'KeyR' && army.mode === 'heli') resetHeli();
+      else if (e.code === 'KeyR') callChopper();
+      if ((e.code === 'Space' || e.code === 'Enter') && chute.current.cine) skipCine();
       if (e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
     };
     const up = (e: KeyboardEvent) => {
@@ -880,8 +1020,10 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
     controls.endSiege = endSiege;
     controls.startSiege = startSiege;
     controls.resetHeli = resetHeli;
+    controls.callChopper = callChopper;
+    controls.skipCine = skipCine;
     controls.quitCourse = quitCourse;
-    if (import.meta.env.DEV) (window as unknown as { __army: unknown }).__army = { army, heli, men, keys: keys.current, board, startWave, startSiege };
+    if (import.meta.env.DEV) (window as unknown as { __army: unknown }).__army = { army, heli, men, keys: keys.current, board, startWave, startSiege, chute, callChopper };
     return () => {
       window.removeEventListener('keydown', down);
       window.removeEventListener('keyup', up);
@@ -897,6 +1039,8 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
       controls.endSiege = null;
       controls.startSiege = null;
       controls.resetHeli = null;
+      controls.callChopper = null;
+      controls.skipCine = null;
       controls.quitCourse = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -992,9 +1136,24 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
     }
   });
 
-  function frame(dt: number) {
+  function frame(realDt: number) {
     const k = keys.current;
     const h = heli.current;
+    // The chute's movie shot runs on real time and slows the whole town down for the yank.
+    const ch = chute.current;
+    let dt = realDt;
+    if (ch.on) {
+      ch.t += realDt;
+      if (ch.cine) {
+        dt = realDt * cineTimeScale(ch.t);
+        if (ch.t >= CINE.pull) pullCord();
+        if (ch.t >= CINE.end) {
+          ch.cine = false;
+          army.chute = 'glide';
+          emit();
+        }
+      }
+    }
     const nudge = drag.current.acc;
     drag.current.acc = 0;
 
@@ -1046,7 +1205,16 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
     }
     if (army.mode === 'ground') {
       const p = player;
-      if (p.fall === 0 && !p.falling) {
+      if (ch.on && army.chute !== 'fold') {
+        // Under the canopy: it drifts along your heading, A/D steer, W/S drift more or less.
+        // The movie shot keeps your hands off the controls.
+        const steer = ch.cine ? 0 : turnIn;
+        p.heading = wrap(p.heading - steer * 1.5 * dt - (ch.cine ? 0 : nudge));
+        const want = ch.pulled >= 0 ? glideSpeed(ch.cine ? 0 : fwdIn) : p.speed * 0.98;
+        p.speed += (want - p.speed) * Math.min(1, dt * 2.5);
+        p.pos.x += Math.sin(p.heading) * p.speed * dt;
+        p.pos.z += Math.cos(p.heading) * p.speed * dt;
+      } else if (p.fall === 0 && !p.falling && !ch.on) {
         const run = Boolean(k.ShiftLeft || k.ShiftRight);
         p.heading = wrap(p.heading - turnIn * 2.6 * dt - (listening ? 0 : nudge));
         const top = run ? 0.24 : 0.11;
@@ -1128,6 +1296,26 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
         }
         if (c.active) c.time += dt;
         rotorLevel(h.rotor, Math.hypot(h.vel.x, h.vel.z));
+      } else if (autopilot.current && !h.grounded) {
+        // Nobody at the stick: it eases off its speed and settles onto whatever's below.
+        const floor = floorAt(h.pos.x, h.pos.z, h.pos.y + 0.01) + HELI.skid;
+        const slow = Math.exp(-dt * 1.8);
+        h.vel.x *= slow;
+        h.vel.z *= slow;
+        h.pos.x += h.vel.x * dt;
+        h.pos.z += h.vel.z * dt;
+        pushOut(h.pos, HELI.radius, h.pos.y + 0.005, h.pos.y + HELI.height);
+        const sink = Math.min(0.55, (h.pos.y - floor) * 2.2 + 0.06);
+        h.pos.y = Math.max(floor, h.pos.y - sink * dt);
+        h.pitch *= slow;
+        h.bank *= slow;
+        if (h.pos.y <= floor + 1e-4) {
+          h.grounded = true;
+          h.vel.set(0, 0, 0);
+          autopilot.current = false;
+          armySfx.bump();
+          if (army.mode === 'ground') rotorOff();
+        }
       } else {
         h.rotor = Math.max(0, h.rotor - dt * 0.6);
       }
@@ -1287,11 +1475,18 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
         pushOut(m.pos, MAN_RADIUS, m.pos.y + 0.005, m.pos.y + MAN_HEIGHT);
         const ground = floorAt(m.pos.x, m.pos.z, m.pos.y + 0.015);
         if (m.pos.y > ground + 0.0005) {
-          playerVy.current -= 9.8 * dt;
+          // Just walked off something tall (the shelf is nearly two metres up): chute.
+          if (!ch.on && playerVy.current === 0 && needsChute(m.pos.y - ground)) startChute(false);
+          if (ch.on && army.chute !== 'fold') {
+            if (ch.pulled < 0 && m.pos.y - ground < CHUTE.lastChance) pullCord();
+            const open = ch.pulled >= 0 ? canopyOpen(ch.t - ch.pulled) : 0;
+            playerVy.current = stepFall(playerVy.current, dt, open, Boolean(k.ShiftLeft || k.ShiftRight || touch.down));
+          } else playerVy.current -= 9.8 * dt;
           m.pos.y = Math.max(ground, m.pos.y + playerVy.current * dt);
         } else {
           m.pos.y = ground;
           playerVy.current = 0;
+          if (ch.on && army.chute !== 'fold') landChute();
         }
         continue;
       }
@@ -1299,12 +1494,43 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
       m.pos.y = 0;
     }
 
+    // The chute: free-fall flail, the yank, swinging under the canopy, folding it up.
+    {
+      const rig = chuteRig;
+      rig.root.visible = ch.on && army.mode === 'ground';
+      if (ch.on) {
+        const since = ch.pulled >= 0 ? ch.t - ch.pulled : -1;
+        const open = since >= 0 ? canopyOpen(since) : 0;
+        if (army.chute === 'fold') {
+          ch.fold = Math.min(1, ch.fold + dt / CHUTE.fold);
+          if (ch.fold >= 1) {
+            ch.on = false;
+            army.chute = null;
+            emit();
+          }
+        }
+        const swing = since >= 0 ? Math.sin(since * 2.8) * 0.3 * Math.exp(-since * 0.8) : 0;
+        ch.sway += (swing + (ch.cine ? 0 : turnIn) * 0.18 - ch.sway) * Math.min(1, dt * 6);
+        // Belly-down and flailing until the canopy bites, then jerked upright and swinging.
+        const wantLean = open < 0.35 ? 0.85 + Math.sin(ch.t * 9) * 0.12 : 0.06;
+        ch.lean += (wantLean - ch.lean) * Math.min(1, realDt * (open < 0.35 ? 8 : 12));
+        if (army.chute !== 'fold') {
+          player.tip.rotation.x = ch.lean;
+          // Hanging under the canopy he leans the same way it swings.
+          player.tip.rotation.z = open < 0.35 ? Math.sin(ch.t * 13) * 0.3 : -ch.sway * 0.8;
+        } else player.tip.rotation.z = 0;
+        rig.root.position.copy(player.pos);
+        rig.root.rotation.y = player.heading;
+        rig.pose(open, ch.fold, ch.sway, since >= 0 ? since / 0.7 : 0);
+      } else if (player.tip.rotation.z !== 0) player.tip.rotation.z = 0;
+    }
+
     // Animate.
     for (const m of men) {
       if (!m.active || !m.root.visible) continue;
       m.root.rotation.y = m.heading;
       if (m.fall > 0 || m.falling) continue;
-      const { clip, scale } = clipFor(Math.abs(m.speed));
+      const { clip, scale } = m === player && ch.on ? { clip: 'Idle' as Clip, scale: 1.6 } : clipFor(Math.abs(m.speed));
       setClip(m, clip);
       m.actions[clip].timeScale = m.speed < 0 ? -scale : scale;
       m.mixer.update(dt);
@@ -1365,9 +1591,51 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
       _look.set(h.pos.x + fx * 0.25, h.pos.y + 0.03, h.pos.z + fz * 0.25);
       clearShot(_look, _want);
     } else {
-      _want.set(player.pos.x - Math.sin(cy) * 0.2, player.pos.y + 0.085, player.pos.z - Math.cos(cy) * 0.2);
-      _look.set(player.pos.x + fx * 0.12, player.pos.y + 0.045, player.pos.z + fz * 0.12);
+      // Under the canopy: back off and up so the chute's in the shot too.
+      const under = ch.on && army.chute !== 'fold' ? 1 : 0;
+      const back = 0.2 + under * 0.24;
+      _want.set(player.pos.x - Math.sin(cy) * back, player.pos.y + 0.085 + under * 0.02, player.pos.z - Math.cos(cy) * back);
+      _look.set(player.pos.x + fx * 0.12, player.pos.y + 0.045 + under * 0.05, player.pos.z + fz * 0.12);
       clearShot(_look, _want);
+    }
+    // The chute's movie shot. Close-up from in front and a touch below while he
+    // flails and grabs the cord, cut to a wide from underneath as the canopy bangs
+    // open, then a glide back to your own camera.
+    let cineRoll = 0;
+    let cineFov = 0;
+    const cine = ch.on && ch.cine && !flying;
+    if (cine) {
+      const P = player.pos;
+      const hd = player.heading;
+      const hx = Math.sin(hd);
+      const hz = Math.cos(hd);
+      if (ch.t < CINE.wide) {
+        const e = ch.t / CINE.wide;
+        const dist = 0.15 - 0.04 * e;
+        _want.set(P.x + hx * dist - hz * 0.035, P.y + MAN_HEIGHT * 0.35, P.z + hz * dist + hx * 0.035);
+        _look.set(P.x + hx * 0.035, P.y + MAN_HEIGHT * 0.6, P.z + hz * 0.035);
+        cineRoll = 0.16 * (1 - e);
+        cineFov = 52 - 6 * e;
+      } else {
+        const e = ch.t - CINE.wide;
+        const a = hd + 2.5 + e * 0.5;
+        _b.set(P.x + Math.sin(a) * 0.24, P.y - 0.09 + e * 0.03, P.z + Math.cos(a) * 0.24);
+        _b.y = Math.max(_b.y, floorAt(_b.x, _b.z, P.y) + 0.02);
+        _a.set(P.x, P.y + MAN_HEIGHT + 0.07, P.z);
+        cineFov = 72;
+        if (ch.t > CINE.back) {
+          // _want/_look still hold the follow camera: blend into it.
+          const u = Math.min(1, (ch.t - CINE.back) / (CINE.end - CINE.back));
+          const sm = u * u * (3 - 2 * u);
+          _b.lerp(_want, sm);
+          _a.lerp(_look, sm);
+          cineFov = 72 + (68 - 72) * sm;
+        }
+        _want.copy(_b);
+        _look.copy(_a);
+      }
+      clearShot(_look, _want);
+      firstPerson = false;
     }
     // Sergeant Green's lesson: the camera closes in on him, a three-quarter shot from in front.
     const closeUp = army.coach === 'talk' && guide !== null && !flying;
@@ -1380,13 +1648,13 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
     }
     // Up/down arrows tilt the view about the camera's own right axis: look up at the
     // ceiling from the rug, or out across the room from the bird's-eye.
-    if (lookPitch.current !== 0 && !closeUp) {
+    if (lookPitch.current !== 0 && !closeUp && !cine) {
       _dir.subVectors(_look, _want);
       _right.crossVectors(_dir, UP).normalize();
       if (_right.lengthSq() > 0) _look.copy(_want).add(_dir.applyAxisAngle(_right, lookPitch.current));
     }
     player.root.visible = !flying && !(firstPerson && player.fall === 0);
-    if (!camReady.current || (firstPerson && !closeUp)) {
+    if (!camReady.current || (firstPerson && !closeUp) || cine) {
       _cam.copy(_want);
       _camLook.copy(_look);
     } else {
@@ -1408,9 +1676,10 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
       camera.position.copy(_cam);
       camera.up.set(0, 1, 0);
       camera.lookAt(_camLook);
+      if (cineRoll) camera.rotateZ(cineRoll);
     }
-    const near = cam === 'birdseye' ? 0.02 : flying ? 0.008 : 0.003;
-    const fov = fitFov(firstPerson ? 78 : 68, size.width / Math.max(1, size.height), 1.5, 100);
+    const near = cine ? 0.003 : cam === 'birdseye' ? 0.02 : flying ? 0.008 : 0.003;
+    const fov = fitFov(cineFov || (firstPerson ? 78 : 68), size.width / Math.max(1, size.height), 1.5, 100);
     if (it.t >= 1 && (persp.near !== near || Math.abs(persp.fov - fov) > 0.1)) {
       persp.near = near;
       persp.fov = fov;
@@ -1439,6 +1708,15 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
       } else army.bubble = null;
     } else if (army.bubble) army.bubble = null;
     tickQuips(dt, flying);
+    // What he shouts on the way down.
+    ch.lineLeft -= realDt;
+    if (ch.line && ch.lineLeft > 0 && !flying) {
+      const at = headOnScreen(camera, player.pos.x, player.pos.y + MAN_HEIGHT * 1.15, player.pos.z);
+      army.chuteBubble = at ? { ...at, who: 'You', text: ch.line } : null;
+    } else if (army.chuteBubble) {
+      army.chuteBubble = null;
+      ch.line = '';
+    }
 
     throttledEmit();
   }
@@ -1456,6 +1734,7 @@ function Crowd({ boot, film = false }: { boot: ArmyBoot | null; film?: boolean }
     <group>
       <group ref={group} />
       <primitive object={tracers.lines} />
+      <primitive object={chuteRig.root} />
       <group ref={heliGroup}>
         <ToyHelicopter parts={heliParts} />
       </group>
@@ -1557,6 +1836,7 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
   const flying = a.mode === 'heli';
   const c = a.course;
   if (sniperBusy()) return <SniperHud />;
+  if (a.chute === 'cine') return <ChuteCine />;
   const btn = 'rounded-xl border border-white/25 bg-black/55 px-3 py-2 text-[11px] font-bold uppercase tracking-wider';
   return (
     <div data-army className="pointer-events-none absolute inset-0 z-40 text-white">
@@ -1569,7 +1849,7 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
         </button>
         {(a.nearChopper || flying) && (
           <button type="button" onClick={() => controls.board?.()} className={`${btn} ${flying ? 'text-white/85' : 'bg-lime-700/70 text-white'}`}>
-            {flying ? 'Land & hop out (F)' : 'Board chopper (F)'}
+            {flying ? (a.heliGrounded ? 'Hop out (F)' : 'Land & hop out') : 'Board chopper (F)'}
           </button>
         )}
         {flying && c.active && (
@@ -1580,6 +1860,16 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
         {flying && (
           <button type="button" onClick={() => controls.resetHeli?.()} className={`${btn} text-white/85`}>
             Back to pad
+          </button>
+        )}
+        {flying && !a.heliGrounded && a.heliAlt > 0.25 && (
+          <button type="button" data-army-bail onClick={() => controls.board?.()} className={`${btn} border-amber-300/60 bg-amber-600/70 text-white`}>
+            Bail out (F)
+          </button>
+        )}
+        {!flying && !a.nearChopper && !a.chute && (
+          <button type="button" data-army-call onClick={() => controls.callChopper?.()} className={`${btn} text-lime-100`}>
+            Call chopper (R)
           </button>
         )}
         {a.siege !== 'story' && a.waveState !== 'won' && (
@@ -1638,7 +1928,13 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
         )}
       </div>
 
-      {a.quipBubble && !a.bubble && <SpeechBubble bubble={a.quipBubble} tone="thought" />}
+      {a.quipBubble && !a.bubble && !a.chuteBubble && <SpeechBubble bubble={a.quipBubble} tone="thought" />}
+      {a.chuteBubble && <SpeechBubble bubble={a.chuteBubble} />}
+      {a.chute === 'glide' && (
+        <p className="absolute bottom-28 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-amber-500 px-4 py-1 text-[12px] font-black uppercase tracking-[0.2em] text-black">
+          Chute open · {isTouch ? 'arrows steer · hold Faster to drop' : 'A/D steer · W drift · Shift drop faster'}
+        </p>
+      )}
       {a.bubble && !flying && (
         <SpeechBubble
           bubble={a.bubble}
@@ -1681,10 +1977,10 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
             <>
               <span className="font-mono tabular-nums text-lime-200">{Math.round(a.heliSpeed * 100)} cm/s</span>
               <span className="font-mono tabular-nums text-cyan-200">{Math.round(a.heliAlt * 100)} cm up</span>
-              {!isTouch && <span className="text-white/65">WASD fly · Arrows look · Space up · Shift down · Tab boost · drag to turn · C camera</span>}
+              {!isTouch && <span className="text-white/65">WASD fly · Arrows look · Space up · Shift down · Tab boost · drag to turn · F bail out · C camera</span>}
             </>
           ) : (
-            !isTouch && <span className="text-white/65">WASD move · Arrows look · Shift run · Space fire · drag to turn · F talk / chopper · C camera</span>
+            !isTouch && <span className="text-white/65">WASD move · Arrows look · Shift run · Space fire · drag to turn · F talk / chopper · R call chopper · C camera</span>
           )}
         </div>
       </div>
@@ -1705,12 +2001,33 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
                 <HoldButton label="Up" className="h-14 w-20" onHold={on => (touch.up = on)} />
                 <HoldButton label="Down" className="h-14 w-20" onHold={on => (touch.down = on)} />
               </>
+            ) : a.chute === 'glide' ? (
+              <HoldButton label="Faster" className="h-20 w-20 text-amber-200" onHold={on => (touch.down = on)} />
             ) : (
               <HoldButton label="Fire" className="h-20 w-20 text-amber-200" onHold={on => (touch.fire = on)} />
             )}
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/** The chute's movie shot: letterbox bars, his line, and a way to skip. */
+function ChuteCine() {
+  const a = army;
+  return (
+    <div data-army-cine className="pointer-events-none absolute inset-0 z-40 text-white">
+      <div className="absolute inset-x-0 top-0 h-[11%] origin-top animate-[cineBar_0.25s_ease-out] bg-black" />
+      <div className="absolute inset-x-0 bottom-0 h-[11%] origin-bottom animate-[cineBar_0.25s_ease-out] bg-black" />
+      {a.chuteBubble && <SpeechBubble bubble={a.chuteBubble} />}
+      <button
+        type="button"
+        onClick={() => controls.skipCine?.()}
+        className="pointer-events-auto absolute bottom-[3%] right-4 rounded-xl border border-white/25 bg-black/55 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white/75"
+      >
+        Skip (F)
+      </button>
     </div>
   );
 }
