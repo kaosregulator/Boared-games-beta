@@ -13,7 +13,7 @@ import { NEON_WALL } from './roomLayout';
 
 const SPINE_COLOR: Record<string, { color: string; accent: string }> = {
   pawnrush: { color: '#c4262c', accent: '#ffe08a' },
-  chess: { color: '#2b2622', accent: '#d8cfc2' },
+  chess: { color: '#1a120e', accent: '#d4af37' },
   connect4: { color: '#1d4fa3', accent: '#ffd23f' },
   checkers: { color: '#8c1c1c', accent: '#f0d9a7' },
   poker: { color: '#1f5134', accent: '#ffd98a' },

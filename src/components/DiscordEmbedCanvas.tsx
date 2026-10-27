@@ -244,7 +244,7 @@ export const DiscordEmbedCanvas: React.FC<DiscordEmbedCanvasProps> = ({
               {activeGame?.id === 'casino' && '🎰 Royal Casino & Slots Lounge'}
               {activeGame?.id === 'battleship' && '⚓ Naval Strike: Dual Radar Target Array'}
               {activeGame?.id === 'connect4' && '🔴 Connect Four: 7x6 Gravity Grid'}
-              {activeGame?.id === 'chess' && '♟️ Staunton Tournament Chess'}
+              {activeGame?.id === 'chess' && '♟️ Wizard Chess'}
               {activeGame?.id === 'checkers' && '🔴 Classic Draughts / Checkers'}
               {activeGame?.id === 'blackjack' && '🃏 Blackjack (21) Green Felt'}
               {activeGame?.id === 'gofish' && '🎣 Go Fish Lake Pond'}

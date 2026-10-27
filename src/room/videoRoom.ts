@@ -158,7 +158,7 @@ export const SHELF_SLOTS: ShelfSlot[] = [
 
 /** The rest of the library, stacked on the shelf's lower rows. */
 export const SHELF_SLOTS_LOWER: ShelfSlot[] = [
-  { id: 'chess', spine: null, title: 'Chess', row: 6, boxHeight: 0.085, color: '#2b2622', accent: '#d8cfc2' },
+  { id: 'chess', spine: null, title: 'Wizard Chess', row: 6, boxHeight: 0.085, color: '#1a120e', accent: '#d4af37' },
   { id: 'connect4', spine: null, title: 'Connect 4', row: 7, boxHeight: 0.085, color: '#1d4fa3', accent: '#ffd23f' },
   { id: 'checkers', spine: null, title: 'Checkers', row: 8, boxHeight: 0.085, color: '#8c1c1c', accent: '#f0d9a7' },
 ];

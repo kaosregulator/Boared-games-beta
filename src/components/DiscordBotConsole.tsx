@@ -46,7 +46,7 @@ export const DiscordBotConsole: React.FC<DiscordBotConsoleProps> = ({
           { name: '/casino', value: 'Lucky 777 Slots & Roulette Wheel' },
           { name: '/battleship', value: 'Naval Strike 3D Dual Radar' },
           { name: '/connect4', value: 'Connect Four Gravity Grid' },
-          { name: '/chess', value: 'Staunton Classic Chess' },
+          { name: '/chess', value: 'Wizard Chess' },
           { name: '/checkers', value: 'Classic Draughts / Checkers' },
           { name: '/blackjack', value: 'Casino 21 / Blackjack' },
           { name: '/gofish', value: 'Classic Go Fish Card Game' },
@@ -164,7 +164,7 @@ export const DiscordBotConsole: React.FC<DiscordBotConsoleProps> = ({
         avatar: '🤖',
         isBot: true,
         time: 'Just now',
-        text: 'Setting up **Staunton Chess**! ♟️',
+        text: 'Setting up **Wizard Chess**! ♟️',
         embed: {
           title: '♟️ Chess Board Deployed',
           description: 'Polished walnut board & grandmaster pieces positioned.',

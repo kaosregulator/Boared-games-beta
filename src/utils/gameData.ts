@@ -98,20 +98,19 @@ export const GAME_CATALOG: GameMetadata[] = [
   },
   {
     id: 'chess',
-    title: 'Chess',
-    subtitle: 'Classic Staunton Chess with Realistic Piece Slide Hands',
+    title: 'Wizard Chess',
+    subtitle: 'Sculpted marble pieces on a stone and gold board',
     players: '1 - 2 Players (or Grandmaster AI)',
     duration: '10 - 20 min',
     boxColor: 'from-amber-950 via-stone-900 to-black',
     boxAccent: 'border-amber-400/40 text-amber-300',
     badge: 'Animated Hands',
-    description: 'Carved wooden tournament chessboard featuring animated hands reaching and moving pieces, legal move path highlights, castling, en passant, pawn promotion, and checkmate detection.',
+    description: 'Sculpted wizard pieces in white marble and black stone, with gold trim, stand on an obsidian board. Drag a piece, or tap it and then a glowing square. Sit as white or black.',
     rules: [
-      'Standard Chess tournament rules. White moves first.',
-      'Select any piece to see all legal moves on the wooden board.',
-      'Supports special moves: Kingside/Queenside Castling and En Passant captures.',
-      'Promote pawns reaching the 8th rank to Queen, Rook, Bishop, or Knight.',
-      'Checkmate the opponent’s King to claim victory!'
+      'Standard chess. White moves first, whichever side you sit on.',
+      'Pick up a piece to see the squares it can reach.',
+      'Castling, en passant, and promotion to a queen are in the rules.',
+      'Checkmate the other king to take the game.'
     ],
     icon: 'Crown',
     rating: '5.0 ★★★★★'

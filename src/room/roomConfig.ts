@@ -18,7 +18,7 @@ export const SHELF_GAMES: ShelfGameSlot[] = [
   { id: 'poker', label: "Texas Hold'em", shortLabel: 'POKER', color: '#78350f', accent: '#fcd34d', shelfRow: 0, shelfCol: 1 },
   { id: 'battleship', label: 'Battleship', shortLabel: 'SHIP', color: '#0c4a6e', accent: '#38bdf8', shelfRow: 0, shelfCol: 2 },
   { id: 'connect4', label: 'Connect Four', shortLabel: 'C4', color: '#1e3a8a', accent: '#f59e0b', shelfRow: 1, shelfCol: 0 },
-  { id: 'chess', label: 'Chess', shortLabel: 'CHESS', color: '#292524', accent: '#d6d3d1', shelfRow: 1, shelfCol: 1 },
+  { id: 'chess', label: 'Wizard Chess', shortLabel: 'WIZARD', color: '#1a120e', accent: '#d4af37', shelfRow: 1, shelfCol: 1 },
   { id: 'casino', label: 'Casino Lounge', shortLabel: 'CASINO', color: '#064e3b', accent: '#34d399', shelfRow: 1, shelfCol: 2 },
   { id: 'blackjack', label: 'Blackjack', shortLabel: '21', color: '#14532d', accent: '#86efac', shelfRow: 2, shelfCol: 0 },
   { id: 'pawnrush', label: 'Sorry!', shortLabel: 'SORRY', color: '#881337', accent: '#fb7185', shelfRow: 2, shelfCol: 1 },
