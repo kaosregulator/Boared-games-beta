@@ -584,13 +584,16 @@ export const NEON_WALL = {
   gap: 0.012,
 };
 
-/** Wooden toy chest on the floor under the neon game wall. */
+/**
+ * Lift-and-hide chest on the floor under the neon game wall.
+ * The mesh origin faces the room (local +Z swings to world -X).
+ */
 export const TOY_CHEST = {
-  x: 2.32,
+  x: 2.52,
   z: -1.45,
-  hx: 0.34,
-  hz: 0.22,
-  top: 0.36,
+  hx: 0.31,
+  hz: 0.46,
+  top: 0.86,
 };
 
 export const ROOM_COLLIDERS = [

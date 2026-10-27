@@ -186,6 +186,57 @@ function isHighShelf(id: string) {
   return id === 'south-shelf' || id === 'teddy' || id.startsWith('sh-');
 }
 
+/** `?stool` parks the stool under the high shelf so a capture can see the step up. */
+function stoolFromQuery(): { x: number; z: number } | null {
+  if (typeof window === 'undefined') return null;
+  if (!new URLSearchParams(window.location.search).has('stool')) return null;
+  return { x: LAYOUT.teddy.x, z: LAYOUT.teddy.z - 0.7 };
+}
+
+/** Someone standing on the stool, one arm up toward the high shelf. */
+function StepUpFigure({ x, z }: { x: number; z: number }) {
+  return (
+    <group position={[x, 0.42, z]} rotation={[0, Math.PI, 0]}>
+      <mesh position={[-0.06, 0.04, 0.02]} castShadow>
+        <boxGeometry args={[0.08, 0.05, 0.14]} />
+        <meshStandardMaterial color="#f4f4f5" roughness={0.6} />
+      </mesh>
+      <mesh position={[0.06, 0.04, 0.02]} castShadow>
+        <boxGeometry args={[0.08, 0.05, 0.14]} />
+        <meshStandardMaterial color="#f4f4f5" roughness={0.6} />
+      </mesh>
+      <mesh position={[-0.06, 0.28, 0]} castShadow>
+        <cylinderGeometry args={[0.045, 0.05, 0.36, 8]} />
+        <meshStandardMaterial color="#31456e" roughness={0.7} />
+      </mesh>
+      <mesh position={[0.06, 0.28, 0]} castShadow>
+        <cylinderGeometry args={[0.045, 0.05, 0.36, 8]} />
+        <meshStandardMaterial color="#31456e" roughness={0.7} />
+      </mesh>
+      <mesh position={[0, 0.62, 0]} castShadow>
+        <boxGeometry args={[0.28, 0.32, 0.16]} />
+        <meshStandardMaterial color="#c23b4a" roughness={0.6} />
+      </mesh>
+      <mesh position={[0.16, 0.78, 0.02]} rotation={[0, 0, -0.9]} castShadow>
+        <cylinderGeometry args={[0.035, 0.04, 0.28, 8]} />
+        <meshStandardMaterial color="#e8b896" roughness={0.7} />
+      </mesh>
+      <mesh position={[-0.18, 0.55, 0]} rotation={[0, 0, 0.4]} castShadow>
+        <cylinderGeometry args={[0.035, 0.04, 0.26, 8]} />
+        <meshStandardMaterial color="#e8b896" roughness={0.7} />
+      </mesh>
+      <mesh position={[0, 0.92, 0]} castShadow>
+        <sphereGeometry args={[0.11, 16, 12]} />
+        <meshStandardMaterial color="#e8b896" roughness={0.65} />
+      </mesh>
+      <mesh position={[0, 1.0, 0]}>
+        <sphereGeometry args={[0.115, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <meshStandardMaterial color="#3a2418" roughness={0.8} />
+      </mesh>
+    </group>
+  );
+}
+
 /** The little stool you pull over to reach the south wall's high shelf. */
 function ShelfStool({ x, z }: { x: number; z: number }) {
   const legs: [number, number][] = [
@@ -289,6 +340,7 @@ export function WalkRoom({
   /** High shelf: ask for a stool before the card, then stand on it. */
   const [stoolAsk, setStoolAsk] = useState<Aimed | null>(null);
   const [stool, setStool] = useState<null | { x: number; z: number }>(null);
+  const stoolPreview = useMemo(stoolFromQuery, []);
   const stoolToken = useRef(0);
   const pinnedAt = useRef<{ x: number; z: number } | null>(null);
   const cardOpen = pinned !== null;
@@ -1062,7 +1114,8 @@ export function WalkRoom({
         <FurbyHold />
         <DeviceFocus device={scripted ? null : device} />
         {seated && <GameBoySeat />}
-        {stool && <ShelfStool x={stool.x} z={stool.z} />}
+        {(stool || stoolPreview) && <ShelfStool x={(stool ?? stoolPreview)!.x} z={(stool ?? stoolPreview)!.z} />}
+        {stoolPreview && !stool && <StepUpFigure x={stoolPreview.x} z={stoolPreview.z} />}
         <DeviceGestures active={Boolean(device || seated) && !big && !scripted} />
         {override.capture && <CaptureClock />}
         {override.cam ? (
