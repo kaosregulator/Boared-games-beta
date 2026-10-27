@@ -190,7 +190,7 @@ function isHighShelf(id: string) {
 function stoolFromQuery(): { x: number; z: number } | null {
   if (typeof window === 'undefined') return null;
   if (!new URLSearchParams(window.location.search).has('stool')) return null;
-  return { x: LAYOUT.teddy.x, z: LAYOUT.teddy.z - 0.7 };
+  return { x: LAYOUT.teddy.x, z: LAYOUT.teddy.z - 1.45 };
 }
 
 /** Someone standing on the stool, one arm up toward the high shelf. */
