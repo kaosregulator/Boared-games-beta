@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import type { ChessBoard, ChessPieceColor, ChessPieceType } from '../../types';
 import { applyChessMove, createInitialBoard, getBestChessMove, getLegalMoves, sideStatus } from '../../games/chess/chessLogic';
@@ -9,27 +8,22 @@ import { PLAY_TABLE } from '../roomLayout';
 import { pushHud } from './tableHud';
 import { followAction, setTableView, tableCam, wasDrag, type Shot } from './tableCam';
 import { GhostHand } from './GhostHand';
-import { useStudioEnv } from './monopolyTokens';
+import { useWizardSet, WizardBoard } from './wizardSet';
 
 /**
- * Chess on the card table with Tabletop Club's set: rehcub's pieces on
- * pennomi and Tiziana's board. Pick a piece up and it lifts and follows your
- * hand; the squares it can reach glow; let go over one to set it down (or tap
- * the piece, then tap the square). The other side's ghost hand reaches over,
- * picks its piece up and sets it down while the camera swings round to watch.
+ * Wizard chess on this room's card table. The sculpted pieces and the stone
+ * board come from the owner's wizard-chess set; the cathedral does not.
+ * Pick a piece up and it lifts and follows your hand; the squares it can
+ * reach glow; let go over one to set it down (or tap the piece, then tap the
+ * square). The other side's ghost hand reaches over, picks its piece up and
+ * sets it down while the camera swings round to watch.
  */
 
-const T = '/games/tabletop/';
-/** The board model is 8.88 units across with an 8 x 8 playing surface at y 0.362. */
-const NATIVE = 8.88;
-/** Sized to cover the board printed inside the box: 6.5 cm squares, near tournament size. */
-const BOARD_W = 0.52;
-const S = BOARD_W / NATIVE;
-const SQ = S; // one square is one native unit
+/** 6.5 cm squares, near tournament size, on the card table. */
+const SQ = 0.065;
 const BOARD_LIFT = 0.007;
-const SURFACE = BOARD_LIFT + 0.362 * S;
+const SURFACE = BOARD_LIFT + 0.012;
 const HOVER = 0.06;
-const KING_H = 0.092;
 
 const sqPos = (r: number, c: number, y = SURFACE) => new THREE.Vector3((c - 3.5) * SQ, y, (r - 3.5) * SQ);
 
@@ -79,7 +73,7 @@ function applyMove(board: ChessBoard, m: Move) {
 /** Taken pieces line up beside the board on the side of whoever took them. */
 function outPos(color: ChessPieceColor, n: number) {
   const side = color === 'b' ? 1 : -1; // black pieces you took sit on your right
-  return new THREE.Vector3(side * (BOARD_W / 2 + 0.034 + (n % 2) * 0.036), 0, side * (0.2 - Math.floor(n / 2) * 0.045));
+  return new THREE.Vector3(side * (SQ * 4 + 0.04 + (n % 2) * 0.036), 0, side * (0.2 - Math.floor(n / 2) * 0.045));
 }
 
 /** The opponent's move, timed: reach, grip, lift, carry, set down, let go. */
@@ -112,53 +106,6 @@ function carryPose(c: Carry, t: number, out: THREE.Vector3) {
 }
 const carryDone = (c: Carry, t: number) => t - c.start >= (c.ai ? REACH : 0) + LIFT + MOVE + DROP;
 
-function useChessSet() {
-  const env = useStudioEnv();
-  const { scene } = useGLTF(`${T}chess-pieces.glb`);
-  return useMemo(() => {
-    const white = new THREE.MeshStandardMaterial({ color: '#efe5cf', roughness: 0.38, envMap: env, envMapIntensity: 0.55 });
-    const black = new THREE.MeshStandardMaterial({ color: '#1f1b1d', roughness: 0.28, metalness: 0.05, envMap: env, envMapIntensity: 0.7 });
-    const names: Record<ChessPieceType, string> = { k: 'king', q: 'queen', b: 'bishop', n: 'knight', r: 'rook', p: 'pawn' };
-    // One scale for the whole set, so a pawn stays a pawn next to the king.
-    const king = scene.getObjectByName('king')!;
-    const kb = new THREE.Box3().setFromObject(king);
-    const scale = KING_H / (kb.max.y - kb.min.y);
-    const make = (type: ChessPieceType, color: ChessPieceColor) => {
-      const src = scene.getObjectByName(names[type])!.clone(true);
-      src.traverse(o => {
-        const m = o as THREE.Mesh;
-        if (m.isMesh) m.material = color === 'w' ? white : black;
-      });
-      src.updateMatrixWorld(true);
-      const box = new THREE.Box3().setFromObject(src);
-      const c = box.getCenter(new THREE.Vector3());
-      src.position.set(-c.x, -box.min.y, -c.z);
-      const g = new THREE.Group();
-      const inner = new THREE.Group();
-      inner.add(src);
-      inner.scale.setScalar(scale);
-      // knights look across the board at the other side
-      inner.rotation.y = (type === 'n' ? Math.PI : 0) + (color === 'b' ? Math.PI : 0);
-      g.add(inner);
-      return g;
-    };
-    return make;
-  }, [env, scene]);
-}
-
-function Board() {
-  const { scene } = useGLTF(`${T}chess-board.glb`);
-  const obj = useMemo(() => {
-    const o = scene.clone(true);
-    o.traverse(n => {
-      const m = n as THREE.Mesh;
-      if (m.isMesh) m.receiveShadow = true;
-    });
-    return o;
-  }, [scene]);
-  return <primitive object={obj} position={[0, BOARD_LIFT, 0]} scale={S} />;
-}
-
 function PieceMesh({
   piece,
   make,
@@ -186,6 +133,18 @@ function PieceMesh({
     // pieces that just settle (a castling rook, a taken piece) glide there
     shown.current.lerp(goal.current, Math.min(1, Math.min(dt, 0.05) * 14));
     n.position.copy(shown.current);
+    const mixer = obj.userData.mixer as THREE.AnimationMixer | undefined;
+    const actions = obj.userData.actions as Record<string, THREE.AnimationAction> | undefined;
+    if (mixer && actions) {
+      const moving = shown.current.distanceTo(goal.current) > 0.004;
+      const want = moving && actions.Move ? 'Move' : 'Idle';
+      if (obj.userData.clip !== want && actions[want]) {
+        actions[want].reset().fadeIn(0.18).play();
+        actions[obj.userData.clip as string]?.fadeOut(0.18);
+        obj.userData.clip = want;
+      }
+      mixer.update(dt);
+    }
   });
   return (
     <group
@@ -204,16 +163,17 @@ const PLAY_VIEW: Shot = { target: [0, 0, 0.03], yaw: 0, pitch: 0.95, dist: 0.72 
 const DIFFS = ['easy', 'medium', 'hard'] as const;
 
 export function ChessTable({ onLeave }: { onLeave: () => void }) {
-  const make = useChessSet();
+  const make = useWizardSet(SQ * 0.78);
   const { camera, raycaster, pointer } = useThree();
   const [board, setBoard] = useState<ChessBoard>(() => createInitialBoard());
   const [pieces, setPieces] = useState<Piece[]>(() => piecesFrom(createInitialBoard()));
+  const [you, setYou] = useState<ChessPieceColor>('w');
   const [turn, setTurn] = useState<ChessPieceColor>('w');
   const [selected, setSelected] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);
   const [carry, setCarry] = useState<Carry | null>(null);
   const [diff, setDiff] = useState<(typeof DIFFS)[number]>('medium');
-  const [note, setNote] = useState('Your move. Pick up a white piece.');
+  const [note, setNote] = useState('Your move. Pick up a piece.');
   const [over, setOver] = useState<string | null>(null);
   const [score, setScore] = useState({ you: 0, them: 0 });
   const clock = useRef(0);
@@ -228,7 +188,9 @@ export function ChessTable({ onLeave }: { onLeave: () => void }) {
   const hit = useMemo(() => new THREE.Vector3(), []);
   const carryLive = useRef(new THREE.Vector3());
 
-  useEffect(() => setTableView(PLAY_VIEW), []);
+  useEffect(() => {
+    setTableView({ ...PLAY_VIEW, yaw: you === 'b' ? Math.PI : 0 });
+  }, [you]);
 
   const at = (r: number, c: number) => pieces.find(p => p.out === null && p.r === r && p.c === c);
   const selPiece = selected === null ? null : pieces.find(p => p.id === selected) ?? null;
@@ -285,9 +247,9 @@ export function ChessTable({ onLeave }: { onLeave: () => void }) {
 
   // The opponent's turn: think a moment, then the ghost hand makes the move.
   useEffect(() => {
-    if (turn !== 'b' || over || carry) return;
+    if (turn === you || over || carry) return;
     const t = window.setTimeout(() => {
-      const best = getBestChessMove(board, 'b', diff);
+      const best = getBestChessMove(board, turn, diff);
       if (!best) return;
       const mover = at(best.from.r, best.from.c);
       if (!mover) return;
@@ -303,7 +265,7 @@ export function ChessTable({ onLeave }: { onLeave: () => void }) {
     }, 650);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [turn, over, carry, board, diff]);
+  }, [turn, over, carry, board, diff, you]);
 
   // Let go of the hand once the carried piece is down.
   useFrame(({ clock: c }) => {
@@ -316,7 +278,8 @@ export function ChessTable({ onLeave }: { onLeave: () => void }) {
         handOn.current = k < REACH + LIFT + MOVE + DROP + BACK * 0.5;
         const reach = Math.min(1, k / REACH);
         if (k < REACH) {
-          hand.current.lerpVectors(new THREE.Vector3(carry.from.x * 0.4, 0.16, -0.42), carry.from, reach * reach * (3 - 2 * reach));
+          const homeZ = you === 'w' ? -0.42 : 0.42;
+          hand.current.lerpVectors(new THREE.Vector3(carry.from.x * 0.4, 0.16, homeZ), carry.from, reach * reach * (3 - 2 * reach));
           handGrip.current = 0;
         } else if (!carryDone(carry, now)) {
           hand.current.copy(carryLive.current);
@@ -347,11 +310,11 @@ export function ChessTable({ onLeave }: { onLeave: () => void }) {
     return out.copy(sqPos(p.r, p.c));
   };
 
-  const yourTurn = turn === 'w' && !over && !carry;
+  const yourTurn = turn === you && !over && !carry;
 
   const grab = (p: Piece, e: { stopPropagation: () => void; pointerId: number; target: EventTarget | null }) => {
     if (!yourTurn) return;
-    if (p.color !== 'w') {
+    if (p.color !== you) {
       // tapping an enemy piece with yours in hand is a capture
       if (selPiece && legal.some(m => m.r === p.r && m.c === p.c)) {
         e.stopPropagation();
@@ -402,27 +365,28 @@ export function ChessTable({ onLeave }: { onLeave: () => void }) {
     else setSelected(null);
   };
 
-  const reset = () => {
+  const reset = (side: ChessPieceColor = you) => {
     const b = createInitialBoard();
     setBoard(b);
     setPieces(piecesFrom(b));
+    setYou(side);
     setTurn('w');
     setSelected(null);
     setCarry(null);
     setOver(null);
-    setNote('Your move. Pick up a white piece.');
-    setTableView(PLAY_VIEW);
+    setNote(side === 'w' ? 'Your move. Pick up a piece.' : 'You have the black pieces. White moves first.');
   };
 
   useEffect(() => {
     pushHud({
-      title: 'Chess',
-      note: over ?? (turn === 'w' ? note : 'Their move…'),
+      title: 'Wizard Chess',
+      note: over ?? (turn === you ? note : 'Their move…'),
       detail: `You ${score.you} · Ghost ${score.them} · drag a piece, or tap it then a glowing square`,
       onLeave,
       actions: [
+        { label: `You: ${you === 'w' ? 'White' : 'Black'}`, onClick: () => reset(you === 'w' ? 'b' : 'w'), tone: 'ghost' },
         { label: `Opponent: ${diff[0].toUpperCase()}${diff.slice(1)}`, onClick: () => setDiff(d => DIFFS[(DIFFS.indexOf(d) + 1) % DIFFS.length]), tone: 'ghost' },
-        { label: over ? 'Play again' : 'New game', onClick: reset, tone: over ? undefined : 'ghost' },
+        { label: over ? 'Play again' : 'New game', onClick: () => reset(), tone: over ? undefined : 'ghost' },
       ],
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -437,7 +401,7 @@ export function ChessTable({ onLeave }: { onLeave: () => void }) {
 
   return (
     <group>
-      <Board />
+      <WizardBoard sq={SQ} top={SURFACE} />
       {/* the playing surface, for taps on empty squares */}
       <mesh position={[0, SURFACE + 0.0004, 0]} rotation={[-Math.PI / 2, 0, 0]} onClick={tapSquare}>
         <planeGeometry args={[SQ * 8, SQ * 8]} />
@@ -457,11 +421,8 @@ export function ChessTable({ onLeave }: { onLeave: () => void }) {
       {pieces.map(p => (
         <PieceMesh key={`${p.id}${p.type}`} piece={p} make={make} pose={pose} onDown={grab} />
       ))}
-      <GhostHand at={hand.current} grip={handGrip} visible={handOn} from={Math.PI} tint="#c9b8ff" />
-      <GhostHand at={myHand.current} grip={myGrip} visible={myHandOn} from={0} tint="#bfe3ff" />
+      <GhostHand at={hand.current} grip={handGrip} visible={handOn} from={you === 'w' ? Math.PI : 0} tint="#c9b8ff" />
+      <GhostHand at={myHand.current} grip={myGrip} visible={myHandOn} from={you === 'w' ? 0 : Math.PI} tint="#bfe3ff" />
     </group>
   );
 }
-
-useGLTF.preload(`${T}chess-pieces.glb`);
-useGLTF.preload(`${T}chess-board.glb`);

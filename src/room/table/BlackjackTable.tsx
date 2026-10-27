@@ -26,6 +26,8 @@ const FELT_Y = 0.0068;
 
 const PLAY_VIEW: Shot = { target: [0.04, 0, -0.01], yaw: 0, pitch: 0.95, dist: 0.78 };
 const DEALER_VIEW: Shot = { target: [0.02, 0, DEALER_ROW], yaw: 0, pitch: 0.78, dist: 0.32 };
+const PLAYER_VIEW: Shot = { target: [0, 0, PLAYER_ROW], yaw: 0, pitch: 0.7, dist: 0.34 };
+const BET_VIEW: Shot = { target: [BET_SPOT.x, 0.01, BET_SPOT.z], yaw: 0.15, pitch: 0.72, dist: 0.34 };
 
 type Phase = 'bet' | 'deal' | 'player' | 'dealer' | 'done';
 
@@ -164,10 +166,10 @@ export function BlackjackTable({ onLeave }: { onLeave: () => void }) {
   /** The dealer's turn: turn the hole card, then draw to 17. */
   const dealerPlays = (p: PlayingCard[], d0: PlayingCard[], src: { d: PlayingCard[] }, stake: number) => {
     setPhase('dealer');
-    followAction(DEALER_VIEW, 4000);
     let d = d0.map(c => ({ ...c, faceUp: true }));
     later(500, () => {
       dealTo(rowPos(DEALER_ROW, 1, d.length));
+      followAction(DEALER_VIEW, 900);
       sound.playCardFlip();
       setDealer(d);
     });
@@ -177,6 +179,7 @@ export function BlackjackTable({ onLeave }: { onLeave: () => void }) {
         if (sc.total < 17 && !calculateHandScore(p).isBust) {
           d = [...d, draw(true, src)];
           dealTo(rowPos(DEALER_ROW, d.length - 1, d.length));
+          followAction(DEALER_VIEW, 800);
           setDealer(d);
           setDeck(src.d);
           step(750);
@@ -201,10 +204,12 @@ export function BlackjackTable({ onLeave }: { onLeave: () => void }) {
           p.push(draw(true, src));
           setPlayer([...p]);
           dealTo(rowPos(PLAYER_ROW, p.length - 1, p.length));
+          followAction(PLAYER_VIEW, 700);
         } else {
           d.push(draw(d.length === 0, src));
           setDealer([...d]);
           dealTo(rowPos(DEALER_ROW, d.length - 1, d.length));
+          followAction(DEALER_VIEW, 700);
         }
         setDeck(src.d);
       });
@@ -227,6 +232,7 @@ export function BlackjackTable({ onLeave }: { onLeave: () => void }) {
     setPlayer(p);
     setDeck(src.d);
     dealTo(rowPos(PLAYER_ROW, p.length - 1, p.length));
+    followAction(PLAYER_VIEW, 900);
     later(450, () => {
       grip.current = 0;
       handGoal.current.copy(SHOE);
@@ -254,6 +260,7 @@ export function BlackjackTable({ onLeave }: { onLeave: () => void }) {
     if (bank < v) return;
     setBank(b => b - v);
     setBet(b => b + v);
+    followAction(BET_VIEW, 800);
     sound.playPokerChipsBet();
   };
 

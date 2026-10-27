@@ -7,12 +7,19 @@ import {
   PLAYER_COLOURS,
   aiBuildTarget,
   aiWantsToBuy,
+  auctionBid,
+  auctionPass,
   build,
   buyPending,
   canBuild,
+  canMortgage,
+  canSellBuilding,
   endTurn,
+  mortgage,
   newGame,
+  offerTrade,
   rollDice,
+  sellBuilding,
   type GameState,
 } from '../../games/monopoly/monopolyEngine';
 import { pushHud, type HudAction } from './tableHud';
@@ -141,6 +148,7 @@ interface TokenProps {
   live: THREE.Vector3;
   onArrive: () => void;
   onStep: () => void;
+  onInspect?: () => void;
 }
 
 /**
@@ -148,7 +156,7 @@ interface TokenProps {
  * ("Go back three spaces"), quicker for a long card move; a trip to jail is a
  * flight. `live` always holds where it is, for the camera.
  */
-function Token({ build: make, id, at, seat, inJail, live, onArrive, onStep }: TokenProps) {
+function Token({ build: make, id, at, seat, inJail, live, onArrive, onStep, onInspect }: TokenProps) {
   const obj = useMemo(() => make(id), [make, id]);
   const g = useRef<THREE.Group>(null);
   const shown = useRef(at);
@@ -215,7 +223,20 @@ function Token({ build: make, id, at, seat, inJail, live, onArrive, onStep }: To
       onArrive();
     }
   });
-  return <primitive ref={g} object={obj} />;
+  return (
+    <group ref={g}>
+      <primitive object={obj} />
+      <mesh
+        onClick={e => {
+          e.stopPropagation();
+          if (!wasDrag()) onInspect?.();
+        }}
+      >
+        <sphereGeometry args={[0.02, 10, 8]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+    </group>
+  );
 }
 
 /* ----------------------------------- dice ----------------------------------- */
@@ -377,7 +398,7 @@ function BillMaterials({ d }: { d: Denom }) {
   );
 }
 
-function Deeds({ owned, zone, scale }: { owned: number[]; zone: Zone; scale: number }) {
+function Deeds({ owned, zone, scale, onPick }: { owned: number[]; zone: Zone; scale: number; onPick?: (i: number) => void }) {
   const w = DEED_SIZE.w * scale;
   const h = DEED_SIZE.h * scale;
   const sorted = [...owned].sort((a, b) => a - b);
@@ -388,7 +409,15 @@ function Deeds({ owned, zone, scale }: { owned: number[]; zone: Zone; scale: num
         const prevSame = k > 0 && BOARD[sorted[k - 1]].group === BOARD[i].group;
         const x = sorted.slice(0, k + 1).reduce((acc, j, n) => acc + (n === 0 ? 0 : BOARD[sorted[n - 1]].group === BOARD[j].group ? w * 0.38 : w * 1.06), 0);
         return (
-          <mesh key={i} position={[x, PAPER * (k + 1) + (prevSame ? PAPER : 0), 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <mesh
+            key={i}
+            position={[x, PAPER * (k + 1) + (prevSame ? PAPER : 0), 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            onClick={e => {
+              e.stopPropagation();
+              if (!wasDrag()) onPick?.(i);
+            }}
+          >
             <planeGeometry args={[w, h]} />
             <meshStandardMaterial map={deedTexture(i)} roughness={0.85} />
           </mesh>
@@ -562,7 +591,7 @@ export function MonopolyTable({ onLeave }: { onLeave: () => void }) {
   const [state, setState] = useState<GameState | null>(null);
   const [toss, setToss] = useState<Throw | null>(null);
   const [walking, setWalking] = useState(false);
-  const [held, setHeld] = useState<null | { kind: 'deed'; i: number } | { kind: 'chance' | 'chest'; text: string }>(null);
+  const [held, setHeld] = useState<null | { kind: 'deed'; i: number; why: 'buy' | 'look' } | { kind: 'chance' | 'chest'; text: string }>(null);
   const [pops, setPops] = useState<{ id: number; amount: number; seat: number }[]>([]);
   const rolling = useRef(false);
   const clock = useRef(0);
@@ -650,14 +679,17 @@ export function MonopolyTable({ onLeave }: { onLeave: () => void }) {
       lastCard.current = key;
       return () => window.clearTimeout(t);
     }
-    if (!key) lastCard.current = null;
+    if (!key) {
+      lastCard.current = null;
+      setHeld(h => (h && h.kind !== 'deed' ? null : h));
+    }
   }, [state?.drawnCard]);
 
   // An unowned property you landed on: hold its deed up while you decide.
   useEffect(() => {
     if (!state) return;
-    if (state.pendingPurchase !== null && !walking && human) setHeld({ kind: 'deed', i: state.pendingPurchase });
-    else setHeld(h => (h?.kind === 'deed' ? null : h));
+    if (state.pendingPurchase !== null && !walking && human) setHeld({ kind: 'deed', i: state.pendingPurchase, why: 'buy' });
+    else setHeld(h => (h?.kind === 'deed' && h.why === 'buy' ? null : h));
   }, [state?.pendingPurchase, walking, human, state]);
 
   // Money changing hands floats off the player's cash.
@@ -678,11 +710,21 @@ export function MonopolyTable({ onLeave }: { onLeave: () => void }) {
 
   // AI turns, paced so you can watch the dice and the walk.
   useEffect(() => {
-    if (!state || !actor?.isAI || state.stage === 'over' || walking) return;
+    const auctionAi = Boolean(state?.stage === 'auction' && state.auction && state.players[state.auction.seat]?.isAI);
+    if (!state || state.stage === 'over' || walking) return;
+    if (!actor?.isAI && !auctionAi) return;
     const timer = window.setTimeout(() => {
       if (rolling.current) return;
       const cur = state;
       if (cur.stage === 'roll') return throwDice();
+      if (cur.stage === 'auction' && cur.auction) {
+        const bidder = cur.players[cur.auction.seat];
+        if (!bidder?.isAI) return;
+        const price = BOARD[cur.auction.space].price ?? 0;
+        const next = cur.auction.high + 10;
+        const afford = bidder.cash - next >= 80 && next <= Math.ceil(price * 1.15);
+        return setState(s => (s ? (afford ? auctionBid(s) : auctionPass(s)) : s));
+      }
       if (cur.pendingPurchase !== null) return setState(s => (s ? buyPending(s, aiWantsToBuy(s, s.pendingPurchase!)) : s));
       const spot = aiBuildTarget(cur);
       if (spot !== null) {
@@ -695,7 +737,7 @@ export function MonopolyTable({ onLeave }: { onLeave: () => void }) {
     }, 1500);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [actor?.isAI, state?.stage, state?.turn, state?.pendingPurchase, state?.log.length, walking]);
+  }, [actor?.isAI, state?.stage, state?.turn, state?.pendingPurchase, state?.auction?.seat, state?.log.length, walking]);
 
   // The HUD: choosing a piece, then your turn's choices.
   useEffect(() => {
@@ -729,10 +771,24 @@ export function MonopolyTable({ onLeave }: { onLeave: () => void }) {
       actions.push({ label: `Buy ${sp.name} ($${sp.price})`, onClick: () => setState(cur => (cur ? buyPending(cur, true) : cur)) });
       actions.push({ label: 'Pass', onClick: () => setState(cur => (cur ? buyPending(cur, false) : cur)), tone: 'ghost' });
     }
-    if (human && state.stage !== 'roll' && state.pendingPurchase === null && !busy) {
-      actions.push({ label: state.doublesRun > 0 ? 'Roll again' : 'End turn', onClick: () => setState(cur => (cur ? endTurn(cur) : cur)), tone: 'ghost' });
+    if (human && state.stage === 'auction' && state.auction?.seat === 0) {
+      const next = state.auction.high + 10;
+      if (state.players[0].cash >= next) actions.push({ label: `Bid $${next}`, onClick: () => setState(cur => (cur ? auctionBid(cur) : cur)) });
+      actions.push({ label: 'Pass bid', onClick: () => setState(cur => (cur ? auctionPass(cur) : cur)), tone: 'ghost' });
     }
-    const buildable = human && state.stage !== 'roll' && !busy ? BOARD.filter(sp => canBuild(state, sp.i, 0)) : [];
+    if (human && (state.stage === 'end' || state.stage === 'resolve') && state.pendingPurchase === null && !state.auction && !busy) {
+      actions.push({ label: state.doublesRun > 0 ? 'Roll again' : 'End turn', onClick: () => setState(cur => (cur ? endTurn(cur) : cur)), tone: 'ghost' });
+      const sellAt = BOARD.find(sp => canSellBuilding(state, sp.i, 0))?.i ?? BOARD.find(sp => canMortgage(state, sp.i, 0))?.i;
+      if (sellAt !== undefined) {
+        actions.push({
+          label: canSellBuilding(state, sellAt, 0) ? `Sell on ${BOARD[sellAt].short}` : `Mortgage ${BOARD[sellAt].short}`,
+          onClick: () => setState(cur => (cur ? (canSellBuilding(cur, sellAt, 0) ? sellBuilding(cur, sellAt) : mortgage(cur, sellAt)) : cur)),
+          tone: 'ghost',
+        });
+      }
+      actions.push({ label: 'Offer a trade', onClick: () => setState(cur => (cur ? offerTrade(cur) : cur)), tone: 'ghost' });
+    }
+    const buildable = human && (state.stage === 'end' || state.stage === 'resolve') && state.pendingPurchase === null && !state.auction && !busy ? BOARD.filter(sp => canBuild(state, sp.i, 0)) : [];
     buildable.slice(0, 3).forEach(sp =>
       actions.push({
         label: `Build on ${sp.name}`,
@@ -774,6 +830,11 @@ export function MonopolyTable({ onLeave }: { onLeave: () => void }) {
     Object.entries(state.deeds)
       .filter(([, d]) => d.owner === seat)
       .map(([i]) => Number(i));
+  const lookAt = (i: number | undefined) => {
+    if (i === undefined || state.pendingPurchase !== null || state.drawnCard) return;
+    setHeld({ kind: 'deed', i, why: 'look' });
+    window.setTimeout(() => setHeld(h => (h?.kind === 'deed' && h.why === 'look' && h.i === i ? null : h)), 4200);
+  };
   const heldFrom = held?.kind === 'deed' ? tileCenter(held.i) : new THREE.Vector3(0, BOARD_Y, 0);
 
   return (
@@ -790,13 +851,14 @@ export function MonopolyTable({ onLeave }: { onLeave: () => void }) {
             live={lives.current[seat]}
             onArrive={() => arrived(seat)}
             onStep={() => sfx('move', 0.22)}
+            onInspect={() => lookAt(owned(seat)[0])}
           />
         ),
       )}
       {state.players.map((p, seat) => (
         <group key={`z${seat}`}>
           {!p.bankrupt && <Cash cash={p.cash} zone={ZONES[seat]} scale={seat === 0 ? 0.82 : 0.6} />}
-          <Deeds owned={owned(seat)} zone={ZONES[seat]} scale={seat === 0 ? 1 : 0.8} />
+          <Deeds owned={owned(seat)} zone={ZONES[seat]} scale={seat === 0 ? 1 : 0.8} onPick={lookAt} />
         </group>
       ))}
       {state.players.map((p, seat) => (

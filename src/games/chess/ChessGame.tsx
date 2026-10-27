@@ -248,7 +248,7 @@ export const ChessGame: React.FC<ChessGameProps> = ({
             <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
               <span>CHESS</span>
               <span className="text-[10px] font-mono uppercase bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">
-                Staunton Classic
+                Wizard Chess
               </span>
             </h2>
             <p className="text-[11px] text-slate-400 font-mono">

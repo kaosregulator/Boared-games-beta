@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { setPadFrame } from '../devices/gameboyBus';
 import { CHANNELS, guideRow, nowSeconds, snickOnAir, type Channel } from './channels';
+import { packOnAir } from './packSchedule';
 import { resolveArchive } from './archive';
 import { forgetVault, isVaultUrl, resolveVault } from './vault';
 import { channelClick, paintSnow, startStatic, type StaticHandle } from './noise';
@@ -263,11 +264,14 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
               file ? { file, offset: air.offset, label: showTitleAt(air.part, air.offset) } : null,
             );
           })()
-        : resolveArchive((ch as Extract<Channel, { kind: 'cartoon' }>).cartoon.id, 'video').then(file =>
-            file
-              ? { file, offset: file.length ? nowSeconds() % file.length : -1, label: (ch as Extract<Channel, { kind: 'cartoon' }>).cartoon.title }
-              : null,
-          );
+        : (() => {
+            const air = packOnAir(ch.cartoons, ch.pack, nowSeconds());
+            return resolveArchive(air.film.id, 'video').then(file =>
+              file
+                ? { file, offset: file.length ? air.offset % file.length : -1, label: air.film.title }
+                : null,
+            );
+          })();
 
     let giveUp = window.setTimeout(() => {
       if (token !== tuneToken.current) return;
@@ -355,6 +359,17 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
     // volume is applied separately; retuning on volume would restart the stream
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channel, watching, retune, plain]);
+
+  // A cartoon pack changes films when its slot ends. The lookup above is what
+  // actually loads the Archive file, same as before.
+  useEffect(() => {
+    if (!watching) return;
+    const ch = CHANNELS.find(c => c.number === channel);
+    if (!ch || ch.kind !== 'pack') return;
+    const air = packOnAir(ch.cartoons, ch.pack, nowSeconds());
+    const timer = window.setTimeout(() => setRetune(r => r + 1), Math.max(800, air.remain * 1000));
+    return () => window.clearTimeout(timer);
+  }, [channel, watching, retune]);
 
   useEffect(() => {
     if (video.current) {
@@ -556,7 +571,8 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
         preload="auto"
         style={{ ...videoStyle, visibility: watching && current.kind !== 'youtube' && current.kind !== 'ads' ? 'visible' : 'hidden', background: '#000' }}
         onEnded={() => {
-          // SNICK rolls straight into the next archived Saturday.
+          // SNICK and the tape blocks roll into the next archive. A cartoon
+          // pack loops the short until its slot ends, then the slot timer retunes.
           if (current.kind === 'snick' || current.kind === 'block') setRetune(r => r + 1);
           else if (video.current) {
             video.current.currentTime = 0;

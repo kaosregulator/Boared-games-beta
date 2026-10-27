@@ -37,7 +37,7 @@ import {
 import { sound } from '../../utils/audio';
 import { CLUE_CARD, clueCardTexture } from './clueArt';
 import { BOARD_Y, TILE, rectOf, roomCentre, roomPoint, roomSpots, tilePos } from './clueBoard';
-import { CameraCard, CardFan, Hand, Notebook } from './clueCards';
+import { CameraCard, CardFan, CardPortrait, Hand, Notebook, WeaponMini } from './clueCards';
 import { ClueFigure, SUSPECT_COLOUR, type Spot } from './ClueFigure';
 import { ClueRooms } from './ClueRooms';
 import { pushHud, type HudAction } from './tableHud';
@@ -136,97 +136,6 @@ function Dice({ toss, live }: { toss: Throw | null; live: THREE.Vector3 }) {
 
 /* ---------------------------------- weapons --------------------------------- */
 
-/** The six weapons, cast like the real tokens: about two centimetres long. */
-function WeaponMini({ id }: { id: Weapon }) {
-  const metal = useMemo(() => new THREE.MeshStandardMaterial({ color: '#c9ccd1', metalness: 0.55, roughness: 0.32 }), []);
-  const brass = useMemo(() => new THREE.MeshStandardMaterial({ color: '#d4a94a', metalness: 0.6, roughness: 0.3 }), []);
-  const s = 0.02;
-  switch (id) {
-    case 'Candlestick':
-      return (
-        <group scale={s}>
-          <mesh material={brass} position={[0, 0.04, 0]}>
-            <cylinderGeometry args={[0.18, 0.22, 0.08, 16]} />
-          </mesh>
-          <mesh material={brass} position={[0, 0.3, 0]}>
-            <cylinderGeometry args={[0.05, 0.08, 0.45, 10]} />
-          </mesh>
-          <mesh material={brass} position={[0, 0.55, 0]}>
-            <cylinderGeometry args={[0.12, 0.07, 0.06, 12]} />
-          </mesh>
-          <mesh position={[0, 0.72, 0]}>
-            <cylinderGeometry args={[0.05, 0.05, 0.3, 10]} />
-            <meshStandardMaterial color="#f6f1e2" roughness={0.6} />
-          </mesh>
-          <mesh position={[0, 0.92, 0]}>
-            <sphereGeometry args={[0.04, 8, 6]} />
-            <meshBasicMaterial color="#ffcf6b" toneMapped={false} />
-          </mesh>
-        </group>
-      );
-    case 'Knife':
-      return (
-        <group scale={s} rotation={[0, 0.4, 0]}>
-          <mesh material={metal} position={[0.18, 0.03, 0]}>
-            <boxGeometry args={[0.55, 0.03, 0.12]} />
-          </mesh>
-          <mesh position={[-0.25, 0.04, 0]}>
-            <boxGeometry args={[0.32, 0.07, 0.09]} />
-            <meshStandardMaterial color="#4a2a14" roughness={0.6} />
-          </mesh>
-        </group>
-      );
-    case 'Lead Pipe':
-      return (
-        <group scale={s} rotation={[0, -0.5, 0]}>
-          <mesh material={metal} position={[0, 0.06, 0]} rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.06, 0.06, 0.8, 10]} />
-          </mesh>
-          <mesh material={metal} position={[0.42, 0.06, 0]} rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.08, 0.08, 0.08, 10]} />
-          </mesh>
-        </group>
-      );
-    case 'Revolver':
-      return (
-        <group scale={s} rotation={[0, 0.9, 0]}>
-          <mesh material={metal} position={[0.2, 0.06, 0]} rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.035, 0.035, 0.45, 8]} />
-          </mesh>
-          <mesh material={metal} position={[-0.05, 0.06, 0]} rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.09, 0.09, 0.14, 10]} />
-          </mesh>
-          <mesh position={[-0.2, 0.05, 0]} rotation={[0, 0, 0.5]}>
-            <boxGeometry args={[0.1, 0.24, 0.08]} />
-            <meshStandardMaterial color="#3a2414" roughness={0.6} />
-          </mesh>
-        </group>
-      );
-    case 'Rope':
-      return (
-        <group scale={s}>
-          {[0, 1, 2].map(i => (
-            <mesh key={i} position={[0, 0.04 + i * 0.05, 0]} rotation={[Math.PI / 2, 0, 0]}>
-              <torusGeometry args={[0.2 - i * 0.03, 0.04, 6, 18]} />
-              <meshStandardMaterial color="#c9a46a" roughness={0.9} />
-            </mesh>
-          ))}
-        </group>
-      );
-    default:
-      return (
-        <group scale={s} rotation={[0, 1.8, 0]}>
-          <mesh material={metal} position={[0, 0.03, 0]}>
-            <boxGeometry args={[0.6, 0.05, 0.09]} />
-          </mesh>
-          <mesh material={metal} position={[0.34, 0.03, 0]} rotation={[Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[0.1, 0.035, 6, 12, Math.PI * 1.5]} />
-          </mesh>
-        </group>
-      );
-  }
-}
-
 function weaponSpot(room: RoomName, k: number) {
   const spots = roomSpots(room);
   const [u, v] = spots[Math.max(0, spots.length - 1 - k)];
@@ -314,6 +223,9 @@ function CaseFile({ solution }: { solution: Card[] | null }) {
             <planeGeometry args={[CLUE_CARD.w, CLUE_CARD.h]} />
             <meshBasicMaterial map={clueCardTexture(c)} side={THREE.DoubleSide} toneMapped={false} />
           </mesh>
+          <group position={[0, CLUE_CARD.h / 2, 0]}>
+            <CardPortrait card={c} spin="up" />
+          </group>
         </group>
       ))}
     </group>

@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { SafeRoomModel } from '../room/RoomModel';
@@ -50,7 +50,9 @@ const seat = {
   pos: new THREE.Vector3(),
   quat: new THREE.Quaternion(),
 };
-const HOLD = new THREE.Vector3(0, -0.035, -0.27);
+/** Held up at eye level, a little closer than a lap. */
+const HOLD = new THREE.Vector3(0, 0.028, -0.3);
+const GLANCE = new THREE.Euler(0, 0, 0, 'YXZ');
 const GB_CENTRE = new THREE.Vector3();
 /** Half the held Game Boy's width and height, metres, plus a little room. */
 const GB_HALF = { w: 0.058, h: 0.092 };
@@ -58,6 +60,7 @@ const GB_HALF = { w: 0.058, h: 0.092 };
 function SeatRig() {
   const { camera, size } = useThree();
   const saved = useRef<{ pos: THREE.Vector3; quat: THREE.Quaternion; fov: number } | null>(null);
+  const glance = useRef({ yaw: 0, pitch: 0, drag: false });
   useLayoutEffect(() => {
     const cam = camera as THREE.PerspectiveCamera;
     saved.current = { pos: cam.position.clone(), quat: cam.quaternion.clone(), fov: cam.fov };
@@ -70,7 +73,41 @@ function SeatRig() {
       cam.updateProjectionMatrix();
     };
   }, [camera]);
-  useFrame(() => {
+  useEffect(() => {
+    let drag: null | { x: number; y: number; moved: boolean } = null;
+    const down = (e: PointerEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el?.closest('button, a, input, textarea, [data-ui="gamepad"]')) return;
+      drag = { x: e.clientX, y: e.clientY, moved: false };
+    };
+    const move = (e: PointerEvent) => {
+      if (!drag || viewRig.zoom > 1.05) return;
+      const dx = e.clientX - drag.x;
+      const dy = e.clientY - drag.y;
+      if (!drag.moved && Math.hypot(dx, dy) < 8) return;
+      drag.moved = true;
+      glance.current.drag = true;
+      glance.current.yaw = THREE.MathUtils.clamp(glance.current.yaw - dx * 0.004, -0.7, 0.7);
+      glance.current.pitch = THREE.MathUtils.clamp(glance.current.pitch + dy * 0.003, -0.4, 0.35);
+      drag.x = e.clientX;
+      drag.y = e.clientY;
+    };
+    const up = () => {
+      drag = null;
+      glance.current.drag = false;
+    };
+    window.addEventListener('pointerdown', down);
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+    return () => {
+      window.removeEventListener('pointerdown', down);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+    };
+  }, []);
+  useFrame((_, dt) => {
     seat.pos.set(...BEANBAG_SEAT.at);
     camera.position.copy(seat.pos);
     camera.lookAt(...BEANBAG_SEAT.look);
@@ -78,6 +115,18 @@ function SeatRig() {
     // Frame the Game Boy in whatever the thumb pad leaves free, then zoom/pan.
     GB_CENTRE.copy(HOLD).applyQuaternion(seat.quat).add(seat.pos);
     frameSubject(camera as THREE.PerspectiveCamera, GB_CENTRE, GB_HALF, viewRig.insets, size, 1.06);
+    if (!glance.current.drag) {
+      const back = 1 - Math.exp(-dt * 3);
+      glance.current.yaw += (0 - glance.current.yaw) * back;
+      glance.current.pitch += (0 - glance.current.pitch) * back;
+    }
+    if (Math.abs(glance.current.yaw) > 0.001 || Math.abs(glance.current.pitch) > 0.001) {
+      GLANCE.setFromQuaternion(camera.quaternion, 'YXZ');
+      GLANCE.y += glance.current.yaw;
+      GLANCE.x = THREE.MathUtils.clamp(GLANCE.x + glance.current.pitch, -1.1, 1.1);
+      GLANCE.z = 0;
+      camera.quaternion.setFromEuler(GLANCE);
+    }
   });
   return null;
 }
@@ -120,6 +169,38 @@ function PadButton({ spec }: { spec: (typeof BUTTONS)[number] }) {
   );
 }
 
+/** A small tag floating beside the shell. It never sits on a button. */
+function SideTag({ text, position }: { text: string; position: [number, number, number] }) {
+  const map = useMemo(() => {
+    const c = document.createElement('canvas');
+    c.width = 256;
+    c.height = 96;
+    const g = c.getContext('2d');
+    if (!g) return null;
+    g.clearRect(0, 0, 256, 96);
+    g.fillStyle = 'rgba(10, 12, 16, 0.78)';
+    g.beginPath();
+    g.roundRect(4, 8, 248, 80, 28);
+    g.fill();
+    g.fillStyle = '#ffe9a0';
+    g.font = '700 52px sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText(text, 128, 50);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }, [text]);
+  if (!map) return null;
+  const wide = Math.max(0.022, text.length * 0.008);
+  return (
+    <mesh position={position}>
+      <planeGeometry args={[wide, 0.012]} />
+      <meshBasicMaterial map={map} transparent depthWrite={false} />
+    </mesh>
+  );
+}
+
 /** The Game Boy held in both hands, kept in front of the camera. */
 function HeldGameBoy() {
   const hold = useRef<THREE.Group>(null);
@@ -147,6 +228,11 @@ function HeldGameBoy() {
           <PadButton key={b.key} spec={b} />
         ))}
       </group>
+      {/* Beside the shell, not on the buttons. */}
+      <SideTag text="PAD" position={[-0.078, 0.012, 0.02]} />
+      <SideTag text="B" position={[0.078, -0.006, 0.02]} />
+      <SideTag text="A" position={[0.078, 0.022, 0.02]} />
+      <SideTag text="START" position={[0.02, -0.078, 0.03]} />
     </group>
   );
 }

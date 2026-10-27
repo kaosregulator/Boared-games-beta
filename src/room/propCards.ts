@@ -1,5 +1,5 @@
 /**
- * Memory cards for everything in the room, down to the stuff baked into the
+ * Time capsules for everything in the room, down to the stuff baked into the
  * desks and shelves (see hotspots.ts). Each one is a little story about how
  * the thing actually got used, a few real photos you can swipe through, and
  * sometimes an old commercial from the Internet Archive.
@@ -20,7 +20,7 @@ export interface CardVideo {
   title: string;
 }
 
-export type CardAction = 'tv' | 'nes' | 'radio' | 'gameboy' | 'tamagotchi' | 'rubik' | 'hotwheels' | 'army' | 'furby' | 'ispy' | 'poochi' | 'pc';
+export type CardAction = 'tv' | 'nes' | 'radio' | 'gameboy' | 'tamagotchi' | 'rubik' | 'hotwheels' | 'army' | 'furby' | 'ispy' | 'poochi' | 'pc' | 'viewmaster';
 
 export interface PropCard {
   id: string;
@@ -476,6 +476,7 @@ const CARDS: PropCard[] = [
     memories: ['The orange lever had the most satisfying click in history.'],
     photos: [P.viewmaster],
     video: V('youtube-JxG0HuHNqKU', 'Talking View-Master commercial, 1983'),
+    action: { kind: 'viewmaster', label: 'Look through it' },
   },
   {
     id: 'sh-books',

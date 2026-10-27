@@ -25,6 +25,7 @@ import { LAYOUT, SOUTH_WINDOW, TABLE_SIDE_BOX, WALL_SHELF } from './roomLayout';
 import { ShelfSquad } from './army/sniper/ShelfSquad';
 import { PlayTable, type TableSession } from './table/TablePlay';
 import { NeonGameWall } from './NeonGameWall';
+import { ToyChest } from './ToyChest';
 import { WallPosters } from './WallPosters';
 import { ANCHORS, type Anchor } from './anchors';
 import { DynamicModel } from './UserProps';
@@ -376,7 +377,7 @@ function TableSideBox({ session, hoveredId }: { session: TableSession | null; ho
 }
 
 /** A whole prop's own memory card, if it has one. */
-function cardTarget(cardId: string, hint = 'Memory card'): HoverTarget | undefined {
+function cardTarget(cardId: string, hint = 'Time capsule'): HoverTarget | undefined {
   const card = propCardFor(cardId);
   return card ? { id: cardId, kind: 'prop', label: card.title, hint: card.action?.label ?? hint } : undefined;
 }
@@ -637,6 +638,7 @@ export function RealRoomScene({
 
       <GameShelf hoveredId={hoveredId} />
       <NeonGameWall games={games} hoveredId={hoveredId} pulledId={pulledGameId} />
+      <ToyChest hovered={hoveredId === 'toy-chest'} />
       <WallPosters />
       <PlacedModel id="beanbag" hoveredId={hoveredId} card="beanbag" />
       <TableSideBox session={session} hoveredId={hoveredId} />

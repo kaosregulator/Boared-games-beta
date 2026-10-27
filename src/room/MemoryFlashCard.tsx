@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { GameMetadata } from '../types';
-import type { CardPhoto, CardVideo, PropCard } from './propCards';
+import type { CardVideo, PropCard } from './propCards';
 import { GAME_PHOTOS } from './gamePhotos';
-import { BookOpen, ChevronLeft, ChevronRight, Users, Wifi, WifiOff, X, Sparkles } from 'lucide-react';
+import { BookOpen, ChevronLeft, ChevronRight, Clock, Film, Images, Pause, PersonStanding, Play, SkipBack, SkipForward, X } from 'lucide-react';
+import './timeCapsule.css';
 
 /** Board games that already have a real in-room engine vs coming-soon shells. */
 const ONLINE_READY = new Set([
@@ -19,10 +20,16 @@ const ONLINE_READY = new Set([
   'battleship',
   'life',
   'pawnrush',
+  'guesswho',
+  'mousetrap',
 ]);
 
-function gameMode(id: string): 'Online ready' | 'Local / offline' {
-  return ONLINE_READY.has(id) ? 'Online ready' : 'Local / offline';
+type Tab = 'history' | 'video' | 'images' | 'animations';
+
+interface Shot {
+  src: string;
+  credit: string;
+  alt: string;
 }
 
 interface GameCardProps {
@@ -46,190 +53,277 @@ interface PropCardProps {
 
 export type MemoryFlashCardProps = GameCardProps | PropCardProps;
 
+function brandOf(id: string, title: string): { movie: boolean; line: string; bananas: boolean } {
+  if (id === 'cd-vhs') return { movie: true, line: 'The Movie Row', bananas: false };
+  if (id === 'cd-snes') return { movie: false, line: 'SNES', bananas: true };
+  return { movie: false, line: title, bananas: false };
+}
+
 /**
- * Glass card for a game box or a memory. On a phone it is a sheet along the
- * bottom of the screen; on a bigger screen it sits on the right. The body
- * scrolls, so long stories and the photo strip fit anywhere.
+ * Every card in the room is a time capsule: a clear glass plate in the middle
+ * of the screen, with History, Video, Images, and Animations along the bottom.
+ * The plate shows a real photo or stays clear. It does not draw a picture of its own.
  */
 export function MemoryFlashCard(props: MemoryFlashCardProps) {
+  if (props.kind === 'game') {
+    const photo = GAME_PHOTOS[props.game.id];
+    const online = ONLINE_READY.has(props.game.id);
+    const brand = brandOf(props.game.id, props.game.title);
+    return (
+      <CapsuleShell
+        movie={brand.movie}
+        line={brand.line}
+        bananas={brand.bananas}
+        era={online ? 'Online ready' : 'Local'}
+        headline={props.game.title}
+        story={props.game.description}
+        notes={[`${props.game.players} · ${props.game.duration}`, ...props.game.rules.slice(0, 2)]}
+        photos={photo ? [{ src: photo.src, credit: photo.credit, alt: props.game.title }] : []}
+        onClose={props.onClose}
+        primary={props.onPlay ? { label: 'Play', onClick: props.onPlay } : { label: 'Already on the table' }}
+        secondary={{ label: 'Rules', onClick: props.onRules }}
+      />
+    );
+  }
+  const brand = brandOf(props.prop.id, props.prop.title);
+  return (
+    <CapsuleShell
+      movie={brand.movie}
+      line={brand.line}
+      bananas={brand.bananas}
+      era={props.prop.era}
+      headline={props.prop.title}
+      story={props.prop.story}
+      notes={props.prop.memories}
+      photos={(props.prop.photos ?? []).map(photo => ({ src: photo.src, credit: photo.credit, alt: photo.alt }))}
+      video={props.prop.video}
+      onVideo={props.onVideo}
+      onClose={props.onClose}
+      primary={props.onAction && props.prop.action ? { label: props.prop.action.label, onClick: props.onAction } : undefined}
+    />
+  );
+}
+
+function CapsuleShell({
+  movie,
+  line,
+  bananas,
+  era,
+  headline,
+  story,
+  notes,
+  photos,
+  video,
+  onVideo,
+  onClose,
+  primary,
+  secondary,
+}: {
+  movie: boolean;
+  line: string;
+  bananas: boolean;
+  era: string;
+  headline: string;
+  story: string;
+  notes: string[];
+  photos: Shot[];
+  video?: CardVideo;
+  onVideo?: (playing: boolean) => void;
+  onClose: () => void;
+  primary?: { label: string; onClick?: () => void };
+  secondary?: { label: string; onClick: () => void };
+}) {
+  const [tab, setTab] = useState<Tab>(movie ? 'images' : 'history');
+  const [shot, setShot] = useState(0);
+  const photo = photos[shot] ?? photos[0];
+
   return (
     <div
       data-ui="card"
-      className="pointer-events-auto flex max-h-[min(72dvh,42rem)] w-[min(24rem,calc(100vw-1rem))] flex-col overflow-hidden rounded-3xl border border-white/25 bg-[#120a16]/80 text-white shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-2xl sm:max-h-[min(86dvh,46rem)]"
+      data-capsule={movie ? 'movie' : 'object'}
+      className="capsule-card pointer-events-auto"
       onClick={e => e.stopPropagation()}
       onPointerDown={e => e.stopPropagation()}
     >
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-white/5 px-3.5 py-2.5">
-        <div className="flex min-w-0 items-center gap-2">
-          <Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-300" />
-          <span className="truncate text-[10px] font-bold uppercase tracking-[0.22em] text-amber-100/90">
-            {props.kind === 'game' ? 'Game box' : 'Memory'}
-          </span>
+      <div className="capsule-card__top">
+        <div className={`capsule-card__logo${movie ? ' capsule-card__logo--movie' : ''}`}>
+          {bananas && <span className="capsule-card__banana" aria-hidden>🍌</span>}
+          {movie ? (
+            <>
+              <span className="capsule-card__the">The</span>
+              <span className="capsule-card__word">Movie Row</span>
+            </>
+          ) : (
+            <>
+              <span className="capsule-card__word">{line}</span>
+              <span className="capsule-card__sub">TIME CAPSULE</span>
+            </>
+          )}
+          {bananas && <span className="capsule-card__banana" aria-hidden>🍌</span>}
         </div>
-        <button
-          type="button"
-          aria-label="Close card"
-          onClick={props.onClose}
-          className="rounded-lg p-1.5 text-white/70 hover:bg-white/10 hover:text-white"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain" style={{ touchAction: 'pan-y' }}>
-        {props.kind === 'game' ? <GameBody {...props} /> : <PropBody {...props} />}
-      </div>
-    </div>
-  );
-}
-
-function PhotoFrame({ src, alt, credit, fallback }: { src?: string; alt: string; credit?: string; fallback: string }) {
-  return (
-    <div className="rounded-xl border border-white/25 bg-black/20 overflow-hidden">
-      {src ? (
-        <img src={src} alt={alt} className="h-36 w-full object-cover" />
-      ) : (
-        <div className="h-24 flex items-center justify-center px-4 text-center">
-          <p className="font-display text-2xl text-white">{fallback}</p>
-        </div>
-      )}
-      {credit && <p className="px-2 py-1 text-[9px] leading-snug text-white/55 bg-black/25">{credit}</p>}
-    </div>
-  );
-}
-
-function GameBody({ game, onPlay, onRules }: GameCardProps) {
-  const mode = gameMode(game.id);
-  const online = mode === 'Online ready';
-  const photo = GAME_PHOTOS[game.id];
-  return (
-    <div className="p-3.5 flex flex-col gap-3">
-      <PhotoFrame src={photo?.src ?? game.coverImage} alt={game.title} credit={photo?.credit} fallback={game.title} />
-
-      <div>
-        <h3 className="font-display text-xl text-white leading-tight">{game.title}</h3>
-        <p className="text-xs text-white/75 mt-1 line-clamp-2">{game.description}</p>
-      </div>
-
-      <div className="grid grid-cols-3 gap-1.5 text-[10px] font-bold uppercase tracking-wider">
-        <div className="rounded-lg bg-black/35 border border-white/10 px-2 py-1.5 flex items-center gap-1.5">
-          <Users className="w-3.5 h-3.5 text-amber-300" />
-          <span className="truncate">{game.players}</span>
-        </div>
-        <div className="rounded-lg bg-black/35 border border-white/10 px-2 py-1.5 flex items-center gap-1.5 col-span-1">
-          <BookOpen className="w-3.5 h-3.5 text-fuchsia-300" />
-          <span className="truncate">{game.duration}</span>
-        </div>
-        <div className="rounded-lg bg-black/35 border border-white/10 px-2 py-1.5 flex items-center gap-1.5">
-          {online ? <Wifi className="w-3.5 h-3.5 text-emerald-300" /> : <WifiOff className="w-3.5 h-3.5 text-slate-300" />}
-          <span className="truncate">{online ? 'Online' : 'Offline'}</span>
-        </div>
-      </div>
-
-      <div className="rounded-xl bg-black/30 border border-white/10 px-3 py-2">
-        <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-white/50 mb-1">Rule book peek</p>
-        <ul className="text-xs text-white/80 space-y-1">
-          {game.rules.slice(0, 2).map(rule => (
-            <li key={rule} className="line-clamp-2">• {rule}</li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="flex gap-2">
-        {onPlay ? (
-          <button
-            type="button"
-            onClick={onPlay}
-            className="flex-1 rounded-xl bg-gradient-to-r from-fuchsia-600 to-amber-500 px-3 py-2.5 font-display text-sm text-white shadow hover:brightness-110"
-          >
-            Play
+        <div className="capsule-card__win">
+          <button type="button" aria-label="Close card" onClick={onClose}>
+            <X className="h-3.5 w-3.5" />
           </button>
-        ) : (
-          <p className="flex flex-1 items-center justify-center rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-[11px] font-bold uppercase tracking-wider text-amber-100/80">
-            Already on the table
-          </p>
-        )}
-        <button
-          type="button"
-          onClick={onRules}
-          className="rounded-xl border border-white/20 bg-white/5 px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-white/90 hover:bg-white/10"
-        >
-          Rules
-        </button>
+        </div>
       </div>
-    </div>
-  );
-}
 
-/** Swipe (or click the arrows) through the real photos. */
-function Gallery({ photos }: { photos: CardPhoto[] }) {
-  const strip = useRef<HTMLDivElement>(null);
-  const [index, setIndex] = useState(0);
-  const go = (dir: number) => {
-    const el = strip.current;
-    if (!el) return;
-    el.scrollBy({ left: dir * el.clientWidth, behavior: 'smooth' });
-  };
-  return (
-    <div className="relative">
-      <div
-        ref={strip}
-        className="flex snap-x snap-mandatory overflow-x-auto rounded-2xl border border-white/15 bg-black/40 [scrollbar-width:none]"
-        style={{ touchAction: 'pan-x pan-y' }}
-        onScroll={e => {
-          const el = e.currentTarget;
-          setIndex(Math.round(el.scrollLeft / Math.max(1, el.clientWidth)));
-        }}
-      >
-        {photos.map(photo => (
-          <figure key={photo.src} className="w-full shrink-0 snap-center">
-            <img
-              src={photo.src}
-              alt={photo.alt}
-              loading="lazy"
-              className="h-44 w-full bg-black/30 object-contain"
-              onError={e => {
-                // Offline or blocked: show the caption on a plain frame instead of a broken image.
-                const img = e.currentTarget;
-                img.style.visibility = 'hidden';
-                img.parentElement?.setAttribute('data-missing', '1');
-              }}
-            />
-            <figcaption className="truncate px-2.5 py-1 text-[9px] text-white/50">{photo.credit}</figcaption>
-          </figure>
-        ))}
-      </div>
-      {photos.length > 1 && (
-        <>
-          <button
-            type="button"
-            aria-label="Previous photo"
-            onClick={() => go(-1)}
-            className="absolute left-1.5 top-[40%] hidden h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white/85 hover:bg-black/75 sm:flex"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            aria-label="Next photo"
-            onClick={() => go(1)}
-            className="absolute right-1.5 top-[40%] hidden h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white/85 hover:bg-black/75 sm:flex"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-          <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 gap-1">
-            {photos.map((photo, i) => (
-              <span key={photo.src} className={`h-1.5 w-1.5 rounded-full ${i === index ? 'bg-white' : 'bg-white/35'}`} />
-            ))}
+      <div className="capsule-card__body">
+        {tab === 'history' && (
+          <div className="capsule-card__split">
+            <Plate photo={photo} />
+            <div className="capsule-card__copy">
+              <p className="capsule-card__era">{era}</p>
+              <h3 className="capsule-card__headline">{headline}</h3>
+              <p className="capsule-card__story">{story}</p>
+              {notes.length > 0 && (
+                <ul className="capsule-card__notes">
+                  {notes.map(lineItem => (
+                    <li key={lineItem}>▸ {lineItem}</li>
+                  ))}
+                </ul>
+              )}
+              <div className="capsule-card__actions">
+                {primary?.onClick ? (
+                  <button type="button" className="capsule-card__play" onClick={primary.onClick}>
+                    {primary.label}
+                  </button>
+                ) : primary ? (
+                  <p className="capsule-card__era">{primary.label}</p>
+                ) : null}
+                {secondary && (
+                  <button type="button" className="capsule-card__rules" onClick={secondary.onClick}>
+                    <BookOpen className="mr-1 inline h-3.5 w-3.5" />
+                    {secondary.label}
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
-        </>
+        )}
+
+        {tab === 'video' && (
+          <div className="capsule-card__screen capsule-card__screen--wide">
+            {video ? (
+              <Tape video={video} onVideo={onVideo} />
+            ) : (
+              <div className="capsule-card__clear">
+                <span>No tape in this capsule</span>
+              </div>
+            )}
+            <div className="capsule-card__scan" />
+          </div>
+        )}
+
+        {tab === 'images' && (
+          <>
+            <Plate
+              photo={photo}
+              wide
+              onPrev={photos.length > 1 ? () => setShot(i => (i + photos.length - 1) % photos.length) : undefined}
+              onNext={photos.length > 1 ? () => setShot(i => (i + 1) % photos.length) : undefined}
+            />
+            {movie && (
+              <div className="capsule-card__transport">
+                <span>{photos.length ? String(shot + 1).padStart(2, '0') : '00'}</span>
+                <button type="button" aria-label="Previous photo" onClick={() => photos.length > 1 && setShot(i => (i + photos.length - 1) % photos.length)}>
+                  <SkipBack className="h-4 w-4" />
+                </button>
+                <button type="button" aria-label={video ? 'Play the tape' : 'Pause'} onClick={() => video && setTab('video')}>
+                  {video ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                </button>
+                <button type="button" aria-label="Next photo" onClick={() => photos.length > 1 && setShot(i => (i + 1) % photos.length)}>
+                  <SkipForward className="h-4 w-4" />
+                </button>
+                <span style={{ marginLeft: 'auto' }}>{String(photos.length).padStart(2, '0')}</span>
+              </div>
+            )}
+          </>
+        )}
+
+        {tab === 'animations' && <Plate photo={photo} wide drift />}
+      </div>
+
+      <div className="capsule-card__dock" role="tablist">
+        <DockButton id="history" on={tab === 'history'} tone="cyan" icon={<Clock className="h-4 w-4" />} label="History" onPick={setTab} />
+        <DockButton id="video" on={tab === 'video'} tone="pink" icon={<Film className="h-4 w-4" />} label="Video" onPick={setTab} />
+        <DockButton id="images" on={tab === 'images'} tone="green" icon={<Images className="h-4 w-4" />} label="Images" onPick={setTab} />
+        <DockButton id="animations" on={tab === 'animations'} tone="amber" icon={<PersonStanding className="h-4 w-4" />} label="Animations" onPick={setTab} />
+      </div>
+    </div>
+  );
+}
+
+function DockButton({
+  id,
+  on,
+  tone,
+  icon,
+  label,
+  onPick,
+}: {
+  id: Tab;
+  on: boolean;
+  tone: string;
+  icon: React.ReactNode;
+  label: string;
+  onPick: (tab: Tab) => void;
+}) {
+  return (
+    <button type="button" role="tab" aria-selected={on} data-on={on ? '1' : '0'} className="capsule-card__tab" onClick={() => onPick(id)}>
+      <span className="capsule-card__glyph" data-tone={tone}>
+        {icon}
+      </span>
+      {label}
+    </button>
+  );
+}
+
+function Plate({
+  photo,
+  wide,
+  drift,
+  onPrev,
+  onNext,
+}: {
+  photo?: Shot;
+  wide?: boolean;
+  drift?: boolean;
+  onPrev?: () => void;
+  onNext?: () => void;
+}) {
+  const [broken, setBroken] = useState(false);
+  useEffect(() => setBroken(false), [photo?.src]);
+  return (
+    <div className={`capsule-card__screen${wide ? ' capsule-card__screen--wide' : ''}`}>
+      {photo && !broken ? (
+        <img
+          src={photo.src}
+          alt={photo.alt}
+          className={drift ? 'is-drift' : undefined}
+          onError={() => setBroken(true)}
+        />
+      ) : (
+        <div className="capsule-card__clear">{photo ? <span>{photo.alt}</span> : null}</div>
       )}
+      {photo && !broken && <p className="capsule-card__credit">{photo.credit}</p>}
+      {onPrev && (
+        <button type="button" className="capsule-card__nav capsule-card__nav--prev" aria-label="Previous photo" onClick={onPrev}>
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+      )}
+      {onNext && (
+        <button type="button" className="capsule-card__nav capsule-card__nav--next" aria-label="Next photo" onClick={onNext}>
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      )}
+      <div className="capsule-card__scan" />
     </div>
   );
 }
 
 /** The old commercial, from archive.org's own player, loaded only when asked. */
-function Commercial({ video, onVideo }: { video: CardVideo; onVideo?: (playing: boolean) => void }) {
+function Tape({ video, onVideo }: { video: CardVideo; onVideo?: (playing: boolean) => void }) {
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (!open) return;
@@ -238,75 +332,24 @@ function Commercial({ video, onVideo }: { video: CardVideo; onVideo?: (playing: 
   }, [open, onVideo]);
   if (!open) {
     return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="flex w-full items-center gap-3 rounded-2xl border border-white/15 bg-black/35 px-3 py-2.5 text-left hover:bg-black/50"
-      >
-        <span className="flex h-9 w-12 shrink-0 items-center justify-center rounded-md border border-white/20 bg-[#1a1a1a] font-mono text-[10px] font-bold text-red-400">
-          ▶ VHS
-        </span>
-        <span className="min-w-0">
-          <span className="block text-[9px] font-bold uppercase tracking-[0.2em] text-amber-200/80">Play the old commercial</span>
-          <span className="block truncate text-xs text-white/85">{video.title}</span>
-        </span>
+      <button type="button" className="capsule-card__tape" onClick={() => setOpen(true)}>
+        <Play className="h-8 w-8" />
+        <strong>PLAY</strong>
+        <span className="px-6 text-center text-xs text-white/80">{video.title}</span>
       </button>
     );
   }
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/15 bg-black">
-      <div className="relative w-full" style={{ paddingTop: '75%' }}>
-        <iframe
-          title={video.title}
-          src={`https://archive.org/embed/${encodeURIComponent(video.archiveId)}?autoplay=1`}
-          allow="autoplay; fullscreen"
-          allowFullScreen
-          className="absolute inset-0 h-full w-full border-0"
-        />
-      </div>
-      <div className="flex items-center justify-between gap-2 px-2.5 py-1.5">
-        <span className="truncate text-[9px] text-white/50">{video.title} · Internet Archive</span>
-        <button type="button" onClick={() => setOpen(false)} className="text-[9px] font-bold uppercase tracking-wider text-amber-200">
-          Stop
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function PropBody({ prop, onAction, onVideo }: PropCardProps) {
-  return (
-    <div className="flex flex-col gap-3 p-3.5">
-      {prop.photos?.length ? (
-        <Gallery photos={prop.photos} />
-      ) : (
-        <div className="rounded-2xl border border-white/15 bg-gradient-to-br from-fuchsia-700/40 via-black/30 to-amber-600/30 px-4 py-5">
-          <p className="font-display text-2xl leading-tight text-white">{prop.title}</p>
-        </div>
-      )}
-      <div>
-        <p className="text-[10px] uppercase tracking-[0.2em] text-amber-200/80">{prop.era}</p>
-        {prop.photos?.length ? <h3 className="mt-0.5 font-display text-xl leading-tight text-white">{prop.title}</h3> : null}
-      </div>
-      {onAction && prop.action && (
-        <button
-          type="button"
-          onClick={onAction}
-          className="rounded-xl bg-gradient-to-r from-fuchsia-600 to-amber-500 px-3 py-2.5 font-display text-sm text-white shadow hover:brightness-110"
-        >
-          {prop.action.label}
-        </button>
-      )}
-      <p className="text-sm leading-relaxed text-white/85">{prop.story}</p>
-      <ul className="space-y-1.5 text-xs text-white/70">
-        {prop.memories.map(line => (
-          <li key={line} className="flex gap-2">
-            <span className="shrink-0 text-amber-300/80">▸</span>
-            <span>{line}</span>
-          </li>
-        ))}
-      </ul>
-      {prop.video && <Commercial video={prop.video} onVideo={onVideo} />}
+    <div className="capsule-card__frame">
+      <iframe
+        title={video.title}
+        src={`https://archive.org/embed/${encodeURIComponent(video.archiveId)}?autoplay=1`}
+        allow="autoplay; fullscreen"
+        allowFullScreen
+      />
+      <button type="button" className="capsule-card__stop" onClick={() => setOpen(false)}>
+        Stop
+      </button>
     </div>
   );
 }

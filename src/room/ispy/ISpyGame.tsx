@@ -143,6 +143,13 @@ export function startPage(difficulty: Difficulty, seed?: number) {
   emit();
 }
 
+/** Leave the bean-bag book and go back to the carpet game, or the open book on the rug. */
+export function leaveReading() {
+  ispy.phase = ispy.puzzle ? 'play' : 'book';
+  ispySfx.pageTurn();
+  emit();
+}
+
 /** Book mode: take the book to the bean bag and read it. */
 export function startReading() {
   wakeISpyAudio();
@@ -445,7 +452,7 @@ function BookBody({ coverOpen = 0 }: { coverOpen?: number }) {
 
 /** The closed library book lying on the rug. */
 export function ISpyBookProp({ hovered, hidden }: { hovered: boolean; hidden: boolean }) {
-  const target = useMemo(() => ({ id: 'ispy-book', kind: 'prop' as const, label: 'I Spy book', hint: 'Memory card' }), []);
+  const target = useMemo(() => ({ id: 'ispy-book', kind: 'prop' as const, label: 'I Spy book', hint: 'Time capsule' }), []);
   if (hidden) return null;
   return (
     <group position={[BOOK_SPOT.x, 0.005, BOOK_SPOT.z]} rotation={[0, BOOK_SPOT.rotY, 0]}>
@@ -1389,7 +1396,7 @@ export function ISpyHud({ onExit }: { onExit: () => void }) {
   const btn = 'rounded-xl border border-white/25 bg-black/55 px-3 py-2 text-[11px] font-bold uppercase tracking-wider';
 
   if (s.phase === 'off') return null;
-  if (s.phase === 'reading') return <ReaderHud onExit={onExit} />;
+  if (s.phase === 'reading') return <ReaderHud onExit={leaveReading} />;
 
   if (s.phase === 'book') {
     return (

@@ -12,8 +12,10 @@ import { LAYOUT } from './roomLayout';
 import { DESK_SLOTS, SHELF_SLOTS, SHELF_SLOTS_LOWER } from './videoRoom';
 import { MemoryFlashCard } from './MemoryFlashCard';
 import { propCardFor, type CardAction } from './propCards';
+import { toyChestBus } from './ToyChest';
 import { TamagotchiPlay } from '../devices/TamagotchiPlay';
 import { RubikPlay } from '../devices/RubikPlay';
+import { ViewMaster } from './ViewMaster';
 import { DeviceFocus } from './DeviceFocus';
 import { DeviceOverlay } from './DeviceOverlay';
 import { TvGlass } from '../tv/TvSet';
@@ -152,6 +154,9 @@ interface WalkRoomProps {
   overlayGame: GameMetadata | null;
   onOpenBoard: (game: GameMetadata) => void;
   onOpenRulesForGame?: (game: GameMetadata) => void;
+  /** A 3D table game asked for from inside a 2D board, such as poker from the casino. */
+  launchTable?: GameMetadata | null;
+  onLaunchTableHandled?: () => void;
 }
 
 /**
@@ -177,11 +182,48 @@ function tableFromQuery(games: GameMetadata[]): GameMetadata | null {
   return games.find(g => g.id === id) ?? null;
 }
 
+function isHighShelf(id: string) {
+  return id === 'south-shelf' || id === 'teddy' || id.startsWith('sh-');
+}
+
+/** `?stool` parks the stool under the high shelf so a capture can see the step up. */
+function stoolFromQuery(): { x: number; z: number } | null {
+  if (typeof window === 'undefined') return null;
+  if (!new URLSearchParams(window.location.search).has('stool')) return null;
+  return { x: LAYOUT.teddy.x, z: LAYOUT.teddy.z - 1.45 };
+}
+
+/** The little stool you pull over to reach the south wall's high shelf. */
+function ShelfStool({ x, z }: { x: number; z: number }) {
+  const legs: [number, number][] = [
+    [-0.1, -0.1],
+    [0.1, -0.1],
+    [0.1, 0.1],
+    [-0.1, 0.1],
+  ];
+  return (
+    <group position={[x, 0, z]}>
+      <mesh position={[0, 0.4, 0]} castShadow>
+        <cylinderGeometry args={[0.16, 0.16, 0.04, 16]} />
+        <meshStandardMaterial color="#8a5a32" roughness={0.72} />
+      </mesh>
+      {legs.map(([lx, lz], i) => (
+        <mesh key={i} position={[lx, 0.19, lz]} castShadow>
+          <cylinderGeometry args={[0.018, 0.022, 0.38, 8]} />
+          <meshStandardMaterial color="#6e4524" roughness={0.8} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 export function WalkRoom({
   games,
   overlayGame,
   onOpenBoard,
   onOpenRulesForGame,
+  launchTable,
+  onLaunchTableHandled,
 }: WalkRoomProps) {
   const override = useMemo(readCameraOverride, []);
   const scripted =
@@ -251,6 +293,11 @@ export function WalkRoom({
   const [toast, setToast] = useState<string | null>(null);
   /** The card you opened stays up until you close it or walk away. */
   const [pinned, setPinned] = useState<Aimed | null>(null);
+  /** High shelf: ask for a stool before the card, then stand on it. */
+  const [stoolAsk, setStoolAsk] = useState<Aimed | null>(null);
+  const [stool, setStool] = useState<null | { x: number; z: number }>(null);
+  const stoolPreview = useMemo(stoolFromQuery, []);
+  const stoolToken = useRef(0);
   const pinnedAt = useRef<{ x: number; z: number } | null>(null);
   const cardOpen = pinned !== null;
   const setCardOpen = useCallback((open: boolean) => {
@@ -269,6 +316,7 @@ export function WalkRoom({
   const [seated, setSeated] = useState(override.seat);
   const [tamagotchi, setTamagotchi] = useState(false);
   const [rubik, setRubik] = useState(false);
+  const [viewMaster, setViewMaster] = useState(false);
   const [racing, setRacing] = useState(Boolean(raceBoot));
   /** Shrunk down in the army town on the floor. */
   const [armyOn, setArmyOn] = useState(Boolean(armyBoot));
@@ -287,7 +335,7 @@ export function WalkRoom({
   const [boneHunt, setBoneHunt] = useState(bonesBoot);
   const toyMode = racing || armyOn || armyAlert !== null || ispyOn || boneHunt;
   /** Something held up close (Tamagotchi, Rubik's Cube): the room waits behind it. */
-  const holding = tamagotchi || rubik;
+  const holding = tamagotchi || rubik || viewMaster;
   /** The Furby in your hands: the room keeps drawing behind it, you just can't walk off. */
   const furbyState = useFurby();
   const furbyHeld = furbyState.held !== null;
@@ -469,6 +517,41 @@ export function WalkRoom({
     sound.playButtonClick();
   }, []);
 
+  const grabStool = useCallback(
+    (target: Aimed) => {
+      const token = ++stoolToken.current;
+      const x = walkRig.pos.x;
+      const z = walkRig.pos.z;
+      setStool({ x, z });
+      setStoolAsk(null);
+      walkRig.eyeBoost = 0.2;
+      sound.playMoveClack();
+      window.setTimeout(() => {
+        if (stoolToken.current !== token) return;
+        walkRig.eyeBoost = 0.42;
+        walkRig.glance = true;
+        pinCard(target);
+      }, 520);
+    },
+    [pinCard],
+  );
+
+  useEffect(() => {
+    if (!stool) return;
+    const home = stool;
+    const timer = window.setInterval(() => {
+      if (Math.hypot(walkRig.pos.x - home.x, walkRig.pos.z - home.z) > 0.9) {
+        stoolToken.current += 1;
+        walkRig.eyeBoost = 0;
+        setStool(null);
+      }
+    }, 200);
+    return () => {
+      window.clearInterval(timer);
+      walkRig.eyeBoost = 0;
+    };
+  }, [stool]);
+
   // Packing up takes the box away from the table, and its card with it.
   useEffect(() => {
     if (pinned?.id.startsWith(TABLE_BOX_PREFIX) && session?.phase !== 'play') setPinned(null);
@@ -507,7 +590,8 @@ export function WalkRoom({
     walkRig.tableActive = true;
     walkRig.setCrouch(true);
     walkRig.teleport = { at: TABLE_SEAT.at, look: TABLE_SEAT.look };
-    setSession({ game, phase: 'unfold', key: sessionKey.current });
+    const deepLink = new URLSearchParams(window.location.search).has('play');
+    setSession({ game, phase: deepLink ? 'play' : 'unfold', key: sessionKey.current });
   }, []);
 
   useEffect(() => {
@@ -571,14 +655,23 @@ export function WalkRoom({
     setMiniGamePhase(session.game.id, phase);
   }, [session?.key, session?.game.id, session?.phase]);
 
-  // Closing a 2D board packs its box back up on the table.
+  // Closing a 2D board packs its box back up on the table. A handoff to a 3D
+  // table (poker from the casino) replaces the session instead of packing it.
   const hadOverlay = useRef(false);
+  const skipPack = useRef(false);
+  if (launchTable) skipPack.current = true;
+  useEffect(() => {
+    if (!launchTable) return;
+    onLaunchTableHandled?.();
+    startTable(launchTable);
+  }, [launchTable, onLaunchTableHandled, startTable]);
   useEffect(() => {
     if (overlayGame) hadOverlay.current = true;
     else if (hadOverlay.current) {
       hadOverlay.current = false;
-      packUp();
-    }
+      if (skipPack.current) skipPack.current = false;
+      else packUp();
+    } else skipPack.current = false;
   }, [overlayGame, packUp]);
 
   useEffect(() => {
@@ -637,6 +730,8 @@ export function WalkRoom({
     (id: DeviceId) => {
       document.exitPointerLock?.();
       setCardOpen(false);
+      // The television keeps the bedroom tape. Its sound is the set's own
+      // speaker; the tape stays on the boombox if it was already playing.
       if (id === 'boombox' || id === 'pc') sound.stopNostalgia();
       if (id === 'pc') powerOnPc();
       sound.playButtonClick();
@@ -786,9 +881,21 @@ export function WalkRoom({
         setArmyAlert(target);
         return;
       }
+      if (isHighShelf(target.id) && !stool) {
+        if (!stoolAsk) {
+          setStoolAsk(target);
+          sound.playButtonClick();
+        } else grabStool(target);
+        return;
+      }
+      if (target.id === 'toy-chest') {
+        toyChestBus.toggle();
+        sound.playCardboardLid();
+        return;
+      }
       if (propCardFor(target.id)) pinCard(target);
     },
-    [byId, pinCard, pinned, playGame],
+    [byId, grabStool, pinCard, pinned, playGame, stool, stoolAsk],
   );
 
   const runCardAction = useCallback(
@@ -807,6 +914,10 @@ export function WalkRoom({
         setPinned(null);
         sound.playButtonClick();
         setRubik(true);
+      } else if (kind === 'viewmaster') {
+        setPinned(null);
+        sound.playButtonClick();
+        setViewMaster(true);
       } else if (kind === 'hotwheels') {
         setPinned(null);
         sound.playButtonClick();
@@ -960,6 +1071,7 @@ export function WalkRoom({
         <FurbyHold />
         <DeviceFocus device={scripted ? null : device} />
         {seated && <GameBoySeat />}
+        {(stool || stoolPreview) && <ShelfStool x={(stool ?? stoolPreview)!.x} z={(stool ?? stoolPreview)!.z} />}
         <DeviceGestures active={Boolean(device || seated) && !big && !scripted} />
         {override.capture && <CaptureClock />}
         {override.cam ? (
@@ -1019,6 +1131,7 @@ export function WalkRoom({
         />
       )}
       {rubik && <RubikPlay onClose={() => setRubik(false)} />}
+      {viewMaster && <ViewMaster onClose={() => setViewMaster(false)} />}
       {furbyHeld && (
         <FurbyHoldHud
           onTable={
@@ -1051,33 +1164,54 @@ export function WalkRoom({
           }}
         />
       )}
+      {stoolAsk && !stool && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-24 z-40 flex justify-center px-4">
+          <button
+            type="button"
+            onClick={() => grabStool(stoolAsk)}
+            className="pointer-events-auto rounded-2xl border border-amber-200/50 bg-[#3a2414]/90 px-5 py-3 text-center shadow-xl"
+          >
+            <span className="block text-[10px] font-bold uppercase tracking-[0.22em] text-amber-200/80">High shelf</span>
+            <span className="mt-1 block font-display text-lg text-white">Grab a stool</span>
+          </button>
+        </div>
+      )}
       {seated && <GameBoyGlass />}
       {seated && (
         <div data-ui="device" className="pointer-events-none absolute inset-0 z-40">
-          <div className={`pointer-events-auto absolute flex gap-2 ${padUp && vp.landscape ? 'left-1/2 top-2 -translate-x-1/2' : 'right-4 top-4'}`}>
-            <button
-              type="button"
-              onClick={() => toggleBig(!big)}
-              className="rounded-xl border border-cyan-200/30 bg-black/60 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-cyan-100 hover:bg-black/80"
-            >
-              {big ? '⤡ Exit big screen' : '⤢ Big screen'}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (big) toggleBig(false);
-                standUp();
-              }}
-              className="rounded-xl border border-white/20 bg-black/60 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-white hover:bg-black/80"
-            >
-              Stand up
-            </button>
+          <div
+            className={`pointer-events-auto absolute left-1/2 flex -translate-x-1/2 flex-col items-center gap-2 ${
+              padUp && !vp.landscape ? 'bottom-[13.5rem]' : 'bottom-4'
+            }`}
+          >
+            <div className="flex gap-3 rounded-[22px] border border-fuchsia-300/40 bg-[#160818]/80 p-2 shadow-[0_0_28px_rgba(217,70,239,0.35)] backdrop-blur">
+              <button
+                type="button"
+                onClick={() => toggleBig(!big)}
+                className="flex min-w-[11rem] items-center gap-3 rounded-2xl border border-cyan-300/40 bg-cyan-400/10 px-4 py-2 text-left text-cyan-50 hover:bg-cyan-400/20"
+              >
+                <span className="text-lg" aria-hidden>▣</span>
+                <span>
+                  <span className="block text-[12px] font-black uppercase tracking-[0.16em]">{big ? 'Exit big screen' : 'Big screen'}</span>
+                  <span className="block text-[9px] font-bold uppercase tracking-[0.14em] text-cyan-100/70">View fullscreen · F</span>
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (big) toggleBig(false);
+                  standUp();
+                }}
+                className="flex min-w-[11rem] items-center gap-3 rounded-2xl border border-fuchsia-300/40 bg-fuchsia-400/10 px-4 py-2 text-left text-fuchsia-50 hover:bg-fuchsia-400/20"
+              >
+                <span className="text-lg" aria-hidden>⬆</span>
+                <span>
+                  <span className="block text-[12px] font-black uppercase tracking-[0.16em]">Stand up</span>
+                  <span className="block text-[9px] font-bold uppercase tracking-[0.14em] text-fuchsia-100/70">Exit and stand up · Esc</span>
+                </span>
+              </button>
+            </div>
           </div>
-          {!touch && !big && (
-            <p className="absolute bottom-3 left-1/2 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-center text-[11px] font-bold uppercase tracking-[0.16em] text-white/75">
-              Arrows · Z = A · X = B · Enter = Start · V = Select · scroll to zoom · F big screen · Esc stands up
-            </p>
-          )}
         </div>
       )}
       {padUp && <TouchGamepad tone={seated ? 'gb' : 'nes'} landscape={vp.landscape} />}
@@ -1176,7 +1310,7 @@ export function WalkRoom({
       />
 
       {showCard && !device && (
-        <div className="absolute inset-x-2 bottom-2 z-40 flex justify-center sm:inset-x-auto sm:bottom-auto sm:right-8 sm:top-1/2 sm:-translate-y-1/2">
+        <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center p-3">
           {cardGame ? (
             <MemoryFlashCard
               kind="game"

@@ -578,10 +578,22 @@ export const NEON_WALL = {
   x: EAST_X - 0.012,
   z: -1.45,
   y: 1.04,
-  cols: 10,
+  cols: 11,
   w: 0.1,
   h: 0.14,
   gap: 0.012,
+};
+
+/**
+ * Lift-and-hide chest on the floor under the neon game wall.
+ * The mesh origin faces the room (local +Z swings to world -X).
+ */
+export const TOY_CHEST = {
+  x: 2.52,
+  z: -1.45,
+  hx: 0.31,
+  hz: 0.46,
+  top: 0.86,
 };
 
 export const ROOM_COLLIDERS = [
@@ -596,6 +608,7 @@ export const ROOM_COLLIDERS = [
   footprint(LAYOUT.teddy, false),
   footprint(LAYOUT.army, false),
   footprint(LAYOUT.beanbag, false),
+  { x: TOY_CHEST.x, z: TOY_CHEST.z, hx: TOY_CHEST.hx, hz: TOY_CHEST.hz, top: TOY_CHEST.top },
 ];
 
 /** Game-box rows up the real shelf, helmet stays above the top row. */

@@ -126,6 +126,17 @@ export function BoxUnfold({
   const cues = useRef(new Set<string>());
   const done = useRef(false);
 
+  const finish = useRef(onComplete);
+  finish.current = onComplete;
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      if (done.current) return;
+      done.current = true;
+      finish.current();
+    }, 6500);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   const { box } = layout;
   // Half of the opened board folds over the other half.
   const leafW = layout.shape === 'case' ? layout.w / 2 : layout.w;

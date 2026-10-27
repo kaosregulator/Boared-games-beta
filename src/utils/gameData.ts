@@ -98,20 +98,19 @@ export const GAME_CATALOG: GameMetadata[] = [
   },
   {
     id: 'chess',
-    title: 'Chess',
-    subtitle: 'Classic Staunton Chess with Realistic Piece Slide Hands',
+    title: 'Wizard Chess',
+    subtitle: 'Sculpted marble pieces on a stone and gold board',
     players: '1 - 2 Players (or Grandmaster AI)',
     duration: '10 - 20 min',
     boxColor: 'from-amber-950 via-stone-900 to-black',
     boxAccent: 'border-amber-400/40 text-amber-300',
     badge: 'Animated Hands',
-    description: 'Carved wooden tournament chessboard featuring animated hands reaching and moving pieces, legal move path highlights, castling, en passant, pawn promotion, and checkmate detection.',
+    description: 'Sculpted wizard pieces in white marble and black stone, with gold trim, stand on an obsidian board. Drag a piece, or tap it and then a glowing square. Sit as white or black.',
     rules: [
-      'Standard Chess tournament rules. White moves first.',
-      'Select any piece to see all legal moves on the wooden board.',
-      'Supports special moves: Kingside/Queenside Castling and En Passant captures.',
-      'Promote pawns reaching the 8th rank to Queen, Rook, Bishop, or Knight.',
-      'Checkmate the opponent’s King to claim victory!'
+      'Standard chess. White moves first, whichever side you sit on.',
+      'Pick up a piece to see the squares it can reach.',
+      'Castling, en passant, and promotion to a queen are in the rules.',
+      'Checkmate the other king to take the game.'
     ],
     icon: 'Crown',
     rating: '5.0 ★★★★★'
@@ -177,9 +176,47 @@ export const GAME_CATALOG: GameMetadata[] = [
     rating: '4.8 ★★★★★'
   },
   {
+    id: 'guesswho',
+    title: 'Guess Who',
+    subtitle: 'Red tray, blue tray, and a question',
+    players: '1 Player vs. the blue tray',
+    duration: '5 - 10 min',
+    boxColor: 'from-red-800 via-red-950 to-blue-950',
+    boxAccent: 'border-red-400/40 text-red-200',
+    badge: 'Flip the faces',
+    description: 'Two plastic trays of original faces. Ask a yes-or-no question, flip the ones who are out, and name the person on the other side of the table.',
+    rules: [
+      'You can see your own mystery card. The other card is the one you are hunting.',
+      'Ask one question a turn. Faces that do not match the answer fold down.',
+      'You can flip a face yourself when you already know.',
+      'Guess the person when you are ready. A wrong name passes the turn.'
+    ],
+    icon: 'Sparkles',
+    rating: '4.8 ★★★★★'
+  },
+  {
+    id: 'mousetrap',
+    title: 'Mouse Trap',
+    subtitle: 'Crank, marble, and a cage',
+    players: '4 mice (you and three others)',
+    duration: '10 - 15 min',
+    boxColor: 'from-green-900 via-lime-950 to-yellow-950',
+    boxAccent: 'border-yellow-400/40 text-yellow-200',
+    badge: 'Build the trap',
+    description: 'Roll, move your mouse, and build the contraption. When the last part is on, the crank turns, the marble runs, and the cage comes down.',
+    rules: [
+      'Roll the die and move that many spaces around the board.',
+      'Build spaces add the next part of the trap: crank, boot, chute, tub, cage.',
+      'Cheese spaces stock a wedge you can spend later.',
+      'Turn the crank when the trap is built and the marble does the rest.'
+    ],
+    icon: 'Sparkles',
+    rating: '4.9 ★★★★★'
+  },
+  {
     id: 'pawnrush',
-    title: 'Sorry! (Pawn Rush)',
-    subtitle: '4-Player Revenge Race with Slide Tracks & Bump Cards',
+    title: 'Sorry!',
+    subtitle: 'Four colors, a real deck, slides, and bumps',
     players: '2 - 4 Players (Pass-and-Play or 3 Bots)',
     duration: '8 - 15 min',
     boxColor: 'from-rose-950 via-emerald-950 to-blue-950',
@@ -191,7 +228,7 @@ export const GAME_CATALOG: GameMetadata[] = [
       'A 4 moves back 4. A 10 may go forward 10 or back 1. An 11 may move 11 or swap with an opponent on the track.',
       'A 7 moves one pawn forward 7. SORRY! jumps a pawn from Start onto an opponent and sends that pawn back to Start.',
       'Near your own start, an exact count turns into the safety lane. Landing on the last step is HOME.',
-      'First player to guide all 3 pawns into HOME wins.'
+      'First player to guide all 4 pawns into HOME wins.'
     ],
     icon: 'Sparkles',
     rating: '4.9 ★★★★★'

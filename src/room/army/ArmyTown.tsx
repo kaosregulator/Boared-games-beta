@@ -126,6 +126,12 @@ export const army = {
    * shrink and the town springs up out of the rug, null once you're down.
    */
   landing: null as null | 'wait' | 'rise',
+  /**
+   * The locked film after you shrink: a corner of the rug while the town
+   * rises, a push-in on Sergeant Green, then his speech. Null once he
+   * says good luck and you can roam.
+   */
+  reel: null as null | 'corner' | 'push' | 'speech',
   listeners: new Set<() => void>(),
 };
 
@@ -330,6 +336,23 @@ function makeMan(kit: Kit, team: Man['team'], role: Role, mat: THREE.Material, w
     march: 0.08,
     guide: false,
   };
+}
+
+/** Snap a right arm up to the brow. The walk clip owns the bone, so this runs after the mixer. */
+function applySalute(m: Man) {
+  let found = false;
+  m.model.traverse(o => {
+    if (!(o instanceof THREE.Bone)) return;
+    const n = o.name.toLowerCase();
+    const right = n.includes('right') || n.endsWith('_r') || n.includes('.r') || n.includes('_r_');
+    const arm = n.includes('arm') || n.includes('shoulder') || n.includes('forearm') || n.includes('hand');
+    if (!right || !arm) return;
+    found = true;
+    const rest = (o.userData.saluteRest as number | undefined) ?? o.rotation.x;
+    o.userData.saluteRest = rest;
+    o.rotation.x = rest - 1.25;
+  });
+  if (!found) m.tip.rotation.x = -0.35;
 }
 
 function setClip(m: Man, clip: Clip, fade = 0.2) {
@@ -618,6 +641,8 @@ function Crowd({ boot, film = false, onBuilt }: { boot: ArmyBoot | null; film?: 
   const greens = useMemo(() => men.filter(m => m.team === 'green'), [men]);
   const guide = useMemo(() => men.find(m => m.guide) ?? null, [men]);
   const coachGlow = useRef<THREE.Group>(null);
+  /** Seconds into the push-in, before the speech starts. */
+  const reelT = useRef(0);
 
   useEffect(() => {
     const g = group.current;
@@ -646,6 +671,7 @@ function Crowd({ boot, film = false, onBuilt }: { boot: ArmyBoot | null; film?: 
     army.waveState = 'incoming';
     army.siege = 'story';
     army.coach = film || boot?.calm || boot?.mode === 'heli' ? null : 'wait';
+    army.reel = army.coach === 'wait' ? 'corner' : null;
     // The reel cuts straight into the battle.
     if (film) waveTimer.current = 0.4;
     army.coachLine = 0;
@@ -679,8 +705,8 @@ function Crowd({ boot, film = false, onBuilt }: { boot: ArmyBoot | null; film?: 
       player.root.visible = false;
       rotorOn();
     }
-    if (film) {
-      // No banners in the reel.
+    if (film || army.reel) {
+      // The film talks. No "go find him" banner over the letterbox.
     } else if (army.coach) banner("We're under attack!", 'Go talk to the glowing sergeant first', 3.4);
     else if (!boot?.calm) banner("We're under attack!", 'Tan army behind the books by the door. Defend the town!', 3);
     emit();
@@ -850,6 +876,7 @@ function Crowd({ boot, film = false, onBuilt }: { boot: ArmyBoot | null; film?: 
     army.bubble = null;
     army.coachCard = null;
     army.coachNear = false;
+    army.reel = null;
     if (lessonRef.current.some(s => s.clip)) sargeStop();
     if (army.siege === 'story' && army.wave === 0) {
       waveTimer.current = 2;
@@ -1340,13 +1367,13 @@ function Crowd({ boot, film = false, onBuilt }: { boot: ArmyBoot | null; film?: 
     // --- Player on foot ----------------------------------------------------
     // WASD moves, arrows look (left/right turn, up/down tilt), like the main room.
     // While the sergeant has the floor you stand and listen.
-    const listening = army.coach === 'talk';
+    const listening = army.coach === 'talk' || army.reel !== null;
     const keyIn = listening ? { forward: 0, strafe: 0, turn: 0, look: 0 } : readArmyKeys(k, touch);
     const fwdIn = keyIn.forward;
     const turnIn = keyIn.turn;
     const strafe = keyIn.strafe;
     lookPitch.current = stepLook(lookPitch.current, keyIn.look, dt);
-    if (listening) {
+    if (army.coach === 'talk') {
       coachT.current += dt;
       const step = lessonRef.current[army.coachLine];
       if (step?.card && !army.coachCard && coachT.current >= cardAt(army.coachLine)) {
@@ -1509,6 +1536,13 @@ function Crowd({ boot, film = false, onBuilt }: { boot: ArmyBoot | null; film?: 
       if (!m.active) continue;
       tickFall(m, dt);
       if (m === player) continue;
+      if (army.reel && !m.guide) {
+        m.speed = 0;
+        if (army.reel === 'speech' && m.team === 'green' && guide && lessonRef.current[army.coachLine]?.clip?.id === 'sound-off') {
+          turnToward(m, Math.atan2(guide.pos.x - m.pos.x, guide.pos.z - m.pos.z), 6, dt);
+        }
+        continue;
+      }
       if (m.fall > 0 || m.falling) {
         m.speed = 0;
         continue;
@@ -1699,6 +1733,14 @@ function Crowd({ boot, film = false, onBuilt }: { boot: ArmyBoot | null; film?: 
       setClip(m, clip);
       m.actions[clip].timeScale = m.speed < 0 ? -scale : scale;
       m.mixer.update(dt);
+      const saluting =
+        army.reel === 'speech' &&
+        m.team === 'green' &&
+        m !== player &&
+        m.fall === 0 &&
+        lessonRef.current[army.coachLine]?.clip?.id === 'sound-off';
+      if (saluting) applySalute(m);
+      else if (m !== player && m.tip.rotation.x === -0.35) m.tip.rotation.x = 0;
     }
     tracers.tick(dt);
 
@@ -1805,9 +1847,26 @@ function Crowd({ boot, film = false, onBuilt }: { boot: ArmyBoot | null; film?: 
     // Sergeant Green's lesson: the camera closes in on him, a three-quarter shot from in front.
     const closeUp = army.coach === 'talk' && guide !== null && !flying;
     if (closeUp && guide) {
-      const side = guide.heading + 0.55;
-      _want.set(guide.pos.x + Math.sin(side) * 0.1, guide.pos.y + MAN_HEIGHT * 1.0, guide.pos.z + Math.cos(side) * 0.1);
+      const pan = army.reel === 'speech' ? Math.sin(coachT.current * 0.4) * 0.35 : 0;
+      const side = guide.heading + 0.55 + pan;
+      _want.set(guide.pos.x + Math.sin(side) * 0.12, guide.pos.y + MAN_HEIGHT * 1.0, guide.pos.z + Math.cos(side) * 0.12);
       _look.set(guide.pos.x, guide.pos.y + MAN_HEIGHT * 0.78, guide.pos.z);
+      clearShot(_look, _want);
+      firstPerson = false;
+    }
+    // Locked film: a corner of the rug while the town rises, then a push onto Sarge.
+    if ((army.reel === 'corner' || army.reel === 'push') && !flying) {
+      _want.set(MAT.x - 1.05, 0.34, MAT.z + 1.05);
+      _look.set(MAT.x, 0.04, MAT.z);
+      if (army.reel === 'push' && guide) {
+        const u = Math.min(1, reelT.current / 1.45);
+        const e = u * u * (3 - 2 * u);
+        const side = guide.heading + 0.55;
+        _a.set(guide.pos.x + Math.sin(side) * 0.12, guide.pos.y + MAN_HEIGHT * 1.0, guide.pos.z + Math.cos(side) * 0.12);
+        _b.set(guide.pos.x, guide.pos.y + MAN_HEIGHT * 0.78, guide.pos.z);
+        _want.lerp(_a, e);
+        _look.lerp(_b, e);
+      }
       clearShot(_look, _want);
       firstPerson = false;
     }
@@ -1844,6 +1903,19 @@ function Crowd({ boot, film = false, onBuilt }: { boot: ArmyBoot | null; film?: 
       camera.lookAt(_camLook);
       if (cineRoll) camera.rotateZ(cineRoll);
     }
+    if (army.reel === 'corner' && it.t >= 1 && army.landing === null) {
+      army.reel = 'push';
+      reelT.current = 0;
+      emit();
+    } else if (army.reel === 'push') {
+      reelT.current += realDt;
+      const voice = sargeReady() || reelT.current > 3.2;
+      if (reelT.current > 1.45 && voice) {
+        startCoach();
+        army.reel = 'speech';
+        emit();
+      }
+    }
     const near = cine ? 0.003 : cam === 'birdseye' ? 0.02 : flying ? 0.008 : 0.003;
     const fov = fitFov(cineFov || (firstPerson ? 78 : 68), size.width / Math.max(1, size.height), 1.5, 100);
     if (it.t >= 1 && (persp.near !== near || Math.abs(persp.fov - fov) > 0.1)) {
@@ -1861,7 +1933,7 @@ function Crowd({ boot, film = false, onBuilt }: { boot: ArmyBoot | null; film?: 
       const pulse = 1 + Math.sin(performance.now() / 240) * 0.12;
       glow.scale.set(pulse, 1, pulse);
     }
-    if (waiting && guide && !flying) {
+    if (waiting && guide && !flying && army.reel !== 'corner' && army.reel !== 'push') {
       const at = headOnScreen(camera, guide.pos.x, guide.pos.y + MAN_HEIGHT * 1.15, guide.pos.z);
       if (at) {
         const talking = army.coach === 'talk';
@@ -2052,10 +2124,17 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
   const c = a.course;
   if (sniperBusy()) return <SniperHud />;
   if (a.chute === 'cine') return <ChuteCine />;
+  const filming = a.reel !== null;
   const btn = 'rounded-xl border border-white/25 bg-black/55 px-3 py-2 text-[11px] font-bold uppercase tracking-wider';
   return (
-    <div data-army className="pointer-events-none absolute inset-0 z-40 text-white">
-      <div className="pointer-events-auto absolute left-4 top-4 flex flex-wrap items-center gap-2">
+    <div data-army={filming ? 'reel' : 'play'} className="pointer-events-none absolute inset-0 z-40 text-white">
+      {filming && (
+        <>
+          <div className="absolute inset-x-0 top-0 h-[11%] bg-black" />
+          <div className="absolute inset-x-0 bottom-0 h-[11%] bg-black" />
+        </>
+      )}
+      <div className={`pointer-events-auto absolute left-4 flex flex-wrap items-center gap-2 ${filming ? 'top-[12%]' : 'top-4'}`}>
         <button type="button" onClick={onExit} className="rounded-xl bg-lime-400 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-black">
           Stand up
         </button>
@@ -2193,19 +2272,39 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
         </p>
       )}
 
-      <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2">
-        <div className="flex items-center gap-3 rounded-full bg-black/60 px-4 py-1.5 text-[11px] font-bold uppercase tracking-wider">
-          {flying ? (
-            <>
-              <span className="font-mono tabular-nums text-lime-200">{Math.round(a.heliSpeed * 100)} cm/s</span>
-              <span className="font-mono tabular-nums text-cyan-200">{Math.round(a.heliAlt * 100)} cm up</span>
-              {!isTouch && <span className="text-white/65">WASD fly · Arrows look · Space up · Shift down · Tab boost · drag to turn · F bail out · C camera</span>}
-            </>
-          ) : (
-            !isTouch && <span className="text-white/65">WASD move · Arrows look · Shift run · Space fire · drag to turn · F talk / chopper · R call chopper · C camera</span>
+      {!isTouch && (
+        <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-stretch gap-1 rounded-2xl border border-white/15 bg-[#0c1018]/80 p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.35)] backdrop-blur">
+          {flying && (
+            <span className="flex items-center px-2 font-mono text-[11px] font-black tabular-nums text-lime-200">
+              {Math.round(a.heliSpeed * 100)} cm/s
+            </span>
           )}
+          {(flying
+            ? [
+                ['WASD', 'Fly'],
+                ['ARROWS', 'Look'],
+                ['SPACE', 'Up'],
+                ['SHIFT', 'Down'],
+                ['F', 'Bail out'],
+                ['C', 'Camera'],
+              ]
+            : [
+                ['WASD', 'Move'],
+                ['ARROWS', 'Turn'],
+                ['SHIFT', 'Run'],
+                ['SPACE', 'Fire'],
+                ['F', 'Talk'],
+                ['R', 'Call chopper'],
+                ['C', 'Camera'],
+              ]
+          ).map(([key, label]) => (
+            <span key={key} className="flex min-w-[4.2rem] flex-col items-center rounded-xl px-2 py-1">
+              <span className="font-mono text-[11px] font-black tracking-wide text-white">{key}</span>
+              <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/55">{label}</span>
+            </span>
+          ))}
         </div>
-      </div>
+      )}
 
       {isTouch && (
         <>

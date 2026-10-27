@@ -186,7 +186,7 @@ export const GameBoxArtGraphic: React.FC<GameBoxArtGraphicProps> = ({
               <Crown className="w-6 h-6" />
             </div>
             <span className="text-[10px] font-mono text-amber-300 uppercase font-bold">
-              Grandmaster Staunton Chess
+              Wizard Chess
             </span>
           </div>
         )}

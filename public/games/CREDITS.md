@@ -29,6 +29,16 @@ From [BertovDev/3D-Connect-Four](https://github.com/BertovDev/3D-Connect-Four) (
 
 MONOPOLY and the board design are trademarks of Hasbro.
 
+## Wizard chess — `wizard/`
+The six piece files (`king_white.glb`, `queen_white.glb`, `bishop_white.glb`,
+`knight_white.glb`, `rook_white.glb`, `pawn_white.glb`) are the sculpted set
+from the room owner's [wizards-chess](https://github.com/kaosregulator/wizards-chess)
+project. Black is the same sculpt with a dark stone material. The cathedral
+model from that project is not in this room. They were stored as gzipped
+base64 and decoded to glTF, then simplified so a full set can sit on the
+table without dragging the room's frame rate. The idle, move, attack, and
+shatter clips are still in the files.
+
 ## Tabletop Club — `tabletop/`
 From [drwhut/tabletop-club](https://github.com/drwhut/tabletop-club) (MIT code; asset pack licences below).
 Its camera and pick-up/carry/drop handling were the model for the table camera here.

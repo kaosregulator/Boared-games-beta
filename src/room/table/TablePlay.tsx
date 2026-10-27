@@ -17,11 +17,16 @@ const ClueTable = lazy(() => import('./ClueTable').then(m => ({ default: m.ClueT
 const FurbyTable = lazy(() => import('../furby/FurbyTable').then(m => ({ default: m.FurbyTable })));
 const PoochiTable = lazy(() => import('../poochi/PoochiTable').then(m => ({ default: m.PoochiTable })));
 const BlackjackTable = lazy(() => import('./BlackjackTable').then(m => ({ default: m.BlackjackTable })));
+const HoldemTable = lazy(() => import('./HoldemTable').then(m => ({ default: m.HoldemTable })));
+const GoFishTable = lazy(() => import('./GoFishTable').then(m => ({ default: m.GoFishTable })));
+const SorryTable = lazy(() => import('./SorryTable').then(m => ({ default: m.SorryTable })));
+const GuessWhoTable = lazy(() => import('./GuessWhoTable').then(m => ({ default: m.GuessWhoTable })));
+const MouseTrapTable = lazy(() => import('./MouseTrapTable').then(m => ({ default: m.MouseTrapTable })));
 
 export { TableHudOverlay } from './tableHud';
 
-export type TableGameId = 'monopoly' | 'connect4' | 'battleship' | 'chess' | 'checkers' | 'blackjack' | 'clue' | 'furby' | 'poochi';
-export const TABLE_GAMES = new Set<string>(['monopoly', 'connect4', 'battleship', 'chess', 'checkers', 'blackjack', 'clue', 'furby', 'poochi']);
+export type TableGameId = 'monopoly' | 'connect4' | 'battleship' | 'chess' | 'checkers' | 'blackjack' | 'clue' | 'furby' | 'poochi' | 'poker' | 'gofish' | 'pawnrush' | 'guesswho' | 'mousetrap';
+export const TABLE_GAMES = new Set<string>(['monopoly', 'connect4', 'battleship', 'chess', 'checkers', 'blackjack', 'clue', 'furby', 'poochi', 'poker', 'gofish', 'pawnrush', 'guesswho', 'mousetrap']);
 
 /**
  * unfold — the table has spawned and the box is opening
@@ -129,7 +134,7 @@ export function PlayTable({
               <FurbyTable key={session.key} phase={phase} onUnfolded={onUnfolded} onPacked={onPacked} onLeave={onLeave} />
             </Suspense>
           </group>
-        ) : (
+        ) : phase === 'play' && (game.id === 'pawnrush' || game.id === 'guesswho' || game.id === 'mousetrap') ? null : (
           <Suspense fallback={null}>
             <BoxUnfold
               key={`${session.key}-${phase === 'pack' ? 'pack' : 'open'}`}
@@ -148,6 +153,11 @@ export function PlayTable({
               {game.id === 'chess' && <ChessTable onLeave={onLeave} />}
               {game.id === 'checkers' && <CheckersTable onLeave={onLeave} />}
               {game.id === 'blackjack' && <BlackjackTable onLeave={onLeave} />}
+              {game.id === 'poker' && <HoldemTable onLeave={onLeave} />}
+              {game.id === 'gofish' && <GoFishTable onLeave={onLeave} />}
+              {game.id === 'pawnrush' && <SorryTable onLeave={onLeave} />}
+              {game.id === 'guesswho' && <GuessWhoTable onLeave={onLeave} />}
+              {game.id === 'mousetrap' && <MouseTrapTable onLeave={onLeave} />}
               {game.id === 'clue' && <ClueTable onLeave={onLeave} />}
             </Suspense>
           </group>

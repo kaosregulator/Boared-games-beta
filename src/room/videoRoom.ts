@@ -158,7 +158,7 @@ export const SHELF_SLOTS: ShelfSlot[] = [
 
 /** The rest of the library, stacked on the shelf's lower rows. */
 export const SHELF_SLOTS_LOWER: ShelfSlot[] = [
-  { id: 'chess', spine: null, title: 'Chess', row: 6, boxHeight: 0.085, color: '#2b2622', accent: '#d8cfc2' },
+  { id: 'chess', spine: null, title: 'Wizard Chess', row: 6, boxHeight: 0.085, color: '#1a120e', accent: '#d4af37' },
   { id: 'connect4', spine: null, title: 'Connect 4', row: 7, boxHeight: 0.085, color: '#1d4fa3', accent: '#ffd23f' },
   { id: 'checkers', spine: null, title: 'Checkers', row: 8, boxHeight: 0.085, color: '#8c1c1c', accent: '#f0d9a7' },
 ];
@@ -167,7 +167,7 @@ export const SHELF_SLOTS_LOWER: ShelfSlot[] = [
 export const DESK_SLOTS: ShelfSlot[] = [
   { id: 'poker', spine: null, title: "Hold'em", row: 0, boxHeight: 0.07, color: '#1f5134', accent: '#ffd98a' },
   { id: 'blackjack', spine: null, title: 'Blackjack', row: 1, boxHeight: 0.07, color: '#14402a', accent: '#9ff0b8' },
-  { id: 'liarsdice', spine: null, title: "Liar's Dice", row: 2, boxHeight: 0.07, color: '#6d4414', accent: '#f5d985' },
+  { id: 'mousetrap', spine: null, title: 'Mouse Trap', row: 2, boxHeight: 0.07, color: '#166534', accent: '#facc15' },
   { id: 'gofish', spine: null, title: 'Go Fish', row: 3, boxHeight: 0.07, color: '#1b5f7a', accent: '#bdf0ff' },
 ];
 
@@ -181,14 +181,14 @@ export interface RoomProp {
 
 /** Non-game things the player can look at and interact with. */
 export const ROOM_PROPS: RoomProp[] = [
-  { id: 'crt-tv', label: 'CRT television', hint: 'Memory card · flat game list', position: [CRT.x, DRESSER.height + CRT.height / 2, NORTH_Z + 0.34], radius: 0.42 },
-  { id: 'boombox', label: 'Boombox', hint: 'Memory card · flip the tape', position: [BOOMBOX.x, 0.14, BOOMBOX.z], radius: 0.26 },
+  { id: 'crt-tv', label: 'CRT television', hint: 'Time capsule · flat game list', position: [CRT.x, DRESSER.height + CRT.height / 2, NORTH_Z + 0.34], radius: 0.42 },
+  { id: 'boombox', label: 'Boombox', hint: 'Time capsule · flip the tape', position: [BOOMBOX.x, 0.14, BOOMBOX.z], radius: 0.26 },
   { id: 'lava-lamp', label: 'Lava lamp', hint: 'Warm the room light up', position: [LAVA.x, LAVA.y, NORTH_Z + 0.3], radius: 0.2 },
   { id: 'door', label: 'Bedroom door', hint: 'Locked in this build', position: [DOOR.x, 1.0, NORTH_Z + 0.05], radius: 0.5 },
-  { id: 'bed', label: 'Bed', hint: 'Open memory card', position: [BED.x, BED.top, BED.z], radius: 0.7 },
-  { id: 'gameboy', label: 'Game Boy', hint: 'Open memory card', position: [BED.x + 0.15, BED.top + 0.08, BED.z + 0.35], radius: 0.22 },
-  { id: 'vhs-stack', label: 'VHS stack', hint: 'Open memory card', position: [BOOMBOX.x - 0.35, 0.1, BOOMBOX.z + 0.35], radius: 0.22 },
-  { id: 'cards', label: 'Trading cards', hint: 'Open memory card', position: [0.2, 0.05, -1.35], radius: 0.22 },
+  { id: 'bed', label: 'Bed', hint: 'Open time capsule', position: [BED.x, BED.top, BED.z], radius: 0.7 },
+  { id: 'gameboy', label: 'Game Boy', hint: 'Open time capsule', position: [BED.x + 0.15, BED.top + 0.08, BED.z + 0.35], radius: 0.22 },
+  { id: 'vhs-stack', label: 'VHS stack', hint: 'Open time capsule', position: [BOOMBOX.x - 0.35, 0.1, BOOMBOX.z + 0.35], radius: 0.22 },
+  { id: 'cards', label: 'Trading cards', hint: 'Open time capsule', position: [0.2, 0.05, -1.35], radius: 0.22 },
 ];
 
 export const PALETTE = {
