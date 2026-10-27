@@ -235,9 +235,15 @@ export function GoFishTable({ onLeave }: { onLeave: () => void }) {
           )),
         ),
       )}
-      {state.players.map((p, i) => (
-        <Tag key={p.id} text={p.name} x={SEAT[i].x} z={SEAT[i].z + (i === 2 ? -0.07 : 0.07)} hot={state.turn === i} />
-      ))}
+      {state.players.map((p, i) => {
+        const tag = [
+          [0, 0.32],
+          [-0.46, 0],
+          [0, -0.36],
+          [0.46, 0],
+        ][i];
+        return <Tag key={p.id} text={p.name} x={tag[0]} z={tag[1]} hot={state.turn === i} />;
+      })}
     </group>
   );
 }

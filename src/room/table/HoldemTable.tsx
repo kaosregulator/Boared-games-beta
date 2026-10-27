@@ -32,32 +32,27 @@ const TABLE_VIEW: Shot = { target: [0, 0, 0.02], yaw: 0, pitch: 0.98, dist: 0.9 
 const HERO_VIEW: Shot = { target: [0, 0, 0.1], yaw: 0, pitch: 0.78, dist: 0.58 };
 const BOARD_VIEW: Shot = { target: [0, 0, -0.02], yaw: 0, pitch: 0.84, dist: 0.56 };
 
-const HOLE = [
-  { x: 0, z: 0.2 },
-  { x: -0.3, z: 0.02 },
-  { x: 0, z: -0.26 },
-  { x: 0.3, z: 0.02 },
-];
+/** Cards, the name on the rail, the stack, and this street's bet. Kept off the faces. */
+const SEAT = [
+  { cards: [0, 0.2], name: [0, 0.305], bank: [0.18, 0.22], bet: [-0.2, 0.08], button: [-0.1, 0.3] },
+  { cards: [-0.34, 0.02], name: [-0.47, 0.02], bank: [-0.4, 0.12], bet: [-0.18, 0.12], button: [-0.47, 0.08] },
+  { cards: [0, -0.22], name: [0, -0.34], bank: [0.18, -0.28], bet: [0.2, -0.1], button: [0.1, -0.34] },
+  { cards: [0.34, 0.02], name: [0.47, 0.02], bank: [0.4, -0.1], bet: [0.18, -0.12], button: [0.47, -0.06] },
+] as const;
 
-const POT_AT = new THREE.Vector3(0.22, FELT_Y + 0.004, 0.06);
-const SHOE = new THREE.Vector3(0.36, 0.02, -0.16);
+const POT_AT = new THREE.Vector3(0.22, FELT_Y + 0.004, 0.1);
+const DECK_AT = new THREE.Vector3(0.4, 0, -0.2);
 
-function along(i: number, extra: number) {
-  const h = HOLE[i];
-  const len = Math.hypot(h.x, h.z) || 1;
-  const d = Math.max(0.05, len + extra);
-  return new THREE.Vector3((h.x / len) * d, FELT_Y + 0.004, (h.z / len) * d);
+function spot(xz: readonly [number, number], y = FELT_Y + 0.004) {
+  return new THREE.Vector3(xz[0], y, xz[1]);
 }
 
 function holePose(i: number, k: number, faceUp: boolean, n: number): CardPose {
-  const seat = HOLE[i];
-  const spread = (k - (n - 1) / 2) * 0.034;
-  const yaw = faceUp ? spread * 0.6 : Math.atan2(seat.x, seat.z || 1);
-  const x = seat.x + spread;
-  const z = seat.z + (faceUp ? 0 : 0);
+  const [x0, z0] = SEAT[i].cards;
+  const spread = (k - (n - 1) / 2) * 0.04;
   return {
-    pos: new THREE.Vector3(x, FELT_Y + 0.0004 + k * 0.00045, z),
-    yaw: faceUp ? yaw : Math.atan2(-seat.x, -(seat.z || 0.01)),
+    pos: new THREE.Vector3(x0 + spread, FELT_Y + 0.0004 + k * 0.00045, z0),
+    yaw: faceUp ? spread : i === 2 ? Math.PI : 0,
     faceUp,
   };
 }
@@ -99,11 +94,11 @@ function Felt() {
     g.lineWidth = 3;
     g.strokeRect(52, 44, 920, 552);
     g.fillStyle = 'rgba(255, 230, 170, 0.9)';
-    g.font = '700 54px Georgia, serif';
-    g.textAlign = 'center';
-    g.fillText("TEXAS HOLD 'EM", 512, 250);
-    g.font = '600 26px Georgia, serif';
-    g.fillText('BLINDS  $10  /  $20', 512, 292);
+    g.font = '700 28px Georgia, serif';
+    g.textAlign = 'left';
+    g.fillText("HOLD 'EM", 70, 575);
+    g.font = '600 18px Georgia, serif';
+    g.fillText('BLINDS $10 / $20', 70, 602);
     const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = 4;
@@ -151,8 +146,8 @@ export function HoldemTable({ onLeave }: { onLeave: () => void }) {
   const cardMat = useCardMaterial();
   const chipMat = useChipMaterial();
   const [state, setState] = useState<Holdem>(() => newMatch());
-  const hand = useRef(new THREE.Vector3().copy(SHOE));
-  const handGoal = useRef(new THREE.Vector3().copy(SHOE));
+  const hand = useRef(new THREE.Vector3(DECK_AT.x, 0.02, DECK_AT.z));
+  const handGoal = useRef(new THREE.Vector3(DECK_AT.x, 0.02, DECK_AT.z));
   const grip = useRef(0);
   const handOn = useRef(false);
   const seenBoard = useRef(0);
@@ -176,10 +171,10 @@ export function HoldemTable({ onLeave }: { onLeave: () => void }) {
     seenBoard.current = 0;
     handOn.current = true;
     grip.current = 1;
-    handGoal.current.set(HOLE[0].x, FELT_Y, HOLE[0].z);
+    handGoal.current.set(SEAT[0].cards[0], FELT_Y, SEAT[0].cards[1]);
     const t = window.setTimeout(() => {
       grip.current = 0;
-      handGoal.current.copy(SHOE);
+      handGoal.current.set(DECK_AT.x, 0.02, DECK_AT.z);
       handOn.current = false;
     }, 900);
     return () => window.clearTimeout(t);
@@ -194,7 +189,7 @@ export function HoldemTable({ onLeave }: { onLeave: () => void }) {
     seenBoard.current = state.board.length;
     const t = window.setTimeout(() => {
       grip.current = 0;
-      handGoal.current.copy(SHOE);
+      handGoal.current.set(DECK_AT.x, 0.02, DECK_AT.z);
       handOn.current = false;
     }, 700);
     return () => window.clearTimeout(t);
@@ -273,26 +268,29 @@ export function HoldemTable({ onLeave }: { onLeave: () => void }) {
         ));
       })}
       {state.seats.map((seat, i) => (
-        <Tag key={seat.name} name={seat.name} at={along(i, 0.09)} hot={state.actor === i} out={seat.folded} />
+        <Tag key={seat.name} name={seat.name} at={spot(SEAT[i].name, 0.02)} hot={state.actor === i} out={seat.folded} />
       ))}
       {state.seats.map((seat, i) =>
-        seat.chips > 0 ? <ChipStacks key={`bank-${i}`} amount={seat.chips} at={along(i, 0.05)} material={chipMat} spread={0.04} /> : null,
+        seat.chips > 0 ? <ChipStacks key={`bank-${i}`} amount={seat.chips} at={spot(SEAT[i].bank)} material={chipMat} spread={0.038} /> : null,
       )}
       {state.seats.map((seat, i) =>
-        seat.bet > 0 ? <ChipStacks key={`bet-${i}`} amount={seat.bet} at={along(i, -0.1)} material={chipMat} spread={0.036} /> : null,
+        seat.bet > 0 ? <ChipStacks key={`bet-${i}`} amount={seat.bet} at={spot(SEAT[i].bet)} material={chipMat} spread={0.034} /> : null,
       )}
-      {pot > 0 && <ChipStacks amount={pot} at={POT_AT} material={chipMat} spread={0.042} />}
-      <mesh position={along(state.dealer, 0.02)} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[0.014, 24]} />
+      {pot > 0 && <ChipStacks amount={pot} at={POT_AT} material={chipMat} spread={0.04} />}
+      <mesh position={spot(SEAT[state.dealer].button, FELT_Y + 0.001)} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.012, 24]} />
         <meshBasicMaterial color="#f6f3ea" />
       </mesh>
       <GhostHand at={hand.current} grip={grip} visible={handOn} from={0.4} tint="#d7c4ff" />
-      <group position={[SHOE.x, 0.004, SHOE.z]} rotation={[0, 0.4, 0]}>
-        <mesh position={[0, 0.012, 0]}>
-          <boxGeometry args={[0.07, 0.018, 0.05]} />
-          <meshStandardMaterial color="#1a3f86" roughness={0.55} />
-        </mesh>
-      </group>
+      {[0, 1, 2, 3].map(k => (
+        <Card3D
+          key={`deck-${k}`}
+          rank="A"
+          suit="♠"
+          material={cardMat}
+          pose={{ pos: new THREE.Vector3(DECK_AT.x, FELT_Y + k * 0.0005, DECK_AT.z), yaw: 0.4, faceUp: false }}
+        />
+      ))}
     </group>
   );
 }
