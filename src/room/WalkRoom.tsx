@@ -15,6 +15,7 @@ import { propCardFor, type CardAction } from './propCards';
 import { toyChestBus } from './ToyChest';
 import { TamagotchiPlay } from '../devices/TamagotchiPlay';
 import { RubikPlay } from '../devices/RubikPlay';
+import { ViewMaster } from './ViewMaster';
 import { DeviceFocus } from './DeviceFocus';
 import { DeviceOverlay } from './DeviceOverlay';
 import { TvGlass } from '../tv/TvSet';
@@ -307,6 +308,7 @@ export function WalkRoom({
   const [seated, setSeated] = useState(override.seat);
   const [tamagotchi, setTamagotchi] = useState(false);
   const [rubik, setRubik] = useState(false);
+  const [viewMaster, setViewMaster] = useState(false);
   const [racing, setRacing] = useState(Boolean(raceBoot));
   /** Shrunk down in the army town on the floor. */
   const [armyOn, setArmyOn] = useState(Boolean(armyBoot));
@@ -325,7 +327,7 @@ export function WalkRoom({
   const [boneHunt, setBoneHunt] = useState(bonesBoot);
   const toyMode = racing || armyOn || armyAlert !== null || ispyOn || boneHunt;
   /** Something held up close (Tamagotchi, Rubik's Cube): the room waits behind it. */
-  const holding = tamagotchi || rubik;
+  const holding = tamagotchi || rubik || viewMaster;
   /** The Furby in your hands: the room keeps drawing behind it, you just can't walk off. */
   const furbyState = useFurby();
   const furbyHeld = furbyState.held !== null;
@@ -903,6 +905,10 @@ export function WalkRoom({
         setPinned(null);
         sound.playButtonClick();
         setRubik(true);
+      } else if (kind === 'viewmaster') {
+        setPinned(null);
+        sound.playButtonClick();
+        setViewMaster(true);
       } else if (kind === 'hotwheels') {
         setPinned(null);
         sound.playButtonClick();
@@ -1116,6 +1122,7 @@ export function WalkRoom({
         />
       )}
       {rubik && <RubikPlay onClose={() => setRubik(false)} />}
+      {viewMaster && <ViewMaster onClose={() => setViewMaster(false)} />}
       {furbyHeld && (
         <FurbyHoldHud
           onTable={

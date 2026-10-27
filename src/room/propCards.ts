@@ -20,7 +20,7 @@ export interface CardVideo {
   title: string;
 }
 
-export type CardAction = 'tv' | 'nes' | 'radio' | 'gameboy' | 'tamagotchi' | 'rubik' | 'hotwheels' | 'army' | 'furby' | 'ispy' | 'poochi' | 'pc';
+export type CardAction = 'tv' | 'nes' | 'radio' | 'gameboy' | 'tamagotchi' | 'rubik' | 'hotwheels' | 'army' | 'furby' | 'ispy' | 'poochi' | 'pc' | 'viewmaster';
 
 export interface PropCard {
   id: string;
@@ -476,6 +476,7 @@ const CARDS: PropCard[] = [
     memories: ['The orange lever had the most satisfying click in history.'],
     photos: [P.viewmaster],
     video: V('youtube-JxG0HuHNqKU', 'Talking View-Master commercial, 1983'),
+    action: { kind: 'viewmaster', label: 'Look through it' },
   },
   {
     id: 'sh-books',
