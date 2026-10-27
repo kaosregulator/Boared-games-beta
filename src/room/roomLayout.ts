@@ -584,6 +584,15 @@ export const NEON_WALL = {
   gap: 0.012,
 };
 
+/** Wooden toy chest on the floor under the neon game wall. */
+export const TOY_CHEST = {
+  x: 2.32,
+  z: -1.45,
+  hx: 0.34,
+  hz: 0.22,
+  top: 0.36,
+};
+
 export const ROOM_COLLIDERS = [
   footprint(LAYOUT.bed, true),
   footprint(LAYOUT.nightstand, false),
@@ -596,6 +605,7 @@ export const ROOM_COLLIDERS = [
   footprint(LAYOUT.teddy, false),
   footprint(LAYOUT.army, false),
   footprint(LAYOUT.beanbag, false),
+  { x: TOY_CHEST.x, z: TOY_CHEST.z, hx: TOY_CHEST.hx, hz: TOY_CHEST.hz, top: TOY_CHEST.top },
 ];
 
 /** Game-box rows up the real shelf, helmet stays above the top row. */

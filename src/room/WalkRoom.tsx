@@ -12,6 +12,7 @@ import { LAYOUT } from './roomLayout';
 import { DESK_SLOTS, SHELF_SLOTS, SHELF_SLOTS_LOWER } from './videoRoom';
 import { MemoryFlashCard } from './MemoryFlashCard';
 import { propCardFor, type CardAction } from './propCards';
+import { toyChestBus } from './ToyChest';
 import { TamagotchiPlay } from '../devices/TamagotchiPlay';
 import { RubikPlay } from '../devices/RubikPlay';
 import { DeviceFocus } from './DeviceFocus';
@@ -874,6 +875,11 @@ export function WalkRoom({
           setStoolAsk(target);
           sound.playButtonClick();
         } else grabStool(target);
+        return;
+      }
+      if (target.id === 'toy-chest') {
+        toyChestBus.toggle();
+        sound.playCardboardLid();
         return;
       }
       if (propCardFor(target.id)) pinCard(target);
