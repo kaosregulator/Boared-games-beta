@@ -42,14 +42,13 @@ function drawPiece(ctx: CanvasRenderingContext2D, id: string, w: number, h: numb
 
   ctx.save();
   ctx.translate(w / 2, h / 2 + 6);
+  const shape = capsuleShape(id);
   ctx.strokeStyle = hue;
   ctx.fillStyle = hue;
   ctx.lineWidth = 6;
   ctx.lineJoin = 'round';
   ctx.shadowColor = hue;
-  ctx.shadowBlur = 18;
-
-  const shape = capsuleShape(id);
+  ctx.shadowBlur = shape === 'wizard' || shape === 'face' || shape === 'mouse' || shape === 'sorry' ? 8 : 18;
   if (shape === 'ship') {
     ctx.beginPath();
     ctx.moveTo(-46, 10);
@@ -123,61 +122,52 @@ function ink(ctx: CanvasRenderingContext2D, hue: string) {
   ctx.strokeStyle = hue;
 }
 
-/** Gold wizard: hat, beard, robe, and a staff with a hollow glow. */
+/** Gold wizard: a tall hat, a beard, and a staff. Silhouette first, so it survives the glow. */
 function drawWizard(ctx: CanvasRenderingContext2D, hue: string) {
-  ctx.lineWidth = 7;
   ctx.lineCap = 'round';
+  ctx.lineWidth = 9;
   ctx.beginPath();
-  ctx.moveTo(36, 46);
-  ctx.quadraticCurveTo(30, 4, 20, -26);
+  ctx.moveTo(40, 48);
+  ctx.lineTo(26, -18);
   ctx.stroke();
   ctx.beginPath();
-  ctx.arc(16, -40, 13, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.save();
-  ctx.globalCompositeOperation = 'destination-out';
-  ctx.beginPath();
-  ctx.arc(16, -40, 5.5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-  ink(ctx, hue);
-  ctx.beginPath();
-  ctx.moveTo(-32, 46);
-  ctx.lineTo(22, 46);
-  ctx.quadraticCurveTo(18, 18, 14, 6);
-  ctx.lineTo(-20, 6);
-  ctx.quadraticCurveTo(-28, 18, -32, 46);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(-18, 8);
-  ctx.lineTo(-42, 30);
-  ctx.lineTo(-26, 36);
-  ctx.lineTo(-6, 14);
-  ctx.closePath();
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(-28, -4);
-  ctx.quadraticCurveTo(0, 6, 28, -4);
-  ctx.lineTo(16, -16);
-  ctx.lineTo(-16, -16);
-  ctx.closePath();
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(-14, -14);
-  ctx.lineTo(14, -14);
-  ctx.lineTo(2, -64);
-  ctx.closePath();
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(-12, -2);
-  ctx.quadraticCurveTo(0, 26, 12, -2);
-  ctx.quadraticCurveTo(0, 8, -12, -2);
+  ctx.arc(22, -32, 14, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = '#1a1208';
-  ctx.font = '700 14px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('✦', 0, -30);
+  ctx.beginPath();
+  ctx.arc(22, -32, 5, 0, Math.PI * 2);
+  ctx.fill();
   ink(ctx, hue);
+  ctx.beginPath();
+  ctx.moveTo(-34, 48);
+  ctx.lineTo(18, 48);
+  ctx.lineTo(12, 8);
+  ctx.lineTo(-26, 8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(-36, -2);
+  ctx.lineTo(30, -2);
+  ctx.lineTo(22, -16);
+  ctx.lineTo(-28, -16);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(-22, -14);
+  ctx.lineTo(16, -14);
+  ctx.lineTo(-2, -78);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(-16, 2);
+  ctx.lineTo(14, 2);
+  ctx.lineTo(-2, 28);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#1a1208';
+  ctx.beginPath();
+  ctx.arc(-2, -46, 3.5, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function drawPawn(ctx: CanvasRenderingContext2D) {
@@ -199,12 +189,12 @@ function drawPawn(ctx: CanvasRenderingContext2D) {
 function drawSorry(ctx: CanvasRenderingContext2D, hue: string) {
   ctx.save();
   ctx.rotate(-0.22);
-  roundRect(ctx, 2, -50, 36, 52, 5);
+  roundRect(ctx, -2, -62, 48, 68, 6);
   ctx.fill();
   ctx.fillStyle = '#1a1208';
-  ctx.font = '800 20px sans-serif';
+  ctx.font = '800 32px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('1', 20, -18);
+  ctx.fillText('1', 22, -18);
   ctx.restore();
   ink(ctx, hue);
   ctx.beginPath();
@@ -228,77 +218,87 @@ function drawSorry(ctx: CanvasRenderingContext2D, hue: string) {
 
 /** A Guess Who face, glasses and all, in its little tray. */
 function drawFace(ctx: CanvasRenderingContext2D, hue: string) {
-  ctx.globalAlpha = 0.28;
-  roundRect(ctx, -44, -58, 88, 112, 12);
+  ctx.globalAlpha = 0.35;
+  roundRect(ctx, -46, -62, 92, 118, 14);
   ctx.fill();
   ctx.globalAlpha = 1;
   ctx.beginPath();
-  ctx.arc(0, 8, 30, 0, Math.PI * 2);
+  ctx.arc(0, 10, 32, 0, Math.PI * 2);
   ctx.fill();
   ctx.beginPath();
-  ctx.ellipse(0, -8, 30, 22, 0, Math.PI, 0);
+  ctx.ellipse(0, -10, 34, 26, 0, Math.PI, 0);
+  ctx.lineTo(34, -4);
+  ctx.lineTo(-34, -4);
   ctx.fill();
   ctx.fillStyle = '#140c14';
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = '#140c14';
+  ctx.lineCap = 'round';
+  ctx.strokeRect(-24, -2, 18, 14);
+  ctx.strokeRect(6, -2, 18, 14);
   ctx.beginPath();
-  ctx.arc(-11, 6, 3.4, 0, Math.PI * 2);
-  ctx.arc(11, 6, 3.4, 0, Math.PI * 2);
+  ctx.moveTo(-6, 5);
+  ctx.lineTo(6, 5);
+  ctx.moveTo(-24, 5);
+  ctx.lineTo(-32, 2);
+  ctx.moveTo(24, 5);
+  ctx.lineTo(32, 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(-15, 4, 3, 0, Math.PI * 2);
+  ctx.arc(15, 4, 3, 0, Math.PI * 2);
   ctx.fill();
+  ctx.beginPath();
+  ctx.arc(0, 18, 8, 0.3, Math.PI - 0.3);
+  ctx.stroke();
   ink(ctx, hue);
-  ctx.lineWidth = 4;
-  ctx.strokeRect(-22, -2, 16, 13);
-  ctx.strokeRect(6, -2, 16, 13);
-  ctx.beginPath();
-  ctx.moveTo(-6, 4);
-  ctx.lineTo(6, 4);
-  ctx.moveTo(-22, 4);
-  ctx.lineTo(-28, 2);
-  ctx.moveTo(22, 4);
-  ctx.lineTo(28, 2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(0, 16, 8, 0.25, Math.PI - 0.25);
-  ctx.stroke();
 }
 
 /** The mouse, a wedge of cheese, and the crank it has to beat. */
 function drawMouse(ctx: CanvasRenderingContext2D, hue: string) {
-  ctx.lineWidth = 5;
+  ctx.lineWidth = 7;
   ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.moveTo(8, 16);
-  ctx.quadraticCurveTo(46, 28, 36, -8);
+  ctx.moveTo(6, 18);
+  ctx.quadraticCurveTo(52, 34, 40, -6);
   ctx.stroke();
   ctx.beginPath();
-  ctx.ellipse(-6, 16, 26, 16, -0.35, 0, Math.PI * 2);
+  ctx.ellipse(-8, 18, 30, 18, -0.3, 0, Math.PI * 2);
   ctx.fill();
   ctx.beginPath();
-  ctx.arc(-24, 2, 13, 0, Math.PI * 2);
+  ctx.arc(-28, 2, 15, 0, Math.PI * 2);
   ctx.fill();
   ctx.beginPath();
-  ctx.arc(-32, -12, 8, 0, Math.PI * 2);
+  ctx.arc(-38, -14, 10, 0, Math.PI * 2);
+  ctx.arc(-18, -16, 8, 0, Math.PI * 2);
   ctx.fill();
   ctx.beginPath();
-  ctx.moveTo(16, -36);
-  ctx.lineTo(48, -8);
-  ctx.lineTo(18, 6);
+  ctx.moveTo(14, -46);
+  ctx.lineTo(52, -6);
+  ctx.lineTo(16, 10);
   ctx.closePath();
   ctx.fill();
   ctx.fillStyle = '#1a1208';
   ctx.beginPath();
-  ctx.arc(30, -16, 3.2, 0, Math.PI * 2);
-  ctx.arc(36, -6, 2.2, 0, Math.PI * 2);
+  ctx.arc(30, -22, 4, 0, Math.PI * 2);
+  ctx.arc(38, -10, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(-32, 0, 2.2, 0, Math.PI * 2);
   ctx.fill();
   ink(ctx, hue);
-  ctx.lineWidth = 4;
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = '#1a1208';
   ctx.beginPath();
-  ctx.arc(8, -46, 9, 0, Math.PI * 2);
+  ctx.arc(4, -52, 11, 0, Math.PI * 2);
   ctx.stroke();
   ctx.beginPath();
-  ctx.moveTo(8, -55);
-  ctx.lineTo(8, -37);
-  ctx.moveTo(-1, -46);
-  ctx.lineTo(17, -46);
+  ctx.moveTo(4, -63);
+  ctx.lineTo(4, -41);
+  ctx.moveTo(-7, -52);
+  ctx.lineTo(15, -52);
   ctx.stroke();
+  ink(ctx, hue);
 }
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
