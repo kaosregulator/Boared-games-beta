@@ -22,7 +22,7 @@ export const SHELF_GAMES: ShelfGameSlot[] = [
   { id: 'casino', label: 'Casino Lounge', shortLabel: 'CASINO', color: '#064e3b', accent: '#34d399', shelfRow: 1, shelfCol: 2 },
   { id: 'blackjack', label: 'Blackjack', shortLabel: '21', color: '#14532d', accent: '#86efac', shelfRow: 2, shelfCol: 0 },
   { id: 'pawnrush', label: 'Sorry!', shortLabel: 'SORRY', color: '#881337', accent: '#fb7185', shelfRow: 2, shelfCol: 1 },
-  { id: 'liarsdice', label: "Liar's Dice", shortLabel: 'LIAR', color: '#854d0e', accent: '#fde047', shelfRow: 2, shelfCol: 2 },
+  { id: 'mousetrap', label: 'Mouse Trap', shortLabel: 'TRAP', color: '#166534', accent: '#facc15', shelfRow: 2, shelfCol: 2 },
 ];
 
 export const ROOM = {

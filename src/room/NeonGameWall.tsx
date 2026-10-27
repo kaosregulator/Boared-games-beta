@@ -20,6 +20,8 @@ const SPINE_COLOR: Record<string, { color: string; accent: string }> = {
   blackjack: { color: '#14402a', accent: '#9ff0b8' },
   gofish: { color: '#1b5f7a', accent: '#bdf0ff' },
   liarsdice: { color: '#6d4414', accent: '#f5d985' },
+  mousetrap: { color: '#166534', accent: '#facc15' },
+  guesswho: { color: '#b91c1c', accent: '#bfdbfe' },
   trivia: { color: '#3b2148', accent: '#ffd27a' },
   casino: { color: '#0e3b32', accent: '#d4ffe8' },
 };
@@ -27,7 +29,7 @@ const SPINE_COLOR: Record<string, { color: string; accent: string }> = {
 /** These have a real box on the game shelf (and beside the table while they're played). */
 const FLOOR_BOX_GAMES = new Set(['monopoly', 'battleship', 'clue', 'life', 'yahtzee']);
 
-const ORDER = ['connect4', 'chess', 'checkers', 'pawnrush', 'trivia', 'poker', 'blackjack', 'casino', 'gofish', 'liarsdice'];
+const ORDER = ['connect4', 'chess', 'checkers', 'pawnrush', 'trivia', 'poker', 'blackjack', 'casino', 'gofish', 'mousetrap', 'guesswho'];
 
 const faceCache = new Map<string, THREE.CanvasTexture>();
 

@@ -167,7 +167,7 @@ export const SHELF_SLOTS_LOWER: ShelfSlot[] = [
 export const DESK_SLOTS: ShelfSlot[] = [
   { id: 'poker', spine: null, title: "Hold'em", row: 0, boxHeight: 0.07, color: '#1f5134', accent: '#ffd98a' },
   { id: 'blackjack', spine: null, title: 'Blackjack', row: 1, boxHeight: 0.07, color: '#14402a', accent: '#9ff0b8' },
-  { id: 'liarsdice', spine: null, title: "Liar's Dice", row: 2, boxHeight: 0.07, color: '#6d4414', accent: '#f5d985' },
+  { id: 'mousetrap', spine: null, title: 'Mouse Trap', row: 2, boxHeight: 0.07, color: '#166534', accent: '#facc15' },
   { id: 'gofish', spine: null, title: 'Go Fish', row: 3, boxHeight: 0.07, color: '#1b5f7a', accent: '#bdf0ff' },
 ];
 

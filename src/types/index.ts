@@ -10,6 +10,8 @@ export type GameId =
   | 'gofish'
   | 'pawnrush'
   | 'liarsdice'
+  | 'guesswho'
+  | 'mousetrap'
   | 'yahtzee'
   | 'clue'
   | 'life'

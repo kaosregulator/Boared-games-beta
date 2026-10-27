@@ -20,6 +20,8 @@ const TABLE_LOADS: (() => Promise<unknown>)[] = [
     () => import('./HoldemTable'),
     () => import('./GoFishTable'),
     () => import('./SorryTable'),
+    () => import('./GuessWhoTable'),
+    () => import('./MouseTrapTable'),
     () => import('./ClueTable'),
     () => import('../../components/ActiveGameSwitch'),
     () => import('../../components/RulesModal'),

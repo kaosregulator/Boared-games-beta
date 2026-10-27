@@ -578,7 +578,7 @@ export const NEON_WALL = {
   x: EAST_X - 0.012,
   z: -1.45,
   y: 1.04,
-  cols: 10,
+  cols: 11,
   w: 0.1,
   h: 0.14,
   gap: 0.012,

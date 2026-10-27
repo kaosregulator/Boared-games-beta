@@ -20,11 +20,13 @@ const BlackjackTable = lazy(() => import('./BlackjackTable').then(m => ({ defaul
 const HoldemTable = lazy(() => import('./HoldemTable').then(m => ({ default: m.HoldemTable })));
 const GoFishTable = lazy(() => import('./GoFishTable').then(m => ({ default: m.GoFishTable })));
 const SorryTable = lazy(() => import('./SorryTable').then(m => ({ default: m.SorryTable })));
+const GuessWhoTable = lazy(() => import('./GuessWhoTable').then(m => ({ default: m.GuessWhoTable })));
+const MouseTrapTable = lazy(() => import('./MouseTrapTable').then(m => ({ default: m.MouseTrapTable })));
 
 export { TableHudOverlay } from './tableHud';
 
-export type TableGameId = 'monopoly' | 'connect4' | 'battleship' | 'chess' | 'checkers' | 'blackjack' | 'clue' | 'furby' | 'poochi' | 'poker' | 'gofish' | 'pawnrush';
-export const TABLE_GAMES = new Set<string>(['monopoly', 'connect4', 'battleship', 'chess', 'checkers', 'blackjack', 'clue', 'furby', 'poochi', 'poker', 'gofish', 'pawnrush']);
+export type TableGameId = 'monopoly' | 'connect4' | 'battleship' | 'chess' | 'checkers' | 'blackjack' | 'clue' | 'furby' | 'poochi' | 'poker' | 'gofish' | 'pawnrush' | 'guesswho' | 'mousetrap';
+export const TABLE_GAMES = new Set<string>(['monopoly', 'connect4', 'battleship', 'chess', 'checkers', 'blackjack', 'clue', 'furby', 'poochi', 'poker', 'gofish', 'pawnrush', 'guesswho', 'mousetrap']);
 
 /**
  * unfold — the table has spawned and the box is opening
@@ -154,6 +156,8 @@ export function PlayTable({
               {game.id === 'poker' && <HoldemTable onLeave={onLeave} />}
               {game.id === 'gofish' && <GoFishTable onLeave={onLeave} />}
               {game.id === 'pawnrush' && <SorryTable onLeave={onLeave} />}
+              {game.id === 'guesswho' && <GuessWhoTable onLeave={onLeave} />}
+              {game.id === 'mousetrap' && <MouseTrapTable onLeave={onLeave} />}
               {game.id === 'clue' && <ClueTable onLeave={onLeave} />}
             </Suspense>
           </group>

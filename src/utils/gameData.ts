@@ -176,6 +176,44 @@ export const GAME_CATALOG: GameMetadata[] = [
     rating: '4.8 ★★★★★'
   },
   {
+    id: 'guesswho',
+    title: 'Guess Who',
+    subtitle: 'Red tray, blue tray, and a question',
+    players: '1 Player vs. the blue tray',
+    duration: '5 - 10 min',
+    boxColor: 'from-red-800 via-red-950 to-blue-950',
+    boxAccent: 'border-red-400/40 text-red-200',
+    badge: 'Flip the faces',
+    description: 'Two plastic trays of original faces. Ask a yes-or-no question, flip the ones who are out, and name the person on the other side of the table.',
+    rules: [
+      'You can see your own mystery card. The other card is the one you are hunting.',
+      'Ask one question a turn. Faces that do not match the answer fold down.',
+      'You can flip a face yourself when you already know.',
+      'Guess the person when you are ready. A wrong name passes the turn.'
+    ],
+    icon: 'Sparkles',
+    rating: '4.8 ★★★★★'
+  },
+  {
+    id: 'mousetrap',
+    title: 'Mouse Trap',
+    subtitle: 'Crank, marble, and a cage',
+    players: '4 mice (you and three others)',
+    duration: '10 - 15 min',
+    boxColor: 'from-green-900 via-lime-950 to-yellow-950',
+    boxAccent: 'border-yellow-400/40 text-yellow-200',
+    badge: 'Build the trap',
+    description: 'Roll, move your mouse, and build the contraption. When the last part is on, the crank turns, the marble runs, and the cage comes down.',
+    rules: [
+      'Roll the die and move that many spaces around the board.',
+      'Build spaces add the next part of the trap: crank, boot, chute, tub, cage.',
+      'Cheese spaces stock a wedge you can spend later.',
+      'Turn the crank when the trap is built and the marble does the rest.'
+    ],
+    icon: 'Sparkles',
+    rating: '4.9 ★★★★★'
+  },
+  {
     id: 'pawnrush',
     title: 'Sorry!',
     subtitle: 'Four colors, a real deck, slides, and bumps',
