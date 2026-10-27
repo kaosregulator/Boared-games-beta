@@ -729,8 +729,6 @@ function rock(ctx: CanvasRenderingContext2D, accent: string, ink: string) {
   ctx.lineTo(36, -28);
   ctx.lineTo(50, 2);
   ctx.fill();
-  ctx.fillStyle = ink;
-  ctx.fillRect(-8, -62, 10, 8);
 }
 
 function tunnel(ctx: CanvasRenderingContext2D, accent: string, ink: string) {
