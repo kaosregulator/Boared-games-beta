@@ -4,6 +4,7 @@ import { CCF_2000, CN_TAPES, FOX_KIDS, KIDS_WB_2001, NICK_CN_2003, blockOnAir, s
 import { ARTHUR } from './lineups/arthur';
 import { ADS_NUMBER, adsGuide } from './lineups/ads90s';
 import { MTV_CHANNEL, PICK_CHANNEL, YT_CHANNELS, ytOnAir, ytShowAt, type YtChannel } from './lineups/youtube247';
+import { PACK_SLOT, packOnAir } from './packSchedule';
 
 /**
  * The cable lineup. Channel 2 is SNICK, running the archived Saturday nights
@@ -81,25 +82,37 @@ export const CARTOONS: Cartoon[] = [
   { id: 'SantasSuprise', title: "Santa's Surprise", year: 1947, studio: 'Famous Studios' },
 ];
 
+export type PackId = 'toon' | 'heroes' | 'felix' | 'betty' | 'woody' | 'ubi';
+
 export type Channel =
   | { number: number; call: string; kind: 'snick'; name: string }
   | { number: number; call: string; kind: 'block'; name: string; block: ArchiveBlock }
-  | { number: number; call: string; kind: 'cartoon'; name: string; cartoon: Cartoon }
+  | { number: number; call: string; kind: 'pack'; name: string; pack: PackId; cartoons: Cartoon[] }
   | { number: number; call: string; kind: 'youtube'; name: string; yt: YtChannel }
   | { number: number; call: string; kind: 'ads'; name: string };
 
-function callSign(c: Cartoon): string {
+/** Which station a short belongs on. Named shows leave the grab-bag TOON station. */
+export function cartoonPack(c: Cartoon): PackId {
   const t = c.title.toUpperCase();
-  if (t.startsWith('POPEYE') || t.includes('POPEYE')) return 'POP';
-  if (t.startsWith('SUPERMAN')) return 'SUP';
-  if (t.startsWith('BETTY')) return 'BTY';
-  if (t.startsWith('FELIX')) return 'FLX';
-  if (t.startsWith('FLIP')) return 'FLP';
-  if (c.studio === 'Disney') return 'DIS';
-  if (c.studio.startsWith('Ub')) return 'UBI';
-  if (c.studio.includes('Lantz')) return 'WDY';
-  if (c.studio.includes('Terry')) return 'TRY';
-  return 'TOON';
+  if (t.includes('POPEYE') || t.startsWith('SUPERMAN')) return 'heroes';
+  if (t.startsWith('FELIX')) return 'felix';
+  if (t.startsWith('BETTY')) return 'betty';
+  if (t.includes('WOODY') || c.studio.includes('Lantz')) return 'woody';
+  if (t.startsWith('FLIP') || c.studio.startsWith('Ub')) return 'ubi';
+  return 'toon';
+}
+
+const PACKS: { id: PackId; number: number; call: string; name: string }[] = [
+  { id: 'toon', number: 9, call: 'TOON', name: 'Toon Party — every short, once around' },
+  { id: 'heroes', number: 10, call: 'HERO', name: 'Popeye & Superman' },
+  { id: 'felix', number: 11, call: 'FLX', name: 'Felix the Cat' },
+  { id: 'betty', number: 12, call: 'BTY', name: 'Betty Boop' },
+  { id: 'woody', number: 13, call: 'WDY', name: 'Woody Woodpecker' },
+  { id: 'ubi', number: 14, call: 'UBI', name: 'Ub Iwerks' },
+];
+
+function filmsFor(id: PackId) {
+  return CARTOONS.filter(c => cartoonPack(c) === id);
 }
 
 const ytChannel = (yt: YtChannel): Channel => ({ number: yt.number, call: yt.call, kind: 'youtube', name: yt.name, yt });
@@ -114,12 +127,13 @@ export const CHANNELS: Channel[] = [
   { number: 6, call: 'FOXK', kind: 'block', name: 'Fox Kids (2000–2001)', block: FOX_KIDS },
   { number: 7, call: 'KWB', kind: 'block', name: "Kids' WB (Feb 2001)", block: KIDS_WB_2001 },
   { number: 8, call: 'PBS', kind: 'block', name: 'Arthur 24/7 — every season (1996–2022)', block: ARTHUR },
-  ...CARTOONS.map((cartoon, i): Channel => ({
-    number: i + 9,
-    call: callSign(cartoon),
-    kind: 'cartoon',
-    name: cartoon.title,
-    cartoon,
+  ...PACKS.map((pack): Channel => ({
+    number: pack.number,
+    call: pack.call,
+    kind: 'pack',
+    name: pack.name,
+    pack: pack.id,
+    cartoons: filmsFor(pack.id),
   })),
   // Nothing but 90s commercial breaks, on the channel number of the decade.
   { number: ADS_NUMBER, call: 'ADS', kind: 'ads', name: '90s Commercial Breaks' },
@@ -184,6 +198,9 @@ export function guideRow(channel: Channel, at = nowSeconds()): { now: string; ne
     const when = new Date(next.at * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     return { now: show.now, next: `${when} ${next.title}` };
   }
-  const label = `${channel.cartoon.title} (${channel.cartoon.year})`;
-  return { now: label, next: `${channel.cartoon.studio} encore` };
+  const air = packOnAir(channel.cartoons, channel.pack, at);
+  const when = new Date((at + air.remain) * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return { now: `${air.film.title} (${air.film.year})`, next: `${when} ${air.next.title}` };
 }
+
+export { PACK_SLOT };

@@ -637,6 +637,8 @@ export function WalkRoom({
     (id: DeviceId) => {
       document.exitPointerLock?.();
       setCardOpen(false);
+      // The television keeps the bedroom tape. Its sound is the set's own
+      // speaker; the tape stays on the boombox if it was already playing.
       if (id === 'boombox' || id === 'pc') sound.stopNostalgia();
       if (id === 'pc') powerOnPc();
       sound.playButtonClick();

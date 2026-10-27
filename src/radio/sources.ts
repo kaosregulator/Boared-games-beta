@@ -162,6 +162,20 @@ export async function* sourcesFor(station: Station): AsyncGenerator<Source> {
     return s;
   };
 
+  const streamOk = async (url: string | null) => {
+    if (!url) return null;
+    // A SomaFM listen page or any HTML address is not a station. The dial
+    // stays on the tuner and tries the next stream.
+    try {
+      const u = new URL(url);
+      if (u.hostname.endsWith('somafm.com') && !/^ice\d\.somafm\.com$/.test(u.hostname)) return null;
+      if (/\.(html?|php)(\?|$)/i.test(u.pathname)) return null;
+    } catch {
+      return null;
+    }
+    return url;
+  };
+
   // A stand-in that has proven better than the station's own feed goes
   // first, except once a day, when the own feed gets the chance to win back
   // its place.
@@ -169,11 +183,11 @@ export async function* sourcesFor(station: Station): AsyncGenerator<Source> {
     .filter(([key, h]) => key !== 'own' && h.url && score(h) > score(health.own) && score(h) > 0)
     .sort((a, b) => score(b[1]) - score(a[1]))[0];
   const ownDue = !health.own || Date.now() - health.own.at > 24 * 3600 * 1000;
-  if (best && !ownDue) yield give({ key: best[0], uuid: best[1].uuid, url: async () => best[1].url ?? null });
+  if (best && !ownDue) yield give({ key: best[0], uuid: best[1].uuid, url: async () => streamOk(best[1].url ?? null) });
 
-  for (const s of own(station)) yield s;
+  for (const s of own(station)) yield { ...s, url: async () => streamOk(await s.url()) };
   tried.add('own');
-  if (best && !tried.has(best[0])) yield give({ key: best[0], uuid: best[1].uuid, url: async () => best[1].url ?? null });
+  if (best && !tried.has(best[0])) yield give({ key: best[0], uuid: best[1].uuid, url: async () => streamOk(best[1].url ?? null) });
   if (!stand) return;
 
   // Radio Browser: the very same channel first, then its style.
@@ -184,13 +198,13 @@ export async function* sourcesFor(station: Station): AsyncGenerator<Source> {
   for (const s of rb.slice(0, 5)) {
     const key = `rb:${s.uuid}`;
     if (tried.has(key)) continue;
-    yield give({ key, uuid: s.uuid, url: async () => s.url });
+    yield give({ key, uuid: s.uuid, url: async () => streamOk(s.url) });
   }
 
   // GitHub's daily genre lists, last.
   for (const url of (await playlist(stand.list)).slice(0, 5)) {
     const key = `m3u:${url}`;
     if (tried.has(key)) continue;
-    yield give({ key, url: async () => url });
+    yield give({ key, url: async () => streamOk(url) });
   }
 }
