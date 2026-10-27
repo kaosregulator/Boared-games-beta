@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { PLAYER, WALL } from './videoRoom';
-import { ROOM_COLLIDERS, TABLE_COLLIDER } from './roomLayout';
+import { LAYOUT, ROOM_COLLIDERS, TABLE_COLLIDER } from './roomLayout';
 import { controlSettings, lookTurn } from './controls';
 import { crouchKeyAction } from './crouch';
 import { aim, emitRoomTap, fitFov, pad } from './input';
@@ -20,6 +20,10 @@ export const walkRig = {
   tableActive: false,
   /** Where the player stands, for cards that close when you walk off. */
   pos: { x: 0, z: 0 },
+  /** Extra eye height while standing on the high-shelf stool, metres. */
+  eyeBoost: 0,
+  /** Look up at the high shelf once, after the second step onto the stool. */
+  glance: false,
   /** Last full pose, so a rebuilt canvas (or a reloaded page) puts you back. */
   lastPose: null as SavedPose | null,
   listeners: new Set<(crouched: boolean) => void>(),
@@ -305,14 +309,14 @@ export function WalkController({ enabled, engaged, onStep, atTable = false }: Wa
     if (jump) {
       walkRig.teleport = null;
       velocity.current.set(0, 0, 0);
-      eyeHeight.current = walkRig.crouchLock ? PLAYER.crouchHeight : PLAYER.height;
+      eyeHeight.current = (walkRig.crouchLock ? PLAYER.crouchHeight : PLAYER.height) + walkRig.eyeBoost;
       camera.position.set(jump.at[0], eyeHeight.current, jump.at[2]);
       camera.lookAt(jump.look[0], jump.look[1], jump.look[2]);
     }
     walkRig.pos.x = camera.position.x;
     walkRig.pos.z = camera.position.z;
     // Only while actually walking: device close-ups and the bean bag move the camera elsewhere.
-    if (enabled && engagedRef.current && !walkRig.crouchLock) {
+    if (enabled && engagedRef.current && !walkRig.crouchLock && walkRig.eyeBoost === 0) {
       const p = camera.position;
       const q = camera.quaternion;
       walkRig.lastPose = { p: [p.x, eyeHeight.current, p.z], q: [q.x, q.y, q.z, q.w] };
@@ -329,7 +333,7 @@ export function WalkController({ enabled, engaged, onStep, atTable = false }: Wa
 
     const k = keys.current;
     const crouching = walkRig.crouchLock;
-    const targetEye = crouching ? PLAYER.crouchHeight : PLAYER.height;
+    const targetEye = (crouching ? PLAYER.crouchHeight : PLAYER.height) + walkRig.eyeBoost;
     eyeHeight.current += (targetEye - eyeHeight.current) * Math.min(1, delta * 9);
 
     const speed = crouching ? PLAYER.crouchSpeed : PLAYER.walkSpeed;
@@ -377,6 +381,11 @@ export function WalkController({ enabled, engaged, onStep, atTable = false }: Wa
       bobPhase.current = 0;
       const t = performance.now() * 0.001;
       camera.position.y = eyeHeight.current + Math.sin(t * 1.25) * 0.008;
+    }
+
+    if (walkRig.glance) {
+      walkRig.glance = false;
+      camera.lookAt(LAYOUT.teddy.x, 2.28, LAYOUT.teddy.z);
     }
 
     // Arrows look: left / right turn, up / down look up and down.

@@ -177,6 +177,34 @@ function tableFromQuery(games: GameMetadata[]): GameMetadata | null {
   return games.find(g => g.id === id) ?? null;
 }
 
+function isHighShelf(id: string) {
+  return id === 'south-shelf' || id === 'teddy' || id.startsWith('sh-');
+}
+
+/** The little stool you pull over to reach the south wall's high shelf. */
+function ShelfStool({ x, z }: { x: number; z: number }) {
+  const legs: [number, number][] = [
+    [-0.1, -0.1],
+    [0.1, -0.1],
+    [0.1, 0.1],
+    [-0.1, 0.1],
+  ];
+  return (
+    <group position={[x, 0, z]}>
+      <mesh position={[0, 0.4, 0]} castShadow>
+        <cylinderGeometry args={[0.16, 0.16, 0.04, 16]} />
+        <meshStandardMaterial color="#8a5a32" roughness={0.72} />
+      </mesh>
+      {legs.map(([lx, lz], i) => (
+        <mesh key={i} position={[lx, 0.19, lz]} castShadow>
+          <cylinderGeometry args={[0.018, 0.022, 0.38, 8]} />
+          <meshStandardMaterial color="#6e4524" roughness={0.8} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 export function WalkRoom({
   games,
   overlayGame,
@@ -251,6 +279,10 @@ export function WalkRoom({
   const [toast, setToast] = useState<string | null>(null);
   /** The card you opened stays up until you close it or walk away. */
   const [pinned, setPinned] = useState<Aimed | null>(null);
+  /** High shelf: ask for a stool before the card, then stand on it. */
+  const [stoolAsk, setStoolAsk] = useState<Aimed | null>(null);
+  const [stool, setStool] = useState<null | { x: number; z: number }>(null);
+  const stoolToken = useRef(0);
   const pinnedAt = useRef<{ x: number; z: number } | null>(null);
   const cardOpen = pinned !== null;
   const setCardOpen = useCallback((open: boolean) => {
@@ -468,6 +500,41 @@ export function WalkRoom({
     setPinned(target);
     sound.playButtonClick();
   }, []);
+
+  const grabStool = useCallback(
+    (target: Aimed) => {
+      const token = ++stoolToken.current;
+      const x = walkRig.pos.x;
+      const z = walkRig.pos.z;
+      setStool({ x, z });
+      setStoolAsk(null);
+      walkRig.eyeBoost = 0.2;
+      sound.playMoveClack();
+      window.setTimeout(() => {
+        if (stoolToken.current !== token) return;
+        walkRig.eyeBoost = 0.42;
+        walkRig.glance = true;
+        pinCard(target);
+      }, 520);
+    },
+    [pinCard],
+  );
+
+  useEffect(() => {
+    if (!stool) return;
+    const home = stool;
+    const timer = window.setInterval(() => {
+      if (Math.hypot(walkRig.pos.x - home.x, walkRig.pos.z - home.z) > 0.9) {
+        stoolToken.current += 1;
+        walkRig.eyeBoost = 0;
+        setStool(null);
+      }
+    }, 200);
+    return () => {
+      window.clearInterval(timer);
+      walkRig.eyeBoost = 0;
+    };
+  }, [stool]);
 
   // Packing up takes the box away from the table, and its card with it.
   useEffect(() => {
@@ -788,9 +855,16 @@ export function WalkRoom({
         setArmyAlert(target);
         return;
       }
+      if (isHighShelf(target.id) && !stool) {
+        if (!stoolAsk) {
+          setStoolAsk(target);
+          sound.playButtonClick();
+        } else grabStool(target);
+        return;
+      }
       if (propCardFor(target.id)) pinCard(target);
     },
-    [byId, pinCard, pinned, playGame],
+    [byId, grabStool, pinCard, pinned, playGame, stool, stoolAsk],
   );
 
   const runCardAction = useCallback(
@@ -962,6 +1036,7 @@ export function WalkRoom({
         <FurbyHold />
         <DeviceFocus device={scripted ? null : device} />
         {seated && <GameBoySeat />}
+        {stool && <ShelfStool x={stool.x} z={stool.z} />}
         <DeviceGestures active={Boolean(device || seated) && !big && !scripted} />
         {override.capture && <CaptureClock />}
         {override.cam ? (
@@ -1053,33 +1128,51 @@ export function WalkRoom({
           }}
         />
       )}
+      {stoolAsk && !stool && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-24 z-40 flex justify-center px-4">
+          <button
+            type="button"
+            onClick={() => grabStool(stoolAsk)}
+            className="pointer-events-auto rounded-2xl border border-amber-200/50 bg-[#3a2414]/90 px-5 py-3 text-center shadow-xl"
+          >
+            <span className="block text-[10px] font-bold uppercase tracking-[0.22em] text-amber-200/80">High shelf</span>
+            <span className="mt-1 block font-display text-lg text-white">Grab a stool</span>
+          </button>
+        </div>
+      )}
       {seated && <GameBoyGlass />}
       {seated && (
         <div data-ui="device" className="pointer-events-none absolute inset-0 z-40">
-          <div className={`pointer-events-auto absolute flex gap-2 ${padUp && vp.landscape ? 'left-1/2 top-2 -translate-x-1/2' : 'right-4 top-4'}`}>
-            <button
-              type="button"
-              onClick={() => toggleBig(!big)}
-              className="rounded-xl border border-cyan-200/30 bg-black/60 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-cyan-100 hover:bg-black/80"
-            >
-              {big ? '⤡ Exit big screen' : '⤢ Big screen'}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (big) toggleBig(false);
-                standUp();
-              }}
-              className="rounded-xl border border-white/20 bg-black/60 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-white hover:bg-black/80"
-            >
-              Stand up
-            </button>
+          <div
+            className={`pointer-events-auto absolute left-1/2 flex -translate-x-1/2 flex-col items-center gap-2 ${
+              padUp && !vp.landscape ? 'bottom-[13.5rem]' : 'bottom-4'
+            }`}
+          >
+            {!touch && !big && (
+              <p className="w-max max-w-[calc(100vw-2rem)] rounded-full bg-black/55 px-3 py-1 text-center text-[11px] font-bold uppercase tracking-[0.16em] text-white/75">
+                Arrows · Z = A · X = B · Enter = Start · V = Select · drag looks around · scroll zoom · F big screen · Esc stands up
+              </p>
+            )}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => toggleBig(!big)}
+                className="rounded-xl border border-cyan-200/30 bg-black/60 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-cyan-100 hover:bg-black/80"
+              >
+                {big ? '⤡ Exit big screen' : '⤢ Big screen'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (big) toggleBig(false);
+                  standUp();
+                }}
+                className="rounded-xl border border-white/20 bg-black/60 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-white hover:bg-black/80"
+              >
+                Stand up
+              </button>
+            </div>
           </div>
-          {!touch && !big && (
-            <p className="absolute bottom-3 left-1/2 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-center text-[11px] font-bold uppercase tracking-[0.16em] text-white/75">
-              Arrows · Z = A · X = B · Enter = Start · V = Select · scroll to zoom · F big screen · Esc stands up
-            </p>
-          )}
         </div>
       )}
       {padUp && <TouchGamepad tone={seated ? 'gb' : 'nes'} landscape={vp.landscape} />}

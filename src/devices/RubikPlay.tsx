@@ -251,6 +251,16 @@ function Cube({
 
 const FACE_KEYS = ['U', 'D', 'L', 'R', 'F', 'B'] as const;
 
+/** Colour of each face, the way the cube is stickered. Click the colour, not a letter. */
+const FACE_COLORS: { key: (typeof FACE_KEYS)[number]; name: string; color: string; ink: string }[] = [
+  { key: 'U', name: 'white', color: '#f4f4f4', ink: '#1a1a1a' },
+  { key: 'D', name: 'yellow', color: '#ffd400', ink: '#1a1a1a' },
+  { key: 'F', name: 'green', color: '#009b48', ink: '#f4fff6' },
+  { key: 'B', name: 'blue', color: '#0046ad', ink: '#f4f7ff' },
+  { key: 'L', name: 'orange', color: '#ff7a00', ink: '#1a1a1a' },
+  { key: 'R', name: 'red', color: '#c41e2a', ink: '#fff5f5' },
+];
+
 /** Back the camera off on narrow screens so the whole cube fits across. */
 function FitCube() {
   const { camera, size } = useThree();
@@ -409,35 +419,39 @@ export function RubikPlay({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="shrink-0 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
-        <div className="mx-auto grid max-w-md grid-cols-6 gap-1.5">
-          {FACE_KEYS.map(k => (
-            <button
-              key={k}
-              type="button"
-              onClick={() => doTurn(k, false)}
-              className="rounded-lg border border-white/15 bg-white/10 py-2 font-mono text-sm font-bold text-white active:bg-white/20"
-            >
-              {k}
-            </button>
+        <div className="mx-auto flex max-w-lg flex-wrap items-end justify-center gap-2">
+          {FACE_COLORS.map(face => (
+            <div key={face.key} className="flex w-[3.4rem] flex-col gap-1">
+              <button
+                type="button"
+                aria-label={`Turn the ${face.name} face`}
+                onClick={() => doTurn(face.key, false)}
+                className="flex h-12 items-center justify-center rounded-xl border border-black/30 text-lg font-black shadow-inner"
+                style={{ background: face.color, color: face.ink }}
+              >
+                ↻
+              </button>
+              <button
+                type="button"
+                aria-label={`Turn the ${face.name} face the other way`}
+                onClick={() => doTurn(face.key, true)}
+                className="h-7 rounded-lg border border-black/20 text-xs font-bold"
+                style={{ background: face.color, color: face.ink }}
+              >
+                ↺
+              </button>
+            </div>
           ))}
-          {FACE_KEYS.map(k => (
-            <button
-              key={k + "'"}
-              type="button"
-              onClick={() => doTurn(k, true)}
-              className="rounded-lg border border-white/10 bg-black/40 py-2 font-mono text-sm font-bold text-white/80 active:bg-white/20"
-            >
-              {k}&rsquo;
-            </button>
-          ))}
+        </div>
+        <div className="mx-auto mt-2 grid max-w-md grid-cols-2 gap-1.5">
           <button
             type="button"
             onClick={scramble}
-            className="col-span-3 rounded-lg bg-gradient-to-r from-fuchsia-600 to-amber-500 py-2 font-display text-sm text-white"
+            className="rounded-lg bg-gradient-to-r from-fuchsia-600 to-amber-500 py-2 font-display text-sm text-white"
           >
             Scramble
           </button>
-          <button type="button" onClick={reset} className="col-span-3 rounded-lg border border-white/20 bg-black/40 py-2 text-xs font-bold uppercase tracking-wider text-white/80">
+          <button type="button" onClick={reset} className="rounded-lg border border-white/20 bg-black/40 py-2 text-xs font-bold uppercase tracking-wider text-white/80">
             Reset
           </button>
         </div>
