@@ -20,7 +20,7 @@ import { setTableView, type Shot } from './tableCam';
  */
 
 const YOU: MouseColor = 'red';
-const BOARD = 0.78;
+const BOARD = 0.68;
 const VIEW: Shot = { target: [0, 0, 0], yaw: 0, pitch: 0.98, dist: 0.9 };
 
 const MARBLE_PATH: THREE.Vector3[] = [
