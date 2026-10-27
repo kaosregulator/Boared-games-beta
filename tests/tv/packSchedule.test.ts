@@ -39,6 +39,40 @@ test('a cycle plays every film once, and the next cycle is a different order', (
   assert.deepEqual(packOrder('felix', 7, 3), packOrder('felix', 7, 3));
 });
 
+test('the guide\'s "next" on the last slot is the first film of the next cycle', () => {
+  for (const id of PACKS) {
+    const films = CARTOONS.filter(c => cartoonPack(c) === id);
+    const cycleLen = films.length * PACK_SLOT;
+    for (let cycle = 0; cycle < 40; cycle += 1) {
+      const last = packOnAir(films, id, cycle * cycleLen + cycleLen - 5);
+      const first = packOnAir(films, id, (cycle + 1) * cycleLen + 5);
+      assert.equal(last.slot, films.length - 1);
+      assert.equal(first.slot, 0);
+      assert.equal(last.next.id, first.film.id, `${id} cycle ${cycle}`);
+    }
+  }
+});
+
+test('no short plays twice in a row across the reshuffle, and each cycle is still a full permutation', () => {
+  for (const count of [2, 3, 4, 7, 12, 30]) {
+    for (let cycle = 0; cycle < 300; cycle += 1) {
+      const prev = packOrder('seam', count, cycle);
+      const order = packOrder('seam', count, cycle + 1);
+      assert.deepEqual([...order].sort((a, b) => a - b), Array.from({ length: count }, (_, i) => i));
+      assert.notEqual(order[0], prev[count - 1], `count ${count} cycle ${cycle + 1}`);
+    }
+  }
+  for (const id of PACKS) {
+    const films = CARTOONS.filter(c => cartoonPack(c) === id);
+    let before = '';
+    for (let t = 5; t < films.length * PACK_SLOT * 25; t += PACK_SLOT) {
+      const air = packOnAir(films, id, t);
+      if (films.length > 1) assert.notEqual(air.film.id, before, `${id} repeats at ${t}`);
+      before = air.film.id;
+    }
+  }
+});
+
 test('the Woody and UBI stations carry more than a couple of shorts, with no repeats', () => {
   const ids = CARTOONS.map(c => c.id);
   assert.equal(new Set(ids).size, ids.length, 'a film is listed twice');
