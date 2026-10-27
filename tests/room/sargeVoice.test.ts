@@ -48,6 +48,7 @@ test('the lines the user cut are gone', () => {
   const words = index.clips.map(c => c.text).join(' ');
   assert.doesNotMatch(words, /last present/i);
   assert.doesNotMatch(words, /Lotso|incarcerated/);
+  assert.doesNotMatch(words, /zerg/i);
   assert.match(words, /It's a big one\.\.\. It's a\.\.\. It's a board game! Repeat: Battleship!/);
 });
 
