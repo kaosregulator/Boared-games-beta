@@ -28,6 +28,15 @@ const TRACKS: Track[] = [
 ];
 
 const decoded = new Map<string, AudioBuffer>();
+/** A song you drop in plays for this visit only, and a huge file is refused. */
+export const AUDIO_LIMIT = 40 * 1024 * 1024;
+
+export function audioFileProblem(file: { name: string; type: string; size: number }): string | null {
+  const audio = file.type.startsWith('audio/') || /\.(mp3|wav|ogg|m4a|aac|flac|webm)$/i.test(file.name);
+  if (!audio) return `"${file.name}" is not an audio file.`;
+  if (file.size > AUDIO_LIMIT) return `"${file.name}" is too large to play here. Keep it under 40 MB.`;
+  return null;
+}
 
 function fmt(s: number) {
   if (!Number.isFinite(s)) return '00:00';
@@ -100,7 +109,9 @@ class Deck {
   }
   dispose() {
     this.stop();
+    this.buf = null;
     this.analyser.disconnect();
+    decoded.clear();
   }
 }
 
@@ -229,9 +240,16 @@ export function MediaPlayer({ win }: { win: WinState }) {
         hidden
         onChange={e => {
           const files = Array.from(e.target.files ?? []);
+          e.target.value = '';
           if (!files.length) return;
+          const ok = files.filter(f => {
+            const problem = audioFileProblem(f);
+            if (problem) messageBox('Windows Media Player', { icon: 'error', text: problem, sound: 'chord' });
+            return !problem;
+          });
+          if (!ok.length) return;
           const start = tracks.length;
-          setTracks(t => [...t, ...files.map(f => ({ title: f.name.replace(/\.[^.]+$/, ''), artist: 'My Music', file: f }))]);
+          setTracks(t => [...t, ...ok.map(f => ({ title: f.name.replace(/\.[^.]+$/, ''), artist: 'My Music', file: f }))]);
           window.setTimeout(() => void load(start), 50);
         }}
       />
@@ -239,7 +257,7 @@ export function MediaPlayer({ win }: { win: WinState }) {
         <span className="wmp-brand">Windows Media Player</span>
         <div className="wmp-menu">
           <button type="button" onClick={() => fileInput.current?.click()}>File ▾</button>
-          <button type="button" onClick={() => messageBox('About Windows Media Player', { icon: 'media', text: `${TRACKS[0].credit}\n\nVisualizations drawn for this computer.\nFile opens any song on your own machine.`, sound: 'none' })}>
+          <button type="button" onClick={() => messageBox('About Windows Media Player', { icon: 'media', text: `${TRACKS[0].credit}\n\nVisualizations drawn for this computer.\nFile opens an audio file on your own machine, up to 40 MB. Closing the player drops it from memory.`, sound: 'none' })}>
             Help ▾
           </button>
           <button type="button" className="wmp-x" onClick={() => closeWindow(win.id)}>
