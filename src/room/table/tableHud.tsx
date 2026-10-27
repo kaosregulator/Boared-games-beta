@@ -25,6 +25,8 @@ export interface HudModel {
   typed?: boolean;
   /** Sit below the toys when the card would cover the middle of the table. */
   dock?: 'bottom';
+  /** A corner key that stays readable no matter the camera or the room lights. */
+  legend?: 'battleship';
 }
 
 let hudModel: HudModel | null = null;
@@ -161,9 +163,11 @@ export function TableHudOverlay({
       </span>
     </div>
   );
+  const legend = model.legend === 'battleship' ? <BattleshipKey /> : null;
   if (low) {
     return (
       <div className="pointer-events-none absolute bottom-3 right-3 z-30 flex w-[min(23rem,calc(100vw-1.5rem))] flex-col gap-2 pb-[env(safe-area-inset-bottom)]">
+        {legend}
         {card}
         {pills}
       </div>
@@ -171,6 +175,7 @@ export function TableHudOverlay({
   }
   return (
     <>
+      {legend}
       <div className="pointer-events-none absolute right-3 top-16 z-30 w-[min(23rem,calc(100vw-1.5rem))] pt-[env(safe-area-inset-top)]">
         {card}
       </div>
@@ -180,6 +185,28 @@ export function TableHudOverlay({
         </div>
       )}
     </>
+  );
+}
+
+function BattleshipKey() {
+  const rows: [string, string][] = [
+    ['#9aa7b5', 'Ship'],
+    ['#ff2d3a', 'Hit'],
+    ['#ffffff', 'Miss'],
+    ['#141414', 'Sunk'],
+  ];
+  return (
+    <div className="pointer-events-none fixed bottom-16 left-3 z-30 rounded-2xl border border-white/30 bg-black/80 px-3 py-2 text-white shadow-xl">
+      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-100">Key</p>
+      <div className="mt-1 flex flex-col gap-1">
+        {rows.map(([color, label]) => (
+          <span key={label} className="flex items-center gap-2 text-[11px] font-bold">
+            <span className="h-3 w-3 rounded-full border border-white/70" style={{ background: color }} />
+            {label}
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }
 

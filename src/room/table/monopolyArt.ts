@@ -459,12 +459,11 @@ function drawDeed(ctx: CanvasRenderingContext2D, sp: Space) {
   ctx.fillStyle = INK;
 
   if (sp.kind === 'street' && sp.group && sp.rent) {
+    line(ctx, 'TITLE DEED', W / 2, 32, W - 60, 14, 700);
+    line(ctx, sp.name.toUpperCase(), W / 2, 56, W - 50, 22, 800);
     ctx.fillStyle = GROUP_COLORS[sp.group];
-    ctx.fillRect(16, 16, W - 32, 78);
-    ctx.strokeRect(16, 16, W - 32, 78);
-    ctx.fillStyle = sp.group === 'darkblue' || sp.group === 'green' || sp.group === 'red' || sp.group === 'brown' ? '#ffffff' : INK;
-    line(ctx, 'TITLE DEED', W / 2, 36, W - 60, 15, 700);
-    line(ctx, sp.name.toUpperCase(), W / 2, 66, W - 50, 26, 800);
+    ctx.fillRect(16, 72, W - 32, 18);
+    ctx.strokeRect(16, 72, W - 32, 18);
     ctx.fillStyle = INK;
     const r = sp.rent;
     line(ctx, `RENT $${r[0]}`, W / 2, 116, W - 60, 20, 800);

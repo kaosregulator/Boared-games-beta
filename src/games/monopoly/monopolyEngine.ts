@@ -41,9 +41,11 @@ export interface GameState {
   deeds: Record<number, Holding>;
   dice: [number, number];
   doublesRun: number;
-  /** 'roll' waits for a throw, 'resolve' waits for a decision, 'end' waits for the hand-off. */
-  stage: 'roll' | 'resolve' | 'end' | 'over';
+  /** 'roll' waits for a throw, 'resolve' waits for a decision, 'auction' is a bid, 'end' waits for the hand-off. */
+  stage: 'roll' | 'resolve' | 'auction' | 'end' | 'over';
   pendingPurchase: number | null;
+  /** A property nobody bought outright. Null unless stage is 'auction'. */
+  auction: null | { space: number; high: number; leader: number | null; seat: number; passed: boolean[] };
   drawnCard: Card | null;
   log: string[];
   chanceDeck: number[];
@@ -87,6 +89,7 @@ export function newGame(names: { name: string; isAI: boolean; token: string; gly
     doublesRun: 0,
     stage: 'roll',
     pendingPurchase: null,
+    auction: null,
     drawnCard: null,
     log: ['Roll to leave GO.'],
     chanceDeck: deckIndices(CHANCE.length),
@@ -397,12 +400,171 @@ export function buyPending(state: GameState, buy: boolean): GameState {
     p.cash -= space.price;
     s.deeds[i] = { owner: p.id, houses: 0, hotel: false, mortgaged: false };
     say(s, `${p.name} buys ${space.short} for $${space.price}.`);
-  } else if (buy) {
-    say(s, `${p.name} cannot afford ${space.short}.`);
-  } else {
-    say(s, `${p.name} passes on ${space.short}.`);
+    s.stage = 'end';
+    return s;
+  }
+  if (buy) say(s, `${p.name} cannot afford ${space.short}.`);
+  else say(s, `${p.name} passes on ${space.short}.`);
+
+  const others = s.players.filter(pl => !pl.bankrupt && pl.id !== p.id);
+  if (!buy && others.length > 0 && space.price !== undefined) {
+    s.auction = { space: i, high: 0, leader: null, seat: p.id, passed: s.players.map(pl => pl.bankrupt) };
+    s.stage = 'auction';
+    say(s, `${space.short} is up for auction.`);
+    return advanceAuction(s);
   }
   s.stage = 'end';
+  return s;
+}
+
+function clonePlay(state: GameState): GameState {
+  return {
+    ...state,
+    players: state.players.map(p => ({ ...p })),
+    deeds: { ...state.deeds },
+    auction: state.auction ? { ...state.auction, passed: [...state.auction.passed] } : null,
+  };
+}
+
+function closeAuction(s: GameState): GameState {
+  const a = s.auction;
+  s.auction = null;
+  s.stage = 'end';
+  if (!a || a.leader === null || a.high <= 0) {
+    say(s, 'Nobody bids. The bank keeps it.');
+    return s;
+  }
+  const winner = s.players[a.leader];
+  const price = Math.min(a.high, winner.cash);
+  winner.cash -= price;
+  s.deeds[a.space] = { owner: winner.id, houses: 0, hotel: false, mortgaged: false };
+  say(s, `${winner.name} wins ${spaceAt(a.space).short} for $${price}.`);
+  return s;
+}
+
+/** Move the bid to the next player who has not passed. Close when only the leader is left. */
+function advanceAuction(s: GameState): GameState {
+  const a = s.auction;
+  if (!a) return s;
+  const live = s.players.filter(p => !p.bankrupt && !a.passed[p.id]);
+  if (live.length === 0 || (a.leader !== null && live.every(p => p.id === a.leader))) return closeAuction(s);
+  let n = a.seat;
+  for (let i = 0; i < s.players.length; i += 1) {
+    n = (n + 1) % s.players.length;
+    if (!s.players[n].bankrupt && !a.passed[n]) {
+      a.seat = n;
+      return s;
+    }
+  }
+  return closeAuction(s);
+}
+
+export function auctionBid(state: GameState): GameState {
+  if (state.stage !== 'auction' || !state.auction) return state;
+  const s = clonePlay(state);
+  const a = s.auction!;
+  const p = s.players[a.seat];
+  const next = a.high + 10;
+  if (p.cash < next) return auctionPass(state);
+  a.high = next;
+  a.leader = p.id;
+  say(s, `${p.name} bids $${next}.`);
+  return advanceAuction(s);
+}
+
+export function auctionPass(state: GameState): GameState {
+  if (state.stage !== 'auction' || !state.auction) return state;
+  const s = clonePlay(state);
+  const a = s.auction!;
+  const p = s.players[a.seat];
+  a.passed[p.id] = true;
+  say(s, `${p.name} passes.`);
+  return advanceAuction(s);
+}
+
+function groupLevels(s: GameState, group: string) {
+  return BOARD.filter(sp => sp.group === group).map(sp => {
+    const d = s.deeds[sp.i];
+    return d?.hotel ? 5 : (d?.houses ?? 0);
+  });
+}
+
+export function canSellBuilding(s: GameState, i: number, owner: number) {
+  const space = spaceAt(i);
+  const deed = s.deeds[i];
+  if (!deed || deed.owner !== owner || (!deed.hotel && deed.houses <= 0)) return false;
+  if (space.kind !== 'street' || !space.group) return false;
+  const mine = deed.hotel ? 5 : deed.houses;
+  return mine >= Math.max(...groupLevels(s, space.group));
+}
+
+export function sellBuilding(state: GameState, i: number): GameState {
+  const s = clonePlay(state);
+  const p = s.players[s.turn];
+  if (!canSellBuilding(s, i, p.id)) return state;
+  const space = spaceAt(i);
+  const deed = { ...s.deeds[i] };
+  const back = Math.floor((space.houseCost ?? 0) / 2);
+  p.cash += back;
+  if (deed.hotel) {
+    deed.hotel = false;
+    deed.houses = 4;
+    say(s, `${p.name} sells the hotel on ${space.short} for $${back}.`);
+  } else {
+    deed.houses -= 1;
+    say(s, `${p.name} sells a house on ${space.short} for $${back}.`);
+  }
+  s.deeds[i] = deed;
+  return s;
+}
+
+export function canMortgage(s: GameState, i: number, owner: number) {
+  const deed = s.deeds[i];
+  const space = spaceAt(i);
+  if (!deed || deed.owner !== owner || deed.mortgaged || deed.houses > 0 || deed.hotel) return false;
+  if (space.kind === 'street' && space.group) {
+    const built = BOARD.filter(sp => sp.group === space.group).some(sp => {
+      const d = s.deeds[sp.i];
+      return Boolean(d && (d.houses > 0 || d.hotel));
+    });
+    if (built) return false;
+  }
+  return true;
+}
+
+export function mortgage(state: GameState, i: number): GameState {
+  const s = clonePlay(state);
+  const p = s.players[s.turn];
+  if (!canMortgage(s, i, p.id)) return state;
+  const space = spaceAt(i);
+  const back = Math.floor((space.price ?? 0) / 2);
+  p.cash += back;
+  s.deeds[i] = { ...s.deeds[i], mortgaged: true };
+  say(s, `${p.name} mortgages ${space.short} for $${back}.`);
+  return s;
+}
+
+/** Offer your cheapest open street to the next player, at 80% of the price. */
+export function offerTrade(state: GameState): GameState {
+  const s = clonePlay(state);
+  const me = s.players[s.turn];
+  const them = s.players.find(p => p.id !== me.id && !p.bankrupt);
+  const mine = BOARD.filter(sp => sp.kind === 'street' && canMortgage(s, sp.i, me.id)).sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
+  if (!them || mine.length === 0) {
+    say(s, `${me.name} has nothing free to trade.`);
+    return s;
+  }
+  const sp = mine[0];
+  const price = Math.floor((sp.price ?? 0) * 0.8);
+  const wants = them.cash >= price && (aiWantsToBuy({ ...s, turn: them.id }, sp.i) || price <= (sp.price ?? 0));
+  if (!wants) {
+    say(s, `${them.name} passes on ${sp.short}.`);
+    return s;
+  }
+  them.cash -= price;
+  me.cash += price;
+  s.deeds[sp.i] = { ...s.deeds[sp.i], owner: them.id };
+  say(s, `${me.name} sells ${sp.short} to ${them.name} for $${price}.`);
   return s;
 }
 

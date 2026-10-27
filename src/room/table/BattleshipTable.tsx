@@ -254,13 +254,19 @@ function Markers({ shots, ocean }: { shots: Shots; ocean: THREE.Vector3 }) {
         const [x, y] = k.split(',').map(Number);
         const p = cellPos(ocean, x, y);
         return v === 'hit' ? (
-          <sprite key={k} position={[p.x, p.y + 0.02, p.z]} scale={[CELL * 0.9, CELL * 0.9, 1]}>
-            <spriteMaterial map={hitTex} transparent depthWrite={false} toneMapped={false} />
-          </sprite>
+          <group key={k} position={[p.x, p.y + 0.004, p.z]}>
+            <mesh rotation={[-Math.PI / 2, 0, 0]}>
+              <circleGeometry args={[CELL * 0.28, 16]} />
+              <meshBasicMaterial color="#ff2d3a" toneMapped={false} />
+            </mesh>
+            <sprite position={[0, 0.016, 0]} scale={[CELL * 0.9, CELL * 0.9, 1]}>
+              <spriteMaterial map={hitTex} transparent depthWrite={false} toneMapped={false} />
+            </sprite>
+          </group>
         ) : (
-          <mesh key={k} position={[p.x, p.y + 0.001, p.z]} rotation={[-Math.PI / 2, 0, 0]}>
-            <ringGeometry args={[CELL * 0.14, CELL * 0.24, 18]} />
-            <meshBasicMaterial color="#f2fbff" transparent opacity={0.85} depthWrite={false} />
+          <mesh key={k} position={[p.x, p.y + 0.002, p.z]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[CELL * 0.16, CELL * 0.28, 18]} />
+            <meshBasicMaterial color="#ffffff" toneMapped={false} />
           </mesh>
         );
       })}
@@ -476,6 +482,7 @@ export function BattleshipTable({ onLeave }: { onLeave: () => void }) {
       title: 'Battleship',
       note: phase === 'over' ? (winner === 'me' ? 'Their whole fleet is on the bottom. You win!' : 'Your fleet is gone. They win.') : news,
       detail: phase === 'place' ? `${mine.length}/${FLEET.length} ships placed` : `Your ships afloat ${afloat(mine)} · theirs ${afloat(theirs)}`,
+      legend: 'battleship',
       onLeave,
       actions,
     });
