@@ -1,9 +1,10 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { ROOMS, SUSPECTS, WEAPONS, cardKey, type Card } from '../../games/clue/clueData';
+import { ROOMS, SUSPECTS, WEAPONS, cardKey, type Card, type Suspect, type Weapon } from '../../games/clue/clueData';
 import type { CluePlayer } from '../../games/clue/clueEngine';
-import { CLUE_CARD, clueCardTexture } from './clueArt';
+import { CLUE_CARD, CLUE_PORTRAIT, clueCardTexture } from './clueArt';
+import { FIGURE_H, buildFigure } from './ClueFigure';
 import { CARD_RISE_S, fanCardDelay } from './cluePace';
 import { wasDrag } from './tableCam';
 
@@ -118,6 +119,7 @@ export function CameraCard({
       <mesh material={mats}>
         <boxGeometry args={[CLUE_CARD.w, CLUE_CARD.h, T]} />
       </mesh>
+      {card && <CardPortrait card={card} spin="up" />}
       {glow && (
         <mesh position={[0, 0, -0.0005]} raycast={noRay}>
           <planeGeometry args={[CLUE_CARD.w + 0.004, CLUE_CARD.h + 0.004]} />
@@ -252,11 +254,191 @@ function HandCard({ card, x, glow, onPick }: { card: Card; x: number; glow: bool
       <mesh material={mats} position={[0, 0, 0]}>
         <boxGeometry args={[CLUE_CARD.w, CLUE_CARD.h, T]} />
       </mesh>
+      <CardPortrait card={card} spin="flat" />
       {glow && (
         <mesh position={[0, 0, -0.0006]} raycast={noRay}>
           <planeGeometry args={[CLUE_CARD.w + 0.005, CLUE_CARD.h + 0.005]} />
           <meshBasicMaterial color="#ffd36b" toneMapped={false} />
         </mesh>
+      )}
+    </group>
+  );
+}
+
+/* ---------------------------- portrait in the frame ------------------------ */
+
+/** How tall the tallest bust is, in buildFigure units, so a feather still clears the frame. */
+const BUST_UNITS = 1.22;
+
+function disposeTree(root: THREE.Object3D) {
+  const geos = new Set<THREE.BufferGeometry>();
+  const mats = new Set<THREE.Material>();
+  root.traverse(o => {
+    const mesh = o as THREE.Mesh;
+    if (mesh.geometry) geos.add(mesh.geometry);
+    const mat = mesh.material;
+    if (Array.isArray(mat)) mat.forEach(x => mats.add(x));
+    else if (mat) mats.add(mat);
+  });
+  geos.forEach(g => g.dispose());
+  mats.forEach(m => m.dispose());
+}
+
+/** The same person who walks the board, small enough to live in the card window. */
+function SuspectBust({ id }: { id: Suspect }) {
+  const rig = useMemo(() => {
+    const r = buildFigure(id);
+    r.bob.geometry.dispose();
+    (r.bob.material as THREE.Material).dispose();
+    r.bob.removeFromParent();
+    r.root.traverse(o => {
+      const mesh = o as THREE.Mesh;
+      mesh.castShadow = false;
+      mesh.receiveShadow = false;
+      if (mesh.isMesh) mesh.raycast = () => {};
+    });
+    return r;
+  }, [id]);
+  useEffect(() => () => disposeTree(rig.root), [rig]);
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    rig.body.position.y = Math.sin(t * 2.1) * 0.012;
+    rig.head.rotation.y = Math.sin(t * 0.65) * 0.5;
+    rig.head.rotation.x = -0.06 + Math.sin(t * 0.5) * 0.06;
+    rig.armL.rotation.x = 0.12 + Math.sin(t * 1.35) * 0.05;
+    rig.armR.rotation.x = 0.12 - Math.sin(t * 1.35) * 0.05;
+  });
+  const fit = (CLUE_PORTRAIT.h * 0.92) / (BUST_UNITS * FIGURE_H);
+  return (
+    <group scale={fit}>
+      <primitive object={rig.root} position={[0, -(BUST_UNITS * FIGURE_H) / 2, 0]} />
+    </group>
+  );
+}
+
+/** The six weapons, cast like the real tokens: about two centimetres long. */
+export function WeaponMini({ id }: { id: Weapon }) {
+  const metal = useMemo(() => new THREE.MeshStandardMaterial({ color: '#c9ccd1', metalness: 0.55, roughness: 0.32 }), []);
+  const brass = useMemo(() => new THREE.MeshStandardMaterial({ color: '#d4a94a', metalness: 0.6, roughness: 0.3 }), []);
+  const s = 0.02;
+  switch (id) {
+    case 'Candlestick':
+      return (
+        <group scale={s}>
+          <mesh material={brass} position={[0, 0.04, 0]}>
+            <cylinderGeometry args={[0.18, 0.22, 0.08, 16]} />
+          </mesh>
+          <mesh material={brass} position={[0, 0.3, 0]}>
+            <cylinderGeometry args={[0.05, 0.08, 0.45, 10]} />
+          </mesh>
+          <mesh material={brass} position={[0, 0.55, 0]}>
+            <cylinderGeometry args={[0.12, 0.07, 0.06, 12]} />
+          </mesh>
+          <mesh position={[0, 0.72, 0]}>
+            <cylinderGeometry args={[0.05, 0.05, 0.3, 10]} />
+            <meshStandardMaterial color="#f6f1e2" roughness={0.6} />
+          </mesh>
+          <mesh position={[0, 0.92, 0]}>
+            <sphereGeometry args={[0.04, 8, 6]} />
+            <meshBasicMaterial color="#ffcf6b" toneMapped={false} />
+          </mesh>
+        </group>
+      );
+    case 'Knife':
+      return (
+        <group scale={s} rotation={[0, 0.4, 0]}>
+          <mesh material={metal} position={[0.18, 0.03, 0]}>
+            <boxGeometry args={[0.55, 0.03, 0.12]} />
+          </mesh>
+          <mesh position={[-0.25, 0.04, 0]}>
+            <boxGeometry args={[0.32, 0.07, 0.09]} />
+            <meshStandardMaterial color="#4a2a14" roughness={0.6} />
+          </mesh>
+        </group>
+      );
+    case 'Lead Pipe':
+      return (
+        <group scale={s} rotation={[0, -0.5, 0]}>
+          <mesh material={metal} position={[0, 0.06, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.06, 0.06, 0.8, 10]} />
+          </mesh>
+          <mesh material={metal} position={[0.42, 0.06, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.08, 0.08, 0.08, 10]} />
+          </mesh>
+        </group>
+      );
+    case 'Revolver':
+      return (
+        <group scale={s} rotation={[0, 0.9, 0]}>
+          <mesh material={metal} position={[0.2, 0.06, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.035, 0.035, 0.45, 8]} />
+          </mesh>
+          <mesh material={metal} position={[-0.05, 0.06, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.09, 0.09, 0.14, 10]} />
+          </mesh>
+          <mesh position={[-0.2, 0.05, 0]} rotation={[0, 0, 0.5]}>
+            <boxGeometry args={[0.1, 0.24, 0.08]} />
+            <meshStandardMaterial color="#3a2414" roughness={0.6} />
+          </mesh>
+        </group>
+      );
+    case 'Rope':
+      return (
+        <group scale={s}>
+          {[0, 1, 2].map(i => (
+            <mesh key={i} position={[0, 0.04 + i * 0.05, 0]} rotation={[Math.PI / 2, 0, 0]}>
+              <torusGeometry args={[0.2 - i * 0.03, 0.04, 6, 18]} />
+              <meshStandardMaterial color="#c9a46a" roughness={0.9} />
+            </mesh>
+          ))}
+        </group>
+      );
+    default:
+      return (
+        <group scale={s} rotation={[0, 1.8, 0]}>
+          <mesh material={metal} position={[0, 0.03, 0]}>
+            <boxGeometry args={[0.6, 0.05, 0.09]} />
+          </mesh>
+          <mesh material={metal} position={[0.34, 0.03, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.1, 0.035, 6, 12, Math.PI * 1.5]} />
+          </mesh>
+        </group>
+      );
+  }
+}
+
+const WEAPON_LIFT: Record<Weapon, number> = {
+  Candlestick: -0.0095,
+  Knife: -0.001,
+  'Lead Pipe': -0.0012,
+  Revolver: -0.0015,
+  Rope: -0.004,
+  Wrench: -0.0008,
+};
+
+/**
+ * The portrait: the real suspect or weapon, turning in the picture window.
+ * Held-up cards spin like a bust on a stand. Cards lying on the felt spin in
+ * the plane of the card so the face stays toward you.
+ */
+export function CardPortrait({ card, spin }: { card: Card; spin: 'up' | 'flat' }) {
+  const g = useRef<THREE.Group>(null);
+  useFrame(({ clock }, dt) => {
+    const n = g.current;
+    if (!n) return;
+    if (spin === 'up') n.rotation.y += dt * 0.85;
+    else n.rotation.z += dt * 0.65;
+    n.position.y = CLUE_PORTRAIT.y + Math.sin(clock.elapsedTime * 1.6) * 0.0003;
+  });
+  if (card.kind === 'room') return null;
+  return (
+    <group ref={g} position={[0, CLUE_PORTRAIT.y, CLUE_PORTRAIT.z]} raycast={noRay}>
+      {card.kind === 'suspect' ? (
+        <SuspectBust id={card.value} />
+      ) : (
+        <group position={[0, WEAPON_LIFT[card.value], 0]} rotation={[spin === 'up' ? 0.4 : 1.05, 0, 0]} scale={1.12}>
+          <WeaponMini id={card.value} />
+        </group>
       )}
     </group>
   );

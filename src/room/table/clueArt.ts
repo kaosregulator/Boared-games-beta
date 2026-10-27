@@ -746,165 +746,35 @@ export function standeeTexture(kind: StandeeKind) {
 
 export const CLUE_CARD = { w: 0.036, h: 0.054 };
 
-const CARD_CACHE = new Map<string, THREE.Texture>();
+/** Logical card, before the 1.5× canvas scale. The name plaque starts at y 268. */
+const CARD_PX = { w: 240, h: 360 };
+const WINDOW_PX = { x: 36, y: 34, w: 168, h: 216 };
+/** Pixel row where the name plaque starts, measured from the top of the logical card. */
+export const CLUE_PLAQUE_TOP = 268;
 
-function suspectFace(g: CanvasRenderingContext2D, id: string, colour: string, cx: number, cy: number, s: number) {
-  // shoulders
-  g.fillStyle = colour;
-  g.beginPath();
-  g.ellipse(cx, cy + s * 1.15, s * 0.95, s * 0.6, 0, Math.PI, 0);
-  g.fill();
-  g.fillStyle = '#efcfae';
-  g.beginPath();
-  g.arc(cx, cy, s * 0.45, 0, Math.PI * 2);
-  g.fill();
-  const hair: Record<string, string> = { Scarlett: '#1a1414', Mustard: '#c9c2b5', White: '#e8e4dc', Green: '#4a3020', Peacock: '#3a2412', Plum: '#5a4a3a' };
-  g.fillStyle = hair[id] ?? '#333';
-  g.beginPath();
-  g.arc(cx, cy - s * 0.08, s * 0.48, Math.PI * 1.02, Math.PI * 1.98);
-  g.fill();
-  if (id === 'Scarlett') {
-    g.fillRect(cx - s * 0.48, cy - s * 0.1, s * 0.16, s * 0.5);
-    g.fillRect(cx + s * 0.32, cy - s * 0.1, s * 0.16, s * 0.5);
-  }
-  if (id === 'Mustard') {
-    g.fillStyle = '#c9c2b5';
-    g.fillRect(cx - s * 0.22, cy + s * 0.12, s * 0.44, s * 0.08);
-  }
-  if (id === 'Plum') {
-    g.strokeStyle = '#222';
-    g.lineWidth = 2;
-    g.beginPath();
-    g.arc(cx - s * 0.17, cy, s * 0.11, 0, Math.PI * 2);
-    g.arc(cx + s * 0.17, cy, s * 0.11, 0, Math.PI * 2);
-    g.stroke();
-  }
-  if (id === 'Peacock') {
-    g.strokeStyle = '#1f6aa8';
-    g.lineWidth = 4;
-    g.beginPath();
-    g.moveTo(cx + s * 0.3, cy - s * 0.4);
-    g.quadraticCurveTo(cx + s * 0.7, cy - s * 0.9, cx + s * 0.5, cy - s * 1.1);
-    g.stroke();
-  }
-  if (id === 'White') {
-    g.fillStyle = '#ffffff';
-    g.fillRect(cx - s * 0.3, cy - s * 0.55, s * 0.6, s * 0.12);
-  }
-  if (id === 'Green') {
-    g.fillStyle = '#1e3a28';
-    g.fillRect(cx - s * 0.4, cy - s * 0.62, s * 0.8, s * 0.12);
-    g.fillRect(cx - s * 0.28, cy - s * 0.95, s * 0.56, s * 0.36);
-  }
-  g.fillStyle = '#222';
-  g.beginPath();
-  g.arc(cx - s * 0.15, cy - s * 0.02, 2, 0, Math.PI * 2);
-  g.arc(cx + s * 0.15, cy - s * 0.02, 2, 0, Math.PI * 2);
-  g.fill();
-}
-
-/** Engraving-style weapon pictures, so every card matches the tokens on the board. */
-function weaponArt(g: CanvasRenderingContext2D, w: string, cx: number, cy: number) {
-  const steel = g.createLinearGradient(cx - 60, cy - 60, cx + 60, cy + 60);
-  steel.addColorStop(0, '#eef1f4');
-  steel.addColorStop(0.5, '#9aa3ad');
-  steel.addColorStop(1, '#5a636d');
-  const brass = g.createLinearGradient(cx - 40, 0, cx + 40, 0);
-  brass.addColorStop(0, '#8a6a1a');
-  brass.addColorStop(0.5, '#f2d27a');
-  brass.addColorStop(1, '#8a6a1a');
-  g.save();
-  g.lineJoin = 'round';
-  g.strokeStyle = '#2a2a2e';
-  g.lineWidth = 3;
-  const shape = (draw: () => void, fill: string | CanvasGradient) => {
-    g.beginPath();
-    draw();
-    g.fillStyle = fill;
-    g.fill();
-    g.stroke();
-  };
-  if (w === 'Candlestick') {
-    shape(() => g.ellipse(cx, cy + 80, 50, 14, 0, 0, Math.PI * 2), brass);
-    shape(() => g.rect(cx - 9, cy - 30, 18, 104), brass);
-    shape(() => g.ellipse(cx, cy - 30, 30, 9, 0, 0, Math.PI * 2), brass);
-    shape(() => g.rect(cx - 10, cy - 86, 20, 54), '#f6f1e2');
-    shape(() => g.ellipse(cx, cy - 98, 7, 14, 0, 0, Math.PI * 2), '#ffb83a');
-  } else if (w === 'Knife') {
-    g.translate(cx, cy);
-    g.rotate(-0.8);
-    shape(() => {
-      g.moveTo(-10, -20);
-      g.lineTo(90, -6);
-      g.quadraticCurveTo(60, 14, -10, 12);
-      g.closePath();
-    }, steel);
-    shape(() => g.rect(-22, -18, 12, 34), brass);
-    shape(() => g.roundRect(-92, -12, 70, 22, 8), '#4a2a14');
-  } else if (w === 'Lead Pipe') {
-    g.translate(cx, cy);
-    g.rotate(-0.7);
-    shape(() => g.rect(-90, -11, 160, 22), steel);
-    shape(() => g.rect(60, -16, 26, 32), steel);
-    shape(() => g.rect(-96, -15, 18, 30), steel);
-  } else if (w === 'Revolver') {
-    g.translate(cx - 10, cy);
-    shape(() => g.rect(-30, -30, 110, 16), steel);
-    shape(() => g.roundRect(-36, -38, 50, 34, 6), steel);
-    shape(() => g.ellipse(-10, -12, 24, 18, 0, 0, Math.PI * 2), steel);
-    shape(() => {
-      g.moveTo(-36, -8);
-      g.lineTo(-10, -4);
-      g.lineTo(-30, 60);
-      g.lineTo(-62, 54);
-      g.closePath();
-    }, '#4a2a14');
-    g.beginPath();
-    g.arc(0, 8, 14, 0, Math.PI);
-    g.stroke();
-  } else if (w === 'Rope') {
-    g.lineWidth = 16;
-    g.strokeStyle = '#8a6a3a';
-    for (let i = 0; i < 3; i += 1) {
-      g.beginPath();
-      g.ellipse(cx, cy + 20 - i * 26, 62 - i * 6, 24, 0, 0, Math.PI * 2);
-      g.stroke();
-    }
-    g.lineWidth = 10;
-    g.strokeStyle = '#d9b77a';
-    for (let i = 0; i < 3; i += 1) {
-      g.beginPath();
-      g.ellipse(cx, cy + 20 - i * 26, 62 - i * 6, 24, 0, 0, Math.PI * 2);
-      g.stroke();
-    }
-    g.beginPath();
-    g.moveTo(cx + 50, cy - 40);
-    g.quadraticCurveTo(cx + 80, cy - 90, cx + 40, cy - 100);
-    g.stroke();
-  } else {
-    g.translate(cx, cy);
-    g.rotate(-0.75);
-    shape(() => g.roundRect(-80, -11, 130, 22, 8), steel);
-    shape(() => {
-      g.arc(70, 0, 30, 0.6, Math.PI * 2 - 0.6);
-      g.lineTo(96, -10);
-      g.lineTo(96, 10);
-      g.closePath();
-    }, steel);
-    g.beginPath();
-    g.arc(-70, 0, 7, 0, Math.PI * 2);
-    g.fillStyle = '#d9cfb5';
-    g.fill();
-    g.stroke();
-  }
-  g.restore();
+function cardLocalY(pixelFromTop: number) {
+  return ((CARD_PX.h / 2 - pixelFromTop) / CARD_PX.h) * CLUE_CARD.h;
 }
 
 /**
- * A Clue card in the classic deck layout: a coloured border, the picture in
- * the middle, the name in black on a cream plaque. Drawn from the portraits,
- * weapons and room floors already in this file. Null is the back.
- * The canvas is 1.5× the old card so the plaque stays sharp when the card is held up.
+ * The picture window inside the classic frame. A spinning figure stands here;
+ * the painted card keeps the border, the cream mat, and the name plaque.
+ * +y is toward the top of the card, +z comes out of the face.
+ */
+export const CLUE_PORTRAIT = {
+  y: cardLocalY(WINDOW_PX.y + WINDOW_PX.h / 2),
+  z: 0.0045,
+  w: (WINDOW_PX.w / CARD_PX.w) * CLUE_CARD.w,
+  h: (WINDOW_PX.h / CARD_PX.h) * CLUE_CARD.h,
+};
+
+const CARD_CACHE = new Map<string, THREE.Texture>();
+
+/**
+ * A Clue card in the classic deck layout: a coloured border, a picture window,
+ * the name in black on a cream plaque. Suspects and weapons leave that window
+ * empty so a spinning figure can stand in it. Rooms still show their floor.
+ * Null is the back. The canvas is 1.5× so the plaque stays sharp when held up.
  */
 export function clueCardTexture(card: Card | null) {
   const id = card ? `${card.kind}:${card.value}` : 'back';
@@ -963,14 +833,21 @@ export function clueCardTexture(card: Card | null) {
     g.restore();
     g.fillStyle = '#efe6d2';
     g.fillRect(32, 28, 176, 228);
-    if (card.kind === 'suspect') {
-      const s = SUSPECTS.find(x => x.id === card.value)!;
-      suspectFace(g, s.id, s.colour, 120, 132, 62);
-    } else if (card.kind === 'weapon') {
-      weaponArt(g, card.value, 120, 140);
-    } else {
+    if (card.kind === 'room') {
       const floor = floorTexture(card.value, 3, 3).image as HTMLCanvasElement;
       g.drawImage(floor, 36, 32, 168, 220);
+    } else {
+      // Empty stage. The real portrait is a mesh in front of this window.
+      g.fillStyle = '#f4ecda';
+      g.fillRect(WINDOW_PX.x, WINDOW_PX.y, WINDOW_PX.w, WINDOW_PX.h);
+      const vig = g.createRadialGradient(120, 148, 18, 120, 148, 108);
+      vig.addColorStop(0, 'rgba(255,252,245,0)');
+      vig.addColorStop(1, 'rgba(92, 64, 32, 0.22)');
+      g.fillStyle = vig;
+      g.fillRect(WINDOW_PX.x, WINDOW_PX.y, WINDOW_PX.w, WINDOW_PX.h);
+      g.strokeStyle = '#c6a15a';
+      g.lineWidth = 1.5;
+      g.strokeRect(WINDOW_PX.x, WINDOW_PX.y, WINDOW_PX.w, WINDOW_PX.h);
     }
     const name = card.kind === 'suspect' ? SUSPECTS.find(x => x.id === card.value)!.full : card.value;
     g.fillStyle = '#fffaf1';
