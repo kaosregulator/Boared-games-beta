@@ -38,3 +38,14 @@ test('a cycle plays every film once, and the next cycle is a different order', (
   assert.notDeepEqual(first, second);
   assert.deepEqual(packOrder('felix', 7, 3), packOrder('felix', 7, 3));
 });
+
+test('the Woody and UBI stations carry more than a couple of shorts, with no repeats', () => {
+  const ids = CARTOONS.map(c => c.id);
+  assert.equal(new Set(ids).size, ids.length, 'a film is listed twice');
+  const woody = CARTOONS.filter(c => cartoonPack(c) === 'woody');
+  const ubi = CARTOONS.filter(c => cartoonPack(c) === 'ubi');
+  assert.ok(woody.length >= 8, `woody has ${woody.length}`);
+  assert.ok(ubi.length >= 12, `ubi has ${ubi.length}`);
+  assert.ok(woody.some(c => c.title.startsWith('Woody Woodpecker')));
+  assert.ok(woody.every(c => c.studio === 'Walter Lantz'));
+});
