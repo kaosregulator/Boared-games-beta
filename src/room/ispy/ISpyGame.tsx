@@ -143,6 +143,13 @@ export function startPage(difficulty: Difficulty, seed?: number) {
   emit();
 }
 
+/** Leave the bean-bag book and go back to the carpet game, or the open book on the rug. */
+export function leaveReading() {
+  ispy.phase = ispy.puzzle ? 'play' : 'book';
+  ispySfx.pageTurn();
+  emit();
+}
+
 /** Book mode: take the book to the bean bag and read it. */
 export function startReading() {
   wakeISpyAudio();
@@ -1389,7 +1396,7 @@ export function ISpyHud({ onExit }: { onExit: () => void }) {
   const btn = 'rounded-xl border border-white/25 bg-black/55 px-3 py-2 text-[11px] font-bold uppercase tracking-wider';
 
   if (s.phase === 'off') return null;
-  if (s.phase === 'reading') return <ReaderHud onExit={onExit} />;
+  if (s.phase === 'reading') return <ReaderHud onExit={leaveReading} />;
 
   if (s.phase === 'book') {
     return (

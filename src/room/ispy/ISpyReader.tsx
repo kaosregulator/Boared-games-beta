@@ -11,11 +11,10 @@ import { rng } from './puzzle';
 
 /**
  * Book mode: sit in the bean bag with the I Spy book open in your lap.
- * The left page has the riddle as a checklist, the right page the picture.
+ * Both pages are pictures, and the things to find sit along the bottom.
  * Click something in the picture and it gets circled in pink pen (like the
- * library copy everyone already wrote in) and crossed off the list. Turn
- * the pages with the arrows. The photo pages come first, then pages shot
- * from the toy box, always the same ones.
+ * library copy everyone already wrote in). Turn the pages with the arrows.
+ * The photo pages come first, then pages shot from the toy box.
  */
 
 const PAGE_W = 0.2;
@@ -31,6 +30,8 @@ export const reader = {
   hint: null as null | { page: number; spot: number; until: number },
   turning: 0 as -1 | 0 | 1,
   ready: false,
+  /** 1 is the lap view. Pinch, scroll, or the buttons step closer. */
+  zoom: 1,
   toast: null as null | { text: string; until: number },
   listeners: new Set<() => void>(),
 };
@@ -83,18 +84,6 @@ function loadImage(src: string) {
     img.onerror = reject;
     img.src = src;
   });
-}
-
-const strikeImages: HTMLImageElement[] = [];
-function strikes() {
-  if (!strikeImages.length && typeof window !== 'undefined') {
-    for (let i = 1; i <= 5; i++) {
-      const img = new Image();
-      img.src = `/ispy/strike-${i}.webp`;
-      strikeImages.push(img);
-    }
-  }
-  return strikeImages;
 }
 
 /** Shoot a toy page: the pile laid out on its carpet, photographed from above. */
@@ -183,12 +172,15 @@ function getPicture(index: number, gl: THREE.WebGLRenderer): Promise<Picture> {
   return done;
 }
 
-/** Where the picture sits on the right page canvas (fit inside the margins). */
+/** Picture above a find-list, the way the paper book is printed. */
+const FOOTER = 132;
+
+/** Where the picture sits on a page canvas (fit above the list). */
 function fit(pic: Picture) {
-  const s = Math.min((CANVAS_W - MARGIN * 2) / pic.w, (CANVAS_H - MARGIN * 2 - 40) / pic.h);
+  const s = Math.min((CANVAS_W - MARGIN * 2) / pic.w, (CANVAS_H - MARGIN - FOOTER - 8) / pic.h);
   const w = pic.w * s;
   const h = pic.h * s;
-  return { x: (CANVAS_W - w) / 2, y: MARGIN + (CANVAS_H - MARGIN * 2 - 40 - h) / 2, w, h, s };
+  return { x: (CANVAS_W - w) / 2, y: MARGIN * 0.4 + (CANVAS_H - FOOTER - h) / 2, w, h, s };
 }
 
 /** A wobbly pink pen circle, drawn up to `t` of the way round. */
@@ -217,14 +209,39 @@ function penCircle(g: CanvasRenderingContext2D, cx: number, cy: number, r: numbe
   g.restore();
 }
 
-function drawRight(g: CanvasRenderingContext2D, index: number, pic: Picture | undefined, now: number) {
+function drawFindBand(g: CanvasRenderingContext2D, index: number, pic: Picture, now: number) {
+  const top = CANVAS_H - FOOTER;
+  g.fillStyle = 'rgba(244, 236, 216, 0.96)';
+  g.fillRect(0, top, CANVAS_W, FOOTER);
+  g.strokeStyle = '#c9b48a';
+  g.lineWidth = 2;
+  g.beginPath();
+  g.moveTo(MARGIN, top + 4);
+  g.lineTo(CANVAS_W - MARGIN, top + 4);
+  g.stroke();
+  const found = foundOn(index);
+  g.font = '700 18px Georgia, serif';
+  g.textAlign = 'left';
+  const colW = (CANVAS_W - MARGIN * 2) / 2;
+  pic.spots.forEach((s, i) => {
+    const col = i % 2;
+    const row = Math.floor(i / 2);
+    const x = MARGIN + col * colW;
+    const y = top + 28 + row * 22;
+    if (y > CANVAS_H - 8) return;
+    const done = found.has(i);
+    g.fillStyle = done ? 'rgba(58,42,26,0.4)' : '#3a2a1a';
+    const mark = done ? '✓ ' : '• ';
+    g.fillText(mark + s.label, x, y);
+  });
+}
+
+function drawPicturePage(g: CanvasRenderingContext2D, index: number, pic: Picture | undefined, now: number, pageNo: string) {
   g.fillStyle = '#f4ecd8';
   g.fillRect(0, 0, CANVAS_W, CANVAS_H);
-  g.fillStyle = '#6b4e2a';
-  g.font = 'italic 22px Georgia, serif';
-  g.textAlign = 'right';
-  g.fillText(String(index * 2 + 3), CANVAS_W - MARGIN, CANVAS_H - 18);
   if (!pic) {
+    g.fillStyle = '#6b4e2a';
+    g.font = 'italic 22px Georgia, serif';
     g.textAlign = 'center';
     g.fillText('turning...', CANVAS_W / 2, CANVAS_H / 2);
     return;
@@ -243,85 +260,19 @@ function drawRight(g: CanvasRenderingContext2D, index: number, pic: Picture | un
     const pulse = 1 + Math.sin(now / 120) * 0.08;
     penCircle(g, f.x + s.x * f.w, f.y + s.y * f.h, s.r * f.w * 1.6 * pulse, 1, 99, 'rgba(255,214,64,0.95)', true);
   }
+  drawFindBand(g, index, pic, now);
+  g.fillStyle = '#6b4e2a';
+  g.font = 'italic 18px Georgia, serif';
+  g.textAlign = 'right';
+  g.fillText(pageNo, CANVAS_W - MARGIN, CANVAS_H - 10);
 }
 
-function wrapText(g: CanvasRenderingContext2D, text: string, x: number, y: number, maxW: number, lh: number) {
-  const words = text.split(' ');
-  let line = '';
-  for (const w of words) {
-    const test = line ? `${line} ${w}` : w;
-    if (g.measureText(test).width > maxW && line) {
-      g.fillText(line, x, y);
-      y += lh;
-      line = w;
-    } else line = test;
-  }
-  if (line) g.fillText(line, x, y);
-  return y + lh;
+function drawRight(g: CanvasRenderingContext2D, index: number, pic: Picture | undefined, now: number) {
+  drawPicturePage(g, index, pic, now, String(index * 2 + 3));
 }
 
 function drawLeft(g: CanvasRenderingContext2D, index: number, pic: Picture | undefined, now: number) {
-  const page = BOOK_PAGES[index];
-  g.fillStyle = '#f4ecd8';
-  g.fillRect(0, 0, CANVAS_W, CANVAS_H);
-  g.fillStyle = '#6b4e2a';
-  g.font = 'italic 22px Georgia, serif';
-  g.textAlign = 'left';
-  g.fillText(String(index * 2 + 2), MARGIN, CANVAS_H - 18);
-  g.fillStyle = '#16131c';
-  g.font = '900 52px Georgia, serif';
-  g.fillText('I SPY', MARGIN + 6, 84);
-  g.font = '700 30px Georgia, serif';
-  g.fillStyle = '#c0201a';
-  g.fillText(page.title, MARGIN + 6, 128);
-  if (!pic) return;
-  g.fillStyle = '#3a2a1a';
-  g.font = 'italic 26px Georgia, serif';
-  let y = 182;
-  for (const line of pic.rhyme) y = wrapText(g, line, MARGIN + 6, y, CANVAS_W - MARGIN * 2 - 12, 34);
-  y += 18;
-  const found = foundOn(index);
-  g.font = '700 30px Georgia, serif';
-  const marks = strikes();
-  pic.spots.forEach((s, i) => {
-    const done = found.has(i);
-    const boxY = y - 24;
-    g.strokeStyle = '#6b4e2a';
-    g.lineWidth = 3;
-    g.strokeRect(MARGIN + 8, boxY, 26, 26);
-    if (done) {
-      g.strokeStyle = '#ec5fa8';
-      g.lineWidth = 5;
-      g.beginPath();
-      g.moveTo(MARGIN + 12, boxY + 13);
-      g.lineTo(MARGIN + 20, boxY + 22);
-      g.lineTo(MARGIN + 34, boxY - 2);
-      g.stroke();
-    }
-    g.fillStyle = done ? 'rgba(58,42,26,0.45)' : '#3a2a1a';
-    const text = s.label;
-    g.fillText(text, MARGIN + 50, y);
-    if (done) {
-      const w = g.measureText(text).width;
-      const t = Math.min(1, (now - (found.get(i) ?? 0)) / 400);
-      const img = marks[i % marks.length];
-      if (img?.complete && img.naturalWidth) g.drawImage(img, 0, 0, img.naturalWidth * t, img.naturalHeight, MARGIN + 46, y - 20, (w + 8) * t, 18);
-      else {
-        g.strokeStyle = '#4aa8d8';
-        g.lineWidth = 6;
-        g.beginPath();
-        g.moveTo(MARGIN + 46, y - 10);
-        g.lineTo(MARGIN + 46 + (w + 8) * t, y - 12);
-        g.stroke();
-      }
-    }
-    y += 46;
-  });
-  y += 10;
-  g.font = 'italic 22px Georgia, serif';
-  g.fillStyle = '#6b4e2a';
-  const all = found.size === pic.spots.length;
-  g.fillText(all ? 'All found! Turn the page →' : `${found.size} of ${pic.spots.length} found`, MARGIN + 8, y);
+  drawPicturePage(g, index, pic, now, String(index * 2 + 2));
 }
 
 // ---------------------------------------------------------------------------
@@ -349,6 +300,7 @@ export function ReaderScene() {
   const flipFront = useMemo(pageCanvas, []);
   const flipBack = useMemo(pageCanvas, []);
   const rightMesh = useRef<THREE.Mesh>(null);
+  const leftMesh = useRef<THREE.Mesh>(null);
   const flipGroup = useRef<THREE.Group>(null);
   const glide = useRef({ t: 0, from: new THREE.Vector3(), look: new THREE.Vector3(), started: false });
   const saved = useRef<{ fov: number; near: number } | null>(null);
@@ -416,21 +368,20 @@ export function ReaderScene() {
   }
 
   function tap(clientX: number, clientY: number) {
-    const mesh = rightMesh.current;
+    const meshes = [rightMesh.current, leftMesh.current].filter((m): m is THREE.Mesh => Boolean(m));
     const pic = pictures.get(reader.page);
-    if (!mesh || !pic || flip.current.dir !== 0) return;
+    if (!meshes.length || !pic || flip.current.dir !== 0) return;
     const rect = gl.domElement.getBoundingClientRect();
     const ndc = new THREE.Vector2(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1);
     const ray = new THREE.Raycaster();
     ray.setFromCamera(ndc, camera);
-    const hit = ray.intersectObject(mesh, false)[0];
-    if (!hit?.uv) {
-      // Clicked the left page or the room: nothing to circle.
-      return;
-    }
+    const hit = ray.intersectObjects(meshes, false)[0];
+    if (!hit?.uv) return;
     const f = fit(pic);
     const px = hit.uv.x * CANVAS_W;
     const py = (1 - hit.uv.y) * CANVAS_H;
+    // The find-list is the footer. A click there is not a miss.
+    if (py >= CANVAS_H - FOOTER) return;
     const ix = (px - f.x) / f.w;
     const iy = (py - f.y) / f.h;
     const found = foundOn(reader.page);
@@ -488,6 +439,13 @@ export function ReaderScene() {
       if (d.moved < 7 && performance.now() - d.at < 600) tap(e.clientX, e.clientY);
     };
     window.addEventListener('keydown', down);
+    const onWheel = (e: WheelEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el?.closest('button, input, textarea')) return;
+      reader.zoom = Math.min(2.6, Math.max(1, reader.zoom * (e.deltaY > 0 ? 0.9 : 1.1)));
+      emit();
+    };
+    window.addEventListener('wheel', onWheel, { passive: true });
     window.addEventListener('pointerdown', pDown);
     window.addEventListener('pointermove', pMove);
     window.addEventListener('pointerup', pUp);
@@ -496,6 +454,7 @@ export function ReaderScene() {
     if (import.meta.env.DEV) (window as unknown as { __ispyReader: unknown }).__ispyReader = { reader, turn, tap, pictures };
     return () => {
       window.removeEventListener('keydown', down);
+      window.removeEventListener('wheel', onWheel);
       window.removeEventListener('pointerdown', pDown);
       window.removeEventListener('pointermove', pMove);
       window.removeEventListener('pointerup', pUp);
@@ -529,7 +488,7 @@ export function ReaderScene() {
     const lookAt = new THREE.Vector3().lerpVectors(g.look, target, e);
     camera.up.set(0, 1, 0);
     camera.lookAt(lookAt);
-    const fov = fitFov(52, size.width / Math.max(1, size.height), 1.6, 100);
+    const fov = fitFov(52 / reader.zoom, size.width / Math.max(1, size.height), 1.6, 100);
     if (Math.abs(persp.fov - fov) > 0.1 || persp.near !== 0.02) {
       persp.fov = fov;
       persp.near = 0.02;
@@ -595,7 +554,7 @@ export function ReaderScene() {
         <boxGeometry args={[PAGE_W - 0.004, 0.006, PAGE_H]} />
         <meshStandardMaterial color="#efe6cf" roughness={0.9} />
       </mesh>
-      <mesh position={[-PAGE_W / 2, 0.0012, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh ref={leftMesh} position={[-PAGE_W / 2, 0.0012, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[PAGE_W, PAGE_H]} />
         <meshBasicMaterial map={left.tex} color="#ebe4d6" toneMapped={false} />
       </mesh>
@@ -629,7 +588,17 @@ export function ReaderHud({ onExit }: { onExit: () => void }) {
     <div data-ispy="reading" className="pointer-events-none absolute inset-0 z-40 text-white">
       <div className="pointer-events-auto absolute left-4 top-4 flex gap-2">
         <button type="button" onClick={onExit} className="rounded-xl bg-white/90 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-black">
-          Stand up
+          Back
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            reader.zoom = Math.min(2.6, reader.zoom * 1.2);
+            emit();
+          }}
+          className="rounded-xl border border-white/25 bg-black/55 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-amber-200"
+        >
+          Zoom
         </button>
         <button type="button" onClick={() => controls.hint?.()} className="rounded-xl border border-white/25 bg-black/55 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-amber-200">
           Hint (H)
@@ -640,7 +609,7 @@ export function ReaderHud({ onExit }: { onExit: () => void }) {
       )}
       <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-3">
         <button type="button" className={btn} disabled={r.page === 0} onClick={() => controls.turn?.(-1)}>
-          ◀ Back
+          ◀ Page
         </button>
         <span className="rounded-full bg-black/60 px-4 py-1.5 font-serif text-sm">
           {BOOK_PAGES[r.page].title} · page {r.page + 1} of {BOOK_PAGES.length}
@@ -651,8 +620,8 @@ export function ReaderHud({ onExit }: { onExit: () => void }) {
         </button>
       </div>
       {!isTouch && (
-        <p className="absolute left-1/2 top-4 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/50 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white/60">
-          Click a thing in the picture to circle it · ← → turn pages · drag to look up · H hint
+        <p className="absolute left-1/2 top-16 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/50 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white/60">
+          Click either picture · ← → turn pages · scroll to zoom · drag to look · H hint
         </p>
       )}
     </div>
