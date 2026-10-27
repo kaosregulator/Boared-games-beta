@@ -20,7 +20,6 @@ import { CAR, ceilingAt, groundAt, newCar, placeCar, refillNitro, stepCar, TUNIN
 import { BED_BOUNDS, BED_CLEAR, BLOCKS, DESK, ROOM, blockHas, zoneAt, type ZoneId } from './world';
 import { Quipper, quipSeconds } from '../roomQuips';
 import { SpeechBubble } from '../army/SpeechBubble';
-import { stepLook } from '../army/armyKeys';
 import { motorSpeed, raceSfx, startMotor, stopRaceAudio, wakeRaceAudio } from './raceAudio';
 import { openMiniGame } from '../../engine/lifecycle';
 
@@ -574,6 +573,8 @@ export function HotWheelsWorld({ spot, skipCountdown }: { spot: string | null; s
   const camReady = useRef(false);
   /** Arrow-key look: how far the camera has swung round the car and tilted. */
   const look = useRef({ yaw: 0, pitch: 0 });
+  /** Bird's-eye arrows slide the overhead view. They do not orbit. */
+  const pan = useRef({ x: 0, z: 0 });
   const prevPos = useRef(start.p.clone());
   const offTrack = useRef(0);
   const lastEmit = useRef(0);
@@ -628,10 +629,12 @@ export function HotWheelsWorld({ spot, skipCountdown }: { spot: string | null; s
       if (e.code === 'KeyC' || e.code === 'KeyV') {
         cycleCam();
         look.current = { yaw: 0, pitch: 0 };
+        pan.current = { x: 0, z: 0 };
       }
       if (e.code === 'KeyR') {
         resetCar();
         look.current = { yaw: 0, pitch: 0 };
+        pan.current = { x: 0, z: 0 };
       }
       if (e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
     };
@@ -701,15 +704,25 @@ export function HotWheelsWorld({ spot, skipCountdown }: { spot: string | null; s
     const dt = Math.min(rawDt, 0.05);
     const c = car.current;
     const k = keys.current;
-    // WASD drives; the arrow keys look around, like walking the room.
+    const modeNow = hwRace.cam;
+    if (modeNow === 'birdseye') {
+      const slideX = (k.ArrowRight ? 1 : 0) - (k.ArrowLeft ? 1 : 0);
+      const slideZ = (k.ArrowDown ? 1 : 0) - (k.ArrowUp ? 1 : 0);
+      pan.current.x = THREE.MathUtils.clamp(pan.current.x + slideX * 0.75 * dt, -1.5, 1.5);
+      pan.current.z = THREE.MathUtils.clamp(pan.current.z + slideZ * 0.75 * dt, -1.5, 1.5);
+    } else {
+      // Chase: left and right look around the car. Up tilts a little and stays
+      // in chase. Hood is its own view, only on C.
+      const lookYaw = (k.ArrowLeft ? 1 : 0) - (k.ArrowRight ? 1 : 0);
+      const lookUp = (k.ArrowUp ? 1 : 0) - (k.ArrowDown ? 1 : 0);
+      if (lookYaw) look.current.yaw = wrapAngle(look.current.yaw + lookYaw * 1.6 * dt);
+      const pitchCap = modeNow === 'chase' ? 0.4 : 1.05;
+      look.current.pitch = Math.max(-0.45, Math.min(pitchCap, look.current.pitch + lookUp * 1.1 * dt));
+    }
     const gas = k.KeyW || touchDrive.gas || pad.y > 0.3;
     const brake = k.KeyS || touchDrive.brake || pad.y < -0.3;
     const left = k.KeyA || touchDrive.left || pad.x < -0.3;
     const right = k.KeyD || touchDrive.right || pad.x > 0.3;
-    const lookYaw = (k.ArrowLeft ? 1 : 0) - (k.ArrowRight ? 1 : 0);
-    const lookUp = (k.ArrowUp ? 1 : 0) - (k.ArrowDown ? 1 : 0);
-    if (lookYaw) look.current.yaw = wrapAngle(look.current.yaw + lookYaw * 1.9 * dt);
-    look.current.pitch = stepLook(look.current.pitch, lookUp, dt);
     const held = hwRace.phase === 'countdown';
     const input = {
       throttle: held ? 0 : (gas ? 1 : 0) - (brake ? 1 : 0),
@@ -821,8 +834,13 @@ export function HotWheelsWorld({ spot, skipCountdown }: { spot: string | null; s
       camReady.current = false;
     } else {
       chaseTarget(c, mode, _want, _look);
-      // Arrows swing the camera round the car and tilt the view.
-      if (look.current.yaw) {
+      if (mode === 'birdseye') {
+        // Slide the overhead picture. Orbiting here is what made the view spin.
+        _want.x += pan.current.x;
+        _want.z += pan.current.z;
+        _look.x += pan.current.x;
+        _look.z += pan.current.z;
+      } else if (look.current.yaw) {
         _want.sub(c.pos).applyAxisAngle(UP, look.current.yaw).add(c.pos);
         _look.sub(c.pos).applyAxisAngle(UP, look.current.yaw).add(c.pos);
       }
@@ -833,7 +851,9 @@ export function HotWheelsWorld({ spot, skipCountdown }: { spot: string | null; s
       camReady.current = true;
       camera.position.copy(_cam);
       camera.up.set(0, 1, 0);
-      if (look.current.pitch) _look.copy(_cam).add(lookAround(_tmp.subVectors(_look, _cam), look.current.pitch));
+      if (mode !== 'birdseye' && look.current.pitch) {
+        _look.copy(_cam).add(lookAround(_tmp.subVectors(_look, _cam), look.current.pitch));
+      }
       camera.lookAt(_look);
     }
     const near = mode === 'birdseye' ? 0.03 : 0.006;
