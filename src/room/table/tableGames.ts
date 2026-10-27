@@ -19,6 +19,7 @@ const TABLE_LOADS: (() => Promise<unknown>)[] = [
     () => import('./BlackjackTable'),
     () => import('./HoldemTable'),
     () => import('./GoFishTable'),
+    () => import('./SorryTable'),
     () => import('./ClueTable'),
     () => import('../../components/ActiveGameSwitch'),
     () => import('../../components/RulesModal'),

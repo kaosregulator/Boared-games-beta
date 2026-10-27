@@ -177,8 +177,8 @@ export const GAME_CATALOG: GameMetadata[] = [
   },
   {
     id: 'pawnrush',
-    title: 'Sorry! (Pawn Rush)',
-    subtitle: '4-Player Revenge Race with Slide Tracks & Bump Cards',
+    title: 'Sorry!',
+    subtitle: 'Four colors, a real deck, slides, and bumps',
     players: '2 - 4 Players (Pass-and-Play or 3 Bots)',
     duration: '8 - 15 min',
     boxColor: 'from-rose-950 via-emerald-950 to-blue-950',
@@ -190,7 +190,7 @@ export const GAME_CATALOG: GameMetadata[] = [
       'A 4 moves back 4. A 10 may go forward 10 or back 1. An 11 may move 11 or swap with an opponent on the track.',
       'A 7 moves one pawn forward 7. SORRY! jumps a pawn from Start onto an opponent and sends that pawn back to Start.',
       'Near your own start, an exact count turns into the safety lane. Landing on the last step is HOME.',
-      'First player to guide all 3 pawns into HOME wins.'
+      'First player to guide all 4 pawns into HOME wins.'
     ],
     icon: 'Sparkles',
     rating: '4.9 ★★★★★'
