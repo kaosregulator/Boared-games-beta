@@ -45,13 +45,18 @@ export default function App() {
   );
   const [userProfile, setUserProfile] =
     useState<UserProfile>(INITIAL_USER_PROFILE);
+  const [launchTable, setLaunchTable] = useState<GameMetadata | null>(null);
 
   const handleLaunchGameById = (id: GameId) => {
     const found = GAME_CATALOG.find((g) => g.id === id);
-    if (found) {
-      setActiveGame(found);
-      sound.playVictoryFanfare();
+    if (!found) return;
+    if (IN_ROOM_TABLE.has(found.id)) {
+      setLaunchTable(found);
+      setActiveGame(null);
+      return;
     }
+    setActiveGame(found);
+    sound.playVictoryFanfare();
   };
 
   const handleToggleViewMode = () => {
@@ -80,6 +85,8 @@ export default function App() {
           if (!IN_ROOM_TABLE.has(game.id)) setActiveGame(game);
         }}
         onOpenRulesForGame={(game) => setShowRulesForGame(game)}
+        launchTable={launchTable}
+        onLaunchTableHandled={() => setLaunchTable(null)}
       />
 
       {activeGame && (

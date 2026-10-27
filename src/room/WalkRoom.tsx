@@ -152,6 +152,9 @@ interface WalkRoomProps {
   overlayGame: GameMetadata | null;
   onOpenBoard: (game: GameMetadata) => void;
   onOpenRulesForGame?: (game: GameMetadata) => void;
+  /** A 3D table game asked for from inside a 2D board, such as poker from the casino. */
+  launchTable?: GameMetadata | null;
+  onLaunchTableHandled?: () => void;
 }
 
 /**
@@ -210,6 +213,8 @@ export function WalkRoom({
   overlayGame,
   onOpenBoard,
   onOpenRulesForGame,
+  launchTable,
+  onLaunchTableHandled,
 }: WalkRoomProps) {
   const override = useMemo(readCameraOverride, []);
   const scripted =
@@ -638,14 +643,23 @@ export function WalkRoom({
     setMiniGamePhase(session.game.id, phase);
   }, [session?.key, session?.game.id, session?.phase]);
 
-  // Closing a 2D board packs its box back up on the table.
+  // Closing a 2D board packs its box back up on the table. A handoff to a 3D
+  // table (poker from the casino) replaces the session instead of packing it.
   const hadOverlay = useRef(false);
+  const skipPack = useRef(false);
+  if (launchTable) skipPack.current = true;
+  useEffect(() => {
+    if (!launchTable) return;
+    onLaunchTableHandled?.();
+    startTable(launchTable);
+  }, [launchTable, onLaunchTableHandled, startTable]);
   useEffect(() => {
     if (overlayGame) hadOverlay.current = true;
     else if (hadOverlay.current) {
       hadOverlay.current = false;
-      packUp();
-    }
+      if (skipPack.current) skipPack.current = false;
+      else packUp();
+    } else skipPack.current = false;
   }, [overlayGame, packUp]);
 
   useEffect(() => {
