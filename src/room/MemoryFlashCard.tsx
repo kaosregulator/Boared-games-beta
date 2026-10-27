@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import type { GameMetadata } from '../types';
 import type { CardPhoto, CardVideo, PropCard } from './propCards';
 import { GAME_PHOTOS } from './gamePhotos';
+import { TimeCapsule } from './TimeCapsule';
 import { BookOpen, ChevronLeft, ChevronRight, Users, Wifi, WifiOff, X, Sparkles } from 'lucide-react';
 
 /** Board games that already have a real in-room engine vs coming-soon shells. */
@@ -55,7 +56,11 @@ export function MemoryFlashCard(props: MemoryFlashCardProps) {
   return (
     <div
       data-ui="card"
-      className="pointer-events-auto flex max-h-[min(72dvh,42rem)] w-[min(24rem,calc(100vw-1rem))] flex-col overflow-hidden rounded-3xl border border-white/25 bg-[#120a16]/80 text-white shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-2xl sm:max-h-[min(86dvh,46rem)]"
+      className={`pointer-events-auto flex max-h-[min(72dvh,42rem)] w-[min(24rem,calc(100vw-1rem))] flex-col overflow-hidden rounded-3xl border text-white shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-2xl sm:max-h-[min(86dvh,46rem)] ${
+        props.kind === 'game'
+          ? 'border-cyan-200/30 bg-[#071018]/55'
+          : 'border-white/25 bg-[#120a16]/80'
+      }`}
       onClick={e => e.stopPropagation()}
       onPointerDown={e => e.stopPropagation()}
     >
@@ -63,7 +68,7 @@ export function MemoryFlashCard(props: MemoryFlashCardProps) {
         <div className="flex min-w-0 items-center gap-2">
           <Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-300" />
           <span className="truncate text-[10px] font-bold uppercase tracking-[0.22em] text-amber-100/90">
-            {props.kind === 'game' ? 'Game box' : 'Memory'}
+            {props.kind === 'game' ? 'Time capsule' : 'Memory'}
           </span>
         </div>
         <button
@@ -83,28 +88,13 @@ export function MemoryFlashCard(props: MemoryFlashCardProps) {
   );
 }
 
-function PhotoFrame({ src, alt, credit, fallback }: { src?: string; alt: string; credit?: string; fallback: string }) {
-  return (
-    <div className="rounded-xl border border-white/25 bg-black/20 overflow-hidden">
-      {src ? (
-        <img src={src} alt={alt} className="h-36 w-full object-cover" />
-      ) : (
-        <div className="h-24 flex items-center justify-center px-4 text-center">
-          <p className="font-display text-2xl text-white">{fallback}</p>
-        </div>
-      )}
-      {credit && <p className="px-2 py-1 text-[9px] leading-snug text-white/55 bg-black/25">{credit}</p>}
-    </div>
-  );
-}
-
 function GameBody({ game, onPlay, onRules }: GameCardProps) {
   const mode = gameMode(game.id);
   const online = mode === 'Online ready';
   const photo = GAME_PHOTOS[game.id];
   return (
     <div className="p-3.5 flex flex-col gap-3">
-      <PhotoFrame src={photo?.src ?? game.coverImage} alt={game.title} credit={photo?.credit} fallback={game.title} />
+      <TimeCapsule id={game.id} title={game.title} photos={photo ? [photo] : []} />
 
       <div>
         <h3 className="font-display text-xl text-white leading-tight">{game.title}</h3>

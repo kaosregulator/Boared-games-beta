@@ -1,0 +1,130 @@
+.time-capsule {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  border: 1px solid rgba(186, 242, 255, 0.45);
+  background:
+    linear-gradient(180deg, rgba(186, 242, 255, 0.14), rgba(255, 186, 242, 0.05) 42%, rgba(8, 10, 18, 0.2)),
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 4px);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 18px 50px rgba(40, 180, 255, 0.18);
+  color: white;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.time-capsule__scan {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent, rgba(160, 240, 255, 0.16), transparent);
+  animation: capsule-scan 3.6s linear infinite;
+}
+
+.time-capsule__stage {
+  position: relative;
+  height: 210px;
+  perspective: 900px;
+  display: grid;
+  place-items: center;
+}
+
+.time-capsule__spin {
+  width: 148px;
+  height: 168px;
+  transform-style: preserve-3d;
+  animation: capsule-spin 7s linear infinite;
+}
+
+.time-capsule__spin[data-hold='1'] {
+  animation-play-state: paused;
+}
+
+.time-capsule__face {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  backface-visibility: hidden;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.time-capsule__face--back {
+  transform: rotateY(180deg);
+  background: linear-gradient(160deg, rgba(20, 24, 40, 0.2), rgba(80, 160, 255, 0.18));
+}
+
+.time-capsule__face canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.time-capsule__photo {
+  position: absolute;
+  inset: 28px 36px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 24px rgba(180, 240, 255, 0.35);
+  opacity: 0;
+  transform: translateY(8px) scale(0.96);
+  transition: opacity 0.45s ease, transform 0.45s ease;
+  pointer-events: none;
+}
+
+.time-capsule__photo[data-on='1'] {
+  opacity: 1;
+  transform: none;
+}
+
+.time-capsule__photo canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.time-capsule__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px 12px;
+}
+
+.time-capsule__kicker {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(186, 242, 255, 0.9);
+}
+
+.time-capsule__next {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(8, 12, 20, 0.35);
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+}
+
+.time-capsule__next:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+@keyframes capsule-spin {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(360deg); }
+}
+
+@keyframes capsule-scan {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(100%); }
+}
