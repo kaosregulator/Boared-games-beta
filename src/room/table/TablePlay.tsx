@@ -134,7 +134,7 @@ export function PlayTable({
               <FurbyTable key={session.key} phase={phase} onUnfolded={onUnfolded} onPacked={onPacked} onLeave={onLeave} />
             </Suspense>
           </group>
-        ) : (
+        ) : phase === 'play' && (game.id === 'pawnrush' || game.id === 'guesswho' || game.id === 'mousetrap') ? null : (
           <Suspense fallback={null}>
             <BoxUnfold
               key={`${session.key}-${phase === 'pack' ? 'pack' : 'open'}`}

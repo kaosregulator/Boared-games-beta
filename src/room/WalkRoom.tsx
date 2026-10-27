@@ -590,7 +590,8 @@ export function WalkRoom({
     walkRig.tableActive = true;
     walkRig.setCrouch(true);
     walkRig.teleport = { at: TABLE_SEAT.at, look: TABLE_SEAT.look };
-    setSession({ game, phase: 'unfold', key: sessionKey.current });
+    const deepLink = new URLSearchParams(window.location.search).has('play');
+    setSession({ game, phase: deepLink ? 'play' : 'unfold', key: sessionKey.current });
   }, []);
 
   useEffect(() => {
