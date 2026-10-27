@@ -2173,8 +2173,21 @@ function FilmHud({ onExit }: { onExit: () => void }) {
           Shrinking you down…
         </p>
       )}
-      {a.coach === 'talk' && a.coachCard && <CoachCard step={a.coachLine + 1} text={a.coachCard} />}
-      {a.bubble && <SpeechBubble bubble={a.bubble} onNext={a.coach === 'talk' ? () => controls.interact?.() : undefined} />}
+      {a.coach === 'talk' && a.coachCard && <CoachCard step={a.coachLine + 1} text={a.coachCard} top />}
+      {a.coach === 'talk' && a.bubble && (
+        // Subtitles, not a bubble: half his shots aren't on him.
+        <div data-army-subtitle className="absolute inset-x-0 bottom-[12.5%] flex justify-center px-4">
+          <button
+            type="button"
+            onClick={() => controls.interact?.()}
+            className="pointer-events-auto max-w-[min(40rem,92vw)] rounded-xl bg-black/55 px-4 py-2 text-center"
+          >
+            <span className="block text-[10px] font-black uppercase tracking-[0.25em] text-lime-300">{a.bubble.who}</span>
+            <span className="block text-[15px] font-bold leading-snug text-white sm:text-[17px]">{a.bubble.text}</span>
+            <span className="mt-0.5 block text-[9px] font-bold uppercase tracking-[0.2em] text-white/50">{a.bubble.hint}</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -2392,9 +2405,9 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
 }
 
 /** Sergeant Green's step card: how the controls work, under what he just said. */
-function CoachCard({ step, text }: { step: number; text: string }) {
+function CoachCard({ step, text, top = false }: { step: number; text: string; top?: boolean }) {
   return (
-    <div data-army-card className="absolute bottom-28 left-1/2 w-[min(26rem,88vw)] -translate-x-1/2 rounded-2xl border-2 border-lime-300/70 bg-black/75 px-4 py-3 text-white shadow-[3px_4px_0_rgba(0,0,0,0.55)]">
+    <div data-army-card className={`absolute ${top ? 'top-[13%]' : 'bottom-28'} left-1/2 w-[min(26rem,88vw)] -translate-x-1/2 rounded-2xl border-2 border-lime-300/70 bg-black/75 px-4 py-3 text-white shadow-[3px_4px_0_rgba(0,0,0,0.55)]`}>
       <p className="text-[10px] font-black uppercase tracking-[0.25em] text-lime-300">Step {step}</p>
       <p className="mt-1 text-[14px] font-bold leading-snug">{text}</p>
     </div>
