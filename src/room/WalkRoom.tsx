@@ -1175,18 +1175,17 @@ export function WalkRoom({
               padUp && !vp.landscape ? 'bottom-[13.5rem]' : 'bottom-4'
             }`}
           >
-            {!touch && !big && (
-              <p className="w-max max-w-[calc(100vw-2rem)] rounded-full bg-black/55 px-3 py-1 text-center text-[11px] font-bold uppercase tracking-[0.16em] text-white/75">
-                Arrows · Z = A · X = B · Enter = Start · V = Select · drag looks around · scroll zoom · F big screen · Esc stands up
-              </p>
-            )}
-            <div className="flex gap-2">
+            <div className="flex gap-3 rounded-[22px] border border-fuchsia-300/40 bg-[#160818]/80 p-2 shadow-[0_0_28px_rgba(217,70,239,0.35)] backdrop-blur">
               <button
                 type="button"
                 onClick={() => toggleBig(!big)}
-                className="rounded-xl border border-cyan-200/30 bg-black/60 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-cyan-100 hover:bg-black/80"
+                className="flex min-w-[11rem] items-center gap-3 rounded-2xl border border-cyan-300/40 bg-cyan-400/10 px-4 py-2 text-left text-cyan-50 hover:bg-cyan-400/20"
               >
-                {big ? '⤡ Exit big screen' : '⤢ Big screen'}
+                <span className="text-lg" aria-hidden>▣</span>
+                <span>
+                  <span className="block text-[12px] font-black uppercase tracking-[0.16em]">{big ? 'Exit big screen' : 'Big screen'}</span>
+                  <span className="block text-[9px] font-bold uppercase tracking-[0.14em] text-cyan-100/70">View fullscreen · F</span>
+                </span>
               </button>
               <button
                 type="button"
@@ -1194,9 +1193,13 @@ export function WalkRoom({
                   if (big) toggleBig(false);
                   standUp();
                 }}
-                className="rounded-xl border border-white/20 bg-black/60 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-white hover:bg-black/80"
+                className="flex min-w-[11rem] items-center gap-3 rounded-2xl border border-fuchsia-300/40 bg-fuchsia-400/10 px-4 py-2 text-left text-fuchsia-50 hover:bg-fuchsia-400/20"
               >
-                Stand up
+                <span className="text-lg" aria-hidden>⬆</span>
+                <span>
+                  <span className="block text-[12px] font-black uppercase tracking-[0.16em]">Stand up</span>
+                  <span className="block text-[9px] font-bold uppercase tracking-[0.14em] text-fuchsia-100/70">Exit and stand up · Esc</span>
+                </span>
               </button>
             </div>
           </div>
@@ -1298,7 +1301,7 @@ export function WalkRoom({
       />
 
       {showCard && !device && (
-        <div className="absolute inset-x-2 bottom-2 z-40 flex justify-center sm:inset-x-auto sm:bottom-auto sm:right-8 sm:top-1/2 sm:-translate-y-1/2">
+        <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center p-3">
           {cardGame ? (
             <MemoryFlashCard
               kind="game"

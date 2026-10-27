@@ -2272,19 +2272,39 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
         </p>
       )}
 
-      <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2">
-        <div className="flex items-center gap-3 rounded-full bg-black/60 px-4 py-1.5 text-[11px] font-bold uppercase tracking-wider">
-          {flying ? (
-            <>
-              <span className="font-mono tabular-nums text-lime-200">{Math.round(a.heliSpeed * 100)} cm/s</span>
-              <span className="font-mono tabular-nums text-cyan-200">{Math.round(a.heliAlt * 100)} cm up</span>
-              {!isTouch && <span className="text-white/65">WASD fly · Arrows look · Space up · Shift down · Tab boost · drag to turn · F bail out · C camera</span>}
-            </>
-          ) : (
-            !isTouch && <span className="text-white/65">WASD move · Arrows look · Shift run · Space fire · drag to turn · F talk / chopper · R call chopper · C camera</span>
+      {!isTouch && (
+        <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-stretch gap-1 rounded-2xl border border-white/15 bg-[#0c1018]/80 p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.35)] backdrop-blur">
+          {flying && (
+            <span className="flex items-center px-2 font-mono text-[11px] font-black tabular-nums text-lime-200">
+              {Math.round(a.heliSpeed * 100)} cm/s
+            </span>
           )}
+          {(flying
+            ? [
+                ['WASD', 'Fly'],
+                ['ARROWS', 'Look'],
+                ['SPACE', 'Up'],
+                ['SHIFT', 'Down'],
+                ['F', 'Bail out'],
+                ['C', 'Camera'],
+              ]
+            : [
+                ['WASD', 'Move'],
+                ['ARROWS', 'Turn'],
+                ['SHIFT', 'Run'],
+                ['SPACE', 'Fire'],
+                ['F', 'Talk'],
+                ['R', 'Call chopper'],
+                ['C', 'Camera'],
+              ]
+          ).map(([key, label]) => (
+            <span key={key} className="flex min-w-[4.2rem] flex-col items-center rounded-xl px-2 py-1">
+              <span className="font-mono text-[11px] font-black tracking-wide text-white">{key}</span>
+              <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/55">{label}</span>
+            </span>
+          ))}
         </div>
-      </div>
+      )}
 
       {isTouch && (
         <>

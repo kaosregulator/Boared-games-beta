@@ -1,5 +1,5 @@
 /**
- * Memory cards for everything in the room, down to the stuff baked into the
+ * Time capsules for everything in the room, down to the stuff baked into the
  * desks and shelves (see hotspots.ts). Each one is a little story about how
  * the thing actually got used, a few real photos you can swipe through, and
  * sometimes an old commercial from the Internet Archive.

@@ -181,14 +181,14 @@ export interface RoomProp {
 
 /** Non-game things the player can look at and interact with. */
 export const ROOM_PROPS: RoomProp[] = [
-  { id: 'crt-tv', label: 'CRT television', hint: 'Memory card · flat game list', position: [CRT.x, DRESSER.height + CRT.height / 2, NORTH_Z + 0.34], radius: 0.42 },
-  { id: 'boombox', label: 'Boombox', hint: 'Memory card · flip the tape', position: [BOOMBOX.x, 0.14, BOOMBOX.z], radius: 0.26 },
+  { id: 'crt-tv', label: 'CRT television', hint: 'Time capsule · flat game list', position: [CRT.x, DRESSER.height + CRT.height / 2, NORTH_Z + 0.34], radius: 0.42 },
+  { id: 'boombox', label: 'Boombox', hint: 'Time capsule · flip the tape', position: [BOOMBOX.x, 0.14, BOOMBOX.z], radius: 0.26 },
   { id: 'lava-lamp', label: 'Lava lamp', hint: 'Warm the room light up', position: [LAVA.x, LAVA.y, NORTH_Z + 0.3], radius: 0.2 },
   { id: 'door', label: 'Bedroom door', hint: 'Locked in this build', position: [DOOR.x, 1.0, NORTH_Z + 0.05], radius: 0.5 },
-  { id: 'bed', label: 'Bed', hint: 'Open memory card', position: [BED.x, BED.top, BED.z], radius: 0.7 },
-  { id: 'gameboy', label: 'Game Boy', hint: 'Open memory card', position: [BED.x + 0.15, BED.top + 0.08, BED.z + 0.35], radius: 0.22 },
-  { id: 'vhs-stack', label: 'VHS stack', hint: 'Open memory card', position: [BOOMBOX.x - 0.35, 0.1, BOOMBOX.z + 0.35], radius: 0.22 },
-  { id: 'cards', label: 'Trading cards', hint: 'Open memory card', position: [0.2, 0.05, -1.35], radius: 0.22 },
+  { id: 'bed', label: 'Bed', hint: 'Open time capsule', position: [BED.x, BED.top, BED.z], radius: 0.7 },
+  { id: 'gameboy', label: 'Game Boy', hint: 'Open time capsule', position: [BED.x + 0.15, BED.top + 0.08, BED.z + 0.35], radius: 0.22 },
+  { id: 'vhs-stack', label: 'VHS stack', hint: 'Open time capsule', position: [BOOMBOX.x - 0.35, 0.1, BOOMBOX.z + 0.35], radius: 0.22 },
+  { id: 'cards', label: 'Trading cards', hint: 'Open time capsule', position: [0.2, 0.05, -1.35], radius: 0.22 },
 ];
 
 export const PALETTE = {

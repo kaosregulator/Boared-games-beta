@@ -240,7 +240,7 @@ function HotspotBox({ spot, active }: { spot: Hotspot; active: boolean }) {
     () =>
       spot.gameId
         ? { id: spot.id, kind: 'game', gameId: spot.gameId, label: GAME_LABEL[spot.gameId] ?? spot.gameId, hint: 'Inspect · play' }
-        : { id: spot.id, kind: 'prop', label: card?.title ?? spot.id, hint: card?.action?.label ?? 'Memory card' },
+        : { id: spot.id, kind: 'prop', label: card?.title ?? spot.id, hint: card?.action?.label ?? 'Time capsule' },
     [spot.id, spot.gameId, card],
   );
   const [w, ht, d] = spot.size;
