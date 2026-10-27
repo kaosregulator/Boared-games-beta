@@ -20,6 +20,8 @@ const ONLINE_READY = new Set([
   'battleship',
   'life',
   'pawnrush',
+  'guesswho',
+  'mousetrap',
 ]);
 
 function gameMode(id: string): 'Online ready' | 'Local / offline' {

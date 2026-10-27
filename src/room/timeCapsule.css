@@ -30,6 +30,45 @@
   place-items: center;
 }
 
+.time-capsule__stage::before {
+  content: '';
+  position: absolute;
+  width: 108px;
+  height: 18px;
+  bottom: 16px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(186, 242, 255, 0.45), transparent 70%);
+  filter: blur(0.5px);
+}
+
+.time-capsule[data-capsule='chess'] {
+  border-color: rgba(231, 197, 106, 0.7);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 18px 50px rgba(212, 175, 55, 0.32);
+}
+
+.time-capsule[data-capsule='guesswho'] {
+  border-color: rgba(255, 93, 115, 0.65);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 18px 50px rgba(255, 70, 110, 0.28);
+}
+
+.time-capsule[data-capsule='mousetrap'] {
+  border-color: rgba(246, 211, 77, 0.7);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 18px 50px rgba(80, 180, 70, 0.28);
+}
+
+.time-capsule[data-capsule='pawnrush'] {
+  border-color: rgba(255, 92, 92, 0.65);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 18px 50px rgba(255, 80, 60, 0.28);
+}
+
 .time-capsule__spin {
   width: 148px;
   height: 168px;
