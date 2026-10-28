@@ -1,4 +1,5 @@
-import React, { useEffect, useLayoutEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { MARKER_H, MARKER_KINDS, MARKER_LABEL, MARKER_W, drawMarker, onMarkerArt, type MarkerKind } from './battleshipMarkers';
 import { typeCharMs, typedCount } from './cluePace';
 import { bottomCardLimit, cardCrossesTable } from './tableCard';
 import { PRESET_LABEL, cyclePreset, resetUserView, setFollow, useTableCam } from './tableCam';
@@ -188,21 +189,32 @@ export function TableHudOverlay({
   );
 }
 
+/** One marker drawn by the same code that draws the pegs on the table. */
+function MarkerIcon({ kind }: { kind: MarkerKind }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const draw = () => {
+      const g = ref.current?.getContext('2d');
+      if (g) drawMarker(g, kind);
+    };
+    draw();
+    return onMarkerArt(draw);
+  }, [kind]);
+  return <canvas ref={ref} width={MARKER_W} height={MARKER_H} className="h-9 w-6 shrink-0" aria-hidden />;
+}
+
 function BattleshipKey() {
-  const rows: [string, string][] = [
-    ['#9aa7b5', 'Ship'],
-    ['#ff2d3a', 'Hit'],
-    ['#ffffff', 'Miss'],
-    ['#141414', 'Sunk'],
-  ];
   return (
-    <div className="pointer-events-none fixed bottom-16 left-3 z-30 rounded-2xl border border-white/30 bg-black/80 px-3 py-2 text-white shadow-xl">
+    <div
+      data-ui="table-key"
+      className="pointer-events-none fixed bottom-16 left-3 z-30 rounded-2xl border border-white/30 bg-black/80 px-3 py-2 text-white shadow-xl"
+    >
       <p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-100">Key</p>
-      <div className="mt-1 flex flex-col gap-1">
-        {rows.map(([color, label]) => (
-          <span key={label} className="flex items-center gap-2 text-[11px] font-bold">
-            <span className="h-3 w-3 rounded-full border border-white/70" style={{ background: color }} />
-            {label}
+      <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
+        {MARKER_KINDS.map(kind => (
+          <span key={kind} className="flex items-center gap-1.5 text-[11px] font-bold">
+            <MarkerIcon kind={kind} />
+            {MARKER_LABEL[kind]}
           </span>
         ))}
       </div>
