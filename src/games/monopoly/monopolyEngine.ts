@@ -544,27 +544,145 @@ export function mortgage(state: GameState, i: number): GameState {
   return s;
 }
 
-/** Offer your cheapest open street to the next player, at 80% of the price. */
-export function offerTrade(state: GameState): GameState {
+/** What the bank asks to lift a mortgage: the mortgage value plus 10% interest. */
+export function unmortgageCost(i: number) {
+  return Math.ceil((Math.floor((spaceAt(i).price ?? 0) / 2) * 11) / 10);
+}
+
+export function canUnmortgage(s: GameState, i: number, owner: number) {
+  const deed = s.deeds[i];
+  if (!deed || deed.owner !== owner || !deed.mortgaged) return false;
+  return s.players[owner].cash >= unmortgageCost(i);
+}
+
+export function unmortgage(state: GameState, i: number): GameState {
   const s = clonePlay(state);
-  const me = s.players[s.turn];
-  const them = s.players.find(p => p.id !== me.id && !p.bankrupt);
-  const mine = BOARD.filter(sp => sp.kind === 'street' && canMortgage(s, sp.i, me.id)).sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
-  if (!them || mine.length === 0) {
-    say(s, `${me.name} has nothing free to trade.`);
+  const p = s.players[s.turn];
+  if (!canUnmortgage(s, i, p.id)) return state;
+  const cost = unmortgageCost(i);
+  p.cash -= cost;
+  s.deeds[i] = { ...s.deeds[i], mortgaged: false };
+  say(s, `${p.name} lifts the mortgage on ${spaceAt(i).short} for $${cost}.`);
+  return s;
+}
+
+/* --------------------------------- trading --------------------------------- */
+
+/** One side's proposal: deeds each way, and cash (positive: `from` pays, negative: `to` pays). */
+export interface TradeOffer {
+  from: number;
+  to: number;
+  give: number[];
+  want: number[];
+  cash: number;
+}
+
+/** A deed can change hands only while nothing is built anywhere in its colour group. */
+export function canTrade(s: GameState, i: number, owner: number) {
+  const deed = s.deeds[i];
+  if (!deed || deed.owner !== owner) return false;
+  const space = spaceAt(i);
+  if (space.kind === 'street' && space.group) {
+    return !BOARD.some(sp => {
+      const d = s.deeds[sp.i];
+      return sp.group === space.group && Boolean(d && (d.houses > 0 || d.hotel));
+    });
+  }
+  return true;
+}
+
+/** Why an offer cannot be made at all, or null when it can. */
+export function tradeProblem(s: GameState, o: TradeOffer): string | null {
+  const a = s.players[o.from];
+  const b = s.players[o.to];
+  if (!a || !b || a.id === b.id || a.bankrupt || b.bankrupt) return 'Pick someone still in the game.';
+  if (o.give.length === 0 && o.want.length === 0) return 'Put a deed on the table first.';
+  if (!o.give.every(i => canTrade(s, i, a.id))) return `${a.name} cannot trade that.`;
+  if (!o.want.every(i => canTrade(s, i, b.id))) return `${b.name} cannot trade that.`;
+  if (o.cash > 0 && a.cash < o.cash) return `${a.name} does not have $${o.cash}.`;
+  if (o.cash < 0 && b.cash < -o.cash) return `${b.name} does not have $${-o.cash}.`;
+  return null;
+}
+
+const GROUPS = [...new Set(BOARD.map(sp => sp.group).filter((g): g is NonNullable<Space['group']> => Boolean(g)))];
+
+/** Set-aware worth of one player's deeds: a full colour group counts for far more than its parts. */
+function portfolio(deeds: Record<number, Holding>, pid: number) {
+  let worth = 0;
+  GROUPS.forEach(group => {
+    const all = BOARD.filter(sp => sp.group === group);
+    const mine = all.filter(sp => deeds[sp.i]?.owner === pid);
+    if (mine.length === 0) return;
+    // a mortgaged deed is worth what is left once the bank is paid back
+    worth += mine.reduce((acc, sp) => acc + (deeds[sp.i].mortgaged ? (sp.price ?? 0) * 0.45 : (sp.price ?? 0)), 0);
+    if (group === 'rail') worth += [0, 0, 50, 150, 300][mine.length];
+    else if (group === 'util') worth += mine.length === 2 ? 80 : 0;
+    else if (mine.length === all.length) worth += all.reduce((acc, sp) => acc + (sp.price ?? 0), 0) * 1.2 + 100;
+    else if (mine.length === all.length - 1) worth += mine.reduce((acc, sp) => acc + (sp.price ?? 0), 0) * 0.25;
+  });
+  return worth;
+}
+
+function hasMonopolyIn(deeds: Record<number, Holding>, owner: number, group: string) {
+  return BOARD.filter(sp => sp.group === group).every(sp => deeds[sp.i]?.owner === owner);
+}
+
+function tradedDeeds(s: GameState, o: TradeOffer) {
+  const after = { ...s.deeds };
+  o.give.forEach(i => (after[i] = { ...after[i], owner: o.to }));
+  o.want.forEach(i => (after[i] = { ...after[i], owner: o.from }));
+  return after;
+}
+
+/**
+ * How the player receiving an offer reads it. They want to come out ahead on
+ * their own sheet, and they count half of whatever the proposer gains against
+ * the deal, so nobody hands over a colour set cheaply.
+ */
+export function judgeTrade(s: GameState, o: TradeOffer): { accept: boolean; reason: string } {
+  const problem = tradeProblem(s, o);
+  if (problem) return { accept: false, reason: problem };
+  const them = s.players[o.to];
+  if (o.cash < 0 && them.cash + o.cash < 100) return { accept: false, reason: `${them.name} can't spare $${-o.cash}.` };
+  const after = tradedDeeds(s, o);
+  const theirGain = portfolio(after, o.to) - portfolio(s.deeds, o.to) + o.cash;
+  const proposerGain = portfolio(after, o.from) - portfolio(s.deeds, o.from) - o.cash;
+  if (theirGain - 0.5 * Math.max(0, proposerGain) >= 10) return { accept: true, reason: `${them.name} shakes on it.` };
+  const handsOverSet = o.want.some(i => {
+    const g = spaceAt(i).group;
+    return Boolean(g && g !== 'rail' && g !== 'util' && hasMonopolyIn(after, o.from, g) && !hasMonopolyIn(s.deeds, o.from, g));
+  });
+  if (handsOverSet) return { accept: false, reason: `${them.name} won't hand over a colour set that cheap.` };
+  return { accept: false, reason: `${them.name} wants more than that.` };
+}
+
+function tradeSides(o: TradeOffer) {
+  const side = (deeds: number[], cash: number) => [...deeds.map(i => spaceAt(i).short), ...(cash > 0 ? [`$${cash}`] : [])].join(' + ') || 'nothing';
+  return { gives: side(o.give, Math.max(0, o.cash)), gets: side(o.want, Math.max(0, -o.cash)) };
+}
+
+/** Put an offer to another player. A computer player accepts or declines on its own valuation. */
+export function proposeTrade(state: GameState, o: TradeOffer): GameState {
+  const s = clonePlay(state);
+  const a = s.players[o.from];
+  const b = s.players[o.to];
+  const problem = tradeProblem(s, o);
+  if (problem) {
+    say(s, problem);
     return s;
   }
-  const sp = mine[0];
-  const price = Math.floor((sp.price ?? 0) * 0.8);
-  const wants = them.cash >= price && (aiWantsToBuy({ ...s, turn: them.id }, sp.i) || price <= (sp.price ?? 0));
-  if (!wants) {
-    say(s, `${them.name} passes on ${sp.short}.`);
-    return s;
+  const { gives, gets } = tradeSides(o);
+  if (b.isAI) {
+    const verdict = judgeTrade(s, o);
+    if (!verdict.accept) {
+      say(s, `${a.name} offers ${gives} for ${gets}. ${verdict.reason}`);
+      return s;
+    }
   }
-  them.cash -= price;
-  me.cash += price;
-  s.deeds[sp.i] = { ...s.deeds[sp.i], owner: them.id };
-  say(s, `${me.name} sells ${sp.short} to ${them.name} for $${price}.`);
+  s.deeds = tradedDeeds(s, o);
+  a.cash -= o.cash;
+  b.cash += o.cash;
+  say(s, `${b.name} takes ${gives} for ${gets}. Deal.`);
   return s;
 }
 
