@@ -217,12 +217,20 @@ export interface Ears {
   up: Vec;
 }
 
+const distances: Partial<Record<SpeakerId, number>> = {};
+
+/** Metres from the ears to a speaker, as of its anchor's last frame; null before the first. */
+export function speakerDistance(id: SpeakerId): number | null {
+  return distances[id] ?? null;
+}
+
 /**
  * Once a frame from each anchor: move the listener to the camera and the
  * speaker to `spot`, facing `face`. Plain numbers so the sound engine can
  * import this without pulling three.js along.
  */
 export function placeSpeaker(id: SpeakerId, ears: Ears, spot: Vec, face: Vec) {
+  distances[id] = Math.hypot(spot.x - ears.at.x, spot.y - ears.at.y, spot.z - ears.at.z);
   if (!room) return;
   const s = room.speakers[id];
   const { ctx } = room;

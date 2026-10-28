@@ -24,6 +24,14 @@ export const walkRig = {
   eyeBoost: 0,
   /** Look up at the high shelf once, after the second step onto the stool. */
   glance: false,
+  /** Look once at a point (the stool appearing at your feet). */
+  glanceAt: null as null | [number, number, number],
+  /** Which way the player faces on the floor (unit x, z), for putting things in front of them. */
+  dir: { x: 0, z: -1 },
+  /** True while the stool climb drives the eye height itself, step by step (no easing). */
+  eyeSnap: false,
+  /** Walk to this floor point (the step onto the stool); 0..1 how far along. */
+  stepTo: null as null | { x: number; z: number; from: { x: number; z: number }; k: number },
   /** Last full pose, so a rebuilt canvas (or a reloaded page) puts you back. */
   lastPose: null as SavedPose | null,
   listeners: new Set<(crouched: boolean) => void>(),
@@ -334,7 +342,8 @@ export function WalkController({ enabled, engaged, onStep, atTable = false }: Wa
     const k = keys.current;
     const crouching = walkRig.crouchLock;
     const targetEye = (crouching ? PLAYER.crouchHeight : PLAYER.height) + walkRig.eyeBoost;
-    eyeHeight.current += (targetEye - eyeHeight.current) * Math.min(1, delta * 9);
+    if (walkRig.eyeSnap) eyeHeight.current = targetEye;
+    else eyeHeight.current += (targetEye - eyeHeight.current) * Math.min(1, delta * 9);
 
     const speed = crouching ? PLAYER.crouchSpeed : PLAYER.walkSpeed;
 
@@ -383,6 +392,22 @@ export function WalkController({ enabled, engaged, onStep, atTable = false }: Wa
       camera.position.y = eyeHeight.current + Math.sin(t * 1.25) * 0.008;
     }
 
+    FORWARD.set(0, 0, -1).applyQuaternion(camera.quaternion);
+    const flat = Math.hypot(FORWARD.x, FORWARD.z);
+    if (flat > 0.05) {
+      walkRig.dir.x = FORWARD.x / flat;
+      walkRig.dir.z = FORWARD.z / flat;
+    }
+    const st = walkRig.stepTo;
+    if (st) {
+      camera.position.x = st.from.x + (st.x - st.from.x) * st.k;
+      camera.position.z = st.from.z + (st.z - st.from.z) * st.k;
+    }
+    if (walkRig.glanceAt) {
+      const [gx, gy, gz] = walkRig.glanceAt;
+      walkRig.glanceAt = null;
+      camera.lookAt(gx, gy, gz);
+    }
     if (walkRig.glance) {
       walkRig.glance = false;
       camera.lookAt(LAYOUT.teddy.x, 2.28, LAYOUT.teddy.z);

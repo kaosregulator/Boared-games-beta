@@ -19,7 +19,6 @@ const SPINE_COLOR: Record<string, { color: string; accent: string }> = {
   poker: { color: '#1f5134', accent: '#ffd98a' },
   blackjack: { color: '#14402a', accent: '#9ff0b8' },
   gofish: { color: '#1b5f7a', accent: '#bdf0ff' },
-  liarsdice: { color: '#6d4414', accent: '#f5d985' },
   mousetrap: { color: '#166534', accent: '#facc15' },
   guesswho: { color: '#b91c1c', accent: '#bfdbfe' },
   trivia: { color: '#3b2148', accent: '#ffd27a' },

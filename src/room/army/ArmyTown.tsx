@@ -2367,10 +2367,10 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
                 ['R', 'Call chopper'],
                 ['C', 'Camera'],
               ]
-          ).map(([key, label]) => (
-            <span key={key} className="flex min-w-[4.2rem] flex-col items-center rounded-xl px-2 py-1">
-              <span className="font-mono text-[11px] font-black tracking-wide text-white">{key}</span>
-              <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/55">{label}</span>
+          ).map(([key, label], i) => (
+            <span key={key} className={`flex min-w-[4.4rem] flex-col items-center justify-end gap-1 px-2.5 py-1 ${i ? 'border-l border-white/15' : ''}`}>
+              <Keycaps name={key} />
+              <span className="text-[9px] font-black uppercase tracking-[0.14em] text-white/75">{label}</span>
             </span>
           ))}
         </div>
@@ -2405,6 +2405,27 @@ export function ArmyHud({ onExit }: { onExit: () => void }) {
 }
 
 /** Sergeant Green's step card: how the controls work, under what he just said. */
+/** A key as it looks on the keyboard: WASD and the arrows as their clusters, the rest as one cap. */
+function Keycaps({ name }: { name: string }) {
+  const cap = (k: string, wide = false) => (
+    <kbd
+      key={k}
+      className={`grid h-[1.45rem] place-items-center rounded-md border border-sky-200/70 bg-[#0d1a26]/90 font-mono text-[10px] font-black text-white shadow-[0_2px_0_rgba(125,211,252,0.45),0_0_6px_rgba(125,211,252,0.25)] ${wide ? 'px-2' : 'w-[1.45rem]'}`}
+    >
+      {k}
+    </kbd>
+  );
+  const cluster = (top: string, row: string[]) => (
+    <span className="flex flex-col items-center gap-0.5">
+      {cap(top)}
+      <span className="flex gap-0.5">{row.map(k => cap(k))}</span>
+    </span>
+  );
+  if (name === 'WASD') return cluster('W', ['A', 'S', 'D']);
+  if (name === 'ARROWS') return cluster('↑', ['←', '↓', '→']);
+  return cap(name, name.length > 1);
+}
+
 function CoachCard({ step, text, top = false }: { step: number; text: string; top?: boolean }) {
   return (
     <div data-army-card className={`absolute ${top ? 'top-[13%]' : 'bottom-28'} left-1/2 w-[min(26rem,88vw)] -translate-x-1/2 rounded-2xl border-2 border-lime-300/70 bg-black/75 px-4 py-3 text-white shadow-[3px_4px_0_rgba(0,0,0,0.55)]`}>

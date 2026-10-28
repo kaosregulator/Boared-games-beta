@@ -51,6 +51,18 @@ export function ToyChest({ hovered }: { hovered: boolean }) {
     return built;
   }, []);
 
+  // Each box in the chest opens its own game when you aim at it (the room's own
+  // game-box click: card first, press again to play). The viewer opens the View-Master.
+  useEffect(() => {
+    const boxes: Record<string, HoverTarget> = {
+      sorry: { id: 'chest-sorry', kind: 'game', gameId: 'pawnrush', label: 'Sorry!', hint: 'Inspect · play' },
+      guess_who: { id: 'chest-guesswho', kind: 'game', gameId: 'guesswho', label: 'Guess Who?', hint: 'Inspect · play' },
+      mouse_trap: { id: 'chest-mousetrap', kind: 'game', gameId: 'mousetrap', label: 'Mouse Trap', hint: 'Inspect · play' },
+      view_master: { id: 'chest-viewmaster', kind: 'prop', label: 'View-Master', hint: 'Look through it' },
+    };
+    for (const [key, mesh] of handles.storedBoxMeshes) mesh.userData.interactable = boxes[key];
+  }, [handles]);
+
   useEffect(() => {
     toyChestBus.toggle = () => setOpen(value => !value);
     return () => {

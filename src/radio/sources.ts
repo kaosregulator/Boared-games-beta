@@ -139,6 +139,58 @@ export function countClick(uuid: string) {
   void fetch(`/api/radio/click/${uuid}`).catch(() => {});
 }
 
+/* ------------------------------ stream checks ------------------------------ */
+
+/**
+ * Addresses that can't be a station before anyone asks: not https, a web
+ * page or playlist file, or a SomaFM address that isn't one of its public
+ * Icecast hosts (somafm.com pages and the premium mounts ask you to sign in).
+ */
+export function plausibleStream(url: string): boolean {
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    return false;
+  }
+  if (u.protocol !== 'https:' || u.username || u.password) return false;
+  const host = u.hostname.toLowerCase();
+  if (host.endsWith('somafm.com') && !/^ice\d\.somafm\.com$/.test(host)) return false;
+  if (/\/premium\b|\/(login|signin|sign-in|auth|account)\b/i.test(u.pathname)) return false;
+  if (/\.(html?|php|aspx?|jsp|cgi|pls|m3u8?|xspf|asx)$/i.test(u.pathname)) return false;
+  return true;
+}
+
+export interface ProbeResult {
+  ok: boolean;
+  url?: string;
+  why?: string;
+}
+
+const probes = new Map<string, Promise<string | null>>();
+
+/**
+ * Ask our server whether a stand-in answers like a station: 200 with an
+ * audio content type, no sign-in, no redirect to a page. Resolves to the
+ * address to play (after any redirects), or null. If the check itself can't
+ * be made, the stand-in is skipped rather than played blind.
+ */
+export function checkedStream(url: string, fetchImpl: typeof fetch = fetch): Promise<string | null> {
+  let hit = probes.get(url);
+  if (!hit) {
+    hit = fetchImpl(`/api/radio/probe?${new URLSearchParams({ url })}`, { signal: AbortSignal.timeout(9000) })
+      .then(res => (res.ok ? (res.json() as Promise<ProbeResult>) : null))
+      .then(result => (result?.ok && result.url && plausibleStream(result.url) ? result.url : null))
+      .catch(() => null);
+    probes.set(url, hit);
+    // a failed check is asked again next time; the server caches its own answers
+    void hit.then(ok => {
+      if (!ok) probes.delete(url);
+    });
+  }
+  return hit;
+}
+
 /* ------------------------------ the whole chain ----------------------------- */
 
 function own(station: Station): Source[] {
@@ -162,19 +214,10 @@ export async function* sourcesFor(station: Station): AsyncGenerator<Source> {
     return s;
   };
 
-  const streamOk = async (url: string | null) => {
-    if (!url) return null;
-    // A SomaFM listen page or any HTML address is not a station. The dial
-    // stays on the tuner and tries the next stream.
-    try {
-      const u = new URL(url);
-      if (u.hostname.endsWith('somafm.com') && !/^ice\d\.somafm\.com$/.test(u.hostname)) return null;
-      if (/\.(html?|php)(\?|$)/i.test(u.pathname)) return null;
-    } catch {
-      return null;
-    }
-    return url;
-  };
+  // A stand-in plays only once the server has heard it answer like a station
+  // (see probeStream in radioBrowserApi.mjs). The dial stays on the tuner and
+  // tries the next stream otherwise.
+  const streamOk = async (url: string | null) => (url && plausibleStream(url) ? checkedStream(url) : null);
 
   // A stand-in that has proven better than the station's own feed goes
   // first, except once a day, when the own feed gets the chance to win back
@@ -185,7 +228,17 @@ export async function* sourcesFor(station: Station): AsyncGenerator<Source> {
   const ownDue = !health.own || Date.now() - health.own.at > 24 * 3600 * 1000;
   if (best && !ownDue) yield give({ key: best[0], uuid: best[1].uuid, url: async () => streamOk(best[1].url ?? null) });
 
-  for (const s of own(station)) yield { ...s, url: async () => streamOk(await s.url()) };
+  // The station's own Icecast hosts and archive tapes are known addresses:
+  // only the address check, no round trip through the server.
+  for (const s of own(station)) {
+    yield {
+      ...s,
+      url: async () => {
+        const url = await s.url();
+        return url && plausibleStream(url) ? url : null;
+      },
+    };
+  }
   tried.add('own');
   if (best && !tried.has(best[0])) yield give({ key: best[0], uuid: best[1].uuid, url: async () => streamOk(best[1].url ?? null) });
   if (!stand) return;

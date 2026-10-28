@@ -54,10 +54,17 @@ const seat = {
 const HOLD = new THREE.Vector3(0, 0.028, -0.3);
 const GLANCE = new THREE.Euler(0, 0, 0, 'YXZ');
 const GB_CENTRE = new THREE.Vector3();
-/** Half the held Game Boy's width and height, metres, plus a little room. */
-const GB_HALF = { w: 0.058, h: 0.092 };
+/**
+ * Half the held Game Boy's width and height, plus a little room, in metres at
+ * the hold point (HOLD, 0.3 m out; the tilted face itself comes up to about
+ * 0.21 m, so these read larger than the shell). The width takes in the neon
+ * labels either side, wider with the key caps; measured off screenshots so
+ * the outer label edges just fit a 390 px portrait phone.
+ */
+const GB_HALF_LABELLED = { w: 0.138, h: 0.092 };
+const GB_HALF_KEYS = { w: 0.16, h: 0.092 };
 
-function SeatRig() {
+function SeatRig({ keys }: { keys: boolean }) {
   const { camera, size } = useThree();
   const saved = useRef<{ pos: THREE.Vector3; quat: THREE.Quaternion; fov: number } | null>(null);
   const glance = useRef({ yaw: 0, pitch: 0, drag: false });
@@ -114,7 +121,7 @@ function SeatRig() {
     seat.quat.copy(camera.quaternion);
     // Frame the Game Boy in whatever the thumb pad leaves free, then zoom/pan.
     GB_CENTRE.copy(HOLD).applyQuaternion(seat.quat).add(seat.pos);
-    frameSubject(camera as THREE.PerspectiveCamera, GB_CENTRE, GB_HALF, viewRig.insets, size, 1.06);
+    frameSubject(camera as THREE.PerspectiveCamera, GB_CENTRE, keys ? GB_HALF_KEYS : GB_HALF_LABELLED, viewRig.insets, size, 1.06);
     if (!glance.current.drag) {
       const back = 1 - Math.exp(-dt * 3);
       glance.current.yaw += (0 - glance.current.yaw) * back;
@@ -169,40 +176,156 @@ function PadButton({ spec }: { spec: (typeof BUTTONS)[number] }) {
   );
 }
 
-/** A small tag floating beside the shell. It never sits on a button. */
-function SideTag({ text, position }: { text: string; position: [number, number, number] }) {
-  const map = useMemo(() => {
-    const c = document.createElement('canvas');
-    c.width = 256;
-    c.height = 96;
-    const g = c.getContext('2d');
-    if (!g) return null;
-    g.clearRect(0, 0, 256, 96);
-    g.fillStyle = 'rgba(10, 12, 16, 0.78)';
-    g.beginPath();
-    g.roundRect(4, 8, 248, 80, 28);
-    g.fill();
-    g.fillStyle = '#ffe9a0';
-    g.font = '700 52px sans-serif';
-    g.textAlign = 'center';
-    g.textBaseline = 'middle';
-    g.fillText(text, 128, 50);
-    const tex = new THREE.CanvasTexture(c);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    return tex;
-  }, [text]);
-  if (!map) return null;
-  const wide = Math.max(0.022, text.length * 0.008);
+/**
+ * The neon sticker labels from the owner's mockup, stuck in the air beside
+ * the shell: MOVE pointing at the D-pad and SELECT at Select on the left; A
+ * SELECT, B BACK and START on the right. They sit in the shell's own plane
+ * (so they tilt with it) and only ever outside its edge, never over the
+ * screen or a button. On a keyboard each one also shows its key.
+ */
+export interface GbLabel {
+  text: string;
+  /** The key on a keyboard (public/emu/play.html: Z = A, X = B, Shift = Select, Enter = Start). */
+  key: string;
+  /** -1 left of the shell, pointing right; 1 right of it, pointing left. */
+  side: -1 | 1;
+  /** Height on the shell, fitted units (level with the button it names). */
+  y: number;
+  color: string;
+  tilt: number;
+}
+
+export const GB_LABELS: GbLabel[] = [
+  { text: 'MOVE', key: '↑↓←→', side: -1, y: 0.409, color: '#5ef2ff', tilt: 0.04 },
+  { text: 'SELECT', key: 'SHIFT', side: -1, y: 0.256, color: '#c9a2ff', tilt: -0.03 },
+  { text: 'A SELECT', key: 'Z', side: 1, y: 0.478, color: '#ff5fb8', tilt: -0.04 },
+  { text: 'B BACK', key: 'X', side: 1, y: 0.367, color: '#ffd84a', tilt: 0.03 },
+  { text: 'START', key: 'ENTER', side: 1, y: 0.256, color: '#8dff6a', tilt: -0.02 },
+];
+
+/** Where the labels start, just clear of the shell's edge, and how tall they are (fitted units). */
+const LABEL_EDGE = 0.36;
+const LABEL_H = 0.066;
+/** Without key caps (touch screens) they're a touch smaller, so the Game Boy stays big on a phone. */
+const LABEL_H_TOUCH = 0.058;
+const LABEL_FONT = '800 64px Syne, "Bricolage Grotesque", sans-serif';
+const ARROW_FONT = '800 54px sans-serif';
+const KEY_FONT = '700 40px "IBM Plex Mono", monospace';
+
+function drawLabel(label: GbLabel, keys: boolean) {
+  const c = document.createElement('canvas');
+  const g = c.getContext('2d');
+  if (!g) return null;
+  const H = 128;
+  const arrow = label.side === -1 ? '▶' : '◀';
+  g.font = LABEL_FONT;
+  const textW = g.measureText(label.text).width;
+  g.font = ARROW_FONT;
+  const arrowW = g.measureText(arrow).width;
+  g.font = KEY_FONT;
+  const keyW = keys ? g.measureText(label.key).width + 28 : 0;
+  const gap = 18;
+  const pad = 34;
+  const W = Math.ceil(pad * 2 + textW + gap + arrowW + (keys ? gap + keyW : 0));
+  c.width = W;
+  c.height = H;
+  // a die-cut sticker: white edge, dark body, neon rim
+  const r = 40;
+  g.beginPath();
+  g.roundRect(5, 5, W - 10, H - 10, r);
+  g.fillStyle = '#fdfaff';
+  g.fill();
+  g.beginPath();
+  g.roundRect(14, 14, W - 28, H - 28, r - 9);
+  g.fillStyle = '#170a22';
+  g.fill();
+  g.shadowColor = label.color;
+  g.shadowBlur = 14;
+  g.strokeStyle = label.color;
+  g.lineWidth = 4;
+  g.stroke();
+  // reading order, with the arrow on the button's side
+  type Part = { kind: 'text' | 'arrow' | 'key'; w: number };
+  const word: Part = { kind: 'text', w: textW };
+  const tip: Part = { kind: 'arrow', w: arrowW };
+  const cap: Part[] = keys ? [{ kind: 'key', w: keyW }] : [];
+  const parts: Part[] = label.side === -1 ? [...cap, word, tip] : [tip, word, ...cap];
+  let x = pad;
+  g.textBaseline = 'middle';
+  g.textAlign = 'left';
+  for (const p of parts) {
+    if (p.kind === 'text') {
+      g.font = LABEL_FONT;
+      g.shadowColor = label.color;
+      g.shadowBlur = 20;
+      g.fillStyle = label.color;
+      g.fillText(label.text, x, H / 2 + 3);
+      g.shadowBlur = 0;
+      g.fillStyle = 'rgba(255,255,255,0.45)';
+      g.fillText(label.text, x - 1, H / 2 + 1);
+      g.globalAlpha = 0.65;
+      g.fillStyle = label.color;
+      g.fillText(label.text, x, H / 2 + 3);
+      g.globalAlpha = 1;
+    } else if (p.kind === 'arrow') {
+      g.font = ARROW_FONT;
+      g.shadowColor = label.color;
+      g.shadowBlur = 16;
+      g.fillStyle = '#ffffff';
+      g.fillText(arrow, x, H / 2 + 2);
+    } else {
+      g.shadowBlur = 0;
+      g.beginPath();
+      g.roundRect(x, H / 2 - 28, p.w, 56, 10);
+      g.fillStyle = 'rgba(255,255,255,0.12)';
+      g.fill();
+      g.strokeStyle = 'rgba(255,255,255,0.7)';
+      g.lineWidth = 3;
+      g.stroke();
+      g.font = KEY_FONT;
+      g.fillStyle = '#ffffff';
+      g.fillText(label.key, x + 14, H / 2 + 2);
+    }
+    x += p.w + gap;
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  return { tex, aspect: W / H };
+}
+
+function NeonLabel({ label, keys }: { label: GbLabel; keys: boolean }) {
+  // redraw once the word-art fonts are in
+  const [fontsIn, setFontsIn] = useState(0);
+  useEffect(() => {
+    if (typeof document === 'undefined' || !document.fonts) return;
+    let live = true;
+    void Promise.all([document.fonts.load(LABEL_FONT), document.fonts.load(KEY_FONT)]).then(
+      () => live && setFontsIn(n => n + 1),
+      () => {},
+    );
+    return () => {
+      live = false;
+    };
+  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const art = useMemo(() => drawLabel(label, keys), [label, keys, fontsIn]);
+  useEffect(() => () => art?.tex.dispose(), [art]);
+  if (!art) return null;
+  const h = keys ? LABEL_H : LABEL_H_TOUCH;
+  const w = h * art.aspect;
+  // anchored at the shell's edge, reaching outwards
+  const x = label.side * (LABEL_EDGE + w / 2);
   return (
-    <mesh position={position}>
-      <planeGeometry args={[wide, 0.012]} />
-      <meshBasicMaterial map={map} transparent depthWrite={false} />
+    <mesh position={at(x, label.y, 0.03)} rotation={[-LEAN, 0, label.tilt]} renderOrder={5}>
+      <planeGeometry args={[w * M, h * M]} />
+      <meshBasicMaterial map={art.tex} transparent depthWrite={false} toneMapped={false} />
     </mesh>
   );
 }
 
 /** The Game Boy held in both hands, kept in front of the camera. */
-function HeldGameBoy() {
+function HeldGameBoy({ keys }: { keys: boolean }) {
   const hold = useRef<THREE.Group>(null);
   useFrame(() => {
     const g = hold.current;
@@ -227,12 +350,11 @@ function HeldGameBoy() {
         {BUTTONS.map(b => (
           <PadButton key={b.key} spec={b} />
         ))}
+        {/* Beside the shell, never on the screen or a button. */}
+        {GB_LABELS.map(l => (
+          <NeonLabel key={l.text} label={l} keys={keys} />
+        ))}
       </group>
-      {/* Beside the shell, not on the buttons. */}
-      <SideTag text="PAD" position={[-0.078, 0.012, 0.02]} />
-      <SideTag text="B" position={[0.078, -0.006, 0.02]} />
-      <SideTag text="A" position={[0.078, 0.022, 0.02]} />
-      <SideTag text="START" position={[0.02, -0.078, 0.03]} />
     </group>
   );
 }
@@ -244,12 +366,12 @@ function HeldGameBoy() {
  */
 const IDLE_FPS = 15;
 
-export function GameBoySeat() {
+export function GameBoySeat({ keys = true }: { keys?: boolean }) {
   return (
     <>
       <DemandTicker idleFps={IDLE_FPS} />
-      <SeatRig />
-      <HeldGameBoy />
+      <SeatRig keys={keys} />
+      <HeldGameBoy keys={keys} />
     </>
   );
 }

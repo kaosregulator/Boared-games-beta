@@ -51,6 +51,32 @@ class SoundEngine {
   private menuMusic = false;
   /** Seconds the next fade-in of the bed takes. */
   private nextFadeIn = 1.28;
+  /** 0..1: the room's TV ducks the bedroom tape while it plays (1 = not ducked). */
+  private bedDuck = 1;
+
+  /** What the bedroom tape should be at right now: the slider, the mute and the TV's duck. */
+  private bedLevel() {
+    if (this.muted) return 0;
+    return this.menuMusic ? this.musicVolume : this.musicVolume * this.bedDuck;
+  }
+
+  /**
+   * The TV turns the bedroom tape down while it plays and gives it back when
+   * it goes off or you walk away from it. The tape keeps rolling underneath,
+   * so it comes back where it would have been, not from the top.
+   */
+  public setBedDuck(level: number) {
+    const k = Math.round(Math.max(0, Math.min(1, level)) * 20) / 20;
+    if (k === this.bedDuck) return;
+    this.bedDuck = k;
+    if (!this.nostalgiaOn || this.bedroomHeld || !this.bedAudio) return;
+    this.nextFadeIn = 0.6;
+    this.fadeBed(this.bedLevel());
+  }
+
+  public getBedDuck() {
+    return this.bedDuck;
+  }
 
   private initCtx() {
     if (!this.ctx && typeof window !== 'undefined') {
@@ -88,7 +114,7 @@ class SoundEngine {
       window.clearInterval(this.bedFade);
       this.bedFade = null;
     }
-    this.bedAudio.volume = this.muted ? 0 : this.musicVolume;
+    this.bedAudio.volume = this.bedLevel();
   }
 
   public getTrack() {
@@ -1489,7 +1515,7 @@ class SoundEngine {
     if (audio.paused) {
       void audio.play().catch(() => {});
     }
-    this.fadeBed(this.muted ? 0 : this.musicVolume);
+    this.fadeBed(this.bedLevel());
   }
 
   public startNostalgia() {
@@ -1500,7 +1526,7 @@ class SoundEngine {
     }
     if (this.bedroomHeld) return;
     const audio = this.ensureBed();
-    const target = this.muted ? 0 : this.musicVolume;
+    const target = this.bedLevel();
     if (audio.paused) {
       audio.volume = 0;
       void audio.play().catch(() => {
@@ -1512,7 +1538,7 @@ class SoundEngine {
           window.removeEventListener('keydown', resume);
           if (!this.nostalgiaOn || !this.bedAudio) return;
           void this.bedAudio.play().then(() => {
-            if (this.nostalgiaOn) this.fadeBed(this.muted ? 0 : this.musicVolume);
+            if (this.nostalgiaOn) this.fadeBed(this.bedLevel());
           }).catch(() => {});
         };
         this.bedUnlock = resume;

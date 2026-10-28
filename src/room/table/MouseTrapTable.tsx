@@ -4,8 +4,10 @@ import * as THREE from 'three';
 import { buildMouseTrap3DScene } from '../../games/bored/mouseTrap3DBuilder';
 import { createMouseTrapBoardTexture } from '../../games/bored/boardTextures';
 import {
+  CHEESE_WHEEL_SPACE_INDEX,
   MOUSE_COLORS,
   MOUSE_META,
+  completeContraptionChainReaction,
   createInitialMouseTrapState,
   rollMouseTrapTurn,
   type MouseColor,
@@ -97,7 +99,8 @@ export function MouseTrapTable({ onLeave }: { onLeave: () => void }) {
     scene.updateLivingMouseTrapScene({
       elapsed: clock.elapsedTime,
       dt,
-      state: { ...state, builtStages: 5 },
+      // The trap goes up a piece at a time as it's earned, as in the box rules.
+      state,
       activeMouseStepAnim: step.current,
       chainReactionStartMs: chainAt.current,
       scenePulseStartMs: null,
@@ -115,6 +118,18 @@ export function MouseTrapTable({ onLeave }: { onLeave: () => void }) {
       actions.push({ label: 'New game', onClick: () => setState(createInitialMouseTrapState('mode1_classic')) });
     } else if (state.currentTurn === YOU) {
       actions.push({ label: state.lastDiceRoll ? 'Roll again' : 'Roll', onClick: roll });
+      // The whole trap is up and someone's on the cheese wheel: turn the crank.
+      const victim = MOUSE_COLORS.find(c => c !== YOU && state.mice[c].trackIndex === CHEESE_WHEEL_SPACE_INDEX && !state.mice[c].isTrapped);
+      if (state.builtStages >= 5 && victim) {
+        actions.push({
+          label: 'Turn the crank',
+          onClick: () => {
+            chainAt.current = performance.now();
+            sound.playShelfSlide();
+            setState(s => (s.currentTurn === YOU && !s.winner ? completeContraptionChainReaction(s, victim) : s));
+          },
+        });
+      }
     }
     const cheese = MOUSE_COLORS.map(c => `${MOUSE_META[c].name.split(' ')[0]} ${state.mice[c].cheeseCount}`).join(' · ');
     pushHud({

@@ -612,7 +612,6 @@ export const BOX_FACE: Record<string, { card: string; face: string; ink: string 
   blackjack: { card: '#a16245', face: '#14532d', ink: '#dcfce7' },
   gofish: { card: '#a16245', face: '#0e7490', ink: '#ecfeff' },
   casino: { card: '#a16245', face: '#065f46', ink: '#d1fae5' },
-  liarsdice: { card: '#a16245', face: '#854d0e', ink: '#fef9c3' },
   mousetrap: { card: '#a16245', face: '#166534', ink: '#fef9c3' },
   guesswho: { card: '#a16245', face: '#b91c1c', ink: '#dbeafe' },
   trivia: { card: '#a16245', face: '#4c1d95', ink: '#fde68a' },
@@ -668,9 +667,6 @@ export function boardFaceTexture(id: GameId): THREE.Texture {
       break;
     case 'yahtzee':
       drawDiceMat(ctx, 'YAHTZEE');
-      break;
-    case 'liarsdice':
-      drawDiceMat(ctx, "LIAR'S DICE");
       break;
     case 'mousetrap':
       drawFelt(ctx, 'MOUSE TRAP', '#166534', 4);

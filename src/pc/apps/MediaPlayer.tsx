@@ -30,12 +30,37 @@ const TRACKS: Track[] = [
 const decoded = new Map<string, AudioBuffer>();
 /** A song you drop in plays for this visit only, and a huge file is refused. */
 export const AUDIO_LIMIT = 40 * 1024 * 1024;
+/** Above this the player asks first: a big file takes a while to decode and a lot of memory. */
+export const AUDIO_WARN = 25 * 1024 * 1024;
+/** What the player opens, as the file box and the hint show it. */
+export const AUDIO_KINDS = ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac', 'webm'];
+const AUDIO_EXT = new RegExp(`\\.(${AUDIO_KINDS.join('|')})$`, 'i');
+export const AUDIO_ACCEPT = ['audio/*', ...AUDIO_KINDS.map(k => `.${k}`)].join(',');
+const MB = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+const LIMIT_MB = Math.round(AUDIO_LIMIT / (1024 * 1024));
+const KIND_LIST = AUDIO_KINDS.map(k => k.toUpperCase()).join(', ');
+/** One line for the playlist and the library: what plays, how big, and that nothing is kept. */
+export const AUDIO_HINT = `Plays ${KIND_LIST}. Up to ${LIMIT_MB} MB each. Played from memory, never saved.`;
 
+export type AudioVerdict = { kind: 'ok' } | { kind: 'warn'; text: string } | { kind: 'refuse'; text: string };
+
+/** Whether a file can go on the playlist: fine, fine after a warning, or refused (and why). */
+export function audioFileVerdict(file: { name: string; type: string; size: number }): AudioVerdict {
+  const audio = file.type.startsWith('audio/') || AUDIO_EXT.test(file.name);
+  if (!audio) return { kind: 'refuse', text: `"${file.name}" is not a file Windows Media Player can play.\n\nIt plays ${KIND_LIST} files.` };
+  if (file.size > AUDIO_LIMIT) {
+    return { kind: 'refuse', text: `"${file.name}" is ${MB(file.size)}, over the ${LIMIT_MB} MB limit, so it can't be played here.\n\nPick a file under ${LIMIT_MB} MB.` };
+  }
+  if (file.size > AUDIO_WARN) {
+    return { kind: 'warn', text: `"${file.name}" is ${MB(file.size)}. A file this big takes a moment to open and uses a lot of memory while it plays.\n\nPlay it anyway?` };
+  }
+  return { kind: 'ok' };
+}
+
+/** The refusal message, or null when the file can be played (perhaps after a warning). */
 export function audioFileProblem(file: { name: string; type: string; size: number }): string | null {
-  const audio = file.type.startsWith('audio/') || /\.(mp3|wav|ogg|m4a|aac|flac|webm)$/i.test(file.name);
-  if (!audio) return `"${file.name}" is not an audio file.`;
-  if (file.size > AUDIO_LIMIT) return `"${file.name}" is too large to play here. Keep it under 40 MB.`;
-  return null;
+  const v = audioFileVerdict(file);
+  return v.kind === 'refuse' ? v.text : null;
 }
 
 function fmt(s: number) {
@@ -119,6 +144,8 @@ export function MediaPlayer({ win }: { win: WinState }) {
   const deck = useRef<Deck | null>(null);
   if (!deck.current) deck.current = new Deck();
   const [tracks, setTracks] = useState<Track[]>(TRACKS);
+  /** The playlist as of now, for loads started from a dialog or a timer (their render's list is old). */
+  const tracksNow = useRef(tracks);
   const [index, setIndex] = useState(0);
   const [status, setStatus] = useState<'stopped' | 'loading' | 'playing' | 'paused'>('stopped');
   const [time, setTime] = useState(0);
@@ -133,7 +160,7 @@ export function MediaPlayer({ win }: { win: WinState }) {
 
   const load = async (i: number, autoplay = true) => {
     const d = deck.current!;
-    const tr = tracks[i];
+    const tr = tracksNow.current[i];
     if (!tr) return;
     d.stop();
     setIndex(i);
@@ -228,6 +255,42 @@ export function MediaPlayer({ win }: { win: WinState }) {
   };
   const go = (step: number) => void load((index + step + tracks.length) % tracks.length);
 
+  /** Put files on the playlist and play the first: refused ones explain why, big ones ask first. */
+  const addFiles = (files: File[]) => {
+    const take = (list: File[]) => {
+      if (!list.length) return;
+      const start = tracksNow.current.length;
+      tracksNow.current = [...tracksNow.current, ...list.map(f => ({ title: f.name.replace(/\.[^.]+$/, ''), artist: 'My Music', file: f }))];
+      setTracks(tracksNow.current);
+      void load(start);
+    };
+    const ok: File[] = [];
+    const big: { file: File; text: string }[] = [];
+    for (const f of files) {
+      const v = audioFileVerdict(f);
+      if (v.kind === 'refuse') messageBox('Windows Media Player', { icon: 'error', text: v.text, sound: 'chord' });
+      else if (v.kind === 'warn') big.push({ file: f, text: v.text });
+      else ok.push(f);
+    }
+    take(ok);
+    // one question per big file, in turn
+    const ask = (i: number) => {
+      const b = big[i];
+      if (!b) return;
+      messageBox('Windows Media Player', {
+        icon: 'warning',
+        text: b.text,
+        buttons: ['Yes', 'No'],
+        sound: 'exclaim',
+        onButton: label => {
+          if (label === 'Yes') take([b.file]);
+          ask(i + 1);
+        },
+      });
+    };
+    ask(0);
+  };
+
   const tr = tracks[index];
   const v = VISUALIZERS[vis];
   return (
@@ -235,29 +298,21 @@ export function MediaPlayer({ win }: { win: WinState }) {
       <input
         ref={fileInput}
         type="file"
-        accept="audio/*"
+        accept={AUDIO_ACCEPT}
         multiple
         hidden
         onChange={e => {
           const files = Array.from(e.target.files ?? []);
           e.target.value = '';
           if (!files.length) return;
-          const ok = files.filter(f => {
-            const problem = audioFileProblem(f);
-            if (problem) messageBox('Windows Media Player', { icon: 'error', text: problem, sound: 'chord' });
-            return !problem;
-          });
-          if (!ok.length) return;
-          const start = tracks.length;
-          setTracks(t => [...t, ...ok.map(f => ({ title: f.name.replace(/\.[^.]+$/, ''), artist: 'My Music', file: f }))]);
-          window.setTimeout(() => void load(start), 50);
+          addFiles(files);
         }}
       />
       <div className="wmp-top">
         <span className="wmp-brand">Windows Media Player</span>
         <div className="wmp-menu">
           <button type="button" onClick={() => fileInput.current?.click()}>File ▾</button>
-          <button type="button" onClick={() => messageBox('About Windows Media Player', { icon: 'media', text: `${TRACKS[0].credit}\n\nVisualizations drawn for this computer.\nFile opens an audio file on your own machine, up to 40 MB. Closing the player drops it from memory.`, sound: 'none' })}>
+          <button type="button" onClick={() => messageBox('About Windows Media Player', { icon: 'media', text: `${TRACKS[0].credit}\n\nVisualizations drawn for this computer.\nFile opens an audio file on your own machine (${KIND_LIST}), up to ${LIMIT_MB} MB; past ${Math.round(AUDIO_WARN / (1024 * 1024))} MB it asks first. Nothing is saved: closing the player drops it from memory.`, sound: 'none' })}>
             Help ▾
           </button>
           <button type="button" className="wmp-x" onClick={() => closeWindow(win.id)}>
@@ -320,6 +375,7 @@ export function MediaPlayer({ win }: { win: WinState }) {
                 <button type="button" className="wmp-add" onClick={() => fileInput.current?.click()}>
                   + Add songs from your computer...
                 </button>
+                <div className="wmp-hint">{AUDIO_HINT}</div>
               </div>
             </>
           )}
@@ -331,9 +387,14 @@ export function MediaPlayer({ win }: { win: WinState }) {
               {t.title}
             </button>
           ))}
-          <button type="button" className="wmp-item add" onClick={() => fileInput.current?.click()}>
+          <button type="button" className="wmp-item add" onClick={() => fileInput.current?.click()} title={AUDIO_HINT}>
             Open...
           </button>
+          <div className="wmp-hint">
+            {KIND_LIST}
+            <br />
+            up to {LIMIT_MB} MB
+          </div>
         </div>
       </div>
       <div className="wmp-seek">

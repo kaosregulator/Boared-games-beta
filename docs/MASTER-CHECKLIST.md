@@ -161,3 +161,21 @@ settings to finish C3 and M3:
 - `huggingface.co` and `*.hf.space`: voice model, stereospace
 - `vm.vmdatabase.com` and `v5.airtableusercontent.com`: reel scans. Worked around by capturing the database pages through Firecrawl.
 - `archive.org` and `upload.wikimedia.org`: only matters for checking the card videos and photos from inside the container. Players' browsers fetch them directly.
+
+---
+
+## Status after PR #58
+
+Done in #57 / #58: A (time capsules), B (army film + keycaps), C1 (Sarge finishes
+his lines), D (Game Boy), E (stool climb), F (PC player), G (Hot Wheels), H1–H17
+(Monopoly, Battleship, Sorry, Blackjack, Hold'em, Go Fish, Guess Who, Mouse Trap
+build-up + crank, Liar's Dice removed, Wizard's Chess board + captures + AI),
+I (Rubik notation pad + Undo), J (TV channels, guide, music ducking), K (radio),
+L (I Spy zoom), M (View-Master reels in 3D, toy chest boxes).
+
+H9 Clue: `clue.glb` is only the box scan, so the cards spin the same 3D figures
+that stand on the board (no separate pawn models exist).
+
+Still blocked: C2 (find the "Zerg" clip) and C3 (remake Sarge's voice) need
+`huggingface.co`, which this session's network still refuses. J2: only one Woody
+Woodpecker short is public domain; the channel is filled with Walter Lantz shorts.

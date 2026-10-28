@@ -11,10 +11,8 @@ const ChessGame = lazy(() => import('../games/chess/ChessGame').then(m => ({ def
 const ClueGame = lazy(() => import('../games/clue/ClueGame').then(m => ({ default: m.ClueGame })));
 const Connect4Game = lazy(() => import('../games/connect4/Connect4Game').then(m => ({ default: m.Connect4Game })));
 const GoFishGame = lazy(() => import('../games/gofish/GoFishGame').then(m => ({ default: m.GoFishGame })));
-const LiarsDiceGame = lazy(() => import('../games/liarsdice/LiarsDiceGame').then(m => ({ default: m.LiarsDiceGame })));
 const LifeGame = lazy(() => import('../games/life/LifeGame').then(m => ({ default: m.LifeGame })));
 const MonopolyGame = lazy(() => import('../games/monopoly/MonopolyGame').then(m => ({ default: m.MonopolyGame })));
-const PawnRushGame = lazy(() => import('../games/pawnrush/PawnRushGame').then(m => ({ default: m.PawnRushGame })));
 const PokerGame = lazy(() => import('../games/poker/PokerGame').then(m => ({ default: m.PokerGame })));
 const TriviaPartyGame = lazy(() => import('../games/trivia/TriviaPartyGame').then(m => ({ default: m.TriviaPartyGame })));
 const YahtzeeGame = lazy(() => import('../games/yahtzee/YahtzeeGame').then(m => ({ default: m.YahtzeeGame })));
@@ -62,12 +60,6 @@ export function ActiveGameSwitch({
       {activeGame.id === 'checkers' && <CheckersGame onBackToShelf={onExit} />}
       {activeGame.id === 'blackjack' && <BlackjackGame onBackToShelf={onExit} />}
       {activeGame.id === 'gofish' && <GoFishGame onBackToShelf={onExit} />}
-      {activeGame.id === 'pawnrush' && (
-        <PawnRushGame viewMode={viewMode} onToggleViewMode={onToggleViewMode} onOpenRules={onOpenRules} />
-      )}
-      {activeGame.id === 'liarsdice' && (
-        <LiarsDiceGame viewMode={viewMode} onToggleViewMode={onToggleViewMode} onOpenRules={onOpenRules} />
-      )}
       {activeGame.id === 'yahtzee' && (
         <YahtzeeGame onBackToShelf={onExit} onGameOver={onGameOver} playerName={userProfile.name} />
       )}
