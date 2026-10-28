@@ -259,6 +259,22 @@ function drawSpace(ctx: CanvasRenderingContext2D, sp: Space) {
   }
 }
 
+/**
+ * Where an owner's colour strip sits on a property space: in the gap just
+ * under the printed name, as a fraction of the space's depth from its centre
+ * (positive runs toward the board's outer edge). Kept beside drawSpace so the
+ * two move together.
+ */
+export function ownerStripOffset(i: number): number {
+  const kind = BOARD[i].kind;
+  if (kind === 'street') return 0.07;
+  if (kind === 'railroad') return -0.17;
+  if (kind === 'utility') return -0.195;
+  return 0;
+}
+/** The strip's size against a space: most of its width, a sliver of its depth. */
+export const OWNER_STRIP = { w: 0.8, d: 0.065 };
+
 function drawCorner(ctx: CanvasRenderingContext2D, sp: Space) {
   const c = CORNER;
   ctx.fillStyle = INK;
@@ -524,6 +540,45 @@ export function deedTexture(i: number): THREE.CanvasTexture {
   deedCache.set(i, t);
   whenFontsReady(() => {
     drawDeed(ctx, BOARD[i]);
+    t.needsUpdate = true;
+  });
+  return t;
+}
+
+const backCache = new Map<number, THREE.CanvasTexture>();
+
+/** The back of a deed, as printed: turned up while the property is mortgaged. */
+function drawDeedBack(ctx: CanvasRenderingContext2D, sp: Space) {
+  const W = DEED_W;
+  const H = DEED_H;
+  ctx.fillStyle = '#fbfaf4';
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 3;
+  ctx.strokeRect(10, 10, W - 20, H - 20);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = INK;
+  lines(ctx, sp.name.toUpperCase(), W / 2, 70, W - 60, 24, 800, 2);
+  line(ctx, 'MORTGAGED', W / 2, 160, W - 60, 34, 800);
+  line(ctx, `for $${(sp.price ?? 0) / 2}`, W / 2, 200, W - 60, 26, 700);
+  lines(ctx, 'Card must be turned this side up if property is mortgaged', W / 2, 296, W - 70, 15, 600, 3);
+}
+
+export function deedBackTexture(i: number): THREE.CanvasTexture {
+  const hit = backCache.get(i);
+  if (hit) return hit;
+  const c = document.createElement('canvas');
+  c.width = DEED_W;
+  c.height = DEED_H;
+  const ctx = c.getContext('2d')!;
+  drawDeedBack(ctx, BOARD[i]);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  backCache.set(i, t);
+  whenFontsReady(() => {
+    drawDeedBack(ctx, BOARD[i]);
     t.needsUpdate = true;
   });
   return t;

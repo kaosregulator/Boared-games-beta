@@ -14,11 +14,25 @@ export interface HudAction {
   tone?: 'amber' | 'ghost';
 }
 
+/** A small pick in a row, e.g. one title deed. */
+export interface HudChip {
+  label: string;
+  onClick: () => void;
+  /** Picked or showing now. */
+  active?: boolean;
+  /** A colour dot before the label, e.g. the deed's colour group. */
+  swatch?: string;
+  /** Greyed, e.g. a mortgaged deed. */
+  muted?: boolean;
+}
+
 export interface HudModel {
   title: string;
   note: string;
   onLeave: () => void;
   actions: HudAction[];
+  /** Labelled rows of chips between the note and the buttons. */
+  lists?: { label: string; chips: HudChip[] }[];
   /** Small print under the note, e.g. cash on hand. */
   detail?: string;
   /** Clue types the note. Other tables leave it off. */
@@ -117,6 +131,28 @@ export function TableHudOverlay({
           Pack up
         </button>
       </div>
+      {model.lists?.map(list => (
+        <div key={list.label} className="mt-2.5">
+          <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/50">{list.label}</p>
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            {list.chips.length === 0 && <span className="text-[11px] text-white/40">Nothing</span>}
+            {list.chips.map(chip => (
+              <button
+                key={chip.label}
+                type="button"
+                onClick={chip.onClick}
+                aria-pressed={chip.active}
+                className={`flex min-h-8 items-center gap-1.5 rounded-lg px-2 text-[11px] font-bold ${
+                  chip.active ? 'bg-amber-400 text-black' : 'border border-white/20 bg-white/10 text-white'
+                } ${chip.muted && !chip.active ? 'opacity-55' : ''}`}
+              >
+                {chip.swatch && <span className="h-2.5 w-2.5 shrink-0 rounded-sm border border-black/40" style={{ background: chip.swatch }} />}
+                {chip.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
       <div className="mt-3 flex flex-wrap gap-2">
         {model.actions.map(action => (
           <button
