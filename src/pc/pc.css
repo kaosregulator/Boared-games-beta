@@ -1332,6 +1332,15 @@ textarea {
   color: #8fa8e0;
   margin-top: auto;
 }
+/* What the player opens and how big, under Open... and the library's add button. */
+.wmp-hint {
+  font: 9px/1.25 Arial;
+  color: #8fa8e0;
+  padding: 1px 3px 0;
+}
+.wmp-library .wmp-hint {
+  padding: 4px 2px 0;
+}
 .wmp-seek {
   padding: 0 10px;
 }

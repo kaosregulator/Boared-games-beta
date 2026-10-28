@@ -127,17 +127,21 @@ export const LAYOUT = {
   padStartSelect: 44,
   /** Desktop hint line at the bottom. */
   hint: 44,
+  /** The seated Game Boy's Big Screen / Stand Up bar on a keyboard: 64 tall, 16 off the bottom, 16 clear above. */
+  gbBar: 96,
 };
 
 export function insetsFor(kind: ViewKind, touch: boolean, vp: { w: number; h: number; landscape: boolean }, big: boolean, controlsShown = true): Insets {
   const top = big && !controlsShown ? 0 : LAYOUT.header;
-  if (!touch) return { top, right: 0, bottom: big ? 0 : LAYOUT.hint, left: 0 };
+  // The Game Boy comes first: on a keyboard its Big Screen / Stand Up bar
+  // stays along the bottom (in big screen too), so the picture never goes under it.
   if (kind === 'gameboy') {
-    if (!touch) return { top: big ? 0 : 12, right: 0, bottom: big ? 0 : 96, left: 0 };
+    if (!touch) return { top: big ? 0 : 12, right: 0, bottom: LAYOUT.gbBar, left: 0 };
     return vp.landscape
       ? { top: 12, right: LAYOUT.padSide, bottom: 72, left: LAYOUT.padSide }
       : { top: 12, right: 0, bottom: LAYOUT.padPortrait + 56, left: 0 };
   }
+  if (!touch) return { top, right: 0, bottom: big ? 0 : LAYOUT.hint, left: 0 };
   if (kind === 'tv') {
     if (big && !controlsShown) return { top: 0, right: 0, bottom: 0, left: 0 };
     return vp.landscape

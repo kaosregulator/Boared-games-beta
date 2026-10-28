@@ -18,6 +18,7 @@ import {
   type Ship,
   type Shots,
 } from './battleshipFleet';
+import { MARKER_H, MARKER_KINDS, MARKER_W, drawMarker, markerCanvas, markersFor, onMarkerArt, type MarkerKind } from './battleshipMarkers';
 
 /**
  * Battleship live on the card table, built from Arrq54's
@@ -246,28 +247,62 @@ interface Flight {
   done: () => void;
 }
 
-function Markers({ shots, ocean }: { shots: Shots; ocean: THREE.Vector3 }) {
-  const [hitTex] = useTexture([`${A}hit.png`]);
+/** One shared texture per marker kind, redrawn when the original's burst and skull load. */
+function useMarkerTextures() {
+  const tex = useMemo(() => {
+    const out = {} as Record<MarkerKind, THREE.CanvasTexture>;
+    for (const kind of MARKER_KINDS) {
+      const t = new THREE.CanvasTexture(markerCanvas(kind));
+      t.colorSpace = THREE.SRGBColorSpace;
+      t.anisotropy = 4;
+      out[kind] = t;
+    }
+    return out;
+  }, []);
+  useEffect(() => {
+    const redraw = () => {
+      for (const kind of MARKER_KINDS) {
+        drawMarker((tex[kind].image as HTMLCanvasElement).getContext('2d')!, kind);
+        tex[kind].needsUpdate = true;
+      }
+    };
+    redraw();
+    return onMarkerArt(redraw);
+  }, [tex]);
+  useEffect(() => () => MARKER_KINDS.forEach(k => tex[k].dispose()), [tex]);
+  return tex;
+}
+
+/** Peg height on the sea, about one cell: a peg stood in the hole. */
+const PEG_H = CELL * 1.05;
+const PEG_W = (PEG_H * MARKER_W) / MARKER_H;
+
+/**
+ * Pegs stood upright in the shot cells. Each is a billboard (it always faces
+ * the camera, so a low look across the water still shows the whole peg) and
+ * unlit, so the room's lamps never wash out a white miss or darken a red hit.
+ * Hits and sinks sit in a hull, so they draw over it rather than vanish inside.
+ */
+function Markers({
+  shots,
+  ocean,
+  fleet,
+  tex,
+}: {
+  shots: Shots;
+  ocean: THREE.Vector3;
+  fleet: Ship[];
+  tex: Record<MarkerKind, THREE.CanvasTexture>;
+}) {
   return (
     <group>
-      {Object.entries(shots).map(([k, v]) => {
-        const [x, y] = k.split(',').map(Number);
-        const p = cellPos(ocean, x, y);
-        return v === 'hit' ? (
-          <group key={k} position={[p.x, p.y + 0.004, p.z]}>
-            <mesh rotation={[-Math.PI / 2, 0, 0]}>
-              <circleGeometry args={[CELL * 0.28, 16]} />
-              <meshBasicMaterial color="#ff2d3a" toneMapped={false} />
-            </mesh>
-            <sprite position={[0, 0.016, 0]} scale={[CELL * 0.9, CELL * 0.9, 1]}>
-              <spriteMaterial map={hitTex} transparent depthWrite={false} toneMapped={false} />
-            </sprite>
-          </group>
-        ) : (
-          <mesh key={k} position={[p.x, p.y + 0.002, p.z]} rotation={[-Math.PI / 2, 0, 0]}>
-            <ringGeometry args={[CELL * 0.16, CELL * 0.28, 18]} />
-            <meshBasicMaterial color="#ffffff" toneMapped={false} />
-          </mesh>
+      {markersFor(shots, fleet).map(m => {
+        const p = cellPos(ocean, m.x, m.y);
+        const inHull = m.kind !== 'miss';
+        return (
+          <sprite key={m.key} position={[p.x, p.y + 0.001, p.z]} center={[0.5, 0.04]} scale={[PEG_W, PEG_H, 1]} renderOrder={inHull ? 12 : 11}>
+            <spriteMaterial map={tex[m.kind]} transparent alphaTest={0.08} depthWrite={false} depthTest={!inHull} toneMapped={false} />
+          </sprite>
         );
       })}
     </group>
@@ -320,6 +355,7 @@ type Phase = 'place' | 'battle' | 'over';
 
 export function BattleshipTable({ onLeave }: { onLeave: () => void }) {
   const make = useHulls();
+  const markerTex = useMarkerTextures();
   const [mine, setMine] = useState<Ship[]>([]);
   const [theirs, setTheirs] = useState<Ship[]>(() => randomFleet());
   const [myShots, setMyShots] = useState<Shots>({});
@@ -445,6 +481,9 @@ export function BattleshipTable({ onLeave }: { onLeave: () => void }) {
     });
   };
 
+  // Capture scripts fire on known cells with window.__battleship (dev server only).
+  if (import.meta.env.DEV) (window as unknown as { __battleship: unknown }).__battleship = { fire: clickTheirs, theirs, mine, turn, phase };
+
   const reset = () => {
     setMine([]);
     setTheirs(randomFleet());
@@ -516,8 +555,8 @@ export function BattleshipTable({ onLeave }: { onLeave: () => void }) {
       {theirs.map(s => (
         <Hull key={`t${s.id}`} ship={s} ocean={THEIRS} make={make} visible={sunk(s) || phase === 'over'} />
       ))}
-      <Markers shots={myShots} ocean={THEIRS} />
-      <Markers shots={theirShots} ocean={MINE} />
+      <Markers shots={myShots} ocean={THEIRS} fleet={theirs} tex={markerTex} />
+      <Markers shots={theirShots} ocean={MINE} fleet={mine} tex={markerTex} />
       {flights.map(f => (
         <Cannonball key={f.id} flight={f} />
       ))}

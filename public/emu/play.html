@@ -75,11 +75,34 @@
       };
 
       const tell = type => parent.postMessage({ source: 'cartridge', type }, location.origin);
+      // EmulatorJS puts SELECT on V, but on the Game Boy in the bean bag V is
+      // Big Screen, so its Select moves to Shift (keyCode 16). The room's labels say so.
+      const SELECT_SLOT = 2;
+      const SHIFT = 16;
       window.EJS_ready = () => tell('ready');
       window.EJS_onGameStart = () => {
+        const controls = window.EJS_emulator && window.EJS_emulator.controls;
+        if (core === 'gb' && controls && controls[0]) controls[0][SELECT_SLOT] = { ...(controls[0][SELECT_SLOT] || {}), value: SHIFT };
         tell('start');
         document.querySelector('canvas')?.focus();
       };
+      // The game has the keyboard, so the room's own keys go over to it:
+      // Escape (leave big screen, then stand up) and, on the Game Boy, V (big screen).
+      window.addEventListener(
+        'keydown',
+        event => {
+          if (event.repeat) return;
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            tell('escape');
+          } else if (core === 'gb' && event.code === 'KeyV' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+            event.preventDefault();
+            event.stopPropagation();
+            tell('big');
+          }
+        },
+        true,
+      );
 
       // Buttons pressed on the 3D console arrive here. Index is the libretro pad slot.
       window.addEventListener('message', event => {

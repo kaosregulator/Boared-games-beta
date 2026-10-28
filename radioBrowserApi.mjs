@@ -104,10 +104,110 @@ export async function countClick(uuid) {
   return { ok: out?.ok === true || out?.ok === 'true' };
 }
 
+/* ------------------------------ stream checks ------------------------------ */
+
+/**
+ * A stand-in stream is only handed to the radio once its address has been
+ * asked here and answered like a radio station: 200 with an audio body. A
+ * sign-in (401/403/407, or any WWW-Authenticate), a web page, or a redirect
+ * that ends on one never reaches the player, so the browser never pops up a
+ * login box over the room.
+ */
+const AUDIO_TYPE = /^(audio\/[a-z0-9.+-]+|application\/ogg)\s*(;|$)/i;
+const MAX_HOPS = 3;
+const PROBE_TTL = 10 * 60 * 1000;
+const probeCache = new Map();
+
+/** What a stream's answer means for the radio: `{ ok: true }` or `{ ok: false, why }`. */
+export function judgeStreamAnswer(status, headers) {
+  const get = name => (typeof headers.get === 'function' ? headers.get(name) : headers[name]) ?? '';
+  if (get('www-authenticate')) return { ok: false, why: 'asks for a sign-in' };
+  if (status === 401 || status === 403 || status === 407) return { ok: false, why: `refused (${status})` };
+  if (status !== 200 && status !== 206) return { ok: false, why: `answered ${status}` };
+  const type = String(get('content-type')).trim();
+  if (!type) return { ok: false, why: 'no content type' };
+  if (!AUDIO_TYPE.test(type)) return { ok: false, why: `not audio (${type.split(';')[0]})` };
+  return { ok: true };
+}
+
+/** Loopback, private, link-local and other addresses a public stream never lives on. */
+export function isPrivateAddress(ip) {
+  const v4 = ip.startsWith('::ffff:') ? ip.slice(7) : ip;
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(v4)) {
+    const [a, b] = v4.split('.').map(Number);
+    return (
+      a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || a >= 224
+    );
+  }
+  const v6 = ip.toLowerCase();
+  return v6 === '::' || v6 === '::1' || v6.startsWith('fc') || v6.startsWith('fd') || v6.startsWith('fe80');
+}
+
+async function publicHost(hostname) {
+  const name = hostname.replace(/^\[|\]$/g, '');
+  if (name === 'localhost' || name.endsWith('.localhost') || name.endsWith('.internal') || name.endsWith('.local')) return false;
+  try {
+    const addrs = await dns.lookup(name, { all: true });
+    return addrs.length > 0 && addrs.every(a => !isPrivateAddress(a.address));
+  } catch {
+    return false;
+  }
+}
+
+/** Ask a stream address what it is, following up to three redirects. */
+export async function probeStream(raw, fetchImpl = fetch, hostOk = publicHost) {
+  let url;
+  try {
+    url = new URL(raw);
+  } catch {
+    return { ok: false, why: 'bad address' };
+  }
+  for (let hop = 0; hop <= MAX_HOPS; hop += 1) {
+    if (url.protocol !== 'https:') return { ok: false, why: 'not https' };
+    if (!(await hostOk(url.hostname))) return { ok: false, why: 'not a public host' };
+    let res;
+    try {
+      res = await fetchImpl(url.href, {
+        redirect: 'manual',
+        headers: { 'User-Agent': USER_AGENT, 'Icy-MetaData': '0' },
+        signal: AbortSignal.timeout(6000),
+      });
+    } catch {
+      return { ok: false, why: 'no answer' };
+    }
+    // headers are all we need; never pull the stream itself through the server
+    void res.body?.cancel().catch(() => {});
+    if (res.status >= 300 && res.status < 400) {
+      const to = res.headers.get('location');
+      if (!to) return { ok: false, why: `redirect ${res.status} to nowhere` };
+      url = new URL(to, url);
+      continue;
+    }
+    const verdict = judgeStreamAnswer(res.status, res.headers);
+    return verdict.ok ? { ok: true, url: url.href, type: res.headers.get('content-type') } : verdict;
+  }
+  return { ok: false, why: 'too many redirects' };
+}
+
+async function probeCached(raw) {
+  const hit = probeCache.get(raw);
+  if (hit && Date.now() - hit.at < PROBE_TTL) return hit.result;
+  const result = await probeStream(raw);
+  probeCache.set(raw, { at: Date.now(), result });
+  if (probeCache.size > 500) probeCache.delete(probeCache.keys().next().value);
+  return result;
+}
+
 /** Express-style handlers, shared by server.mjs and the Vite dev server. */
 export async function handleRadioRequest(url, send) {
   const u = new URL(url, 'http://local');
   try {
+    if (u.pathname === '/api/radio/probe') {
+      const target = u.searchParams.get('url');
+      if (!target) return send(400, { error: 'url' });
+      return send(200, await probeCached(target));
+    }
     if (u.pathname === '/api/radio/search') {
       const name = u.searchParams.get('name') || undefined;
       const tag = u.searchParams.get('tag') || undefined;

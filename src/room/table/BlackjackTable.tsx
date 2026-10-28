@@ -8,6 +8,7 @@ import { pushHud, type HudAction } from './tableHud';
 import { followAction, setTableView, type Shot } from './tableCam';
 import { GhostHand } from './GhostHand';
 import { CARD_W, Card3D, ChipStacks, useCardMaterial, useChipMaterial, type CardPose } from './cards3d';
+import { BANK_AT, BET_AT, DEALER_ROW, PLAYER_ROW, SHOE_AT, blackjackShot, settleBeats, type BlackjackBeat } from './blackjackCam';
 
 /**
  * Blackjack on green felt with real cards and chips (Tabletop Club's CC0
@@ -16,20 +17,26 @@ import { CARD_W, Card3D, ChipStacks, useCardMaterial, useChipMaterial, type Card
  * turns it and draws to 17. Bets are real chip stacks in the betting circle.
  */
 
-const SHOE = new THREE.Vector3(0.33, 0.012, -0.2);
-const DEALER_ROW = -0.15;
-const PLAYER_ROW = 0.19;
+const SHOE = new THREE.Vector3(SHOE_AT[0], 0.012, SHOE_AT[1]);
 /** The printed betting circle's centre on the felt. */
-const BET_SPOT = new THREE.Vector3(0, 0.0072, 0.084);
-const BANK_SPOT = new THREE.Vector3(0.31, 0.0072, 0.17);
+const BET_SPOT = new THREE.Vector3(BET_AT[0], 0.0072, BET_AT[1]);
+const BANK_SPOT = new THREE.Vector3(BANK_AT[0], 0.0072, BANK_AT[1]);
 const FELT_Y = 0.0068;
 
 const PLAY_VIEW: Shot = { target: [0.04, 0, -0.01], yaw: 0, pitch: 0.95, dist: 0.78 };
-const DEALER_VIEW: Shot = { target: [0.02, 0, DEALER_ROW], yaw: 0, pitch: 0.78, dist: 0.32 };
-const PLAYER_VIEW: Shot = { target: [0, 0, PLAYER_ROW], yaw: 0, pitch: 0.7, dist: 0.34 };
-const BET_VIEW: Shot = { target: [BET_SPOT.x, 0.01, BET_SPOT.z], yaw: 0.15, pitch: 0.72, dist: 0.34 };
 
-type Phase = 'bet' | 'deal' | 'player' | 'dealer' | 'done';
+type Phase = 'bet' | 'deal' | 'player' | 'dealer' | 'settle' | 'done';
+
+/** Follow action for one beat of the hand (skipped when following is off). */
+function follow(beat: BlackjackBeat, x = 0) {
+  const { shot, ms } = blackjackShot(beat, x);
+  followAction(shot, ms);
+  // Capture scripts read which beats the camera followed (dev server only).
+  if (import.meta.env.DEV) {
+    const w = window as unknown as { __bjBeats?: BlackjackBeat[] };
+    (w.__bjBeats ??= []).push(beat);
+  }
+}
 
 function rowPos(row: number, k: number, n: number) {
   return new THREE.Vector3((k - (n - 1) / 2) * (CARD_W * 0.74), FELT_Y + 0.0003 + k * 0.0005, row);
@@ -133,7 +140,10 @@ export function BlackjackTable({ onLeave }: { onLeave: () => void }) {
     sound.playCardDeal();
   };
 
+  /** Compare the hands, then move the chips: paid into the circle and home, or swept to the house. */
   const settle = (p: PlayingCard[], d: PlayingCard[], doubled: number) => {
+    setPhase('settle');
+    handOn.current = false;
     const ps = calculateHandScore(p);
     const ds = calculateHandScore(d.map(c => ({ ...c, faceUp: true })));
     const stake = doubled;
@@ -153,40 +163,83 @@ export function BlackjackTable({ onLeave }: { onLeave: () => void }) {
       pay = stake;
       msg = `Push at ${ps.total}. Your bet comes back.`;
     } else msg = `Dealer's ${ds.total} beats your ${ps.total}.`;
-    setBank(b => b + pay);
-    if (pay) sound.playChipCollect();
-    setBet(0);
-    setStreak(s => (pay > stake ? { ...s, won: s.won + 1 } : pay < stake ? { ...s, lost: s.lost + 1 } : s));
-    if (pay > stake) sound.playVictoryFanfare();
     setNote(msg);
-    setPhase('done');
-    handOn.current = false;
+    const [first, ...rest] = settleBeats(pay, stake);
+    follow(first);
+    const finish = () => {
+      setStreak(s => (pay > stake ? { ...s, won: s.won + 1 } : pay < stake ? { ...s, lost: s.lost + 1 } : s));
+      setPhase('done');
+      handOn.current = false;
+      grip.current = 0;
+    };
+    let t = blackjackShot(first).ms;
+    for (const beat of rest) {
+      later(t, () => {
+        follow(beat);
+        if (beat === 'payout') {
+          // the house sets the winnings down beside your stake
+          handOn.current = true;
+          grip.current = 1;
+          handGoal.current.copy(BET_SPOT);
+          setBet(pay);
+          sound.playPokerChipsBet();
+        } else if (beat === 'collect') {
+          handOn.current = false;
+          setBank(b => b + pay);
+          setBet(0);
+          sound.playChipCollect();
+          if (pay > stake) sound.playVictoryFanfare();
+        } else if (beat === 'houseTakes') {
+          // the ghost hand rakes the stake off the circle and back to the shoe
+          handOn.current = true;
+          grip.current = 1;
+          handGoal.current.copy(BET_SPOT);
+          later(500, () => {
+            setBet(0);
+            sound.playChipCollect();
+            handGoal.current.copy(SHOE);
+          });
+        }
+      });
+      t += blackjackShot(beat).ms;
+    }
+    later(t, finish);
   };
 
   /** The dealer's turn: turn the hole card, then draw to 17. */
-  const dealerPlays = (p: PlayingCard[], d0: PlayingCard[], src: { d: PlayingCard[] }, stake: number) => {
+  const dealerPlays = (p: PlayingCard[], d0: PlayingCard[], src: { d: PlayingCard[] }, stake: number, lead = 500) => {
     setPhase('dealer');
     let d = d0.map(c => ({ ...c, faceUp: true }));
-    later(500, () => {
-      dealTo(rowPos(DEALER_ROW, 1, d.length));
-      followAction(DEALER_VIEW, 900);
+    later(lead, () => {
+      const hole = rowPos(DEALER_ROW, 1, d.length);
+      dealTo(hole);
+      follow('flip', hole.x);
       sound.playCardFlip();
       setDealer(d);
+      setNote(`The dealer turns the hole card: ${calculateHandScore(d).total}.`);
     });
     const step = (delay: number) => {
       later(delay, () => {
         const sc = calculateHandScore(d);
         if (sc.total < 17 && !calculateHandScore(p).isBust) {
           d = [...d, draw(true, src)];
-          dealTo(rowPos(DEALER_ROW, d.length - 1, d.length));
-          followAction(DEALER_VIEW, 800);
+          const at = rowPos(DEALER_ROW, d.length - 1, d.length);
+          dealTo(at);
+          follow('dealerDraw', at.x);
           setDealer(d);
           setDeck(src.d);
-          step(750);
+          setNote(`The dealer draws: ${calculateHandScore(d).total}.`);
+          step(blackjackShot('dealerDraw').ms);
+        } else if (sc.isBust) {
+          follow('dealerBust');
+          setNote(`The dealer busts with ${sc.total}!`);
+          grip.current = 0;
+          handGoal.current.copy(SHOE);
+          later(blackjackShot('dealerBust').ms, () => settle(p, d, stake));
         } else later(500, () => settle(p, d, stake));
       });
     };
-    step(1200);
+    step(lead + blackjackShot('flip').ms);
   };
 
   const deal = () => {
@@ -203,13 +256,15 @@ export function BlackjackTable({ onLeave }: { onLeave: () => void }) {
         if (who === 'p') {
           p.push(draw(true, src));
           setPlayer([...p]);
-          dealTo(rowPos(PLAYER_ROW, p.length - 1, p.length));
-          followAction(PLAYER_VIEW, 700);
+          const at = rowPos(PLAYER_ROW, p.length - 1, p.length);
+          dealTo(at);
+          follow('dealPlayer', at.x);
         } else {
           d.push(draw(d.length === 0, src));
           setDealer([...d]);
-          dealTo(rowPos(DEALER_ROW, d.length - 1, d.length));
-          followAction(DEALER_VIEW, 700);
+          const at = rowPos(DEALER_ROW, d.length - 1, d.length);
+          dealTo(at);
+          follow('dealDealer', at.x);
         }
         setDeck(src.d);
       });
@@ -218,8 +273,10 @@ export function BlackjackTable({ onLeave }: { onLeave: () => void }) {
       grip.current = 0;
       handGoal.current.copy(SHOE);
       const ps = calculateHandScore(p);
-      if (ps.isBlackjack) dealerPlays(p, d, src, bet);
-      else {
+      if (ps.isBlackjack) {
+        setNote('Blackjack!');
+        dealerPlays(p, d, src, bet, 700);
+      } else {
         setPhase('player');
         setNote(`You have ${ps.total}${ps.isSoft ? ' (soft)' : ''}. Hit or stand?`);
       }
@@ -227,27 +284,53 @@ export function BlackjackTable({ onLeave }: { onLeave: () => void }) {
   };
 
   const hit = (doubleDown = false) => {
-    const src = { d: deck };
-    const p = [...player, draw(true, src)];
-    setPlayer(p);
-    setDeck(src.d);
-    dealTo(rowPos(PLAYER_ROW, p.length - 1, p.length));
-    followAction(PLAYER_VIEW, 900);
-    later(450, () => {
-      grip.current = 0;
-      handGoal.current.copy(SHOE);
-    });
+    if (phase !== 'player') return;
     const stake = doubleDown ? bet * 2 : bet;
-    if (doubleDown) {
-      setBank(b => b - bet);
-      setBet(stake);
+    const giveCard = () => {
+      const src = { d: deck };
+      const p = [...player, draw(true, src)];
+      setPlayer(p);
+      setDeck(src.d);
+      const at = rowPos(PLAYER_ROW, p.length - 1, p.length);
+      dealTo(at);
+      later(450, () => {
+        grip.current = 0;
+        handGoal.current.copy(SHOE);
+      });
+      const sc = calculateHandScore(p);
+      if (sc.isBust) {
+        follow('bust', at.x);
+        setNote(`Bust with ${sc.total}.`);
+        setPhase('dealer');
+        later(blackjackShot('bust').ms, () => dealerPlays(p, dealer, src, stake));
+      } else {
+        follow('hit', at.x);
+        if (doubleDown || sc.total === 21) {
+          setNote(`${sc.total}. ${doubleDown ? 'Doubled, one card only.' : 'Standing on 21.'}`);
+          setPhase('dealer');
+          later(blackjackShot('hit').ms, () => dealerPlays(p, dealer, src, stake));
+        } else setNote(`You have ${sc.total}${sc.isSoft ? ' (soft)' : ''}. Hit or stand?`);
+      }
+    };
+    if (!doubleDown) {
+      giveCard();
+      return;
     }
-    const sc = calculateHandScore(p);
-    if (sc.isBust) {
-      setNote(`Bust with ${sc.total}.`);
-      later(700, () => dealerPlays(p, dealer, src, stake));
-    } else if (doubleDown || sc.total === 21) later(600, () => dealerPlays(p, dealer, src, stake));
-    else setNote(`You have ${sc.total}${sc.isSoft ? ' (soft)' : ''}. Hit or stand?`);
+    // the second stake goes down first, then the one card
+    setPhase('deal');
+    setBank(b => b - bet);
+    setBet(stake);
+    sound.playPokerChipsBet();
+    follow('double');
+    setNote(`Doubled to $${stake}. One more card.`);
+    later(blackjackShot('double').ms, giveCard);
+  };
+
+  const stand = () => {
+    if (phase !== 'player') return;
+    follow('stand');
+    setNote(`You stand on ${calculateHandScore(player).total}.`);
+    dealerPlays(player, dealer, { d: deck }, bet, blackjackShot('stand').ms);
   };
 
   const addChip = (v: number) => {
@@ -260,7 +343,7 @@ export function BlackjackTable({ onLeave }: { onLeave: () => void }) {
     if (bank < v) return;
     setBank(b => b - v);
     setBet(b => b + v);
-    followAction(BET_VIEW, 800);
+    follow('bet');
     sound.playPokerChipsBet();
   };
 
@@ -272,6 +355,8 @@ export function BlackjackTable({ onLeave }: { onLeave: () => void }) {
     if (v > 0) {
       setBank(b => b - v);
       setBet(v);
+      follow('bet');
+      sound.playPokerChipsBet();
     }
     setNote(bank > 0 ? 'Same bet again, or change it, then Deal.' : 'Out of chips. The house spots you $500.');
     if (bank <= 0) setBank(500);
@@ -283,12 +368,12 @@ export function BlackjackTable({ onLeave }: { onLeave: () => void }) {
     if (phase === 'bet') {
       [5, 10, 25, 100].forEach(v => actions.push({ label: `+$${v}`, onClick: () => addChip(v), tone: 'ghost' }));
       if (bet > 0) {
-        actions.push({ label: 'Clear', onClick: () => (setBank(b => b + bet), setBet(0)), tone: 'ghost' });
+        actions.push({ label: 'Clear', onClick: () => (setBank(b => b + bet), setBet(0), follow('clear')), tone: 'ghost' });
         actions.push({ label: `Deal ($${bet})`, onClick: deal });
       }
     } else if (phase === 'player') {
       actions.push({ label: 'Hit', onClick: () => hit() });
-      actions.push({ label: 'Stand', onClick: () => dealerPlays(player, dealer, { d: deck }, bet), tone: 'ghost' });
+      actions.push({ label: 'Stand', onClick: stand, tone: 'ghost' });
       if (player.length === 2 && bank >= bet) actions.push({ label: `Double ($${bet})`, onClick: () => hit(true), tone: 'ghost' });
     } else if (phase === 'done') actions.push({ label: 'Next hand', onClick: nextHand });
     const ps = player.length ? calculateHandScore(player).total : null;

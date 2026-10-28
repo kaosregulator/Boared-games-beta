@@ -11,6 +11,8 @@ import { FilmCamera, type FilmShot } from './FilmCamera';
 import { LAYOUT } from './roomLayout';
 import { DESK_SLOTS, SHELF_SLOTS, SHELF_SLOTS_LOWER } from './videoRoom';
 import { MemoryFlashCard } from './MemoryFlashCard';
+import { CapsuleHologram } from './capsule/CapsuleHologram';
+import { openCapsule } from './capsule/capsuleBus';
 import { propCardFor, type CardAction } from './propCards';
 import { toyChestBus } from './ToyChest';
 import { TamagotchiPlay } from '../devices/TamagotchiPlay';
@@ -25,6 +27,8 @@ import { MenuReel } from './MenuReel';
 import { WalkKeys } from './WalkKeys';
 import { GameBoySeat } from '../devices/GameBoySeat';
 import { GameBoyGlass } from '../devices/GameBoyGlass';
+import { GameBoyBar } from '../devices/GameBoyBar';
+import { setCartridgeKeys } from '../devices/gameboyBus';
 import { DEVICE_FROM_PROP, type DeviceId } from './devices';
 import { radio, useRadio } from '../radio/radioEngine';
 import { RoomStudio } from './RoomStudio';
@@ -33,6 +37,8 @@ import { AimReticle } from './AimReticle';
 import { TouchGamepad } from '../devices/TouchGamepad';
 import { aim, isTouchDevice } from './input';
 import { useTvStatus } from '../tv/tvBus';
+import { speakerDistance } from '../tv/surround';
+import { tvMusicLevel } from '../tv/tvDuck';
 import { TvRemote } from '../tv/TvRemote';
 import { DeviceGestures } from '../devices/DeviceGestures';
 import { insetsFor, resetView, setBig, setInsets, useViewRig, useViewport, viewRig } from '../devices/viewRig';
@@ -314,9 +320,12 @@ export function WalkRoom({
   const tvStatus = useTvStatus();
   const [device, setDevice] = useState<DeviceId | null>(override.device);
   const [seated, setSeated] = useState(override.seat);
+  /** Big screen on/off, for handlers set up before toggleBig is (it's assigned below). */
+  const toggleBigRef = useRef<(on: boolean) => void>(() => {});
   const [tamagotchi, setTamagotchi] = useState(false);
   const [rubik, setRubik] = useState(false);
-  const [viewMaster, setViewMaster] = useState(false);
+  // `?viewmaster` opens it straight away, for captures.
+  const [viewMaster, setViewMaster] = useState(() => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('viewmaster'));
   const [racing, setRacing] = useState(Boolean(raceBoot));
   /** Shrunk down in the army town on the floor. */
   const [armyOn, setArmyOn] = useState(Boolean(armyBoot));
@@ -398,6 +407,22 @@ export function WalkRoom({
     else if (musicOn && engaged && !device) sound.startNostalgia();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [radioState.power]);
+
+  // The TV and the bedroom tape don't play over each other either: the set
+  // ducks the tape near it, and the tape comes back as you walk off or when
+  // the set goes off. The TV itself stays in the room's HRTF speakers.
+  useEffect(() => {
+    if (tvStatus.mode === 'off') {
+      sound.setBedDuck(1);
+      return;
+    }
+    const update = () => sound.setBedDuck(tvMusicLevel(tvStatus.mode, speakerDistance('tv'), tvOn));
+    update();
+    const id = window.setInterval(update, 250);
+    return () => window.clearInterval(id);
+  }, [tvStatus.mode, tvOn]);
+
+  useEffect(() => () => sound.setBedDuck(1), []);
 
   blockSelect.current = flashPhase !== 'idle' || device !== null || seated || holding || furbyHeld;
 
@@ -730,8 +755,9 @@ export function WalkRoom({
     (id: DeviceId) => {
       document.exitPointerLock?.();
       setCardOpen(false);
-      // The television keeps the bedroom tape. Its sound is the set's own
-      // speaker; the tape stays on the boombox if it was already playing.
+      // The television ducks the bedroom tape while it plays (the effect on
+      // tvStatus below), so the tape is left running here and comes back
+      // when the set goes off or you walk away from it.
       if (id === 'boombox' || id === 'pc') sound.stopNostalgia();
       if (id === 'pc') powerOnPc();
       sound.playButtonClick();
@@ -761,11 +787,23 @@ export function WalkRoom({
       if (event.key !== 'Escape') return;
       event.preventDefault();
       // Escape leaves big screen first, then stands you up.
-      if (viewRig.big) setBig(false);
+      if (viewRig.big) toggleBigRef.current(false);
       else standUp();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+  }, [seated, standUp]);
+
+  // The game in the Game Boy has the keyboard, so its Escape and V come over
+  // from the emulator frame (see public/emu/play.html), like the PC's do.
+  useEffect(() => {
+    if (!seated) return;
+    setCartridgeKeys(key => {
+      if (key === 'big') toggleBigRef.current(!viewRig.big);
+      else if (viewRig.big) toggleBigRef.current(false);
+      else standUp();
+    });
+    return () => setCartridgeKeys(null);
   }, [seated, standUp]);
 
   const exitDevice = useCallback(() => {
@@ -837,12 +875,14 @@ export function WalkRoom({
     },
     [touch],
   );
+  toggleBigRef.current = toggleBig;
 
-  // F toggles big screen on a keyboard.
+  // F toggles big screen on a keyboard; on the Game Boy it's V, as its button says.
   useEffect(() => {
     if (!tvOn && !seated && !atPc) return;
+    const bigKey = seated ? 'KeyV' : 'KeyF';
     const onKey = (event: KeyboardEvent) => {
-      if (event.code !== 'KeyF' || event.repeat) return;
+      if (event.code !== bigKey || event.repeat) return;
       const el = event.target as HTMLElement | null;
       if (el?.closest('input, textarea, select')) return;
       toggleBig(!viewRig.big);
@@ -976,6 +1016,12 @@ export function WalkRoom({
   const cardProp = demoProp ?? aimedProp;
   const showCard = Boolean(demoGame || demoProp) || (engaged && cardOpen && (aimedGame || aimedProp));
   const walking = engaged && !device && !seated && !holding && !furbyHeld && !overlayGame && !pulledGameId && session?.phase !== 'unfold' && !tableCamOn && !toyMode;
+  // The open time capsule's hologram: the real piece of the room it's about.
+  const capsuleId = showCard && !device ? (demoCardId ?? pinned?.id ?? null) : null;
+  useEffect(() => {
+    openCapsule(capsuleId);
+  }, [capsuleId]);
+  useEffect(() => () => openCapsule(null), []);
 
 
   return (
@@ -1070,7 +1116,8 @@ export function WalkRoom({
         />
         <FurbyHold />
         <DeviceFocus device={scripted ? null : device} />
-        {seated && <GameBoySeat />}
+        {seated && <GameBoySeat keys={!touch} />}
+        <CapsuleHologram />
         {(stool || stoolPreview) && <ShelfStool x={(stool ?? stoolPreview)!.x} z={(stool ?? stoolPreview)!.z} />}
         <DeviceGestures active={Boolean(device || seated) && !big && !scripted} />
         {override.capture && <CaptureClock />}
@@ -1178,41 +1225,16 @@ export function WalkRoom({
       )}
       {seated && <GameBoyGlass />}
       {seated && (
-        <div data-ui="device" className="pointer-events-none absolute inset-0 z-40">
-          <div
-            className={`pointer-events-auto absolute left-1/2 flex -translate-x-1/2 flex-col items-center gap-2 ${
-              padUp && !vp.landscape ? 'bottom-[13.5rem]' : 'bottom-4'
-            }`}
-          >
-            <div className="flex gap-3 rounded-[22px] border border-fuchsia-300/40 bg-[#160818]/80 p-2 shadow-[0_0_28px_rgba(217,70,239,0.35)] backdrop-blur">
-              <button
-                type="button"
-                onClick={() => toggleBig(!big)}
-                className="flex min-w-[11rem] items-center gap-3 rounded-2xl border border-cyan-300/40 bg-cyan-400/10 px-4 py-2 text-left text-cyan-50 hover:bg-cyan-400/20"
-              >
-                <span className="text-lg" aria-hidden>▣</span>
-                <span>
-                  <span className="block text-[12px] font-black uppercase tracking-[0.16em]">{big ? 'Exit big screen' : 'Big screen'}</span>
-                  <span className="block text-[9px] font-bold uppercase tracking-[0.14em] text-cyan-100/70">View fullscreen · F</span>
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (big) toggleBig(false);
-                  standUp();
-                }}
-                className="flex min-w-[11rem] items-center gap-3 rounded-2xl border border-fuchsia-300/40 bg-fuchsia-400/10 px-4 py-2 text-left text-fuchsia-50 hover:bg-fuchsia-400/20"
-              >
-                <span className="text-lg" aria-hidden>⬆</span>
-                <span>
-                  <span className="block text-[12px] font-black uppercase tracking-[0.16em]">Stand up</span>
-                  <span className="block text-[9px] font-bold uppercase tracking-[0.14em] text-fuchsia-100/70">Exit and stand up · Esc</span>
-                </span>
-              </button>
-            </div>
-          </div>
-        </div>
+        <GameBoyBar
+          big={big}
+          touch={touch}
+          landscape={vp.landscape}
+          onBig={() => toggleBig(!big)}
+          onStand={() => {
+            if (big) toggleBig(false);
+            standUp();
+          }}
+        />
       )}
       {padUp && <TouchGamepad tone={seated ? 'gb' : 'nes'} landscape={vp.landscape} />}
       {tvOn && (touch || big) && flashPhase !== 'cover' && (
