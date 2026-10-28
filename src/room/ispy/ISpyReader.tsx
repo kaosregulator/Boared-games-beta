@@ -40,6 +40,35 @@ function emit() {
   reader.listeners.forEach(fn => fn());
 }
 
+/** The lap view, and how close the book can come. */
+export const ZOOM_MIN = 1;
+export const ZOOM_MAX = 2.6;
+/** One press of + or −, or one notch of the wheel. */
+export const ZOOM_STEP = 1.2;
+
+export function clampZoom(z: number) {
+  return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Number.isFinite(z) ? z : ZOOM_MIN));
+}
+
+/** Two fingers: the zoom follows how far apart they are now against where they started. */
+export function pinchZoom(startZoom: number, startGap: number, gap: number) {
+  if (startGap <= 0) return clampZoom(startZoom);
+  return clampZoom(startZoom * (gap / startGap));
+}
+
+/** A wheel notch: down (positive) steps back, up steps closer. */
+export function wheelZoom(zoom: number, deltaY: number) {
+  if (deltaY === 0) return zoom;
+  return clampZoom(deltaY > 0 ? zoom / ZOOM_STEP : zoom * ZOOM_STEP);
+}
+
+function setZoom(z: number) {
+  const next = clampZoom(z);
+  if (next === reader.zoom) return;
+  reader.zoom = next;
+  emit();
+}
+
 export function useReader() {
   const [, bump] = useState(0);
   useEffect(() => {
@@ -418,13 +447,42 @@ export function ReaderScene() {
       if (e.code === 'ArrowRight' || e.code === 'KeyD') turn(1);
       if (e.code === 'ArrowLeft' || e.code === 'KeyA') turn(-1);
       if (e.code === 'KeyH') hint();
+      if (e.key === '+' || e.key === '=') setZoom(reader.zoom * ZOOM_STEP);
+      if (e.key === '-' || e.key === '_') setZoom(reader.zoom / ZOOM_STEP);
+      if (e.key === '0') setZoom(ZOOM_MIN);
+    };
+    // Fingers on the page, for the pinch. Two down is a pinch, not a drag or a tap.
+    const fingers = new Map<number, { x: number; y: number }>();
+    const pinch = { on: false, gap: 0, zoom: 1 };
+    const gapNow = () => {
+      const [a, b] = [...fingers.values()];
+      return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
     };
     const pDown = (e: PointerEvent) => {
       if (!(e.target instanceof HTMLCanvasElement)) return;
       wakeISpyAudio();
+      if (e.pointerType === 'touch') {
+        fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (fingers.size === 2) {
+          pinch.on = true;
+          pinch.gap = gapNow();
+          pinch.zoom = reader.zoom;
+          drag.current.on = false;
+          return;
+        }
+      }
       drag.current = { on: true, x: e.clientX, y: e.clientY, moved: 0, at: performance.now() };
     };
     const pMove = (e: PointerEvent) => {
+      const finger = fingers.get(e.pointerId);
+      if (finger) {
+        finger.x = e.clientX;
+        finger.y = e.clientY;
+        if (pinch.on) {
+          setZoom(pinchZoom(pinch.zoom, pinch.gap, gapNow()));
+          return;
+        }
+      }
       const d = drag.current;
       if (!d.on) return;
       d.moved = Math.max(d.moved, Math.hypot(e.clientX - d.x, e.clientY - d.y));
@@ -433,6 +491,13 @@ export function ReaderScene() {
       look.current.y = THREE.MathUtils.clamp(look.current.y - e.movementY * 0.003, -0.3, 0.5);
     };
     const pUp = (e: PointerEvent) => {
+      fingers.delete(e.pointerId);
+      if (pinch.on) {
+        // The pinch ends when a finger lifts; the one left doesn't turn into a drag or a tap.
+        if (fingers.size < 2) pinch.on = false;
+        drag.current.on = false;
+        return;
+      }
       const d = drag.current;
       if (!d.on) return;
       d.on = false;
@@ -442,13 +507,13 @@ export function ReaderScene() {
     const onWheel = (e: WheelEvent) => {
       const el = e.target as HTMLElement | null;
       if (el?.closest('button, input, textarea')) return;
-      reader.zoom = Math.min(2.6, Math.max(1, reader.zoom * (e.deltaY > 0 ? 0.9 : 1.1)));
-      emit();
+      setZoom(wheelZoom(reader.zoom, e.deltaY));
     };
     window.addEventListener('wheel', onWheel, { passive: true });
     window.addEventListener('pointerdown', pDown);
     window.addEventListener('pointermove', pMove);
     window.addEventListener('pointerup', pUp);
+    window.addEventListener('pointercancel', pUp);
     controls.turn = turn;
     controls.hint = hint;
     if (import.meta.env.DEV) (window as unknown as { __ispyReader: unknown }).__ispyReader = { reader, turn, tap, pictures };
@@ -458,6 +523,7 @@ export function ReaderScene() {
       window.removeEventListener('pointerdown', pDown);
       window.removeEventListener('pointermove', pMove);
       window.removeEventListener('pointerup', pUp);
+      window.removeEventListener('pointercancel', pUp);
       controls.turn = null;
       controls.hint = null;
     };
@@ -590,16 +656,18 @@ export function ReaderHud({ onExit }: { onExit: () => void }) {
         <button type="button" onClick={onExit} className="rounded-xl bg-white/90 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-black">
           Back
         </button>
-        <button
-          type="button"
-          onClick={() => {
-            reader.zoom = Math.min(2.6, reader.zoom * 1.2);
-            emit();
-          }}
-          className="rounded-xl border border-white/25 bg-black/55 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-amber-200"
-        >
-          Zoom
-        </button>
+        <div className="flex overflow-hidden rounded-xl border border-white/25 bg-black/55 text-[11px] font-bold uppercase tracking-wider text-amber-200">
+          <button type="button" aria-label="Zoom out" disabled={r.zoom <= ZOOM_MIN} onClick={() => setZoom(r.zoom / ZOOM_STEP)} className="px-3 py-2 disabled:opacity-35">
+            −
+          </button>
+          <span className="flex min-w-[3.2rem] items-center justify-center border-x border-white/15 px-1 tabular-nums text-white/80">{r.zoom.toFixed(1)}×</span>
+          <button type="button" aria-label="Zoom in" disabled={r.zoom >= ZOOM_MAX} onClick={() => setZoom(r.zoom * ZOOM_STEP)} className="px-3 py-2 disabled:opacity-35">
+            +
+          </button>
+          <button type="button" disabled={r.zoom <= ZOOM_MIN} onClick={() => setZoom(ZOOM_MIN)} className="border-l border-white/15 px-3 py-2 disabled:opacity-35">
+            Reset
+          </button>
+        </div>
         <button type="button" onClick={() => controls.hint?.()} className="rounded-xl border border-white/25 bg-black/55 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-amber-200">
           Hint (H)
         </button>
@@ -621,7 +689,7 @@ export function ReaderHud({ onExit }: { onExit: () => void }) {
       </div>
       {!isTouch && (
         <p className="absolute left-1/2 top-16 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/50 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white/60">
-          Click either picture · ← → turn pages · scroll to zoom · drag to look · H hint
+          Click either picture · ← → turn pages · scroll or + − to zoom · drag to look · H hint
         </p>
       )}
     </div>

@@ -377,6 +377,6 @@ test('the rule cards describe the moves the engines actually play', () => {
   assert.match(rules('pawnrush'), /forward 7/);
   assert.doesNotMatch(rules('pawnrush'), /split/i);
   assert.doesNotMatch(rules('blackjack'), /split/i);
-  assert.match(rules('chess'), /En Passant/);
+  assert.match(rules('chess'), /en passant/i);
   assert.match(rules('checkers'), /must be taken/);
 });

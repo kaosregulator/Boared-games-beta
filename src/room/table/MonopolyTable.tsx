@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useGLTF, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
-import { BOARD, CHANCE, CHEST } from '../../games/monopoly/monopolyData';
+import { BOARD, CHANCE, GROUP_COLORS, type Card } from '../../games/monopoly/monopolyData';
 import {
   PLAYER_COLOURS,
   aiBuildTarget,
@@ -14,15 +14,22 @@ import {
   canBuild,
   canMortgage,
   canSellBuilding,
+  canTrade,
+  canUnmortgage,
   endTurn,
   mortgage,
   newGame,
-  offerTrade,
+  proposeTrade,
+  rentFor,
   rollDice,
   sellBuilding,
+  tradeProblem,
+  unmortgage,
+  unmortgageCost,
   type GameState,
+  type TradeOffer,
 } from '../../games/monopoly/monopolyEngine';
-import { pushHud, type HudAction } from './tableHud';
+import { pushHud, type HudAction, type HudChip } from './tableHud';
 import { usText } from './monopolyNames';
 import { followAction, setTableView, wasDrag, type Shot } from './tableCam';
 import {
@@ -35,8 +42,11 @@ import {
   DENOMS,
   billTexture,
   billsFor,
+  OWNER_STRIP,
   cardTexture,
+  deedBackTexture,
   deedTexture,
+  ownerStripOffset,
   type Denom,
 } from './monopolyArt';
 import { TOKEN_DEFS, useTokenFactory } from './monopolyTokens';
@@ -340,6 +350,46 @@ function Buildings({ state }: { state: GameState }) {
   return <group>{pieces}</group>;
 }
 
+/** The printed board's own surface: the opened leaf's top, a little under where the pieces stand. */
+const PRINT_Y = 0.0045;
+
+/**
+ * Who owns what, at a glance: a strip in the owner's colour on each bought
+ * space, just under its printed name. A mortgaged one shows faded.
+ */
+function OwnerStrips({ deeds }: { deeds: GameState['deeds'] }) {
+  const w = OWNER_STRIP.w * TILE * SIDE;
+  const d = OWNER_STRIP.d * CORNER * SIDE;
+  return (
+    <group>
+      {Object.entries(deeds).map(([idx, deed]) => {
+        const i = Number(idx);
+        const inn = inward(i);
+        const pos = tileCenter(i).add(inn.clone().multiplyScalar(-ownerStripOffset(i) * CORNER * SIDE));
+        pos.y = PRINT_Y;
+        const colour = PLAYER_COLOURS[deed.owner % PLAYER_COLOURS.length];
+        return (
+          <group key={i} position={pos} rotation={[0, Math.atan2(inn.x, inn.z), 0]}>
+            <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={1}>
+              <planeGeometry args={[w, d]} />
+              <meshStandardMaterial
+                color={colour}
+                emissive={colour}
+                emissiveIntensity={0.35}
+                roughness={0.7}
+                transparent={deed.mortgaged}
+                opacity={deed.mortgaged ? 0.35 : 1}
+                polygonOffset
+                polygonOffsetFactor={-2}
+              />
+            </mesh>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
 /* ------------------------ deeds and money on the table ---------------------- */
 
 interface Zone {
@@ -362,12 +412,19 @@ const ZONES: Zone[] = [
 
 const PAPER = 0.0004;
 
-function Cash({ cash, zone, scale }: { cash: number; zone: Zone; scale: number }) {
+function Cash({ cash, zone, scale, onPick }: { cash: number; zone: Zone; scale: number; onPick?: () => void }) {
   const bills = billsFor(cash);
   const w = BILL_SIZE.w * scale;
   const h = BILL_SIZE.h * scale;
   return (
-    <group position={zone.cash} rotation={[0, zone.yaw, 0]}>
+    <group
+      position={zone.cash}
+      rotation={[0, zone.yaw, 0]}
+      onClick={e => {
+        e.stopPropagation();
+        if (!wasDrag()) onPick?.();
+      }}
+    >
       {DENOMS.map((d, k) => {
         const n = bills[d];
         if (!n) return null;
@@ -398,7 +455,19 @@ function BillMaterials({ d }: { d: Denom }) {
   );
 }
 
-function Deeds({ owned, zone, scale, onPick }: { owned: number[]; zone: Zone; scale: number; onPick?: (i: number) => void }) {
+function Deeds({
+  owned,
+  mortgaged,
+  zone,
+  scale,
+  onPick,
+}: {
+  owned: number[];
+  mortgaged: (i: number) => boolean;
+  zone: Zone;
+  scale: number;
+  onPick?: (i: number) => void;
+}) {
   const w = DEED_SIZE.w * scale;
   const h = DEED_SIZE.h * scale;
   const sorted = [...owned].sort((a, b) => a - b);
@@ -419,7 +488,8 @@ function Deeds({ owned, zone, scale, onPick }: { owned: number[]; zone: Zone; sc
             }}
           >
             <planeGeometry args={[w, h]} />
-            <meshStandardMaterial map={deedTexture(i)} roughness={0.85} />
+            {/* a mortgaged deed lies face down, as the rules say */}
+            <meshStandardMaterial map={mortgaged(i) ? deedBackTexture(i) : deedTexture(i)} roughness={0.85} />
           </mesh>
         );
       })}
@@ -456,7 +526,7 @@ function Decks() {
  * Chest card just drawn. It rises from where it was and hangs in front of the
  * camera, whatever angle the camera is at.
  */
-function HeldCard({ tex, w, h, from }: { tex: THREE.Texture; w: number; h: number; from: THREE.Vector3 }) {
+function HeldCard({ tex, w, h, from, onPick }: { tex: THREE.Texture; w: number; h: number; from: THREE.Vector3; onPick?: () => void }) {
   const { camera } = useThree();
   const g = useRef<THREE.Group>(null);
   const k = useRef(0);
@@ -484,7 +554,12 @@ function HeldCard({ tex, w, h, from }: { tex: THREE.Texture; w: number; h: numbe
   });
   return (
     <group ref={g}>
-      <mesh>
+      <mesh
+        onClick={e => {
+          e.stopPropagation();
+          if (!wasDrag()) onPick?.();
+        }}
+      >
         <planeGeometry args={[w, h]} />
         <meshBasicMaterial map={tex} toneMapped={false} side={THREE.DoubleSide} />
       </mesh>
@@ -583,6 +658,44 @@ function Picker({ make, pick, onPick }: { make: (id: string) => THREE.Group; pic
 
 const PLAY_VIEW: Shot = { target: [0, 0, 0.02], yaw: 0, pitch: 0.98, dist: 0.74 };
 const OPPONENT_NAMES = ['Mom', 'Dad', 'Jess'];
+/** How long a drawn Chance or Community Chest card stays up before it lays itself back down. */
+const CARD_UP_MS = 3600;
+
+/** A player's deeds in board order, which also keeps each colour group together. */
+function ownedBy(s: GameState, seat: number) {
+  return Object.entries(s.deeds)
+    .filter(([, d]) => d.owner === seat)
+    .map(([i]) => Number(i))
+    .sort((a, b) => a - b);
+}
+
+/** A deed as a pick in the panel: its colour group, faded while mortgaged. */
+function deedChip(s: GameState, i: number, active: boolean, onClick: () => void): HudChip {
+  const sp = BOARD[i];
+  return { label: sp.short, swatch: sp.group ? GROUP_COLORS[sp.group] : undefined, active, muted: s.deeds[i]?.mortgaged, onClick };
+}
+
+/** "2 houses · rent $90", "mortgaged", "rent $25". */
+function deedStatus(s: GameState, i: number) {
+  const d = s.deeds[i];
+  if (!d) return '';
+  if (d.mortgaged) return 'mortgaged';
+  const parts: string[] = [];
+  if (d.hotel) parts.push('hotel');
+  else if (d.houses > 0) parts.push(`${d.houses} house${d.houses > 1 ? 's' : ''}`);
+  const sp = BOARD[i];
+  if (sp.kind === 'utility') parts.push(`rent ${s.deeds[sp.i === 12 ? 28 : 12]?.owner === d.owner ? 10 : 4}× dice`);
+  else parts.push(`rent $${rentFor(s, i, 7)}`);
+  return parts.join(' · ');
+}
+
+/** What the panel at the top right is busy with, if anything besides the turn. */
+type Panel =
+  | null
+  /** Leafing through one player's deeds: `k` is the one held up. */
+  | { kind: 'browse'; seat: number; k: number }
+  /** Putting a deal together. `to` is null until a partner is picked. */
+  | { kind: 'trade'; to: number | null; give: number[]; want: number | null; cash: number; focus: number | null };
 
 export function MonopolyTable({ onLeave }: { onLeave: () => void }) {
   const make = useTokenFactory();
@@ -591,14 +704,17 @@ export function MonopolyTable({ onLeave }: { onLeave: () => void }) {
   const [state, setState] = useState<GameState | null>(null);
   const [toss, setToss] = useState<Throw | null>(null);
   const [walking, setWalking] = useState(false);
-  const [held, setHeld] = useState<null | { kind: 'deed'; i: number; why: 'buy' | 'look' } | { kind: 'chance' | 'chest'; text: string }>(null);
+  /** The Chance or Community Chest card up in front of you, if one is. */
+  const [card, setCard] = useState<null | { kind: 'chance' | 'chest'; text: string }>(null);
+  const [panel, setPanel] = useState<Panel>(null);
   const [pops, setPops] = useState<{ id: number; amount: number; seat: number }[]>([]);
   const rolling = useRef(false);
   const clock = useRef(0);
   const lives = useRef([0, 1, 2, 3].map(() => new THREE.Vector3()));
   const diceLive = useRef(new THREE.Vector3());
   const lastCash = useRef<number[]>([]);
-  const lastCard = useRef<string | null>(null);
+  const lastCard = useRef<Card | null>(null);
+  const cardTimer = useRef(0);
   const popId = useRef(0);
 
   const actor = state?.players[state.turn];
@@ -668,29 +784,47 @@ export function MonopolyTable({ onLeave }: { onLeave: () => void }) {
     followAction({ target: [c.x, 0, c.z], yaw: sideYaw(at) + 0.3, pitch: 0.85, dist: 0.2 }, 1500);
   };
 
-  // A drawn card: lift it to read, then lay it back.
+  // A drawn card: lift it to read, then lay it back. Its own timer puts it
+  // down; nothing else in the turn can cancel that, so it never stays up.
+  const dropCard = () => {
+    window.clearTimeout(cardTimer.current);
+    setCard(null);
+  };
   useEffect(() => {
-    const card = state?.drawnCard ?? null;
-    const key = card ? card.text : null;
-    if (key && key !== lastCard.current) {
-      const kind = CHANCE.some(c => c.text === card!.text) ? 'chance' : CHEST.some(c => c.text === card!.text) ? 'chest' : 'chance';
-      setHeld({ kind, text: card!.text });
-      const t = window.setTimeout(() => setHeld(h => (h && h.kind !== 'deed' ? null : h)), 3600);
-      lastCard.current = key;
-      return () => window.clearTimeout(t);
+    const drawn = state?.drawnCard ?? null;
+    if (drawn === lastCard.current) return;
+    lastCard.current = drawn;
+    window.clearTimeout(cardTimer.current);
+    if (!drawn) {
+      setCard(null);
+      return;
     }
-    if (!key) {
-      lastCard.current = null;
-      setHeld(h => (h && h.kind !== 'deed' ? null : h));
-    }
+    setCard({ kind: CHANCE.some(c => c.text === drawn.text) ? 'chance' : 'chest', text: drawn.text });
+    cardTimer.current = window.setTimeout(() => setCard(null), CARD_UP_MS);
   }, [state?.drawnCard]);
+  useEffect(() => () => window.clearTimeout(cardTimer.current), []);
 
-  // An unowned property you landed on: hold its deed up while you decide.
-  useEffect(() => {
+  // Leaf through a player's deeds: their token, their money, or one of their deeds.
+  const openBrowse = (seat: number, deed?: number) => {
     if (!state) return;
-    if (state.pendingPurchase !== null && !walking && human) setHeld({ kind: 'deed', i: state.pendingPurchase, why: 'buy' });
-    else setHeld(h => (h?.kind === 'deed' && h.why === 'buy' ? null : h));
-  }, [state?.pendingPurchase, walking, human, state]);
+    const k = deed === undefined ? 0 : Math.max(0, ownedBy(state, seat).indexOf(deed));
+    dropCard();
+    setPanel({ kind: 'browse', seat, k });
+  };
+  // While a deal is being put together, a deed on the table goes into it instead.
+  const pickDeed = (seat: number, i: number) => {
+    if (panel?.kind === 'trade' && state) {
+      if (seat === 0 && canTrade(state, i, 0)) {
+        const give = panel.give.includes(i) ? panel.give.filter(x => x !== i) : [...panel.give, i];
+        return setPanel({ ...panel, give, focus: i });
+      }
+      if (seat !== 0 && canTrade(state, i, seat) && !state.players[seat].bankrupt) {
+        // asking for one of another player's deeds makes them the partner
+        return setPanel({ ...panel, to: seat, want: i, focus: i, cash: seat === panel.to ? panel.cash : Math.max(0, panel.cash) });
+      }
+    }
+    openBrowse(seat, i);
+  };
 
   // Money changing hands floats off the player's cash.
   useEffect(() => {
@@ -765,6 +899,168 @@ export function MonopolyTable({ onLeave }: { onLeave: () => void }) {
     if (!state) return;
     const actions: HudAction[] = [];
     const busy = walking || rolling.current;
+    // Your own turn, nothing pending: the time to build, mortgage, sell and trade.
+    const free =
+      human && state.turn === 0 && ['roll', 'end', 'resolve'].includes(state.stage) && state.pendingPurchase === null && !state.auction && !busy;
+    const cashLine = state.players
+      .map((p, i) => `${p.name} (${TOKEN_DEFS.find(t => t.id === tokens[i])?.label ?? ''}) $${p.cash}${p.inJail ? ' · jail' : ''}${p.bankrupt ? ' · out' : ''}`)
+      .join('  ·  ');
+
+    if (panel?.kind === 'trade') {
+      const me = state.players[0];
+      const partners = state.players.filter(p => p.id !== 0 && !p.bankrupt);
+      if (!free || partners.length === 0) {
+        setPanel(null);
+        return;
+      }
+      if (panel.to === null) {
+        pushHud({
+          title: 'Monopoly · Trade',
+          note: 'Who do you want to deal with?',
+          detail: cashLine,
+          onLeave,
+          actions: [
+            ...partners.map(p => ({ label: `${p.name} · $${p.cash}`, onClick: () => setPanel({ ...panel, to: p.id }) })),
+            { label: 'Cancel', onClick: () => setPanel(null), tone: 'ghost' as const },
+          ],
+        });
+        return;
+      }
+      const them = state.players[panel.to];
+      const offer: TradeOffer = { from: 0, to: them.id, give: panel.give, want: panel.want === null ? [] : [panel.want], cash: panel.cash };
+      const problem = tradeProblem(state, offer);
+      const side = (deeds: number[], cash: number) => [...deeds.map(i => BOARD[i].short), ...(cash > 0 ? [`$${cash}`] : [])].join(' + ') || 'nothing';
+      const nudge = (by: number) =>
+        setPanel({ ...panel, cash: THREE.MathUtils.clamp(panel.cash + by, -them.cash, me.cash) });
+      pushHud({
+        title: `Monopoly · Trade with ${them.name}`,
+        note:
+          offer.give.length + offer.want.length === 0
+            ? `Pick what you'd give and what you want from ${them.name}, then make the offer.`
+            : `You give ${side(offer.give, Math.max(0, offer.cash))}. You get ${side(offer.want, Math.max(0, -offer.cash))}.`,
+        detail: `You have $${me.cash} · ${them.name} has $${them.cash} · deeds with houses in their colour can't be traded`,
+        onLeave,
+        lists: [
+          {
+            label: 'You give',
+            chips: ownedBy(state, 0)
+              .filter(i => canTrade(state, i, 0))
+              .map(i => deedChip(state, i, panel.give.includes(i), () => pickDeed(0, i))),
+          },
+          {
+            label: `You want from ${them.name}`,
+            chips: ownedBy(state, them.id)
+              .filter(i => canTrade(state, i, them.id))
+              .map(i =>
+                deedChip(state, i, panel.want === i, () =>
+                  setPanel({ ...panel, want: panel.want === i ? null : i, focus: panel.want === i ? null : i }),
+                ),
+              ),
+          },
+          {
+            label: `Cash · ${panel.cash > 0 ? `you add $${panel.cash}` : panel.cash < 0 ? `${them.name} adds $${-panel.cash}` : 'none'}`,
+            chips: [
+              { label: 'You +$50', onClick: () => nudge(50) },
+              { label: 'You +$10', onClick: () => nudge(10) },
+              { label: `${them.name} +$10`, onClick: () => nudge(-10) },
+              { label: `${them.name} +$50`, onClick: () => nudge(-50) },
+              { label: 'No cash', onClick: () => nudge(-panel.cash), active: panel.cash === 0 },
+            ],
+          },
+        ],
+        actions: [
+          ...(problem
+            ? []
+            : [
+                {
+                  label: `Offer it to ${them.name}`,
+                  onClick: () => {
+                    setState(cur => (cur ? proposeTrade(cur, offer) : cur));
+                    setPanel(null);
+                  },
+                },
+              ]),
+          ...(partners.length > 1 ? [{ label: 'Someone else', onClick: () => setPanel({ ...panel, to: null, want: null, focus: null }), tone: 'ghost' as const }] : []),
+          { label: 'Cancel', onClick: () => setPanel(null), tone: 'ghost' as const },
+        ],
+      });
+      return;
+    }
+
+    if (panel?.kind === 'browse') {
+      const who = state.players[panel.seat];
+      const list = ownedBy(state, panel.seat);
+      const k = Math.min(panel.k, Math.max(0, list.length - 1));
+      const i = list[k];
+      const go = (n: number) => setPanel({ ...panel, k: n });
+      const mine = panel.seat === 0;
+      const deedActions: HudAction[] = [];
+      if (list.length > 1) {
+        deedActions.push({ label: '◀ Previous', onClick: () => go((k - 1 + list.length) % list.length), tone: 'ghost' });
+        deedActions.push({ label: 'Next ▶', onClick: () => go((k + 1) % list.length), tone: 'ghost' });
+      }
+      if (mine && free && i !== undefined) {
+        const sp = BOARD[i];
+        const d = state.deeds[i];
+        if (canBuild(state, i, 0)) {
+          deedActions.push({
+            label: `${d.houses >= 4 ? 'Build a hotel' : 'Build a house'} ($${sp.houseCost})`,
+            onClick: () => {
+              sfx('build');
+              const c = tileCenter(i);
+              followAction({ target: [c.x, 0, c.z], yaw: sideYaw(i), pitch: 0.7, dist: 0.2 }, 1300);
+              setState(cur => (cur ? build(cur, i) : cur));
+            },
+          });
+        }
+        if (canSellBuilding(state, i, 0)) {
+          deedActions.push({
+            label: `Sell ${d.hotel ? 'the hotel' : 'a house'} (+$${Math.floor((sp.houseCost ?? 0) / 2)})`,
+            onClick: () => setState(cur => (cur ? sellBuilding(cur, i) : cur)),
+          });
+        }
+        if (canMortgage(state, i, 0)) {
+          deedActions.push({ label: `Mortgage (+$${Math.floor((sp.price ?? 0) / 2)})`, onClick: () => setState(cur => (cur ? mortgage(cur, i) : cur)) });
+        }
+        if (canUnmortgage(state, i, 0)) {
+          deedActions.push({ label: `Lift mortgage ($${unmortgageCost(i)})`, onClick: () => setState(cur => (cur ? unmortgage(cur, i) : cur)) });
+        }
+      }
+      if (!mine && free && !who.bankrupt) {
+        deedActions.push({
+          label: `Trade with ${who.name}`,
+          onClick: () =>
+            setPanel({
+              kind: 'trade',
+              to: who.id,
+              give: [],
+              want: i !== undefined && canTrade(state, i, who.id) ? i : null,
+              cash: 0,
+              focus: i !== undefined && canTrade(state, i, who.id) ? i : null,
+            }),
+          tone: 'ghost',
+        });
+      }
+      deedActions.push({ label: 'Done', onClick: () => setPanel(null), tone: 'ghost' });
+      const owner = mine ? 'Your' : `${who.name}'s`;
+      let note: string;
+      if (i === undefined) note = `${mine ? 'You don’t' : `${who.name} doesn’t`} own any property yet.`;
+      else {
+        note = `${k + 1} of ${list.length}: ${BOARD[i].name} · ${deedStatus(state, i)}.`;
+        if (mine && state.deeds[i].mortgaged && !canUnmortgage(state, i, 0)) note += ` Lifting the mortgage costs $${unmortgageCost(i)}.`;
+        if (mine && !free) note += ' You can sell, mortgage and build on your own turn.';
+      }
+      pushHud({
+        title: `Monopoly · ${owner} deeds`,
+        note,
+        detail: `${who.name === 'You' ? 'You have' : `${who.name} has`} $${who.cash}${who.getOutCards ? ` · ${who.getOutCards} Get Out of Jail Free` : ''}`,
+        onLeave,
+        lists: list.length ? [{ label: `${list.length} propert${list.length === 1 ? 'y' : 'ies'}`, chips: list.map((j, n) => deedChip(state, j, n === k, () => go(n))) }] : [],
+        actions: deedActions,
+      });
+      return;
+    }
+
     if (human && state.stage === 'roll' && !busy) actions.push({ label: 'Roll the dice', onClick: throwDice });
     if (human && state.pendingPurchase !== null && !walking) {
       const sp = BOARD[state.pendingPurchase];
@@ -778,16 +1074,23 @@ export function MonopolyTable({ onLeave }: { onLeave: () => void }) {
     }
     if (human && (state.stage === 'end' || state.stage === 'resolve') && state.pendingPurchase === null && !state.auction && !busy) {
       actions.push({ label: state.doublesRun > 0 ? 'Roll again' : 'End turn', onClick: () => setState(cur => (cur ? endTurn(cur) : cur)), tone: 'ghost' });
-      const sellAt = BOARD.find(sp => canSellBuilding(state, sp.i, 0))?.i ?? BOARD.find(sp => canMortgage(state, sp.i, 0))?.i;
-      if (sellAt !== undefined) {
+    }
+    if (free) {
+      const mine = ownedBy(state, 0);
+      if (mine.length > 0) {
+        const manage = mine.some(i => canSellBuilding(state, i, 0) || canMortgage(state, i, 0) || canUnmortgage(state, i, 0));
+        actions.push({ label: manage ? 'Sell or mortgage' : 'Your deeds', onClick: () => openBrowse(0), tone: 'ghost' });
+      }
+      const partners = state.players.filter(p => p.id !== 0 && !p.bankrupt);
+      if (partners.length > 0) {
         actions.push({
-          label: canSellBuilding(state, sellAt, 0) ? `Sell on ${BOARD[sellAt].short}` : `Mortgage ${BOARD[sellAt].short}`,
-          onClick: () => setState(cur => (cur ? (canSellBuilding(cur, sellAt, 0) ? sellBuilding(cur, sellAt) : mortgage(cur, sellAt)) : cur)),
+          label: 'Trade',
+          onClick: () => setPanel({ kind: 'trade', to: partners.length === 1 ? partners[0].id : null, give: [], want: null, cash: 0, focus: null }),
           tone: 'ghost',
         });
       }
-      actions.push({ label: 'Offer a trade', onClick: () => setState(cur => (cur ? offerTrade(cur) : cur)), tone: 'ghost' });
     }
+    if (card) actions.push({ label: 'Put the card down', onClick: dropCard, tone: 'ghost' });
     const buildable = human && (state.stage === 'end' || state.stage === 'resolve') && state.pendingPurchase === null && !state.auction && !busy ? BOARD.filter(sp => canBuild(state, sp.i, 0)) : [];
     buildable.slice(0, 3).forEach(sp =>
       actions.push({
@@ -801,19 +1104,17 @@ export function MonopolyTable({ onLeave }: { onLeave: () => void }) {
         tone: 'ghost',
       }),
     );
-    if (state.stage === 'over') actions.push({ label: 'New game', onClick: () => (setState(null), setSetup({ pick: 0, opponents: 2 })) });
+    if (state.stage === 'over') actions.push({ label: 'New game', onClick: () => (setState(null), setPanel(null), setSetup({ pick: 0, opponents: 2 })) });
     const over = state.stage === 'over' ? `${state.winner} wins the board. ` : '';
     pushHud({
       title: 'Monopoly',
       note: over + usText(state.log[0] ?? 'Roll to leave GO.'),
-      detail: state.players
-        .map((p, i) => `${p.name} (${TOKEN_DEFS.find(t => t.id === tokens[i])?.label ?? ''}) $${p.cash}${p.inJail ? ' · jail' : ''}${p.bankrupt ? ' · out' : ''}`)
-        .join('  ·  '),
+      detail: `${cashLine}  ·  Tap a token or its money to see the deeds.`,
       onLeave,
       actions,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [human, state, setup, walking, onLeave, tokens]);
+  }, [human, state, setup, walking, onLeave, tokens, panel, card]);
   useEffect(() => () => pushHud(null), []);
 
   if (setup) {
@@ -826,16 +1127,23 @@ export function MonopolyTable({ onLeave }: { onLeave: () => void }) {
   }
   if (!state) return null;
 
-  const owned = (seat: number) =>
-    Object.entries(state.deeds)
-      .filter(([, d]) => d.owner === seat)
-      .map(([i]) => Number(i));
-  const lookAt = (i: number | undefined) => {
-    if (i === undefined || state.pendingPurchase !== null || state.drawnCard) return;
-    setHeld({ kind: 'deed', i, why: 'look' });
-    window.setTimeout(() => setHeld(h => (h?.kind === 'deed' && h.why === 'look' && h.i === i ? null : h)), 4200);
-  };
+  // What is held up to read. A fresh card first, then whatever deed you are
+  // looking at, then the deed you landed on and might buy.
+  const browsing = panel?.kind === 'browse' ? ownedBy(state, panel.seat) : [];
+  const lookDeed =
+    panel?.kind === 'browse' ? browsing[Math.min(panel.k, browsing.length - 1)] : panel?.kind === 'trade' ? (panel.focus ?? undefined) : undefined;
+  const buyDeed = state.pendingPurchase !== null && !walking && human ? state.pendingPurchase : undefined;
+  const deedUp = lookDeed ?? buyDeed;
+  const held: null | { kind: 'deed'; i: number } | { kind: 'chance' | 'chest'; text: string } = card
+    ? card
+    : deedUp !== undefined
+      ? { kind: 'deed', i: deedUp }
+      : null;
   const heldFrom = held?.kind === 'deed' ? tileCenter(held.i) : new THREE.Vector3(0, BOARD_Y, 0);
+  const putDown = () => {
+    if (card) dropCard();
+    else if (lookDeed !== undefined && panel?.kind === 'browse') setPanel(null);
+  };
 
   return (
     <group>
@@ -851,22 +1159,37 @@ export function MonopolyTable({ onLeave }: { onLeave: () => void }) {
             live={lives.current[seat]}
             onArrive={() => arrived(seat)}
             onStep={() => sfx('move', 0.22)}
-            onInspect={() => lookAt(owned(seat)[0])}
+            onInspect={() => openBrowse(seat)}
           />
         ),
       )}
       {state.players.map((p, seat) => (
         <group key={`z${seat}`}>
-          {!p.bankrupt && <Cash cash={p.cash} zone={ZONES[seat]} scale={seat === 0 ? 0.82 : 0.6} />}
-          <Deeds owned={owned(seat)} zone={ZONES[seat]} scale={seat === 0 ? 1 : 0.8} onPick={lookAt} />
+          {!p.bankrupt && <Cash cash={p.cash} zone={ZONES[seat]} scale={seat === 0 ? 0.82 : 0.6} onPick={() => openBrowse(seat)} />}
+          <Deeds
+            owned={ownedBy(state, seat)}
+            mortgaged={i => Boolean(state.deeds[i]?.mortgaged)}
+            zone={ZONES[seat]}
+            scale={seat === 0 ? 1 : 0.8}
+            onPick={i => pickDeed(seat, i)}
+          />
         </group>
       ))}
       {state.players.map((p, seat) => (
-        <mesh key={`m${seat}`} position={[ZONES[seat].cash.x, 0.0005, ZONES[seat].cash.z]} rotation={[-Math.PI / 2, 0, 0]}>
+        <mesh
+          key={`m${seat}`}
+          position={[ZONES[seat].cash.x, 0.0005, ZONES[seat].cash.z]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          onClick={e => {
+            e.stopPropagation();
+            if (!wasDrag()) openBrowse(seat);
+          }}
+        >
           <ringGeometry args={[0.006, 0.0085, 24]} />
           <meshBasicMaterial color={PLAYER_COLOURS[seat]} toneMapped={false} />
         </mesh>
       ))}
+      <OwnerStrips deeds={state.deeds} />
       <Buildings state={state} />
       <Decks />
       <Dice toss={toss} live={diceLive.current} />
@@ -877,6 +1200,7 @@ export function MonopolyTable({ onLeave }: { onLeave: () => void }) {
           w={held.kind === 'deed' ? DEED_SIZE.w : CARD_SIZE.w}
           h={held.kind === 'deed' ? DEED_SIZE.h : CARD_SIZE.h}
           from={heldFrom}
+          onPick={putDown}
         />
       )}
       {pops.map(pop => (
