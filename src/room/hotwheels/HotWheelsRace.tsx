@@ -22,6 +22,7 @@ import { Quipper, quipSeconds } from '../roomQuips';
 import { SpeechBubble } from '../army/SpeechBubble';
 import { motorSpeed, raceSfx, startMotor, stopRaceAudio, wakeRaceAudio } from './raceAudio';
 import { openMiniGame } from '../../engine/lifecycle';
+import { screenPan } from './screenPan';
 
 export type HwCam = 'chase' | 'hood' | 'birdseye';
 type Phase = 'countdown' | 'racing' | 'roam';
@@ -489,6 +490,7 @@ function Racer() {
 const _cam = new THREE.Vector3();
 const _look = new THREE.Vector3();
 const _want = new THREE.Vector3();
+const _panFwd = new THREE.Vector3();
 const _tmp = new THREE.Vector3();
 
 const UP = new THREE.Vector3(0, 1, 0);
@@ -645,6 +647,8 @@ export function HotWheelsWorld({ spot, skipCountdown }: { spot: string | null; s
     window.addEventListener('keyup', up);
     hwControls.reset = resetCar;
     hwControls.roam = goRoam;
+    // Dev hook for capture scripts: the race state, the bird's-eye pan and the camera.
+    if (import.meta.env.DEV) (window as unknown as { __hw: unknown }).__hw = { race: hwRace, pan, camera, car };
     return () => {
       window.removeEventListener('keydown', down);
       window.removeEventListener('keyup', up);
@@ -706,10 +710,16 @@ export function HotWheelsWorld({ spot, skipCountdown }: { spot: string | null; s
     const k = keys.current;
     const modeNow = hwRace.cam;
     if (modeNow === 'birdseye') {
-      const slideX = (k.ArrowRight ? 1 : 0) - (k.ArrowLeft ? 1 : 0);
-      const slideZ = (k.ArrowDown ? 1 : 0) - (k.ArrowUp ? 1 : 0);
-      pan.current.x = THREE.MathUtils.clamp(pan.current.x + slideX * 0.75 * dt, -1.5, 1.5);
-      pan.current.z = THREE.MathUtils.clamp(pan.current.z + slideZ * 0.75 * dt, -1.5, 1.5);
+      // Pan with the picture, not the room: Up slides the view up the screen
+      // whichever way the car is facing.
+      const right = (k.ArrowRight ? 1 : 0) - (k.ArrowLeft ? 1 : 0);
+      const upScreen = (k.ArrowUp ? 1 : 0) - (k.ArrowDown ? 1 : 0);
+      if (right || upScreen) {
+        camera.getWorldDirection(_panFwd);
+        const step = screenPan(_panFwd.x, _panFwd.z, upScreen, right, { x: Math.cos(c.heading), z: Math.sin(c.heading) });
+        pan.current.x = THREE.MathUtils.clamp(pan.current.x + step.x * 0.75 * dt, -1.5, 1.5);
+        pan.current.z = THREE.MathUtils.clamp(pan.current.z + step.z * 0.75 * dt, -1.5, 1.5);
+      }
     } else {
       // Chase: left and right look around the car. Up tilts a little and stays
       // in chase. Hood is its own view, only on C.
@@ -852,7 +862,11 @@ export function HotWheelsWorld({ spot, skipCountdown }: { spot: string | null; s
       camera.position.copy(_cam);
       camera.up.set(0, 1, 0);
       if (mode !== 'birdseye' && look.current.pitch) {
-        _look.copy(_cam).add(lookAround(_tmp.subVectors(_look, _cam), look.current.pitch));
+        // Take the direction to the car before moving _look: `_look.copy(_cam).add(f(_look - _cam))`
+        // copies first, so the direction came out zero and Up dropped the
+        // third-person view into a blank stare down the room (it looked like first person).
+        const toCar = lookAround(_tmp.subVectors(_look, _cam), look.current.pitch);
+        _look.copy(_cam).add(toCar);
       }
       camera.lookAt(_look);
     }
