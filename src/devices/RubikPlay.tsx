@@ -287,14 +287,21 @@ export function RubikPlay({ onClose }: { onClose: () => void }) {
   const movesRef = useRef(0);
   const startRef = useRef<number | null>(null);
 
+  /** Your turns, newest last, so Undo can take them back one at a time. */
+  const history = useRef<{ key: string; prime: boolean }[]>([]);
   const doTurn = useCallback(
-    (key: string, prime: boolean) => {
+    (key: string, prime: boolean, record = true) => {
       const m = NOTATION[key];
       if (!m || !api.current || scrambling.current) return;
       api.current.turn({ ...m, dir: (prime ? -m.dir : m.dir) as 1 | -1 });
+      if (record) history.current.push({ key, prime });
     },
     [],
   );
+  const undo = useCallback(() => {
+    const last = history.current.pop();
+    if (last) doTurn(last.key, !last.prime, false);
+  }, [doTurn]);
 
   const onTurned = useCallback(
     (isDone: boolean) => {
@@ -323,6 +330,7 @@ export function RubikPlay({ onClose }: { onClose: () => void }) {
 
   const scramble = () => {
     if (!api.current || api.current.busy()) return;
+    history.current = [];
     setSolved(null);
     setMoves(0);
     movesRef.current = 0;
@@ -342,6 +350,7 @@ export function RubikPlay({ onClose }: { onClose: () => void }) {
 
   const reset = () => {
     api.current?.reset();
+    history.current = [];
     scrambling.current = false;
     scrambled.current = false;
     setSolved(null);
@@ -364,6 +373,11 @@ export function RubikPlay({ onClose }: { onClose: () => void }) {
         onClose();
         return;
       }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        undo();
+        return;
+      }
       const key = e.key.toUpperCase();
       if (NOTATION[key]) {
         e.preventDefault();
@@ -372,7 +386,7 @@ export function RubikPlay({ onClose }: { onClose: () => void }) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [doTurn, onClose]);
+  }, [doTurn, onClose, undo]);
 
   const clock = `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`;
 
@@ -419,37 +433,38 @@ export function RubikPlay({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="shrink-0 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
-        <div className="mx-auto flex max-w-lg flex-wrap items-end justify-center gap-2">
-          {FACE_COLORS.map(face => (
-            <div key={face.key} className="flex w-[3.4rem] flex-col gap-1">
+        {/* The standard notation pad, as on cube timers and simulators: each face's
+            letter turns it clockwise, the primed one (′) the other way. */}
+        <div className="mx-auto grid max-w-md grid-cols-6 gap-1.5">
+          {[false, true].map(prime =>
+            FACE_COLORS.map(face => (
               <button
+                key={`${face.key}${prime ? "'" : ''}`}
                 type="button"
-                aria-label={`Turn the ${face.name} face`}
-                onClick={() => doTurn(face.key, false)}
-                className="flex h-12 items-center justify-center rounded-xl border border-black/30 text-lg font-black shadow-inner"
-                style={{ background: face.color, color: face.ink }}
+                aria-label={`${face.key}${prime ? ' prime' : ''}: turn the ${face.name} face ${prime ? 'counter-clockwise' : 'clockwise'}`}
+                onClick={() => doTurn(face.key, prime)}
+                className="flex h-11 items-center justify-center gap-1 rounded-lg border border-white/15 bg-white/[0.06] font-mono text-base font-black text-white hover:bg-white/15 active:scale-95"
+                style={{ boxShadow: `inset 0 -4px 0 ${face.color}` }}
               >
-                ↻
+                {face.key}
+                {prime && <span className="text-sm">′</span>}
               </button>
-              <button
-                type="button"
-                aria-label={`Turn the ${face.name} face the other way`}
-                onClick={() => doTurn(face.key, true)}
-                className="h-7 rounded-lg border border-black/20 text-xs font-bold"
-                style={{ background: face.color, color: face.ink }}
-              >
-                ↺
-              </button>
-            </div>
-          ))}
+            )),
+          )}
         </div>
-        <div className="mx-auto mt-2 grid max-w-md grid-cols-2 gap-1.5">
+        <p className="mx-auto mt-1 max-w-md text-center font-mono text-[10px] text-white/45">
+          Keys: U D L R F B · Shift for ′ · Ctrl+Z undo
+        </p>
+        <div className="mx-auto mt-2 grid max-w-md grid-cols-3 gap-1.5">
           <button
             type="button"
             onClick={scramble}
             className="rounded-lg bg-gradient-to-r from-fuchsia-600 to-amber-500 py-2 font-display text-sm text-white"
           >
             Scramble
+          </button>
+          <button type="button" onClick={undo} className="rounded-lg border border-white/20 bg-black/40 py-2 text-xs font-bold uppercase tracking-wider text-white/80">
+            Undo
           </button>
           <button type="button" onClick={reset} className="rounded-lg border border-white/20 bg-black/40 py-2 text-xs font-bold uppercase tracking-wider text-white/80">
             Reset
