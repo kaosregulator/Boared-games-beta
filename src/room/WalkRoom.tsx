@@ -928,6 +928,11 @@ export function WalkRoom({
         } else grabStool(target);
         return;
       }
+      if (target.id === 'chest-viewmaster') {
+        sound.playButtonClick();
+        setViewMaster(true);
+        return;
+      }
       if (target.id === 'toy-chest') {
         toyChestBus.toggle();
         sound.playCardboardLid();
