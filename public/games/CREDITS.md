@@ -77,3 +77,11 @@ The soldier from three.js's examples (`examples/models/gltf/Soldier.glb`, Mixamo
 animations), shipped in the three.js repo under the MIT licence — https://github.com/mrdoob/three.js.
 Slimmed with `scripts/slim-soldier.mjs` (textures and T-pose dropped) and painted plastic green or tan in code.
 The army town, the helicopter and everything else in `src/room/army/` are built from primitives in code.
+
+## View-Master reels
+
+The fifteen 1990s reels in the View-Master (`public/viewmaster/`) are scans from
+the [View-Master Database](https://vm.vmdatabase.com/), Dave Machin's collection.
+Seven scenes per packet, resized to 360 px. The depth maps beside them
+(`<n>-d.png`) were worked out from each scan with MiDaS v2.1 small
+(isl-org/MiDaS, MIT) and drive the viewer's layered 3D.

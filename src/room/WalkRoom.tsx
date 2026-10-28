@@ -11,6 +11,8 @@ import { FilmCamera, type FilmShot } from './FilmCamera';
 import { LAYOUT } from './roomLayout';
 import { DESK_SLOTS, SHELF_SLOTS, SHELF_SLOTS_LOWER } from './videoRoom';
 import { MemoryFlashCard } from './MemoryFlashCard';
+import { CapsuleHologram } from './capsule/CapsuleHologram';
+import { openCapsule } from './capsule/capsuleBus';
 import { propCardFor, type CardAction } from './propCards';
 import { toyChestBus } from './ToyChest';
 import { TamagotchiPlay } from '../devices/TamagotchiPlay';
@@ -316,7 +318,8 @@ export function WalkRoom({
   const [seated, setSeated] = useState(override.seat);
   const [tamagotchi, setTamagotchi] = useState(false);
   const [rubik, setRubik] = useState(false);
-  const [viewMaster, setViewMaster] = useState(false);
+  // `?viewmaster` opens it straight away, for captures.
+  const [viewMaster, setViewMaster] = useState(() => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('viewmaster'));
   const [racing, setRacing] = useState(Boolean(raceBoot));
   /** Shrunk down in the army town on the floor. */
   const [armyOn, setArmyOn] = useState(Boolean(armyBoot));
@@ -976,6 +979,12 @@ export function WalkRoom({
   const cardProp = demoProp ?? aimedProp;
   const showCard = Boolean(demoGame || demoProp) || (engaged && cardOpen && (aimedGame || aimedProp));
   const walking = engaged && !device && !seated && !holding && !furbyHeld && !overlayGame && !pulledGameId && session?.phase !== 'unfold' && !tableCamOn && !toyMode;
+  // The open time capsule's hologram: the real piece of the room it's about.
+  const capsuleId = showCard && !device ? (demoCardId ?? pinned?.id ?? null) : null;
+  useEffect(() => {
+    openCapsule(capsuleId);
+  }, [capsuleId]);
+  useEffect(() => () => openCapsule(null), []);
 
 
   return (
@@ -1071,6 +1080,7 @@ export function WalkRoom({
         <FurbyHold />
         <DeviceFocus device={scripted ? null : device} />
         {seated && <GameBoySeat />}
+        <CapsuleHologram />
         {(stool || stoolPreview) && <ShelfStool x={(stool ?? stoolPreview)!.x} z={(stool ?? stoolPreview)!.z} />}
         <DeviceGestures active={Boolean(device || seated) && !big && !scripted} />
         {override.capture && <CaptureClock />}
