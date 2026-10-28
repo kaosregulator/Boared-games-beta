@@ -104,7 +104,7 @@ let master: GainNode | null = null;
 let buffer: AudioBuffer | null = null;
 let clips: SargeClip[] = [];
 let loading: Promise<void> | null = null;
-let playing: { srcs: AudioBufferSourceNode[]; gain: GainNode; until: number } | null = null;
+let playing: { srcs: AudioBufferSourceNode[]; gains: GainNode[]; until: number } | null = null;
 /** Audio-clock time his last line ends. */
 let lastEnd = -Infinity;
 const decks = new Map<SargeTag, SargeClip[][]>();
@@ -196,7 +196,11 @@ export function sargeQuietFor() {
 }
 
 export interface SayOpts {
-  /** Cut off whatever he's saying. For the moments that can't wait: a jump, a landing. */
+  /**
+   * For the moments that can't wait (a jump, a landing, a win). He finishes a
+   * line that's nearly done and says this straight after (QUEUE_WITHIN); only
+   * a long line still going gets cut short.
+   */
   cut?: boolean;
   /** Seconds of quiet he needs since his last line first. Ignored with `cut`. Default 4. */
   quiet?: number;
@@ -231,19 +235,30 @@ export function sargeSay(tag: SargeTag, opts: SayOpts = {}): SargeLine | null {
   const seq = [...(lead ?? []), ...entry];
   if (seq.length === 0) return null;
   if (opts.cool) cools.set(tag, now + opts.cool);
-  return sargeSeq(seq, opts.volume);
+  const queue = opts.cut && sargeBusy() && playing!.until - now <= QUEUE_WITHIN;
+  return sargeSeq(seq, opts.volume, queue);
+}
+
+/** Seconds left on his current line under which an urgent line waits for it instead of cutting in. */
+export const QUEUE_WITHIN = 2.5;
+
+/** When a line asked for at `now` starts: straight away, or after the one he's saying if it's queued. */
+export function lineStart(now: number, busyUntil: number | null, queue: boolean) {
+  return queue && busyUntil !== null && busyUntil > now ? busyUntil + JOIN : now + 0.02;
 }
 
 /** Play these clips back to back (the intro and the duck story go through his in order). */
-export function sargeSeq(seq: readonly SargeClip[], volume = 1): SargeLine | null {
+export function sargeSeq(seq: readonly SargeClip[], volume = 1, queue = false): SargeLine | null {
   void loadSarge();
   const ac = audio();
   if (!ac || !buffer || !master || seq.length === 0) return null;
-  sargeStop();
+  // Queued: let him finish, and keep the old line's sources so a later stop still silences both.
+  const prev = queue && playing ? playing : null;
+  const t0 = lineStart(ac.currentTime, prev ? prev.until : null, queue);
+  if (!prev) sargeStop();
   const gain = ac.createGain();
   gain.gain.value = volume;
   gain.connect(master);
-  const t0 = ac.currentTime + 0.02;
   let at = t0;
   const srcs = seq.map(c => {
     const src = ac.createBufferSource();
@@ -254,7 +269,8 @@ export function sargeSeq(seq: readonly SargeClip[], volume = 1): SargeLine | nul
     return src;
   });
   const until = at - JOIN;
-  playing = { srcs, gain, until };
+  // Queued, both lines stay under one handle so a later stop silences both.
+  playing = prev ? { srcs: [...prev.srcs, ...srcs], gains: [...prev.gains, gain], until } : { srcs, gains: [gain], until };
   lastEnd = until;
   return { clips: [...seq], text: seq.map(c => c.text).filter(Boolean).join(' '), dur: until - ac.currentTime };
 }
@@ -266,7 +282,7 @@ export function sargePlay(clip: SargeClip, volume = 1) {
 export function sargeStop() {
   if (!playing || !ctx) return;
   const t = ctx.currentTime;
-  playing.gain.gain.setTargetAtTime(0, t, 0.03);
+  for (const g of playing.gains) g.gain.setTargetAtTime(0, t, 0.03);
   for (const src of playing.srcs) {
     try {
       src.stop(t + 0.15);

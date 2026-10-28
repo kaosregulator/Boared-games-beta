@@ -93,3 +93,14 @@ test('a moment deals every entry once before any twice, pairs together', () => {
   assert.ok(bail.includes('yes-sir+code-red'));
   assert.ok(!bail.includes('yes-sir'));
 });
+
+test('an urgent line waits for a nearly finished one instead of cutting it off', async () => {
+  const { lineStart, QUEUE_WITHIN } = await import('../../src/room/army/sargeVoice.ts');
+  assert.ok(QUEUE_WITHIN >= 2);
+  // Not busy: straight away.
+  assert.ok(Math.abs(lineStart(10, null, false) - 10.02) < 1e-9);
+  // Queued behind a line ending at 11.5: starts just after it.
+  assert.ok(lineStart(10, 11.5, true) > 11.5);
+  // A cut (not queued) starts now even mid-line.
+  assert.ok(lineStart(10, 11.5, false) < 10.1);
+});
