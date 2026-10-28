@@ -28,6 +28,7 @@ import { WalkKeys } from './WalkKeys';
 import { GameBoySeat } from '../devices/GameBoySeat';
 import { GameBoyGlass } from '../devices/GameBoyGlass';
 import { GameBoyBar } from '../devices/GameBoyBar';
+import { CLIMB_SECONDS, STOOL_TOP, climbBoost, stepForward } from './stoolClimb';
 import { setCartridgeKeys } from '../devices/gameboyBus';
 import { DEVICE_FROM_PROP, type DeviceId } from './devices';
 import { radio, useRadio } from '../radio/radioEngine';
@@ -188,6 +189,9 @@ function tableFromQuery(games: GameMetadata[]): GameMetadata | null {
   return games.find(g => g.id === id) ?? null;
 }
 
+/** How far you can walk from where you asked for a stool before the button goes away, metres. */
+const STOOL_ASK_AWAY = 1.2;
+
 function isHighShelf(id: string) {
   return id === 'south-shelf' || id === 'teddy' || id.startsWith('sh-');
 }
@@ -304,6 +308,7 @@ export function WalkRoom({
   const [stool, setStool] = useState<null | { x: number; z: number }>(null);
   const stoolPreview = useMemo(stoolFromQuery, []);
   const stoolToken = useRef(0);
+  const stoolSpot = useRef<{ x: number; z: number } | null>(null);
   const pinnedAt = useRef<{ x: number; z: number } | null>(null);
   const cardOpen = pinned !== null;
   const setCardOpen = useCallback((open: boolean) => {
@@ -542,23 +547,57 @@ export function WalkRoom({
     sound.playButtonClick();
   }, []);
 
+  /** Drive the eye height through the two steps (up or down); calls `done` when finished. */
+  const runClimb = useCallback((dir: 'up' | 'down', token: number, done: () => void) => {
+    const t0 = performance.now();
+    const from = { x: walkRig.pos.x, z: walkRig.pos.z };
+    walkRig.eyeSnap = true;
+    const tick = () => {
+      if (stoolToken.current !== token) {
+        walkRig.eyeSnap = false;
+        walkRig.stepTo = null;
+        return;
+      }
+      const t = (performance.now() - t0) / 1000;
+      walkRig.eyeBoost = climbBoost(dir, t);
+      if (dir === 'up' && stoolSpot.current) {
+        walkRig.stepTo = { x: stoolSpot.current.x, z: stoolSpot.current.z, from, k: stepForward(t) };
+      }
+      if (t >= CLIMB_SECONDS) {
+        walkRig.eyeBoost = dir === 'up' ? STOOL_TOP : 0;
+        walkRig.eyeSnap = false;
+        walkRig.stepTo = null;
+        done();
+        return;
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, []);
+
   const grabStool = useCallback(
     (target: Aimed) => {
       const token = ++stoolToken.current;
-      const x = walkRig.pos.x;
-      const z = walkRig.pos.z;
+      // Set it down just in front of you, so you watch it appear, then step up onto it.
+      const x = walkRig.pos.x + walkRig.dir.x * 0.62;
+      const z = walkRig.pos.z + walkRig.dir.z * 0.62;
+      stoolSpot.current = { x, z };
       setStool({ x, z });
       setStoolAsk(null);
-      walkRig.eyeBoost = 0.2;
       sound.playMoveClack();
+      walkRig.glanceAt = [x, 0.3, z];
       window.setTimeout(() => {
         if (stoolToken.current !== token) return;
-        walkRig.eyeBoost = 0.42;
-        walkRig.glance = true;
-        pinCard(target);
-      }, 520);
+        sound.playFootstep(true);
+        runClimb('up', token, () => {
+          walkRig.glance = true;
+          pinCard(target);
+        });
+        window.setTimeout(() => stoolToken.current === token && sound.playFootstep(false), 220);
+        window.setTimeout(() => stoolToken.current === token && sound.playFootstep(true), 720);
+      }, 650);
     },
-    [pinCard],
+    [pinCard, runClimb],
   );
 
   useEffect(() => {
@@ -566,16 +605,46 @@ export function WalkRoom({
     const home = stool;
     const timer = window.setInterval(() => {
       if (Math.hypot(walkRig.pos.x - home.x, walkRig.pos.z - home.z) > 0.9) {
-        stoolToken.current += 1;
-        walkRig.eyeBoost = 0;
-        setStool(null);
+        window.clearInterval(timer);
+        // Walking away steps down the same two steps, then the stool is put away.
+        const token = ++stoolToken.current;
+        runClimb('down', token, () => setStool(null));
+        window.setTimeout(() => stoolToken.current === token && sound.playFootstep(true), 340);
+        window.setTimeout(() => stoolToken.current === token && sound.playFootstep(false), 780);
       }
     }, 200);
     return () => {
       window.clearInterval(timer);
-      walkRig.eyeBoost = 0;
     };
-  }, [stool]);
+  }, [stool, runClimb]);
+
+  // Leaving the room for good lets go of the stool's height.
+  useEffect(
+    () => () => {
+      stoolToken.current += 1;
+      walkRig.eyeBoost = 0;
+      walkRig.eyeSnap = false;
+      walkRig.stepTo = null;
+    },
+    [],
+  );
+
+  // The "Grab a stool" button goes when you walk away from the shelf, or press Escape.
+  useEffect(() => {
+    if (!stoolAsk) return;
+    const from = { x: walkRig.pos.x, z: walkRig.pos.z };
+    const timer = window.setInterval(() => {
+      if (Math.hypot(walkRig.pos.x - from.x, walkRig.pos.z - from.z) > STOOL_ASK_AWAY) setStoolAsk(null);
+    }, 150);
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setStoolAsk(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [stoolAsk]);
 
   // Packing up takes the box away from the table, and its card with it.
   useEffect(() => {
