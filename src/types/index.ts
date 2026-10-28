@@ -9,7 +9,6 @@ export type GameId =
   | 'blackjack'
   | 'gofish'
   | 'pawnrush'
-  | 'liarsdice'
   | 'guesswho'
   | 'mousetrap'
   | 'yahtzee'
@@ -460,39 +459,3 @@ export interface PawnRushState {
   message: string;
 }
 
-// ----------------------------------------------------
-// Liar's Dice Types
-// ----------------------------------------------------
-export interface LiarsDicePlayer {
-  id: string;
-  name: string;
-  avatar: string;
-  isBot: boolean;
-  dice: number[];
-  diceCount: number;
-  isEliminated: boolean;
-}
-
-export interface LiarsDiceBid {
-  playerId: string;
-  quantity: number;
-  faceValue: number;
-}
-
-export interface LiarsDiceState {
-  players: LiarsDicePlayer[];
-  currentTurnIndex: number;
-  currentBid: LiarsDiceBid | null;
-  lastBid: LiarsDiceBid | null;
-  roundPhase: 'bidding' | 'reveal' | 'round_over' | 'game_over';
-  revealedDice: { playerId: string; dice: number[] }[] | null;
-  revealSummary: {
-    challenger: string;
-    bidder: string;
-    actualCount: number;
-    bidCount: number;
-    loser: string;
-    exactCall?: boolean;
-  } | null;
-  winner: LiarsDicePlayer | null;
-}

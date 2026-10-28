@@ -105,7 +105,6 @@ export const DiscordEmbedCanvas: React.FC<DiscordEmbedCanvasProps> = ({
         else if (cmd.includes('blackjack')) onLaunchGame('blackjack');
         else if (cmd.includes('gofish')) onLaunchGame('gofish');
         else if (cmd.includes('sorry')) onLaunchGame('pawnrush');
-        else if (cmd.includes('liar')) onLaunchGame('liarsdice');
 
         setChatLog(prev => [
           ...prev,
@@ -249,7 +248,6 @@ export const DiscordEmbedCanvas: React.FC<DiscordEmbedCanvasProps> = ({
               {activeGame?.id === 'blackjack' && '🃏 Blackjack (21) Green Felt'}
               {activeGame?.id === 'gofish' && '🎣 Go Fish Lake Pond'}
               {activeGame?.id === 'pawnrush' && '🎲 4-Player Revenge Race (Sorry)'}
-              {activeGame?.id === 'liarsdice' && "🏴‍☠️ Pirate's Liar's Dice (Perudo)"}
               {!activeGame && '🎮 Pick a Board Game to Play via Embed'}
             </h4>
             <p className="text-[11px] text-[#949ba4] mt-1">
@@ -414,8 +412,7 @@ export const DiscordEmbedCanvas: React.FC<DiscordEmbedCanvasProps> = ({
                     { id: 'checkers', label: '🔴 Checkers' },
                     { id: 'blackjack', label: '🃏 Blackjack' },
                     { id: 'gofish', label: '🎣 Go Fish' },
-                    { id: 'pawnrush', label: '🎲 Sorry' },
-                    { id: 'liarsdice', label: '🏴‍☠️ Liar\'s Dice' }
+                    { id: 'pawnrush', label: '🎲 Sorry' }
                   ] as const
                 ).map(g => (
                   <button

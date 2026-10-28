@@ -50,8 +50,7 @@ export const DiscordBotConsole: React.FC<DiscordBotConsoleProps> = ({
           { name: '/checkers', value: 'Classic Draughts / Checkers' },
           { name: '/blackjack', value: 'Casino 21 / Blackjack' },
           { name: '/gofish', value: 'Classic Go Fish Card Game' },
-          { name: '/pawnrush', value: '4-Player Revenge Race (Sorry/Ludo)' },
-          { name: '/liarsdice', value: "Pirate's Liar's Dice (Perudo)" }
+          { name: '/pawnrush', value: '4-Player Revenge Race (Sorry/Ludo)' }
         ]
       }
     }
@@ -232,21 +231,6 @@ export const DiscordBotConsole: React.FC<DiscordBotConsoleProps> = ({
         }
       };
       onLaunchGame('pawnrush');
-    } else if (cmd.startsWith('/liarsdice') || cmd === 'liarsdice' || cmd === 'perudo') {
-      botMsg = {
-        id: `b_${Date.now()}`,
-        sender: 'TabletopBot#0001',
-        avatar: '🤖',
-        isBot: true,
-        time: 'Just now',
-        text: "Distributing leather cups for **Pirate's Liar's Dice**! 🏴‍☠️",
-        embed: {
-          title: '🏴‍☠️ Perudo Showdown',
-          description: '5 dice dealt to each pirate. Keep your rolls secret!',
-          color: '#eab308'
-        }
-      };
-      onLaunchGame('liarsdice');
     } else if (cmd.startsWith('/roll')) {
       const roll1 = Math.floor(Math.random() * 6) + 1;
       const roll2 = Math.floor(Math.random() * 6) + 1;
@@ -280,7 +264,6 @@ export const DiscordBotConsole: React.FC<DiscordBotConsoleProps> = ({
             { name: '/blackjack', value: 'Start Blackjack (21)' },
             { name: '/gofish', value: 'Start Go Fish' },
             { name: '/pawnrush', value: 'Start 4-Player Race (Sorry)' },
-            { name: '/liarsdice', value: "Start Pirate's Liar's Dice" },
             { name: '/roll', value: 'Roll 2d6 dice' }
           ]
         }
