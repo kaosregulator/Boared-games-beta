@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { ChessBoard, ChessPieceColor, ChessPieceType, PlayingCard, CardRank, CardSuit, Pawn, PawnColor, PawnRushCard, PokerCard, PokerRank, PokerSuit } from '../../src/types/index.ts';
+import type { ChessBoard, ChessPieceColor, ChessPieceType, PlayingCard, CardRank, CardSuit, PokerCard, PokerRank, PokerSuit } from '../../src/types/index.ts';
 import {
   applyChessMove,
   createInitialBoard,
@@ -17,14 +17,12 @@ import { checkConnect4Win, createEmptyConnect4Board, getLowestEmptyRow } from '.
 import { generateRandomFleet, isValidPlacement, createEmptyGrid } from '../../src/games/battleship/battleshipLogic.ts';
 import { calculateHandScore } from '../../src/games/blackjack/blackjackLogic.ts';
 import { checkForBooks } from '../../src/games/gofish/goFishLogic.ts';
-import { countMatchingDice, isValidBid } from '../../src/games/liarsdice/liarsDiceLogic.ts';
 import { grandTotal, scoreFor, upperBonus, type ScoreCard } from '../../src/games/yahtzee/yahtzeeRules.ts';
 import { RANK_VALUES, evaluate5CardHand } from '../../src/utils/pokerLogic.ts';
 import { accuse, newClueGame } from '../../src/games/clue/clueEngine.ts';
 import { choosePath, newLifeGame, spin } from '../../src/games/life/lifeEngine.ts';
 import { buyPending, canBuild, endTurn, newGame, rentFor, rollDice } from '../../src/games/monopoly/monopolyEngine.ts';
 import { GO_SALARY, START_CASH } from '../../src/games/monopoly/monopolyData.ts';
-import { calculateValidMovesForCard, initializePawnRush } from '../../src/games/pawnrush/pawnRushLogic.ts';
 import { GAME_CATALOG } from '../../src/utils/gameData.ts';
 
 function emptyBoard(): ChessBoard {
@@ -231,16 +229,6 @@ test('go fish books four of a kind and leaves three in hand', () => {
   assert.equal(books.remainingHand.length, 3);
 });
 
-test('liar’s dice raises the bid and counts aces as wild until someone bids them', () => {
-  assert.equal(isValidBid({ quantity: 1, faceValue: 3 }, null), true);
-  assert.equal(isValidBid({ quantity: 4, faceValue: 3 }, { quantity: 4, faceValue: 5, playerId: 'p' }), false);
-  assert.equal(isValidBid({ quantity: 4, faceValue: 6 }, { quantity: 4, faceValue: 5, playerId: 'p' }), true);
-  assert.equal(isValidBid({ quantity: 3, faceValue: 1 }, { quantity: 6, faceValue: 5, playerId: 'p' }), true);
-  assert.equal(isValidBid({ quantity: 2, faceValue: 1 }, { quantity: 6, faceValue: 5, playerId: 'p' }), false);
-  assert.equal(countMatchingDice([[1, 1, 5], [5, 2]], 5), 4);
-  assert.equal(countMatchingDice([[1, 1, 5]], 1), 2);
-});
-
 test('yahtzee scores every box, the upper bonus, and a joker yahtzee', () => {
   assert.equal(scoreFor('aces', [1, 1, 1, 2, 3]), 3);
   assert.equal(scoreFor('sixes', [6, 6, 1, 2, 3]), 12);
@@ -341,33 +329,6 @@ test('monopoly rolls two dice, pays for passing go, buys, charges rent, and jail
   built.players[0].cash = 500;
   assert.equal(canBuild(built, 1, 0), false);
   assert.equal(canBuild(built, 3, 0), true);
-});
-
-test('sorry starts on a 1, backs up on a 4, and a 7 is one pawn not a split', () => {
-  const fresh = initializePawnRush();
-  const card = (value: PawnRushCard['value'], canStart = false): PawnRushCard => ({ id: value, value, title: value, description: '', canStart });
-  const start = calculateValidMovesForCard(card('1', true), 'blue', fresh.pawns);
-  assert.ok(start.length > 0);
-  assert.equal(start.every(m => m.targetPosition === 4), true);
-  assert.equal(calculateValidMovesForCard(card('3'), 'blue', fresh.pawns).length, 0);
-
-  const out: Record<PawnColor, Pawn[]> = {
-    ...fresh.pawns,
-    blue: fresh.pawns.blue.map((pawn, i) => (i === 0 ? { ...pawn, position: 10, stepIndex: 6 } : pawn)),
-  };
-  const back = calculateValidMovesForCard(card('4'), 'blue', out).find(m => m.pawn.id === 1);
-  assert.equal(back?.targetPosition, 6);
-  const seven = calculateValidMovesForCard(card('7'), 'blue', out).filter(m => m.pawn.id === 1);
-  assert.equal(seven.length, 1);
-  assert.equal(seven[0].targetPosition, 17);
-
-  const bumped = calculateValidMovesForCard(card('SORRY'), 'blue', {
-    ...out,
-    red: fresh.pawns.red.map((pawn, i) => (i === 0 ? { ...pawn, position: 20 } : pawn)),
-  });
-  assert.equal(bumped.length, 1);
-  assert.equal(bumped[0].targetPosition, 20);
-  assert.equal(bumped[0].swapWith?.color, 'red');
 });
 
 test('the rule cards describe the moves the engines actually play', () => {

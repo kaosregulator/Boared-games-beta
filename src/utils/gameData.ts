@@ -234,26 +234,6 @@ export const GAME_CATALOG: GameMetadata[] = [
     rating: '4.9 ★★★★★'
   },
   {
-    id: 'liarsdice',
-    title: "Liar's Dice (Perudo)",
-    subtitle: 'Classic Pirate Cup Bluffing & Escalating Bids',
-    players: '2 - 4 Players (or Pirate Bots)',
-    duration: '5 - 10 min',
-    boxColor: 'from-amber-900 via-amber-950 to-yellow-950',
-    boxAccent: 'border-yellow-500/40 text-yellow-400',
-    badge: 'Bluff & Bet',
-    description: 'Shake leather dice cups, peek under your cup, make escalating bids on total dice across the table (1s are Wild!), or slam the table and call "LIAR!" to catch your rivals bluffing.',
-    rules: [
-      'Each player starts with 5 dice under their cup. Shake and secretly peek at your roll.',
-      'Take turns bidding total dice count and face value across the whole table (e.g. "Four 5s").',
-      'Aces (1s) are WILD and count towards any number unless someone bids on 1s directly.',
-      'Each bid must increase the quantity of dice OR the face value.',
-      'Call "LIAR!" if you doubt the last bid. All cups lift—loser loses a die until only one pirate remains!'
-    ],
-    icon: 'Dice',
-    rating: '4.9 ★★★★★'
-  },
-  {
     id: 'yahtzee',
     title: 'Yahtzee',
     subtitle: 'Five dice, three rolls, full scorecard',
@@ -354,7 +334,7 @@ export const LEADERBOARD_DATA: LeaderboardEntry[] = [
   { id: 'l5', name: 'Vegas_Viper', avatar: '♠️', title: 'High-Roller Shark', rank: 'Platinum', score: 2420, wins: 38, losses: 19, favoriteGame: 'Casino Lounge', badge: 'Top 10' },
   { id: 'l6', name: 'PondFisher_99', avatar: '🎣', title: 'Book Collector', rank: 'Platinum', score: 2190, wins: 32, losses: 16, favoriteGame: 'Go Fish', badge: 'Top 10' },
   { id: 'l7', name: 'SorryNotSorry', avatar: '🎲', title: 'Revenge Racer', rank: 'Gold', score: 1850, wins: 28, losses: 20, favoriteGame: 'Sorry!', badge: 'Challenger' },
-  { id: 'l8', name: 'Blackbeard_Bot', avatar: '🏴‍☠️', title: 'Dice Bluffer', rank: 'Gold', score: 1620, wins: 24, losses: 22, favoriteGame: "Liar's Dice", badge: 'Challenger' }
+  { id: 'l8', name: 'Blackbeard_Bot', avatar: '🏴‍☠️', title: 'Dice Bluffer', rank: 'Gold', score: 1620, wins: 24, losses: 22, favoriteGame: 'Yahtzee', badge: 'Challenger' }
 ];
 
 export const MOCK_DISCORD_USERS = [

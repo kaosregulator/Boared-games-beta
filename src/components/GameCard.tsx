@@ -40,7 +40,6 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onSelect }) => {
               {game.id === 'blackjack' && '♠️'}
               {game.id === 'gofish' && '🎣'}
               {game.id === 'pawnrush' && '✨'}
-              {game.id === 'liarsdice' && '🎲'}
             </span>
           </div>
 
