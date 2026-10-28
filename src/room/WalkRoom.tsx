@@ -318,7 +318,8 @@ export function WalkRoom({
   const [seated, setSeated] = useState(override.seat);
   const [tamagotchi, setTamagotchi] = useState(false);
   const [rubik, setRubik] = useState(false);
-  const [viewMaster, setViewMaster] = useState(false);
+  // `?viewmaster` opens it straight away, for captures.
+  const [viewMaster, setViewMaster] = useState(() => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('viewmaster'));
   const [racing, setRacing] = useState(Boolean(raceBoot));
   /** Shrunk down in the army town on the floor. */
   const [armyOn, setArmyOn] = useState(Boolean(armyBoot));
