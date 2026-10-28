@@ -145,7 +145,8 @@ export function TableCameraRig({ active }: { active: boolean }) {
   }, [active]);
 
   useFrame((_, rawDt) => {
-    const dt = Math.min(rawDt, 0.05);
+    // capture scripts on a software renderer (a frame every few seconds) stretch the frame cap with `slow`
+    const dt = Math.min(rawDt, 0.05 * tableCam.slow);
     if (!active) {
       if (wasActive.current) {
         // Hand the camera back to the walking body, at the table's edge.

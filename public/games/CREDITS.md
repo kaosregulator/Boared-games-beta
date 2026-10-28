@@ -33,11 +33,18 @@ MONOPOLY and the board design are trademarks of Hasbro.
 The six piece files (`king_white.glb`, `queen_white.glb`, `bishop_white.glb`,
 `knight_white.glb`, `rook_white.glb`, `pawn_white.glb`) are the sculpted set
 from the room owner's [wizards-chess](https://github.com/kaosregulator/wizards-chess)
-project. Black is the same sculpt with a dark stone material. The cathedral
-model from that project is not in this room. They were stored as gzipped
-base64 and decoded to glTF, then simplified so a full set can sit on the
-table without dragging the room's frame rate. The idle, move, attack, and
-shatter clips are still in the files.
+project. Black is the same sculpt with a dark stone material. They were
+stored as gzipped base64 and decoded to glTF, then simplified so a full set can
+sit on the table without dragging the room's frame rate. The idle, move,
+attack, and shatter clips are still in the files.
+
+`altar.glb` is the board: the Obsidian Altar and its gold rune inlay, cut out
+of that project's cathedral (`option8_cathedral.glb`) by
+`scripts/build-wizard-board.mjs`. The rest of the cathedral (nave, windows,
+braziers) is not in this room. Textures were converted to WebP and the
+geometry meshopt-compressed. The squares and gold frame on top, the melee
+captures, the stone shatter, and the opponent (`chooseSmartAIMove`) are ported
+from the project's `wizardChessEngine.js`.
 
 ## Tabletop Club — `tabletop/`
 From [drwhut/tabletop-club](https://github.com/drwhut/tabletop-club) (MIT code; asset pack licences below).
