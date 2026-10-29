@@ -1,0 +1,48 @@
+name: Room screenshots
+
+# Builds the game, opens it in headless Chromium pointed at the hotspots
+# listed in scripts/preview/room-shots.json, and commits the screenshots to
+# docs/room-shots/ on the same branch, for checking visual changes in a PR.
+on:
+  push:
+    branches-ignore: [main]
+    paths: [scripts/preview/room-shots.json]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: room-shots-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Start the server
+        run: |
+          node server.mjs > server.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/api/health && break; sleep 1; done
+      - name: Screenshots
+        run: |
+          npm i --no-save playwright
+          npx playwright install --with-deps chromium
+          node --import tsx scripts/preview/room-shots.mjs
+      - name: Commit the screenshots
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -d docs/room-shots ]; then git add docs/room-shots; fi
+          if git diff --cached --quiet; then echo "No screenshots"; exit 0; fi
+          git commit -m "Room screenshots"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push
