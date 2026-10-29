@@ -1,0 +1,91 @@
+name: Build asset quality tiers
+
+# Rebuilds public/models/{low,medium,high}/ from the original exports in Google
+# Drive and opens a pull request with the result. Runs on its own when the
+# source list or budgets change on main, or by hand from the Actions tab.
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Comma-separated model files (e.g. window.glb,toyshelf.glb). Empty = all."
+        required: false
+        default: ""
+      tiers:
+        description: "Tiers to build"
+        required: false
+        default: "low,medium,high"
+  push:
+    branches: [main]
+    paths:
+      - scripts/assets/sources.json
+      - scripts/assets/tiers.json
+      - scripts/build-asset-tiers.mjs
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: asset-tiers
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install project and asset tools
+        run: |
+          npm ci --ignore-scripts
+          npm i --no-save --ignore-scripts=false @gltf-transform/cli@4 sharp
+
+      - name: Install KTX-Software (toktx)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download --repo KhronosGroup/KTX-Software --pattern '*-Linux-x86_64.deb' --dir /tmp/ktx
+          sudo apt-get install -y /tmp/ktx/*.deb
+          toktx --version
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download originals from Google Drive
+        env:
+          GDRIVE_SERVICE_ACCOUNT_JSON: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          pip install --quiet gdown google-auth requests
+          python scripts/assets/download_sources.py --dest assets-src --only "${{ inputs.only }}"
+
+      - name: Build tiers
+        run: |
+          node --max-old-space-size=12000 scripts/build-asset-tiers.mjs \
+            --src assets-src --tiers "${{ inputs.tiers || 'low,medium,high' }}" ${{ inputs.only && format('--only {0}', inputs.only) || '' }} \
+            | tee asset-report.txt
+
+      - name: Size summary
+        run: |
+          du -sh public/models/low public/models/medium public/models/high 2>/dev/null || true
+          { echo '### Asset tiers'; echo '```'; cat asset-report.txt; du -sh public/models/{low,medium,high} 2>/dev/null; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open a pull request with the rebuilt models
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: assets/rebuilt-tiers
+          delete-branch: true
+          add-paths: |
+            public/models/low/**
+            public/models/medium/**
+            public/models/high/**
+            src/engine/assetTiers.json
+          commit-message: Rebuild Low / Medium / High room models from the originals
+          title: "Assets: rebuilt Low / Medium / High room models"
+          body-path: asset-report.txt

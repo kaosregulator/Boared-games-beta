@@ -1,0 +1,40 @@
+{
+  "$comment": "Each room model, the original Tripo/Meshy export it comes from, and how much detail it gets. 'hero' is furniture seen big (beds, shelves, the window); 'closeup' is a small thing you hold or zoom into, where printed text has to stay readable; 'prop' is everything else. driveId is the original GLB in Google Drive. Models not listed here (Furby, Poo-Chi, Hot Wheels, the soldiers) keep their current hand-tuned files.",
+  "models": {
+    "bed.glb":         { "class": "hero",    "driveId": "1Vjr6OCSpVpKTqWIev6zvBBgMie-xt-50", "original": "colorful quilt bed 3d model.glb" },
+    "shelf.glb":       { "class": "hero",    "driveId": "1bsC0DCt0I_3_Hs-EF32ChZ_b_JP82DgC", "original": "board game shelf 3d model.glb" },
+    "crt.glb":         { "class": "hero",    "driveId": "1MpjNQ9PBFU9fXi9pas1x7stELPRngAAM", "original": "retro television 3d model.glb" },
+    "dresser.glb":     { "class": "hero",    "driveId": "1gJA6HF3-neBtivJzU_Dm2iGlfITkwnKE", "original": "wooden dresser 3d model.glb" },
+    "pcdesk.glb":      { "class": "hero",    "driveId": "1IoBEn7k3AdDNetjyj6PPrGE-PhNOv5T2", "original": "retro+computer+desk+3d+model.glb" },
+    "nightstand.glb":  { "class": "hero",    "driveId": "1Xs8iK0oHwmkRXLi8hk5QmsgSAbOUjsy5", "original": "wooden nightstand 3d model.glb" },
+    "window.glb":      { "class": "hero",    "driveId": "1wkU1hlz0dfLhAGwwibo1kosZYsbWFMOg", "original": "window 3d model.glb" },
+    "toyshelf.glb":    { "class": "hero",    "driveId": "1mah8MUpfLAnZx1EcAhWNiLBHoGWJSe8Z", "original": "wooden toy shelf 3d model.glb" },
+    "door.glb":        { "class": "hero",    "driveId": "1JLLyomxvEcxzTrhpUfuiV2EY4vB3UATU", "original": "wooden door 3d model.glb" },
+    "clutterdesk.glb": { "class": "hero",    "driveId": "1jhQi2emXpJUmJCdpm-ZNdq9qD_faXUnE", "original": "vintage cluttered desk 3d model.glb" },
+    "beanbag.glb":     { "class": "hero",    "driveId": "1wDY_5I3wCsssQVWAH1It1INwnw7lp1bX", "original": "bean bag 3d model.glb" },
+
+    "gameboy.glb":     { "class": "closeup", "driveId": "1bkId1dbi7Br37XwETGVUI0B2Bbi3t4AB", "original": "retro handheld game 3d model.glb" },
+    "cards.glb":       { "class": "closeup", "driveId": "1AhyvcT1bxTPP6Xzbr1nUKgIUp6ZQmVgJ", "original": "pokemon cards 3d model.glb" },
+    "vhs_stack.glb":   { "class": "closeup", "driveId": "1byeZ55XvfAfO1kd_NCH7eW19f1BO8p3_", "original": "vhs tape stack 3d model.glb" },
+    "vhs_loose.glb":   { "class": "closeup", "driveId": "1uadvux0Nhej3p-TbHqSoLpCTKqgzK6L8", "original": "vintage vhs tapes 3d model (1).glb" },
+    "nes.glb":         { "class": "closeup", "driveId": "1FTlwQ2QvQQEgZuc4QaHM7rwQlFzJeCT2", "original": "retro game console 3d model.glb" },
+    "boombox.glb":     { "class": "closeup", "driveId": "1fw6RC5qPvp33BVKpZcyF_BlJPR3_gsOr", "original": "retro boombox 3d model.glb" },
+    "army.glb":        { "class": "closeup", "driveId": "1VsDIzJchbL9df6sFXYcTBxHVFyjQ6dC0", "original": "army men 3d model.glb" },
+
+    "backpack.glb":    { "class": "prop",    "driveId": "1BqE92kde8DfyRzXClQuBIhT70YaApyYr", "original": "colorful backpack 3d model.glb" },
+    "hotpockets.glb":  { "class": "prop",    "driveId": "1LI7iF-g8QIi6z-9TxP_xmhj-rdlRviVi", "original": "hot pockets3d model.glb" },
+    "rubik.glb":       { "class": "prop",    "driveId": "1klpMTASt-93CWJ7o2-jReIKIklStYmjU", "original": "rubik cube 3d model.glb" },
+    "armor.glb":       { "class": "prop",    "driveId": "1TCgGiSrVTuWvlt0D_l_tIlxOZ3yQaj4D", "original": "armor figure 3d model.glb" },
+    "gushers.glb":     { "class": "prop",    "driveId": "1RYKJePl9kilW_thMGwojXbRo2RLsyKHq", "original": "gushers snack bag 3d model.glb" },
+    "teddy.glb":       { "class": "prop",    "driveId": "1xLa79OX3i2fBdMbqPkXYq1cFoHIvTFao", "original": "teddy bear 3d model.glb" },
+    "jordans.glb":     { "class": "prop",    "driveId": "1nzxGmOANPGPT77j-9vtAO3WgYCQYhRCl", "original": "Jordans sneakers 3d model.glb" },
+    "car.glb":         { "class": "prop",    "driveId": "14EMq4UiV7caqBq6IRYgUBkwLOFVW8CvV", "original": "stylized car 3d model.glb" },
+    "books.glb":       { "class": "prop",    "driveId": "1XUUlYOToytNnd4C49WhckmuAZGKwMgje", "original": "book spine stack 3d model.glb" },
+    "board.glb":       { "class": "prop",    "driveId": "1MKRHiF_Ee8BrWocjpU8FEw40lx3q9oTD", "original": "board game 3d model.glb" },
+    "battleship.glb":  { "class": "prop",    "driveId": "16QScPbYtEPXUssRCyxWtHiQVx7MsbvTP", "original": "battleship 3d model.glb" },
+    "clue.glb":        { "class": "prop",    "driveId": "1BhjrKfHkxw99NH6Si20rqUeS4OPZOcRU", "original": "clue game box 3d model.glb" },
+    "life.glb":        { "class": "prop",    "driveId": "1yQ37_13ahHYRMlfomD0I82Kg6u3W5ECa", "original": "LIFE game box 3d model.glb" },
+    "yahtzee.glb":     { "class": "prop",    "driveId": "1wdgl8z53t-zL-7qNEHkk3EMI2LuLzzcx", "original": "yahtzee.glb" },
+    "crate.glb":       { "class": "prop",    "driveId": "1XxmKvBofAUM9LkIj9vvzeD-4rgJ1-TbB", "original": "wooden crate 3d model.glb" }
+  }
+}

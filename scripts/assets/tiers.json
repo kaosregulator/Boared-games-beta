@@ -1,0 +1,20 @@
+{
+  "$comment": "Detail budgets per graphics tier and model class. triangles is a ceiling (a model that is already lighter keeps what it has). error is the meshopt simplifier's tolerance as a fraction of the model's size: 0.02 (the old setting) let a 1 m shelf move 2 cm, which is what flattened the skateboard and the window blinds; 0.0005 is half a millimetre. colorPx is the base colour map, otherPx the normal / roughness / occlusion maps. Every texture is KTX2 UASTC (the high-quality Basis mode); the old files used ETC1S, which smears printed text and bands colour.",
+  "tiers": {
+    "low": {
+      "hero":    { "triangles": 30000,  "error": 0.002,  "colorPx": 1024, "otherPx": 512 },
+      "closeup": { "triangles": 16000,  "error": 0.002,  "colorPx": 1024, "otherPx": 512 },
+      "prop":    { "triangles": 10000,  "error": 0.003,  "colorPx": 1024, "otherPx": 512 }
+    },
+    "medium": {
+      "hero":    { "triangles": 110000, "error": 0.001,  "colorPx": 2048, "otherPx": 1024 },
+      "closeup": { "triangles": 50000,  "error": 0.001,  "colorPx": 2048, "otherPx": 1024 },
+      "prop":    { "triangles": 30000,  "error": 0.0015, "colorPx": 2048, "otherPx": 1024 }
+    },
+    "high": {
+      "hero":    { "triangles": 260000, "error": 0.0005, "colorPx": 4096, "otherPx": 2048 },
+      "closeup": { "triangles": 120000, "error": 0.0005, "colorPx": 4096, "otherPx": 2048 },
+      "prop":    { "triangles": 70000,  "error": 0.0008, "colorPx": 2048, "otherPx": 1024 }
+    }
+  }
+}
