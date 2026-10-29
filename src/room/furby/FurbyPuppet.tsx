@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { buildFurbyRig } from './furbyRig';
 import type { FurbyBrain } from './furbyBrain';
 import type { Ellipsoid } from './HoldArms';
+import { SpeakerAnchor } from '../../tv/SpeakerAnchor';
 
 export const FURBY_URL = '/models/furby.glb';
 /** A 1998 Furby stands about 16 cm; the mesh is 0.937 units tall. */
@@ -47,6 +48,9 @@ export function FurbyPuppet({
   return (
     <group visible={visible}>
       <primitive object={rig.root} scale={FURBY_SCALE} />
+      {/* The Furby's voice comes from wherever this puppet is — bed, hand or table.
+          Only the visible one drives the shared HRTF speaker, so they never fight. */}
+      {visible && <SpeakerAnchor id="furby" position={[0, FURBY_HEIGHT * 0.7, 0.05]} />}
       {children}
     </group>
   );
