@@ -59,7 +59,7 @@ async function shoot(name, query, hover) {
     if (hover) {
       await page.mouse.move(512, 320);
       await page.mouse.move(513, 321);
-      await page.waitForTimeout(4_000);
+      await page.waitForTimeout(20_000);
     }
     await page.screenshot({ path: `docs/room-shots/${name}.png`, timeout: 240_000 });
     log(`shot ${name}`);

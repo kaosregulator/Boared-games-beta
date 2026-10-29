@@ -157,7 +157,7 @@ export function CapsuleHologram() {
     const along = DEPTH * Math.max(0.2, _dir.dot(_fwd));
     const viewH = 2 * along * Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2);
     const fit = (Math.min(r.height, r.width * 0.9) / canvas.height) * viewH;
-    g.scale.setScalar((fit * 0.4) / piece.radius);
+    g.scale.setScalar((fit * 0.56) / piece.radius);
     const still = reduceMotion();
     tickHolo(state.clock.elapsedTime, dt, still);
     if (spin.current) {
@@ -209,7 +209,7 @@ function Projector({ radius, ring }: { radius: number; ring: RefObject<THREE.Gro
       {/* The beam: an open cone, brightest at the bottom. */}
       <mesh position={[0, radius * 0.9, 0]} renderOrder={10003}>
         <cylinderGeometry args={[radius * 0.95, radius * 0.18, radius * 1.8, 48, 1, true]} />
-        <meshBasicMaterial color={BLUE} transparent opacity={0.06} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} side={THREE.DoubleSide} />
+        <meshBasicMaterial color={BLUE} transparent opacity={0.022} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} side={THREE.DoubleSide} />
       </mesh>
     </group>
   );

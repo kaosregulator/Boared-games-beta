@@ -62,7 +62,7 @@ const FRAGMENT = /* glsl */ `
     #endif
     float lum = dot(base, vec3(0.299, 0.587, 0.114));
     // Keep a little of the real colour so a red toy still reads as a red toy.
-    vec3 body = mix(uTint * (0.22 + lum * 1.35), base * 1.1 + uTint * 0.12, 0.22);
+    vec3 body = mix(uTint * (0.34 + lum * 1.7), base * 1.3 + uTint * 0.2, 0.22);
 
     vec3 n = normalize(vWorldNormal) * (gl_FrontFacing ? 1.0 : -1.0);
     vec3 view = normalize(cameraPosition - vWorldPos);
