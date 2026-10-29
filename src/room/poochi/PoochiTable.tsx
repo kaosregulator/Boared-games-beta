@@ -52,6 +52,8 @@ export function PoochiTable({
   const queued = useRef<{ at: number; fn: () => void }[]>([]);
   const [, setTick] = React.useState(0);
   const awake = useRef(false);
+  /** Next time (seconds) he'll bark on his own while idle. */
+  const idleBarkAt = useRef(6);
 
   useEffect(() => {
     void loadPoochiVoice();
@@ -255,6 +257,18 @@ export function PoochiTable({
     // A song ends on its own: back to standing.
     if (mood.current === 'song' && moodT.current > 1.5 && voiceOver(d.voice)) setMood('idle');
     if (mood.current === 'song' && voiceAt(d.voice) > 0) d.eyes = Math.floor(voiceAt(d.voice) / 4) % 3 === 2 ? 'happy' : 'heart';
+
+    // Awake and just hanging out, he lets out the odd bark on his own — like the
+    // real toy that never quite shuts up. That gives the room's HRTF speaker
+    // something to place, so he comes from the table and tracks as you walk off.
+    if (phase === 'play' && awake.current && mood.current === 'idle' && t.current > idleBarkAt.current && voiceOver(d.voice)) {
+      idleBarkAt.current = t.current + 7 + Math.random() * 8;
+      say(['bark', 'bark2', 'bark4'][Math.floor(Math.random() * 3)]);
+      d.eyes = 'happy';
+      later(0.8, () => {
+        if (mood.current === 'idle') d.eyes = 'open';
+      });
+    }
 
     const g = toy.current;
     if (!g) return;
