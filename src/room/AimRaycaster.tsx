@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { HoverTarget } from './Interactable';
@@ -37,14 +37,28 @@ export function AimRaycaster({ enabled, onHover, onSelect }: AimRaycasterProps) 
   const since = useRef(0);
   const lastMatrix = useRef(new THREE.Matrix4());
 
+  /** The interactable under the crosshair right now, from a fresh ray. */
+  const castNow = useCallback((): HoverTarget | null => {
+    _raycaster.setFromCamera(_center, camera);
+    const hits = _raycaster.intersectObjects(scene.children, true);
+    for (const hit of hits) {
+      const target = readTarget(hit.object);
+      if (target) return target;
+    }
+    return null;
+  }, [camera, scene]);
+
   useEffect(() => {
+    // The hover test is throttled, so a click right after a fast turn re-casts
+    // here and acts on what's actually aimed at, never a stale target.
     const onClick = () => {
-      if (!enabled || !hoverRef.current) return;
-      onSelect(hoverRef.current);
+      if (!enabled) return;
+      const target = castNow();
+      if (target) onSelect(target);
     };
     window.addEventListener('mousedown', onClick);
     return () => window.removeEventListener('mousedown', onClick);
-  }, [enabled, onSelect]);
+  }, [enabled, onSelect, castNow]);
 
   useFrame((_, dt) => {
     if (!enabled) {
@@ -63,17 +77,7 @@ export function AimRaycaster({ enabled, onHover, onSelect }: AimRaycasterProps) 
     since.current = 0;
     lastMatrix.current.copy(camera.matrixWorld);
 
-    _raycaster.setFromCamera(_center, camera);
-    const hits = _raycaster.intersectObjects(scene.children, true);
-    let next: HoverTarget | null = null;
-    for (const hit of hits) {
-      const target = readTarget(hit.object);
-      if (target) {
-        next = target;
-        break;
-      }
-    }
-
+    const next = castNow();
     hoverRef.current = next;
     const nextId = next?.id ?? null;
     if (nextId !== lastId.current) {
