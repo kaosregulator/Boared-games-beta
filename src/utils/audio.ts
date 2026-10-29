@@ -15,11 +15,43 @@ export const MENU_TRACK = { id: 'menu', title: 'Brahe (Punch Deck)', src: '/room
 /** Seconds of overlap when one song runs out and the next comes in. */
 const SONG_CROSSFADE = 4;
 
-/** Room music, played in turn from the boombox. The first one plays unless the player picked another. */
+/**
+ * Room music, out of the boombox. It shuffles (a new song each time one
+ * ends, never the same one twice in a row) unless shuffle is switched off,
+ * in which case it plays in this order. The picker and Skip still work.
+ */
 export const ROOM_TRACKS = [
   { id: 'snowfall', title: 'Snowfall (slowed, birds)', src: '/room/snowfall.mp3' },
   { id: 'bedroom', title: 'Bedroom tape', src: '/room/bedroom.mp3' },
+  { id: 'growing-up', title: 'Growing Up — Scott Buckley', src: '/room/growing-up.mp3' },
+  { id: 'to-see-the-past', title: 'To See The Past — Hayden Folker', src: '/room/to-see-the-past.mp3' },
 ] as const;
+
+/** Songs that need credit, shown under the title screen and in the Sound menu. */
+export const MUSIC_CREDITS = [
+  {
+    title: 'Growing Up',
+    artist: 'Scott Buckley',
+    license: 'Free To Use YouTube license',
+    source: 'https://breakingcopyright.com/song/scott-buckley-growing-up',
+    licenseUrl: null,
+  },
+  {
+    title: 'To See The Past',
+    artist: 'Hayden Folker',
+    license: 'Creative Commons BY 3.0',
+    source: 'https://breakingcopyright.com/song/hayden-folker-to-see-the-past',
+    licenseUrl: 'https://creativecommons.org/licenses/by/3.0/',
+  },
+] as const;
+
+function savedShuffle() {
+  try {
+    return window.localStorage.getItem('room-shuffle') !== '0';
+  } catch {
+    return true;
+  }
+}
 export type RoomTrackId = (typeof ROOM_TRACKS)[number]['id'];
 
 function savedTrack(): RoomTrackId {
@@ -47,6 +79,8 @@ class SoundEngine {
   private bedFade: number | null = null;
   private bedUnlock: (() => void) | null = null;
   private track: RoomTrackId = typeof window === 'undefined' ? ROOM_TRACKS[0].id : savedTrack();
+  private shuffleOn = typeof window === 'undefined' ? true : savedShuffle();
+  private trackListeners = new Set<(id: RoomTrackId) => void>();
   /** The title screen is up: the bed plays MENU_TRACK instead of the room music. */
   private menuMusic = false;
   /** Seconds the next fade-in of the bed takes. */
@@ -121,6 +155,42 @@ class SoundEngine {
     return this.track;
   }
 
+  public getShuffle() {
+    return this.shuffleOn;
+  }
+
+  public setShuffle(on: boolean) {
+    this.shuffleOn = on;
+    try {
+      window.localStorage.setItem('room-shuffle', on ? '1' : '0');
+    } catch {
+      // Not saved; it still applies for this visit.
+    }
+  }
+
+  /** Called with the new track whenever the room music changes (picker, skip or a song ending). */
+  public onTrackChange(fn: (id: RoomTrackId) => void) {
+    this.trackListeners.add(fn);
+    return () => {
+      this.trackListeners.delete(fn);
+    };
+  }
+
+  /** The song after this one: a random other one when shuffling, the next in the list otherwise. */
+  private nextTrack(): RoomTrackId {
+    const i = ROOM_TRACKS.findIndex(t => t.id === this.track);
+    if (!this.shuffleOn || ROOM_TRACKS.length < 2) return ROOM_TRACKS[(i + 1) % ROOM_TRACKS.length].id;
+    const others = ROOM_TRACKS.filter(t => t.id !== this.track);
+    return others[Math.floor(Math.random() * others.length)].id;
+  }
+
+  /** Skip to the next song now, with a short crossfade. */
+  public skipTrack() {
+    this.track = this.nextTrack();
+    for (const fn of this.trackListeners) fn(this.track);
+    if (!this.menuMusic) this.swapBed(0.8);
+  }
+
   /** Swap the room music. A playing track crossfades into the new one. */
   public setTrack(id: RoomTrackId) {
     if (id === this.track) return;
@@ -130,6 +200,7 @@ class SoundEngine {
     } catch {
       // Not saved; it still changes for this visit.
     }
+    for (const fn of this.trackListeners) fn(id);
     if (!this.menuMusic) this.swapBed(0.6);
   }
 
@@ -169,9 +240,9 @@ class SoundEngine {
     if (audio !== this.bedAudio) return;
     if (this.menuMusic) this.menuMusic = false;
     else {
-      const i = ROOM_TRACKS.findIndex(t => t.id === this.track);
       // just this visit; the picker's choice is still where it starts next time
-      this.track = ROOM_TRACKS[(i + 1) % ROOM_TRACKS.length].id;
+      this.track = this.nextTrack();
+      for (const fn of this.trackListeners) fn(this.track);
     }
     this.swapBed(SONG_CROSSFADE);
   }
