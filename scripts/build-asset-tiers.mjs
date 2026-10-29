@@ -47,6 +47,10 @@ function arg(name, fallback) {
 const srcDir = path.resolve(ROOT, arg('src', 'assets-src'));
 const tierNames = arg('tiers', 'low,medium,high').split(',').filter(Boolean);
 const only = arg('only', '') ? new Set(arg('only', '').split(',')) : null;
+// --shard i/n builds every n-th model starting at i, so CI can split the work across jobs.
+const [shardIndex, shardCount] = (arg('shard', '0/1')).split('/').map(Number);
+// --manifest-out writes this run's entries to their own file (CI merges them).
+const manifestOut = arg('manifest-out', null);
 const force = process.argv.includes('--force');
 const cli = process.env.GLTF_TRANSFORM_BIN || path.join(ROOT, 'node_modules/.bin/gltf-transform');
 const tmpDir = path.join(ROOT, '.asset-tmp');
@@ -143,10 +147,10 @@ async function buildOne(name, cls, tier) {
 
   // UASTC for every map. RDO lambda trades a little quality for a lot of file
   // size; colour maps get the gentler setting so text and art stay crisp.
-  await run(cli, ['uastc', stage1, stage2, '--level', '2', '--rdo', '--rdo-lambda', tier === 'high' ? '1' : '2', '--zstd', '18']);
+  await run(cli, ['uastc', stage1, stage2, '--level', '1', '--rdo', '--rdo-lambda', tier === 'high' ? '1' : '2', '--zstd', '18'], { maxBuffer: 64 * 1024 * 1024 });
   const out = path.join(MODELS, tier, name);
   await mkdir(path.dirname(out), { recursive: true });
-  await run(cli, ['meshopt', stage2, out, '--level', 'medium']);
+  await run(cli, ['meshopt', stage2, out, '--level', 'medium'], { maxBuffer: 64 * 1024 * 1024 });
   await rm(stage1, { force: true });
   await rm(stage2, { force: true });
   const after = triangles(await io.read(out));
@@ -156,10 +160,12 @@ async function buildOne(name, cls, tier) {
 
 async function main() {
   await preflight();
-  const manifest = existsSync(MANIFEST) ? JSON.parse(await readFile(MANIFEST, 'utf8')) : { version: 1, models: {} };
+  const target = manifestOut ? path.resolve(ROOT, manifestOut) : MANIFEST;
+  const manifest = !manifestOut && existsSync(MANIFEST) ? JSON.parse(await readFile(MANIFEST, 'utf8')) : { version: 1, models: {} };
   manifest.models ??= {};
   const report = [];
-  for (const [name, { class: cls }] of Object.entries(SOURCES)) {
+  const entries = Object.entries(SOURCES).filter((_, i) => i % shardCount === shardIndex);
+  for (const [name, { class: cls }] of entries) {
     if (only && !only.has(name)) continue;
     const source = path.join(srcDir, name);
     if (!existsSync(source)) {
@@ -190,7 +196,8 @@ async function main() {
   }
   manifest.version = 1;
   manifest.builtAt = new Date().toISOString();
-  await writeFile(MANIFEST, `${JSON.stringify(manifest, null, 2)}\n`);
+  await mkdir(path.dirname(target), { recursive: true });
+  await writeFile(target, `${JSON.stringify(manifest, null, 2)}\n`);
   await rm(tmpDir, { recursive: true, force: true });
   console.log(report.join('\n'));
   if (report.some(l => l.includes('FAILED'))) process.exitCode = 1;

@@ -2,7 +2,9 @@
 
     python scripts/assets/download_sources.py [--dest assets-src] [--only window.glb,toyshelf.glb]
 
-Two ways in, tried in order:
+Three ways in, tried in order:
+  0. --folder <id>: a Drive folder shared as "Anyone with the link". Every file
+     is fetched with gdown and matched to a model by its original file name.
   1. GDRIVE_SERVICE_ACCOUNT_JSON (the JSON key of a Google service account the
      Drive folder is shared with). Works for private files and shared drives.
   2. gdown, for files shared as "Anyone with the link".
@@ -52,14 +54,43 @@ def via_gdown(file_id, out):
         raise RuntimeError("gdown could not fetch it (is the file shared as 'Anyone with the link'?)")
 
 
+def from_folder(folder_id, dest, only):
+    """Download a public folder once, then file each original under its model name."""
+    import gdown
+    import shutil
+
+    raw = dest / "_folder"
+    raw.mkdir(parents=True, exist_ok=True)
+    gdown.download_folder(id=folder_id, output=str(raw), quiet=True, remaining_ok=True)
+    by_title = {f.name: f for f in raw.rglob("*.glb")}
+    got = set()
+    for name, spec in SOURCES.items():
+        if only and name not in only:
+            continue
+        src = by_title.get(spec["original"])
+        if src is None:
+            continue
+        shutil.move(str(src), dest / name)
+        got.add(name)
+        print(f"{name}: {(dest / name).stat().st_size / 1e6:.1f} MB from '{spec['original']}' (folder)")
+    shutil.rmtree(raw, ignore_errors=True)
+    return got
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dest", default="assets-src")
     ap.add_argument("--only", default="")
+    ap.add_argument("--folder", default=os.environ.get("ASSET_DRIVE_FOLDER", ""))
     args = ap.parse_args()
     dest = (ROOT / args.dest).resolve()
     dest.mkdir(parents=True, exist_ok=True)
     only = set(filter(None, args.only.split(",")))
+    if args.folder:
+        try:
+            from_folder(args.folder, dest, only)
+        except Exception as err:  # fall through to per-file downloads
+            print(f"folder download failed: {err}", file=sys.stderr)
     session = service_session()
     failed = []
     for name, spec in SOURCES.items():

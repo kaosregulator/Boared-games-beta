@@ -1,8 +1,11 @@
 name: Build asset quality tiers
 
-# Rebuilds public/models/{low,medium,high}/ from the original exports in Google
-# Drive and opens a pull request with the result. Runs on its own when the
-# source list or budgets change on main, or by hand from the Actions tab.
+# Rebuilds public/models/{low,medium,high}/ from the original exports in the
+# public Google Drive folder. The work is split across 9 jobs (3 tiers x 3
+# shards) and collected at the end:
+#   - on the asset-quality branch the results are committed onto that branch,
+#     so its pull request carries the finished models;
+#   - on main a pull request is opened with them.
 on:
   workflow_dispatch:
     inputs:
@@ -10,29 +13,34 @@ on:
         description: "Comma-separated model files (e.g. window.glb,toyshelf.glb). Empty = all."
         required: false
         default: ""
-      tiers:
-        description: "Tiers to build"
-        required: false
-        default: "low,medium,high"
   push:
-    branches: [main]
+    branches: [main, claude/asset-quality-tiers]
     paths:
-      - scripts/assets/sources.json
-      - scripts/assets/tiers.json
+      - scripts/assets/**
       - scripts/build-asset-tiers.mjs
+      - .github/workflows/asset-tiers.yml
 
 permissions:
   contents: write
   pull-requests: write
 
 concurrency:
-  group: asset-tiers
+  group: asset-tiers-${{ github.ref }}
   cancel-in-progress: true
+
+env:
+  # "3d" folder, shared as Anyone with the link.
+  ASSET_DRIVE_FOLDER: 1X-YatlNOAvrzHxjfMfoW0U2hXczIsS8K
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        tier: [low, medium, high]
+        shard: [0, 1, 2]
     steps:
       - uses: actions/checkout@v4
 
@@ -44,7 +52,7 @@ jobs:
       - name: Install project and asset tools
         run: |
           npm ci --ignore-scripts
-          npm i --no-save --ignore-scripts=false @gltf-transform/cli@4 sharp
+          npm i --no-save @gltf-transform/cli@4 sharp
 
       - name: Install KTX-Software (toktx)
         env:
@@ -58,25 +66,93 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Download originals from Google Drive
+      - name: Pick this shard's models
+        id: shard
+        run: |
+          list=$(node -e '
+            const m = Object.keys(require("./scripts/assets/sources.json").models);
+            const only = (process.argv[1] || "").split(",").filter(Boolean);
+            const mine = m.filter((_, i) => i % 3 === Number(process.argv[2])).filter(n => !only.length || only.includes(n));
+            console.log(mine.join(","));
+          ' "${{ inputs.only }}" "${{ matrix.shard }}")
+          echo "models=$list" >> "$GITHUB_OUTPUT"
+          echo "Models: $list"
+
+      - name: Download originals
+        if: steps.shard.outputs.models != ''
         env:
           GDRIVE_SERVICE_ACCOUNT_JSON: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}
         run: |
           pip install --quiet gdown google-auth requests
-          python scripts/assets/download_sources.py --dest assets-src --only "${{ inputs.only }}"
+          python scripts/assets/download_sources.py --dest assets-src --only "${{ steps.shard.outputs.models }}"
+          ls -la assets-src
 
-      - name: Build tiers
+      - name: Build ${{ matrix.tier }} (shard ${{ matrix.shard }})
+        if: steps.shard.outputs.models != ''
         run: |
+          mkdir -p .asset-out
           node --max-old-space-size=12000 scripts/build-asset-tiers.mjs \
-            --src assets-src --tiers "${{ inputs.tiers || 'low,medium,high' }}" ${{ inputs.only && format('--only {0}', inputs.only) || '' }} \
-            | tee asset-report.txt
+            --src assets-src --tiers ${{ matrix.tier }} --only "${{ steps.shard.outputs.models }}" \
+            --manifest-out .asset-out/manifest-${{ matrix.tier }}-${{ matrix.shard }}.json \
+            | tee .asset-out/report-${{ matrix.tier }}-${{ matrix.shard }}.txt
 
-      - name: Size summary
+      - uses: actions/upload-artifact@v4
+        if: steps.shard.outputs.models != ''
+        with:
+          name: tier-${{ matrix.tier }}-${{ matrix.shard }}
+          path: |
+            public/models/${{ matrix.tier }}/
+            .asset-out/
+          include-hidden-files: true
+          retention-days: 3
+
+  collect:
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: tier-*
+          path: .collected
+
+      - name: Merge the builds
         run: |
-          du -sh public/models/low public/models/medium public/models/high 2>/dev/null || true
-          { echo '### Asset tiers'; echo '```'; cat asset-report.txt; du -sh public/models/{low,medium,high} 2>/dev/null; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          mkdir -p .asset-out-all
+          for d in .collected/*/; do
+            if [ -d "$d/public/models" ]; then cp -r "$d"/public/models/* public/models/; fi
+            if [ -d "$d/.asset-out" ]; then cp "$d"/.asset-out/* .asset-out-all/; fi
+          done
+          ls public/models/low public/models/medium public/models/high | head -120 || true
+          node -e '
+            const fs = require("fs");
+            const dir = ".asset-out-all";
+            const out = { version: 1, builtAt: new Date().toISOString(), models: {} };
+            for (const f of fs.readdirSync(dir).filter(f => f.startsWith("manifest-"))) {
+              const part = JSON.parse(fs.readFileSync(`${dir}/${f}`, "utf8"));
+              for (const [name, tiers] of Object.entries(part.models || {})) out.models[name] = { ...(out.models[name] || {}), ...tiers };
+            }
+            fs.writeFileSync("src/engine/assetTiers.json", JSON.stringify(out, null, 2) + "\n");
+            console.log(`${Object.keys(out.models).length} models in the manifest`);
+          '
+          cat .asset-out-all/report-*.txt | sort > asset-report.txt
+          { du -sh public/models/low public/models/medium public/models/high || true; } | tee -a asset-report.txt
+          { echo '### Asset tiers'; echo '```'; cat asset-report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit onto this branch
+        if: github.ref != 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/models/low public/models/medium public/models/high src/engine/assetTiers.json
+          if git diff --cached --quiet; then echo "Nothing new to commit"; exit 0; fi
+          git commit -m "Add rebuilt Low / Medium / High room models" -m "$(cat asset-report.txt)"
+          git push
 
       - name: Open a pull request with the rebuilt models
+        if: github.ref == 'refs/heads/main'
         uses: peter-evans/create-pull-request@v7
         with:
           branch: assets/rebuilt-tiers
