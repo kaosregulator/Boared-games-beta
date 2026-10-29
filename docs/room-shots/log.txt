@@ -1,3 +1,4 @@
+shot ns-gameboy
 shot ns-gameboy-card
-shot ts-skateboard-card
-shot ns-clock-card
+shot cd-snes-card
+shot crt-tv-card
