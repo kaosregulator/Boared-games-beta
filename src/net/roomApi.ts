@@ -182,12 +182,16 @@ export function reportScore(game: string, metric: string, value: number, opts: {
 
 export function onAwards(fn: (keys: string[]) => void) {
   awardListeners.add(fn);
-  return () => awardListeners.delete(fn);
+  return () => {
+    awardListeners.delete(fn);
+  };
 }
 
 export function onProfile(fn: (p: PlayerProfile) => void) {
   profileListeners.add(fn);
-  return () => profileListeners.delete(fn);
+  return () => {
+    profileListeners.delete(fn);
+  };
 }
 
 export async function fetchBoards(): Promise<BoardIndex | null> {
