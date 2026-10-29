@@ -1103,7 +1103,16 @@ export function WalkRoom({
     pinned?.kind === 'game' && pinned.gameId ? byId.get(pinned.gameId as GameId) ?? null : null;
   const cardPlayable = !pinned?.id.startsWith(TABLE_BOX_PREFIX);
   const aimedProp = pinned && pinned.kind === 'prop' ? propCardFor(pinned.id) : null;
-  const demoCardId = override.card;
+  const [demoCardId, setDemoCardId] = useState(override.card);
+  // Capture scripts flip through cards without reloading the room.
+  useEffect(() => {
+    if (!scripted) return;
+    const w = window as unknown as { __showCard?: (id: string | null) => void };
+    w.__showCard = setDemoCardId;
+    return () => {
+      delete w.__showCard;
+    };
+  }, [scripted]);
   const demoPropId = demoCardId === 'vhs' ? 'vhs-stack' : demoCardId && propCardFor(demoCardId) ? demoCardId : null;
   const demoGame = demoCardId && !demoPropId ? byId.get(demoCardId as GameId) ?? null : null;
   const demoProp = demoPropId ? propCardFor(demoPropId) : null;
