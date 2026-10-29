@@ -336,7 +336,7 @@ function GameShelf({ hoveredId }: { hoveredId: string | null }) {
 }
 
 /** Bed-local: the bed is turned a quarter, so local +z faces into the room. */
-const BED_FURBY = { position: [-0.33, 0.56, -0.36] as [number, number, number], rotation: [0, -0.35, 0] as [number, number, number] };
+const BED_FURBY = { position: [-0.33, 0.63, -0.36] as [number, number, number], rotation: [0, -0.35, 0] as [number, number, number] };
 
 /** Each game's real box model; it only comes out while that game is on the table. */
 const GAME_BOX_MODEL: Partial<Record<string, keyof typeof LAYOUT>> = {
