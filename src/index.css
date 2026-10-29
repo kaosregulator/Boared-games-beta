@@ -669,6 +669,7 @@ button.tt-tile:not(:disabled):hover {
 }
 @media (prefers-reduced-motion: reduce) {
   .hover-card { animation: none; }
+}
 /* Title screen music credits: a slow end-credits roll, faded at top and bottom. */
 .menu-credits {
   mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent);
