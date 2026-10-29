@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ANCHORS } from './anchors';
 import { setAdaptive, setGraphicsPreset, type GraphicsPreset } from '../engine/graphics';
 import { useGraphics } from '../engine/useGraphics';
+import { activeAssetTier, hasTieredModels, preferredAssetTier, type AssetTier } from '../engine/assetTiers';
 import { setControlPreset, setInvertLook, setLookSensitivity, useControlSettings, type ControlPreset } from './controls';
 import { MOOD_LABEL, type RoomMood } from './moods';
 import { sound, ROOM_TRACKS, type RoomTrackId } from '../utils/audio';
@@ -42,6 +43,8 @@ const GRAPHICS_PRESETS: { id: GraphicsPreset; label: string }[] = [
   { id: 'balanced', label: 'Balanced' },
   { id: 'high', label: 'High' },
 ];
+
+const TIER_LABEL: Record<AssetTier, string> = { low: 'Low', medium: 'Medium', high: 'High' };
 
 const DEVICE_PRESETS: { id: Exclude<ControlPreset, 'custom'>; label: string }[] = [
   { id: 'desktop', label: 'Desktop' },
@@ -175,12 +178,36 @@ export function RoomStudio(props: RoomStudioProps) {
                   </button>
                 ))}
               </div>
+              {hasTieredModels() && (() => {
+                const now = activeAssetTier();
+                const next = preferredAssetTier(gfx.preset);
+                return (
+                  <div className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/30 px-3 py-2">
+                    <span>
+                      Model detail: {TIER_LABEL[now]}
+                      {next !== now ? ` → ${TIER_LABEL[next]} on reload` : ''}
+                    </span>
+                    {next !== now && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          sound.playButtonClick();
+                          window.location.reload();
+                        }}
+                        className="min-h-9 rounded-full border border-amber-200/80 bg-amber-200/20 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-50"
+                      >
+                        Reload
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
               <label className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/30 px-3 py-2">
                 <span>Ease off when the room stutters</span>
                 <input type="checkbox" className="h-5 w-5" checked={gfx.adaptive} onChange={e => setAdaptive(e.target.checked)} />
               </label>
               <span className="text-[10px] leading-relaxed text-white/40">
-                High stays sharp while the frame rate holds. A slow machine steps the picture down on its own and does not bounce back and forth.
+                The preset picks how detailed the furniture and props are (capped to what this device can hold) and how sharp the picture is. Easing off only lowers sharpness, never the models.
               </span>
             </div>
           </>

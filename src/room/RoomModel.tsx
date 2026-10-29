@@ -2,6 +2,7 @@ import React, { Component, Suspense, useEffect, useMemo } from 'react';
 import { useGLTF } from '@react-three/drei';
 import { useThree } from '@react-three/fiber';
 import { withKtx2 } from './ktx2';
+import { modelUrl } from '../engine/assetTiers';
 import * as THREE from 'three';
 import { setAssetState } from '../engine/assets';
 import { leaseResource, noteCacheLookup, release, retain, unleaseResource } from '../engine/cache';
@@ -48,7 +49,12 @@ export type ModelId =
   | 'crate'
   | 'hotwheels';
 
-export const MODEL_URL: Record<ModelId, string> = {
+function tiered<T extends Record<string, string>>(urls: T): T {
+  return Object.fromEntries(Object.entries(urls).map(([k, url]) => [k, modelUrl(url)])) as T;
+}
+
+/** Where each model loads from: the Low / Medium / High build for this device, or the original file. */
+export const MODEL_URL: Record<ModelId, string> = tiered({
   bed: '/models/bed.glb',
   shelf: '/models/shelf.glb',
   crt: '/models/crt.glb',
@@ -83,7 +89,7 @@ export const MODEL_URL: Record<ModelId, string> = {
   beanbag: '/models/beanbag.glb',
   crate: '/models/crate.glb',
   hotwheels: '/models/hotwheels.glb',
-};
+});
 
 /**
  * Tripo writes every prop as a fully metallic PBR material and a mesh of
