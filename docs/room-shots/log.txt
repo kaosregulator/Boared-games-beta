@@ -1,14 +1,3 @@
-[shot ns-clock] page.screenshot: Timeout 30000ms exceeded.
-Call log:
-  - taking page screenshot
-  - waiting for fonts to load...
-  - fonts loaded
-
-[shot ns-gameboy] page.goto: Timeout 30000ms exceeded.
-Call log:
-  - navigating to "http://127.0.0.1:3000/?cam=-2.047,0.500,-1.568,-2.047,0.180,-2.318", waiting until "load"
-
-[shot ts-skateboard] page.goto: Navigation to "http://127.0.0.1:3000/?cam=1.564,0.693,-0.246,2.314,0.373,-0.246" is interrupted by another navigation to "http://127.0.0.1:3000/?cam=-2.047,0.500,-1.568,-2.047,0.180,-2.318"
-Call log:
-  - navigating to "http://127.0.0.1:3000/?cam=1.564,0.693,-0.246,2.314,0.373,-0.246", waiting until "load"
-
+shot ns-gameboy-card
+shot ts-skateboard-card
+shot ns-clock-card
