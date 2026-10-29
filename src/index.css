@@ -618,6 +618,58 @@ button.tt-tile:not(:disabled):hover {
   }
 }
 
+/* Hover name card (HoverGlow.tsx): sits above the item, its stem points down at it. */
+.hover-card {
+  transform: translate(-50%, -100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: hover-card-in 160ms ease-out;
+}
+.hover-card-box {
+  padding: 7px 14px 8px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(255, 190, 90, 0.85);
+  background: rgba(16, 9, 6, 0.78);
+  box-shadow: 0 0 14px rgba(255, 170, 60, 0.35), inset 0 0 10px rgba(255, 170, 60, 0.08);
+  backdrop-filter: blur(3px);
+  white-space: nowrap;
+}
+.hover-card-name {
+  margin: 0;
+  color: #fff6e6;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+.hover-card-hint {
+  margin: 1px 0 0;
+  color: #ffc56e;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.hover-card-stem {
+  width: 1.5px;
+  height: 22px;
+  background: linear-gradient(rgba(255, 190, 90, 0.85), rgba(255, 190, 90, 0.4));
+}
+.hover-card-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffc56e;
+  box-shadow: 0 0 8px rgba(255, 180, 70, 0.9);
+}
+@keyframes hover-card-in {
+  from { opacity: 0; transform: translate(-50%, calc(-100% + 6px)); }
+  to { opacity: 1; transform: translate(-50%, -100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hover-card { animation: none; }
+}
 /* Title screen music credits: a slow end-credits roll, faded at top and bottom. */
 .menu-credits {
   mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent);

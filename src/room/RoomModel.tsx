@@ -11,6 +11,7 @@ import type { HoverTarget } from './Interactable';
 import type { Hotspot } from './hotspots';
 import type { LavaSpec } from './LavaLamp';
 import { propCardFor } from './propCards';
+import { HoverGlow, useWarmHover } from './HoverGlow';
 
 export type ModelId =
   | 'bed'
@@ -221,7 +222,7 @@ const GAME_LABEL: Record<string, string> = {
   yahtzee: 'Yahtzee',
 };
 
-/** Thin amber outline around whatever is being pointed at. */
+/** `?hotspots` keeps the old line boxes on every hotspot, for lining them up with the meshes. */
 function Outline({ size, position }: { size: [number, number, number]; position: [number, number, number] }) {
   const geo = useMemo(() => new THREE.EdgesGeometry(new THREE.BoxGeometry(size[0], size[1], size[2])), [size[0], size[1], size[2]]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
@@ -240,7 +241,7 @@ function HotspotBox({ spot, active }: { spot: Hotspot; active: boolean }) {
     () =>
       spot.gameId
         ? { id: spot.id, kind: 'game', gameId: spot.gameId, label: GAME_LABEL[spot.gameId] ?? spot.gameId, hint: 'Inspect · play' }
-        : { id: spot.id, kind: 'prop', label: card?.title ?? spot.id, hint: card?.action?.label ?? 'Time capsule' },
+        : { id: spot.id, kind: 'prop', label: card?.title ?? spot.id, hint: card?.action?.label ?? 'Examine' },
     [spot.id, spot.gameId, card],
   );
   const [w, ht, d] = spot.size;
@@ -251,7 +252,8 @@ function HotspotBox({ spot, active }: { spot: Hotspot; active: boolean }) {
         <boxGeometry args={[w, ht, d]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
-      {(active || SHOW_ALL_HOTSPOTS) && <Outline size={[w * 1.06 + 0.01, ht * 1.06 + 0.01, d * 1.06 + 0.01]} position={centre} />}
+      {SHOW_ALL_HOTSPOTS && <Outline size={[w * 1.06 + 0.01, ht * 1.06 + 0.01, d * 1.06 + 0.01]} position={centre} />}
+      {active && <HoverGlow id={spot.id} label={target.label} hint={target.hint} size={[w, ht, d]} position={centre} />}
     </>
   );
 }
@@ -295,6 +297,8 @@ export function RoomModel({
     });
     return clone;
   }, [scene, tintAmount, castShadow, receiveShadow, maxAnisotropy]);
+  // A soft lamp-lit lift on the whole model while it's the thing being pointed at.
+  useWarmHover(root, hovered);
   useEffect(() => {
     setAssetState(`model:${id}`, 'ready');
     retain(url);
@@ -360,8 +364,11 @@ export function RoomModel({
         </mesh>
       )}
       {hovered && (
-        <Outline
-          size={[fitted.size.x + 0.02, fitted.size.y + 0.02, fitted.size.z + 0.02]}
+        <HoverGlow
+          id={interactable?.id}
+          label={interactable?.label}
+          hint={interactable?.hint}
+          size={[fitted.size.x, fitted.size.y, fitted.size.z]}
           position={[0, fitted.size.y / 2, 0]}
         />
       )}

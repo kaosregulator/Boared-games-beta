@@ -31,7 +31,7 @@ export function BedFurby({
   const anchor = useRef<THREE.Group>(null);
   const glow = useRef<THREE.MeshBasicMaterial>(null);
   const world = useMemo(() => new THREE.Vector3(), []);
-  const target = useMemo<HoverTarget>(() => ({ id: FURBY_CARD, kind: 'prop', label: 'Furby', hint: 'Time capsule' }), []);
+  const target = useMemo<HoverTarget>(() => ({ id: FURBY_CARD, kind: 'prop', label: 'Furby', hint: 'Examine' }), []);
 
   useEffect(() => {
     if (anchor.current) furbyAnchors.bed = anchor.current;
