@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { capsule, setCapsulePiece } from './capsuleBus';
 import { cloneModelPiece, disposePiece, extractPiece, type Piece } from './extractPiece';
 import { HOLO_BORROW, HOLO_POSE, HOLO_SKIP } from './holoAssets';
+import { boardSrcFor, buildBoardPiece } from './gameBoard';
 import { holoMaterial, holoUniforms, tickHolo } from './holoMaterial';
 
 /**
@@ -105,16 +106,28 @@ export function CapsuleHologram() {
     let timer = 0;
     // Cut it a frame after the card opens, so its first paint isn't held up. A card
     // opened before the room has loaded keeps looking until the room is in.
+    const boardSrc = boardSrcFor(id);
     const attempt = () => {
+      // A game box shows a clean two-sided board of its real box art, not a cut
+      // of the shelf. (Retries while the art loads.)
+      if (boardSrc) {
+        made = buildBoardPiece(boardSrc);
+        if (made) {
+          const spot = findHotspot(scene, id);
+          if (spot) source.current = new THREE.Box3().setFromObject(spot).getCenter(new THREE.Vector3());
+        }
+      }
       // A prop with its own scanned model gets cloned whole — the real thing by
       // itself, no shelf or desk around it. Everything else falls back to cutting
       // a box out of the room scan.
-      const root = findHoloRoot(scene, HOLO_BORROW[id] ?? id);
-      if (root) {
-        made = cloneModelPiece(root, HOLO_POSE[id]);
-        if (made) source.current = new THREE.Box3().setFromObject(root).getCenter(new THREE.Vector3());
-      }
       if (!made) {
+        const root = findHoloRoot(scene, HOLO_BORROW[id] ?? id);
+        if (root) {
+          made = cloneModelPiece(root, HOLO_POSE[id]);
+          if (made) source.current = new THREE.Box3().setFromObject(root).getCenter(new THREE.Vector3());
+        }
+      }
+      if (!made && !boardSrc) {
         const spot = findHotspot(scene, id);
         if (spot) {
           spot.updateWorldMatrix(true, false);
