@@ -106,7 +106,12 @@ class RadioEngine {
     void this.walk(station, token);
   }
 
-  private async walk(station: Station, token: number, skip?: string) {
+  /**
+   * attempt 0 is the normal pass; 1 is one more pass with longer waits; after
+   * that the dial shows the station as off the air and tries it again every
+   * 20 s for as long as it stays tuned there.
+   */
+  private async walk(station: Station, token: number, skip?: string, attempt = 0) {
     const el = this.element();
     let ownFailed = false;
     for await (const src of sourcesFor(station)) {
@@ -115,10 +120,14 @@ class RadioEngine {
       if (token !== this.loadToken) return;
       if (url && url === skip) continue;
       if (import.meta.env.DEV) console.debug('[radio]', station.id, src.key, url);
-      const result = url ? await this.tryPlay(el, url, src, token) : 'failed';
+      // archive.org airchecks and tapes can take several seconds to start; live streams are quick or dead.
+      const slow = Boolean(url && /archive\.org/.test(url));
+      const wait = (slow ? 12000 : 6000) * (attempt > 0 ? 1.5 : 1);
+      const result = url ? await this.tryPlay(el, url, src, token, wait) : 'failed';
       if (token !== this.loadToken) return;
       if (result === 'blocked') return; // the browser wants a tap first; not the station's fault
       if (result === 'playing') {
+        if (this.snap.error) this.set({ error: null });
         record(station.id, src, true, url ?? undefined);
         if (src.uuid) countClick(src.uuid);
         this.watch(station, token);
@@ -129,11 +138,22 @@ class RadioEngine {
       else record(station.id, src, false);
     }
     if (ownFailed) record(station.id, { key: 'own', url: async () => null }, false);
-    if (token === this.loadToken) this.set({ error: `${station.name} is off the air right now` });
+    if (token !== this.loadToken) return;
+    if (attempt === 0) {
+      window.setTimeout(() => {
+        if (token === this.loadToken) void this.walk(station, token, undefined, 1);
+      }, 1500);
+      return;
+    }
+    this.set({ error: `${station.name} is off the air right now` });
+    window.setTimeout(() => {
+      if (token !== this.loadToken || this.loadedId !== station.id) return;
+      void this.walk(station, token, undefined, 2);
+    }, 20_000);
   }
 
   /** Resolves once audio actually plays, fails, or takes too long. */
-  private tryPlay(el: HTMLAudioElement, url: string, src: Source, token: number) {
+  private tryPlay(el: HTMLAudioElement, url: string, src: Source, token: number, wait = 6000) {
     return new Promise<'playing' | 'failed' | 'blocked'>(resolve => {
       let done = false;
       const finish = (r: 'playing' | 'failed' | 'blocked') => {
@@ -146,9 +166,8 @@ class RadioEngine {
       };
       const onPlaying = () => finish('playing');
       const onError = () => finish('failed');
-      // A dead host should not hold the dial. Four seconds is long enough for a
-      // slow stream to start and short enough to try the next one.
-      const timer = window.setTimeout(() => finish(token === this.loadToken ? 'failed' : 'blocked'), 4000);
+      // A dead host should not hold the dial for long, but a slow one deserves the time it needs.
+      const timer = window.setTimeout(() => finish(token === this.loadToken ? 'failed' : 'blocked'), wait);
       el.addEventListener('playing', onPlaying);
       el.addEventListener('error', onError);
       el.onloadedmetadata = src.seekLive
