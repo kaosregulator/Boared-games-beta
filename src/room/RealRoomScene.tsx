@@ -377,7 +377,7 @@ function TableSideBox({ session, hoveredId }: { session: TableSession | null; ho
 }
 
 /** A whole prop's own memory card, if it has one. */
-function cardTarget(cardId: string, hint = 'Time capsule'): HoverTarget | undefined {
+function cardTarget(cardId: string, hint = 'Examine'): HoverTarget | undefined {
   const card = propCardFor(cardId);
   return card ? { id: cardId, kind: 'prop', label: card.title, hint: card.action?.label ?? hint } : undefined;
 }

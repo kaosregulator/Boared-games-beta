@@ -452,7 +452,7 @@ function BookBody({ coverOpen = 0 }: { coverOpen?: number }) {
 
 /** The closed library book lying on the rug. */
 export function ISpyBookProp({ hovered, hidden }: { hovered: boolean; hidden: boolean }) {
-  const target = useMemo(() => ({ id: 'ispy-book', kind: 'prop' as const, label: 'I Spy book', hint: 'Time capsule' }), []);
+  const target = useMemo(() => ({ id: 'ispy-book', kind: 'prop' as const, label: 'I Spy book', hint: 'Examine' }), []);
   if (hidden) return null;
   return (
     <group position={[BOOK_SPOT.x, 0.005, BOOK_SPOT.z]} rotation={[0, BOOK_SPOT.rotY, 0]}>
