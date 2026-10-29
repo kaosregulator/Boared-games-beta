@@ -17,6 +17,27 @@ import path from 'node:path';
 import { createDiscordRest } from '../server/discord/rest.mjs';
 import { applyRoleSync, botTopRolePosition, deleteSyncedRoles, displayName, planRoleSync } from '../server/discord/roleSync.mjs';
 import { readJson, writeJson } from '../server/dataDir.mjs';
+import { openPostgres } from '../server/db.mjs';
+
+/**
+ * The role ids the game server has remembered (it follows ids, so a role
+ * renamed in Discord is still the same role). Merged into the mapping so a
+ * renamed role is never mistaken for a missing one and created twice.
+ * DATABASE_PUBLIC_URL works from your own machine; DATABASE_URL on Railway.
+ */
+async function rememberedIds() {
+  const url = process.env.DATABASE_PUBLIC_URL || process.env.DATABASE_URL;
+  if (!url) return {};
+  try {
+    const db = await openPostgres(url);
+    const rows = (await db.query('SELECT role_key, role_id FROM discord_role_ids')).rows;
+    await db.close();
+    return Object.fromEntries(rows.map(r => [r.role_key, { id: r.role_id, created: false }]));
+  } catch (err) {
+    console.log(`(couldn't read remembered role ids from the database: ${err.message})`);
+    return {};
+  }
+}
 
 const MANAGE_ROLES = 1n << 28n;
 const ADMINISTRATOR = 1n << 3n;
@@ -50,7 +71,7 @@ async function status() {
 async function plan(apply) {
   const roles = await api.roles(guildId);
   const top = await botTopRolePosition(api, guildId, roles);
-  const mapping = readJson(MAPPING_FILE, {});
+  const mapping = { ...(await rememberedIds()), ...readJson(MAPPING_FILE, {}) };
   const only = flag('only') ? new Set(flag('only').split(',')) : null;
   const p = planRoleSync({ catalog, guildRoles: roles, mapping, botTopPosition: top, only });
   for (const a of p.actions) {
