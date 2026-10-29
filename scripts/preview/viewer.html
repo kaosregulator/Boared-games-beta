@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  html, body { margin: 0; background: #1b1420; color: #eee; font: 14px system-ui, sans-serif; }
+  #wrap { display: flex; }
+  .pane { position: relative; width: 640px; height: 520px; }
+  .pane span { position: absolute; left: 12px; top: 10px; background: rgba(0,0,0,.55); padding: 4px 8px; border-radius: 6px; }
+</style>
+<script type="importmap">
+  { "imports": { "three": "/node_modules/three/build/three.module.js", "three/addons/": "/node_modules/three/examples/jsm/" } }
+</script>
+</head>
+<body>
+<div id="wrap">
+  <div class="pane" id="a"><span id="la"></span></div>
+  <div class="pane" id="b"><span id="lb"></span></div>
+</div>
+<script type="module">
+  import * as THREE from 'three';
+  import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+  import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
+  import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+  import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+
+  const q = new URLSearchParams(location.search);
+  const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+  renderer.setSize(640, 520);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  const ktx2 = new KTX2Loader().setTranscoderPath('/public/basis/').detectSupport(renderer);
+  const draco = new DRACOLoader().setDecoderPath('/node_modules/three/examples/jsm/libs/draco/gltf/');
+  const loader = new GLTFLoader().setKTX2Loader(ktx2).setDRACOLoader(draco).setMeshoptDecoder(MeshoptDecoder);
+
+  async function show(el, label, url) {
+    document.getElementById(label.id).textContent = label.text;
+    const gltf = await loader.loadAsync(url);
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#1b1420');
+    scene.add(new THREE.HemisphereLight('#fff3e0', '#2a1c2e', 1.4));
+    const sun = new THREE.DirectionalLight('#ffffff', 2.2);
+    sun.position.set(2, 3, 4);
+    scene.add(sun);
+    const root = gltf.scene;
+    // Same treatment as the room (RoomModel.tsx): no metalness, so the baked colour shows.
+    root.traverse(o => {
+      if (!o.isMesh) return;
+      for (const m of [].concat(o.material)) { m.metalness = 0; m.metalnessMap = null; }
+    });
+    scene.add(root);
+    const box = new THREE.Box3().setFromObject(root);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    const r = size.length() * 0.62;
+    const cam = new THREE.PerspectiveCamera(35, 640 / 520, r / 100, r * 10);
+    cam.position.copy(center).add(new THREE.Vector3(0.35, 0.25, 1).normalize().multiplyScalar(r * 1.6));
+    cam.lookAt(center);
+    renderer.render(scene, cam);
+    const img = new Image();
+    img.src = renderer.domElement.toDataURL('image/png');
+    await img.decode();
+    el.appendChild(img);
+  }
+  try {
+    await show(document.getElementById('a'), { id: 'la', text: q.get('la') }, q.get('a'));
+    await show(document.getElementById('b'), { id: 'lb', text: q.get('lb') }, q.get('b'));
+    document.body.dataset.done = '1';
+  } catch (err) {
+    document.body.dataset.done = 'error';
+    document.body.dataset.error = String(err);
+  }
+</script>
+</body>
+</html>
