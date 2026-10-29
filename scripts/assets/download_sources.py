@@ -54,15 +54,32 @@ def via_gdown(file_id, out):
         raise RuntimeError("gdown could not fetch it (is the file shared as 'Anyone with the link'?)")
 
 
+def annotate(msg):
+    """Shows up as an annotation on the GitHub job, readable without the log."""
+    flat = " ".join(str(msg).split())
+    print(f"::error::{flat[:900]}", flush=True)
+
+
 def from_folder(folder_id, dest, only):
     """Download a public folder once, then file each original under its model name."""
     import gdown
     import shutil
 
+    import subprocess
+
     raw = dest / "_folder"
     raw.mkdir(parents=True, exist_ok=True)
-    gdown.download_folder(id=folder_id, output=str(raw), quiet=True, remaining_ok=True)
+    try:
+        gdown.download_folder(id=folder_id, output=str(raw), quiet=False, remaining_ok=True, use_cookies=False)
+    except Exception as err:
+        annotate(f"gdown.download_folder: {type(err).__name__}: {err}")
+        # The CLI takes a slightly different path through Drive's folder page.
+        r = subprocess.run(["gdown", "--folder", "--remaining-ok", f"https://drive.google.com/drive/folders/{folder_id}", "-O", str(raw)], capture_output=True, text=True)
+        if r.returncode != 0:
+            annotate(f"gdown --folder: {(r.stderr or r.stdout)[-600:]}")
     by_title = {f.name: f for f in raw.rglob("*.glb")}
+    if not by_title:
+        annotate(f"folder {folder_id}: nothing downloaded; found {[f.name for f in raw.rglob('*')][:10]}")
     got = set()
     for name, spec in SOURCES.items():
         if only and name not in only:
@@ -90,7 +107,7 @@ def main():
         try:
             from_folder(args.folder, dest, only)
         except Exception as err:  # fall through to per-file downloads
-            print(f"folder download failed: {err}", file=sys.stderr)
+            annotate(f"folder download failed: {type(err).__name__}: {err}")
     session = service_session()
     failed = []
     for name, spec in SOURCES.items():
@@ -109,6 +126,8 @@ def main():
         except Exception as err:  # keep going; the build skips what is missing
             failed.append(name)
             print(f"{name}: FAILED {err}", file=sys.stderr)
+            if len(failed) <= 3:
+                annotate(f"{name}: {type(err).__name__}: {err}")
     if failed:
         print(f"\n{len(failed)} original(s) not downloaded: {', '.join(failed)}", file=sys.stderr)
         sys.exit(1 if len(failed) == len(SOURCES) or (only and len(failed) == len(only)) else 0)
