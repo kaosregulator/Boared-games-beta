@@ -18,6 +18,13 @@ export interface CardVideo {
   /** archive.org item identifier. */
   archiveId: string;
   title: string;
+  /** One file inside the item, when the item is a compilation and this is the right clip. */
+  file?: string;
+}
+
+export interface CardFact {
+  label: string;
+  value: string;
 }
 
 export type CardAction = 'tv' | 'nes' | 'radio' | 'gameboy' | 'tamagotchi' | 'rubik' | 'hotwheels' | 'army' | 'furby' | 'ispy' | 'poochi' | 'pc' | 'viewmaster';
@@ -33,6 +40,15 @@ export interface PropCard {
   photos?: CardPhoto[];
   video?: CardVideo;
   action?: { kind: CardAction; label: string };
+  /** Header line on the hologram card: what it is, when, and who made it. */
+  kind?: string;
+  year?: string | null;
+  maker?: string | null;
+  /** "Childhood Pro Tip": one funny line. */
+  joke?: string;
+  /** "The Real Story": true history of the real thing. */
+  history?: string;
+  facts?: CardFact[];
 }
 
 /** A Commons file as a sized thumbnail. Special:FilePath follows renames. */
@@ -101,6 +117,8 @@ const P = {
   hwFleet: wm('The Hot Wheels fleet.jpg', 'Jake Spurlock, CC BY 2.0', 'A fleet of Hot Wheels cars'),
   clock: wm('2010-07-20 Black windup alarm clock face.jpg', 'Sun Ladder, CC BY-SA 3.0', 'An alarm clock face'),
 };
+
+import { PROP_FACTS, PROP_VIDEOS } from './propFacts';
 
 const V = (archiveId: string, title: string): CardVideo => ({ archiveId, title });
 
@@ -1139,5 +1157,9 @@ export const PROP_CARDS: Record<string, PropCard> = Object.fromEntries(CARDS.map
 const ALIASES: Record<string, string> = { teddy: 'south-shelf' };
 
 export function propCardFor(id: string): PropCard | null {
-  return PROP_CARDS[id] ?? PROP_CARDS[ALIASES[id] ?? ''] ?? null;
+  const card = PROP_CARDS[id] ?? PROP_CARDS[ALIASES[id] ?? ''] ?? null;
+  if (!card) return null;
+  const extra = PROP_FACTS[card.id];
+  const video = PROP_VIDEOS[card.id];
+  return extra || video !== undefined ? { ...card, ...(extra ?? {}), video: video === undefined ? card.video : video ?? undefined } : card;
 }

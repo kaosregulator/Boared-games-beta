@@ -2,10 +2,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { GameMetadata } from '../types';
 import type { CardVideo, PropCard } from './propCards';
 import { GAME_PHOTOS } from './gamePhotos';
-import { BookOpen, ChevronLeft, ChevronRight, Maximize2, Minimize2, Minus, Play, Square, X } from 'lucide-react';
+import { BookOpen, ChevronLeft, ChevronRight, Maximize2, Play, X } from 'lucide-react';
 import { capsule, setCapsuleStage, useCapsulePiece } from './capsule/capsuleBus';
-import { capsuleLine } from './capsule/capsuleLine';
-import './timeCapsule.css';
+import './holoCard.css';
 
 /** Board games that already have a real in-room engine vs coming-soon shells. */
 const ONLINE_READY = new Set([
@@ -25,7 +24,7 @@ const ONLINE_READY = new Set([
   'mousetrap',
 ]);
 
-type Tab = 'history' | 'video' | 'images' | 'animations';
+type Tab = 'history' | 'video' | 'images';
 
 interface Shot {
   src: string;
@@ -55,25 +54,32 @@ interface PropCardProps {
 export type MemoryFlashCardProps = GameCardProps | PropCardProps;
 
 /**
- * Every card in the room is a time capsule: a clear hologram of glass over the
- * room, rising out of the thing itself on a beam of light. History, Video,
- * Images and Animations sit on a glass bar underneath. Images ends on the real
- * piece of the room, cut out of the scan and turning on a stand, and that is
- * what Animations shows too.
+ * Every card in the room is a time capsule: the real thing, cut out of the
+ * room and turning as a blue hologram over a little projector, with a
+ * holographic card sliding out beside it. History, Video and Images are tabs
+ * on the card; History has pages.
  */
 export function MemoryFlashCard(props: MemoryFlashCardProps) {
   if (props.kind === 'game') {
-    const photo = GAME_PHOTOS[props.game.id];
-    const online = ONLINE_READY.has(props.game.id);
-    const brand = capsuleLine(props.game.id, props.game.title);
+    const g = props.game;
+    const photo = GAME_PHOTOS[g.id];
+    const online = ONLINE_READY.has(g.id);
     return (
       <Capsule
-        brand={{ ...brand, line: props.game.title.length <= 16 ? props.game.title : brand.line }}
-        era={`${props.game.players} · ${online ? 'Plays in the room' : 'Coming soon'}`}
-        headline={props.game.title}
-        story={props.game.description}
-        notes={props.game.rules.slice(0, 2)}
-        photos={photo ? [{ src: photo.src, credit: photo.credit, alt: props.game.title }] : []}
+        title={g.title}
+        kindLine={[g.subtitle || 'Board game', online ? 'Plays in the room' : 'Coming soon']}
+        pages={[
+          {
+            story: { label: 'The Game', text: g.description },
+            facts: [
+              { label: 'Players', value: g.players },
+              { label: 'Takes', value: g.duration },
+              ...(g.rating ? [{ label: 'Rated', value: g.rating }] : []),
+            ],
+          },
+          { list: { label: 'How It Plays', items: g.rules } },
+        ]}
+        photos={photo ? [{ src: photo.src, credit: photo.credit, alt: g.title }] : []}
         onClose={props.onClose}
         primary={props.onPlay ? { label: 'Play', onClick: props.onPlay } : { label: 'Already on the table' }}
         secondary={{ label: 'Rules', onClick: props.onRules }}
@@ -81,13 +87,20 @@ export function MemoryFlashCard(props: MemoryFlashCardProps) {
     );
   }
   const prop = props.prop;
+  const pages: Page[] = [];
+  const kindLine = [prop.kind, prop.year ?? prop.era, prop.maker].filter((x): x is string => !!x);
+  if (prop.history) {
+    pages.push({ joke: prop.joke, story: { label: 'The Real Story', text: prop.history }, facts: prop.facts });
+    pages.push({ story: { label: 'In This Room', text: prop.story }, list: prop.memories.length ? { label: 'You Had To Be There', items: prop.memories } : undefined });
+  } else {
+    pages.push({ joke: prop.joke, story: { label: 'The Story', text: prop.story }, facts: prop.facts });
+    if (prop.memories.length) pages.push({ list: { label: 'You Had To Be There', items: prop.memories } });
+  }
   return (
     <Capsule
-      brand={capsuleLine(prop.id, prop.title, prop.era)}
-      era={prop.era}
-      headline={prop.title}
-      story={prop.story}
-      notes={prop.memories}
+      title={prop.title}
+      kindLine={kindLine.length ? kindLine : [prop.era]}
+      pages={pages}
       photos={(prop.photos ?? []).map(photo => ({ src: photo.src, credit: photo.credit, alt: photo.alt }))}
       video={prop.video}
       onVideo={props.onVideo}
@@ -97,12 +110,22 @@ export function MemoryFlashCard(props: MemoryFlashCardProps) {
   );
 }
 
+interface Page {
+  joke?: string;
+  story?: { label: string; text: string };
+  facts?: { label: string; value: string }[];
+  list?: { label: string; items: string[] };
+}
+
+function initials(title: string) {
+  const words = title.replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(w => w && !/^(the|a|an|of|and)$/i.test(w));
+  return (words.length > 1 ? words[0][0] + words[1][0] : (words[0] ?? '?').slice(0, 2)).toUpperCase();
+}
+
 function Capsule({
-  brand,
-  era,
-  headline,
-  story,
-  notes,
+  title,
+  kindLine,
+  pages,
   photos,
   video,
   onVideo,
@@ -110,11 +133,9 @@ function Capsule({
   primary,
   secondary,
 }: {
-  brand: { line: string; movie: boolean; bananas: boolean };
-  era: string;
-  headline: string;
-  story: string;
-  notes: string[];
+  title: string;
+  kindLine: string[];
+  pages: Page[];
   photos: Shot[];
   video?: CardVideo;
   onVideo?: (playing: boolean) => void;
@@ -122,163 +143,159 @@ function Capsule({
   primary?: { label: string; onClick?: () => void };
   secondary?: { label: string; onClick: () => void };
 }) {
-  const [tab, setTab] = useState<Tab>(brand.movie && video ? 'video' : 'history');
-  const [folded, setFolded] = useState(false);
-  const [big, setBig] = useState(false);
-  const piece = useCapsulePiece() === true;
-  const dock = useRef<HTMLDivElement>(null);
+  const [tab, setTab] = useState<Tab>('history');
+  const [page, setPage] = useState(0);
+  const piece = useCapsulePiece();
+  const stageWrap = useRef<HTMLDivElement>(null);
+  // Images can show the hologram big, in the card: then the projector beside it steps aside.
+  const [bigPiece, setBigPiece] = useState(false);
+  const showBig = tab === 'images' && (bigPiece || !photos.length) && piece === true;
+  const at = Math.min(page, pages.length - 1);
+  const current = pages[at];
 
   return (
     <div
       data-ui="card"
-      data-capsule={brand.movie ? 'movie' : 'object'}
-      data-big={big ? '1' : '0'}
-      className="tc pointer-events-auto"
+      className="hc pointer-events-auto"
       role="dialog"
-      aria-label={`${headline} time capsule`}
+      aria-label={`${title} time capsule`}
       onClick={e => e.stopPropagation()}
       onPointerDown={e => e.stopPropagation()}
       onContextMenu={e => e.preventDefault()}
     >
-      <Beam to={dock} />
-      <section className="tc-glass">
-        <header className="tc-head">
-          <Logo brand={brand} />
-          <div className="tc-win">
-            <button type="button" aria-label={folded ? 'Open the capsule' : 'Fold the capsule'} onClick={() => setFolded(f => !f)}>
-              <Minus className="h-3.5 w-3.5" />
-            </button>
-            <button type="button" aria-label={big ? 'Smaller' : 'Bigger'} onClick={() => setBig(b => !b)}>
-              {big ? <Minimize2 className="h-3 w-3" /> : <Square className="h-3 w-3" />}
-            </button>
-            <button type="button" aria-label="Close the capsule" onClick={onClose}>
-              <X className="h-3.5 w-3.5" />
-            </button>
+      <Beam to={stageWrap} />
+      <div className="hc-proj" ref={stageWrap} data-off={showBig ? '1' : '0'}>
+        {!showBig && <Stage className="hc-stage" />}
+        {piece === false && <span className="hc-proj-note">{title}</span>}
+        {piece === null && <span className="hc-proj-note">Tuning in…</span>}
+      </div>
+
+      <section className="hc-card">
+        <header className="hc-head">
+          <span className="hc-badge" aria-hidden>
+            {initials(title)}
+          </span>
+          <div className="hc-titles">
+            <p className="hc-kind">{kindLine.join(' • ')}</p>
+            <h3 className="hc-title">{title}</h3>
           </div>
+          <button type="button" className="hc-x" aria-label="Close the capsule" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </button>
         </header>
-        <div className="tc-rule">
-          <span />
-          <i />
+
+        <nav className="hc-tabs" role="tablist">
+          {(['history', 'video', 'images'] as const).map(id => {
+            const off = id === 'video' ? !video : id === 'images' ? !photos.length && piece !== true : false;
+            return (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={tab === id}
+                disabled={off}
+                data-on={tab === id ? '1' : '0'}
+                className="hc-tab"
+                onClick={() => setTab(id)}
+              >
+                {id}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="hc-body" key={`${tab}-${at}`}>
+          {tab === 'history' && current && (
+            <>
+              {current.joke && (
+                <div className="hc-tip">
+                  <p className="hc-label">Childhood Pro Tip</p>
+                  <p className="hc-joke">{current.joke}</p>
+                </div>
+              )}
+              {current.story && (
+                <div className="hc-block">
+                  <p className="hc-label">{current.story.label}</p>
+                  <p className="hc-text">{current.story.text}</p>
+                </div>
+              )}
+              {current.facts && current.facts.length > 0 && (
+                <dl className="hc-facts">
+                  {current.facts.map(f => (
+                    <div key={f.label}>
+                      <dt>{f.label}</dt>
+                      <dd>{f.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+              {current.list && (
+                <div className="hc-block">
+                  <p className="hc-label">{current.list.label}</p>
+                  <ul className="hc-list">
+                    {current.list.items.map(line => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
+          )}
+          {tab === 'video' && video && <Tape video={video} onVideo={onVideo} title={title} />}
+          {tab === 'images' && <Gallery photos={photos} piece={piece === true} big={showBig} onPiece={setBigPiece} />}
         </div>
 
-        {!folded && (
-          <div className="tc-body" data-tab={tab}>
-            {tab === 'history' && (
-              <div className="tc-split">
-                {photos[0] ? <Photo shot={photos[0]} /> : piece ? <Stage /> : <Photo />}
-                <div className="tc-copy">
-                  <p className="tc-era">{era}</p>
-                  <h3 className="tc-headline">{headline}</h3>
-                  <p className="tc-story">{story}</p>
-                  {notes.length > 0 && (
-                    <ul className="tc-notes">
-                      {notes.map(line => (
-                        <li key={line}>{line}</li>
-                      ))}
-                    </ul>
-                  )}
-                  {(primary || secondary) && (
-                    <div className="tc-actions">
-                      {primary?.onClick ? (
-                        <button type="button" className="tc-play" onClick={primary.onClick}>
-                          {primary.label}
-                        </button>
-                      ) : primary ? (
-                        <span className="tc-era">{primary.label}</span>
-                      ) : null}
-                      {secondary && (
-                        <button type="button" className="tc-ghost" onClick={secondary.onClick}>
-                          <BookOpen className="h-3.5 w-3.5" />
-                          {secondary.label}
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
+        {(primary || secondary) && (
+          <div className="hc-actions">
+            {primary?.onClick ? (
+              <button type="button" className="hc-play" onClick={primary.onClick}>
+                {primary.label}
+              </button>
+            ) : primary ? (
+              <span className="hc-kind">{primary.label}</span>
+            ) : null}
+            {secondary && (
+              <button type="button" className="hc-ghost" onClick={secondary.onClick}>
+                <BookOpen className="h-3.5 w-3.5" />
+                {secondary.label}
+              </button>
             )}
-            {tab === 'video' && video && <Tape video={video} onVideo={onVideo} title={headline} />}
-            {tab === 'images' && <Gallery photos={photos} piece={piece} />}
-            {tab === 'animations' && (piece ? <Stage wide caption="The real one, from this room" /> : <Photo shot={photos[0]} wide />)}
           </div>
         )}
+
+        <footer className="hc-foot">
+          {tab === 'history' && pages.length > 1 ? (
+            <span className="hc-pages">
+              <button type="button" aria-label="Previous page" disabled={at === 0} onClick={() => setPage(at - 1)}>
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </button>
+              Page {at + 1} / {pages.length}
+              <button type="button" aria-label="Next page" disabled={at >= pages.length - 1} onClick={() => setPage(at + 1)}>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </span>
+          ) : (
+            <span />
+          )}
+          <button type="button" className="hc-exit" onClick={onClose}>
+            ESC • EXIT
+          </button>
+        </footer>
       </section>
-
-      <nav className="tc-dock" role="tablist" ref={dock}>
-        <DockTab id="history" on={tab === 'history'} label="History" onPick={setTab} icon={<HistoryIcon />} />
-        <DockTab id="video" on={tab === 'video'} label="Video" onPick={setTab} icon={<VideoIcon />} off={!video} />
-        <DockTab id="images" on={tab === 'images'} label="Images" onPick={setTab} icon={<ImagesIcon />} off={!photos.length && !piece} />
-        <DockTab id="animations" on={tab === 'animations'} label="Animations" onPick={setTab} icon={<RunnerIcon />} off={!piece && !photos.length} />
-      </nav>
     </div>
   );
 }
 
-function Logo({ brand }: { brand: { line: string; movie: boolean; bananas: boolean } }) {
-  if (brand.movie) {
-    return (
-      <div className="tc-logo tc-logo--movie" aria-label="The Movie Row">
-        <span className="tc-logo-the">The</span>
-        <span className="tc-logo-script">Movie Row</span>
-      </div>
-    );
-  }
-  return (
-    <div className="tc-logo">
-      {brand.bananas && <span className="tc-banana" aria-hidden>🍌</span>}
-      <span className="tc-logo-stack">
-        <span className="tc-logo-main" data-long={brand.line.length > 10 ? '1' : '0'}>
-          {brand.line}
-        </span>
-        <span className="tc-logo-sub">Time Capsule</span>
-      </span>
-      {brand.bananas && <span className="tc-banana" aria-hidden>🍌</span>}
-    </div>
-  );
-}
-
-function DockTab({
-  id,
-  on,
-  off,
-  label,
-  icon,
-  onPick,
-}: {
-  id: Tab;
-  on: boolean;
-  off?: boolean;
-  label: string;
-  icon: React.ReactNode;
-  onPick: (tab: Tab) => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={on}
-      aria-disabled={off}
-      disabled={off}
-      data-on={on ? '1' : '0'}
-      className="tc-tab"
-      onClick={() => onPick(id)}
-    >
-      <span className="tc-tab-icon">{icon}</span>
-      <span className="tc-tab-label">{label}</span>
-    </button>
-  );
-}
-
-/** A real photo in a gold frame, or an empty pane of glass. */
-function Photo({ shot, wide, children }: { shot?: Shot; wide?: boolean; children?: React.ReactNode }) {
+/** A real photo, or an empty pane. */
+function Photo({ shot, children }: { shot?: Shot; children?: React.ReactNode }) {
   const [broken, setBroken] = useState(false);
   useEffect(() => setBroken(false), [shot?.src]);
   return (
-    <figure className={`tc-frame${wide ? ' tc-frame--wide' : ''}`}>
+    <figure className="hc-frame">
       {shot && !broken ? (
         <img src={shot.src} alt={shot.alt} draggable={false} onError={() => setBroken(true)} />
       ) : (
-        <span className="tc-empty">{shot?.alt ?? ''}</span>
+        <span className="hc-empty">{shot?.alt ?? ''}</span>
       )}
       {shot && !broken && <figcaption>{shot.credit}</figcaption>}
       {children}
@@ -286,39 +303,43 @@ function Photo({ shot, wide, children }: { shot?: Shot; wide?: boolean; children
   );
 }
 
-/** The window the real piece turns in (drawn by the room behind the glass). */
-function Stage({ wide, caption, children }: { wide?: boolean; caption?: string; children?: React.ReactNode }) {
+/** The window the real piece turns in (drawn by the room, behind the page). */
+function Stage({ className, caption, children }: { className?: string; caption?: string; children?: React.ReactNode }) {
   const ref = useCallback((el: HTMLDivElement | null) => setCapsuleStage(el), []);
+  if (className) return <div ref={ref} className={className} />;
   return (
-    <figure className={`tc-frame tc-frame--stage${wide ? ' tc-frame--wide' : ''}`}>
-      <div ref={ref} className="tc-stage" />
+    <figure className="hc-frame hc-frame--stage">
+      <div ref={ref} className="hc-stage-in" />
       {caption && <figcaption>{caption}</figcaption>}
       {children}
     </figure>
   );
 }
 
-/** The real photos, then the real piece: next and back go round. */
-function Gallery({ photos, piece }: { photos: Shot[]; piece: boolean }) {
+/** The real photos, then the real piece turning big: next and back go round. */
+function Gallery({ photos, piece, big, onPiece }: { photos: Shot[]; piece: boolean; big: boolean; onPiece: (on: boolean) => void }) {
   const count = photos.length + (piece ? 1 : 0);
   const [at, setAt] = useState(0);
+  useEffect(() => onPiece(at >= photos.length), [at, photos.length, onPiece]);
+  useEffect(() => () => onPiece(false), [onPiece]);
   const go = (d: number) => setAt(i => (i + d + count) % count);
   const nav = count > 1 && (
     <>
-      <button type="button" className="tc-nav tc-nav--prev" aria-label="Back" onClick={() => go(-1)}>
+      <button type="button" className="hc-nav hc-nav--prev" aria-label="Back" onClick={() => go(-1)}>
         <ChevronLeft className="h-4 w-4" />
       </button>
-      <button type="button" className="tc-nav tc-nav--next" aria-label="Next" onClick={() => go(1)}>
+      <button type="button" className="hc-nav hc-nav--next" aria-label="Next" onClick={() => go(1)}>
         <ChevronRight className="h-4 w-4" />
       </button>
-      <span className="tc-count">
+      <span className="hc-count">
         {at + 1} / {count}
       </span>
     </>
   );
-  if (at < photos.length) return <Photo shot={photos[at]} wide>{nav}</Photo>;
+  if (at < photos.length) return <Photo shot={photos[at]}>{nav}</Photo>;
+  if (!big) return null;
   return (
-    <Stage wide caption="The real one, from this room">
+    <Stage caption="The real one, from this room · turning">
       {nav}
     </Stage>
   );
@@ -338,28 +359,28 @@ function Tape({ video, onVideo, title }: { video: CardVideo; onVideo?: (playing:
     void screen.current?.requestFullscreen?.().catch(() => undefined);
   };
   return (
-    <div className="tc-player">
-      <div className="tc-screen" ref={screen}>
+    <div className="hc-player">
+      <div className="hc-screen" ref={screen}>
         {open ? (
           <iframe
             title={video.title}
-            src={`https://archive.org/embed/${encodeURIComponent(video.archiveId)}?autoplay=1`}
+            src={`https://archive.org/embed/${encodeURIComponent(video.archiveId)}${video.file ? `/${video.file.split('/').map(encodeURIComponent).join('/')}` : ''}?autoplay=1`}
             allow="autoplay; fullscreen; picture-in-picture"
             allowFullScreen
           />
         ) : (
-          <button type="button" className="tc-poster" onClick={() => setOpen(true)} aria-label={`Play ${video.title}`}>
-            <span className="tc-poster-play">
+          <button type="button" className="hc-poster" onClick={() => setOpen(true)} aria-label={`Play ${video.title}`}>
+            <span className="hc-poster-play">
               <Play className="h-7 w-7" />
             </span>
-            <span className="tc-poster-title">{video.title}</span>
-            <span className="tc-poster-note">{title} · Internet Archive</span>
+            <span className="hc-poster-title">{video.title}</span>
+            <span className="hc-poster-note">{title} · Internet Archive</span>
           </button>
         )}
       </div>
-      <div className="tc-transport">
+      <div className="hc-transport">
         <span>{open ? 'Playing' : 'Ready'}</span>
-        <span className="tc-transport-bar">
+        <span className="hc-transport-bar">
           <i data-on={open ? '1' : '0'} />
         </span>
         {open && (
@@ -402,84 +423,16 @@ function Beam({ to }: { to: React.RefObject<HTMLDivElement | null> }) {
     return () => cancelAnimationFrame(raf);
   }, [to]);
   return (
-    <svg className="tc-beam" aria-hidden>
+    <svg className="hc-beam" aria-hidden>
       <defs>
-        <linearGradient id="tc-beam-grad" x1="0" y1="1" x2="0" y2="0">
-          <stop offset="0" stopColor="#ffd36b" />
-          <stop offset="0.5" stopColor="#ff6bd6" />
-          <stop offset="1" stopColor="#9b6bff" />
+        <linearGradient id="hc-beam-grad" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stopColor="#5fd4ff" stopOpacity="0.2" />
+          <stop offset="1" stopColor="#9be8ff" />
         </linearGradient>
       </defs>
-      <path ref={glow} className="tc-beam-glow" stroke="url(#tc-beam-grad)" opacity="0" />
-      <path ref={path} className="tc-beam-line" stroke="url(#tc-beam-grad)" opacity="0" />
-      <ellipse ref={spot} className="tc-beam-spot" rx="26" ry="9" opacity="0" />
+      <path ref={glow} className="hc-beam-glow" stroke="url(#hc-beam-grad)" opacity="0" />
+      <path ref={path} className="hc-beam-line" stroke="url(#hc-beam-grad)" opacity="0" />
+      <ellipse ref={spot} className="hc-beam-spot" rx="26" ry="9" opacity="0" />
     </svg>
-  );
-}
-
-// Little pixel-art tab icons, drawn on a 16-unit grid like the mockup's.
-function Px({ children }: { children: React.ReactNode }) {
-  return (
-    <svg viewBox="0 0 16 16" width="26" height="26" shapeRendering="crispEdges" aria-hidden>
-      {children}
-    </svg>
-  );
-}
-function HistoryIcon() {
-  return (
-    <Px>
-      <rect x="3" y="2" width="10" height="12" fill="#3b1d6e" />
-      <rect x="2" y="3" width="12" height="10" fill="#3b1d6e" />
-      <rect x="4" y="3" width="8" height="10" fill="#cdb6ff" />
-      <rect x="3" y="4" width="10" height="8" fill="#cdb6ff" />
-      <rect x="7" y="4" width="2" height="5" fill="#3b1d6e" />
-      <rect x="8" y="8" width="3" height="1" fill="#3b1d6e" />
-      <rect x="2" y="1" width="2" height="2" fill="#ff6bd6" />
-      <rect x="12" y="1" width="2" height="2" fill="#ff6bd6" />
-    </Px>
-  );
-}
-function VideoIcon() {
-  return (
-    <Px>
-      <rect x="1" y="3" width="14" height="10" fill="#1f3550" />
-      <rect x="2" y="4" width="12" height="8" fill="#7fd3ff" />
-      <rect x="1" y="3" width="1" height="1" fill="#e6f6ff" />
-      <rect x="6" y="5" width="1" height="6" fill="#1f3550" />
-      <rect x="7" y="6" width="1" height="4" fill="#1f3550" />
-      <rect x="8" y="7" width="1" height="2" fill="#1f3550" />
-      <rect x="2" y="4" width="1" height="1" fill="#1f3550" />
-      <rect x="2" y="11" width="1" height="1" fill="#1f3550" />
-      <rect x="13" y="4" width="1" height="1" fill="#1f3550" />
-      <rect x="13" y="11" width="1" height="1" fill="#1f3550" />
-    </Px>
-  );
-}
-function ImagesIcon() {
-  return (
-    <Px>
-      <rect x="3" y="1" width="12" height="10" fill="#f2f2f2" />
-      <rect x="1" y="4" width="12" height="11" fill="#ffffff" />
-      <rect x="2" y="5" width="10" height="7" fill="#4fa8ff" />
-      <rect x="2" y="10" width="10" height="2" fill="#3fbf5f" />
-      <rect x="4" y="8" width="3" height="2" fill="#3fbf5f" />
-      <rect x="8" y="9" width="3" height="1" fill="#3fbf5f" />
-      <rect x="9" y="6" width="2" height="2" fill="#ffd23f" />
-    </Px>
-  );
-}
-function RunnerIcon() {
-  return (
-    <Px>
-      <rect x="9" y="1" width="3" height="3" fill="#ffd23f" />
-      <rect x="6" y="4" width="5" height="2" fill="#ff8a1f" />
-      <rect x="7" y="6" width="3" height="3" fill="#ff8a1f" />
-      <rect x="4" y="5" width="2" height="1" fill="#ffd23f" />
-      <rect x="11" y="6" width="2" height="1" fill="#ffd23f" />
-      <rect x="6" y="9" width="2" height="2" fill="#c0392b" />
-      <rect x="9" y="9" width="2" height="3" fill="#c0392b" />
-      <rect x="4" y="11" width="3" height="2" fill="#c0392b" />
-      <rect x="10" y="12" width="2" height="3" fill="#c0392b" />
-    </Px>
   );
 }

@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { capsule, setCapsulePiece } from './capsuleBus';
 import { disposePiece, extractPiece, type Piece } from './extractPiece';
+import { holoMaterial, holoUniforms, tickHolo } from './holoMaterial';
 
 /**
  * The time capsule's hologram: the real piece of the room the card is about,
- * cut out of the scan (extractPiece) and turning on a little glowing stand
- * inside the card's glass window. It is drawn by the room's own renderer, in
+ * cut out of the scan (extractPiece), turned to blue light (holoMaterial) and
+ * turning slowly over a little projector beside the card. It is drawn by the room's own renderer, in
  * the room, so there is no image or model file on the card to save.
  */
 
@@ -30,16 +31,16 @@ function findHotspot(scene: THREE.Object3D, id: string): THREE.Mesh | null {
   return hit;
 }
 
-/** Draw the piece over the room: after everything else, depth cleared first. */
+const reduceMotion = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+/** Draw the piece over the room as a hologram: after everything else, depth cleared first. */
 function overlay(piece: Piece) {
   const clones: THREE.Material[] = [];
   piece.group.traverse(o => {
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh) return;
-    const mat = (mesh.material as THREE.Material).clone();
-    mat.transparent = true;
-    mat.depthWrite = true;
-    mat.depthTest = true;
+    if (!mesh.geometry.getAttribute('normal')) mesh.geometry.computeVertexNormals();
+    const mat = holoMaterial(mesh.material as THREE.Material, !!mesh.geometry.getAttribute('uv'), !!mesh.geometry.getAttribute('color'));
     clones.push(mat);
     mesh.material = mat;
     mesh.renderOrder = 10001;
@@ -87,6 +88,7 @@ export function CapsuleHologram() {
         made = extractPiece(scene, _box, holder.current);
       }
       if (made) {
+        holoUniforms.uReveal.value = 0;
         clones = overlay(made);
         setPiece(made);
         setCapsulePiece(true);
@@ -117,7 +119,8 @@ export function CapsuleHologram() {
     (clearer.material as THREE.Material).dispose();
   }, [clearer]);
 
-  useFrame((_, dt) => {
+  const ring = useRef<THREE.Group>(null);
+  useFrame((state, dt) => {
     const g = holder.current;
     if (!g) return;
     const cam = camera as THREE.PerspectiveCamera;
@@ -155,7 +158,14 @@ export function CapsuleHologram() {
     const viewH = 2 * along * Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2);
     const fit = (Math.min(r.height, r.width * 0.9) / canvas.height) * viewH;
     g.scale.setScalar((fit * 0.4) / piece.radius);
-    if (spin.current) spin.current.rotation.y += dt * SPIN;
+    const still = reduceMotion();
+    tickHolo(state.clock.elapsedTime, dt, still);
+    if (spin.current) {
+      spin.current.rotation.y += dt * (still ? SPIN * 0.3 : SPIN);
+      // It floats: a slow bob above the projector.
+      spin.current.position.y = still ? 0 : Math.sin(state.clock.elapsedTime * 1.3) * piece.radius * 0.05;
+    }
+    if (ring.current) ring.current.rotation.z -= dt * 0.4;
   });
 
   return (
@@ -163,20 +173,44 @@ export function CapsuleHologram() {
       <primitive object={clearer} />
       {piece && (
         <>
-          {/* A touch of light of its own, so a piece from a dark corner still reads. It only reaches the piece. */}
-          <pointLight position={[0.6, 0.9, 1.4]} intensity={0.9} distance={0.3} decay={0} color="#f3e9ff" />
           <group rotation={[0.22, 0, 0]}>
             <group ref={spin}>
               <primitive object={piece.group} />
             </group>
-            {/* The stand: a soft ring of light under it. */}
-            <mesh position={[0, -piece.radius * 0.92, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={10002}>
-              <ringGeometry args={[piece.radius * 0.55, piece.radius * 0.95, 48]} />
-              <meshBasicMaterial color="#c58bff" transparent opacity={0.35} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
-            </mesh>
+            <Projector radius={piece.radius} ring={ring} />
           </group>
         </>
       )}
+    </group>
+  );
+}
+
+const BLUE = '#5fd4ff';
+
+/** The projector under the piece: two rings of blue light and a faint cone up into it. */
+function Projector({ radius, ring }: { radius: number; ring: RefObject<THREE.Group | null> }) {
+  const y = -radius * 0.98;
+  return (
+    <group position={[0, y, 0]}>
+      <group ref={ring} rotation={[-Math.PI / 2, 0, 0]}>
+        <mesh renderOrder={10002}>
+          <ringGeometry args={[radius * 0.82, radius * 0.88, 64]} />
+          <meshBasicMaterial color={BLUE} transparent opacity={0.55} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
+        </mesh>
+        <mesh renderOrder={10002}>
+          <ringGeometry args={[radius * 0.5, radius * 0.74, 48, 1, 0, Math.PI * 1.6]} />
+          <meshBasicMaterial color={BLUE} transparent opacity={0.22} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} side={THREE.DoubleSide} />
+        </mesh>
+        <mesh renderOrder={10002}>
+          <circleGeometry args={[radius * 0.16, 32]} />
+          <meshBasicMaterial color="#c9f3ff" transparent opacity={0.5} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
+        </mesh>
+      </group>
+      {/* The beam: an open cone, brightest at the bottom. */}
+      <mesh position={[0, radius * 0.9, 0]} renderOrder={10003}>
+        <cylinderGeometry args={[radius * 0.95, radius * 0.18, radius * 1.8, 48, 1, true]} />
+        <meshBasicMaterial color={BLUE} transparent opacity={0.06} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} side={THREE.DoubleSide} />
+      </mesh>
     </group>
   );
 }
