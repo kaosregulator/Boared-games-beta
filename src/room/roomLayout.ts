@@ -312,7 +312,8 @@ export const LAYOUT = {
   backpack: {
     id: 'backpack',
     x: bedX + 0.02,
-    y: 0.4,
+    // Rests on the quilt, not sunk into it.
+    y: 0.55,
     z: bedZ - 0.22,
     rotY: -0.35,
     axis: 'y' as const,

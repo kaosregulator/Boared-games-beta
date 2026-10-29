@@ -4,6 +4,7 @@ import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { level, type PoochiVoice } from './poochiAudio';
+import { SpeakerAnchor } from '../../tv/SpeakerAnchor';
 
 export const POOCHI_URL = '/models/poochi.glb';
 
@@ -336,6 +337,8 @@ export function PoochiToy({ drive, showBone = false }: { drive: React.RefObject<
   return (
     <group>
       <primitive object={scene} />
+      {/* His barks and gearbox follow him to the table and around the bone hunt. */}
+      <SpeakerAnchor id="poochi" position={[0, 0.05, 0.05]} />
       <group ref={addOns}>
         <Propeller mast={mast} rotor={rotor} blur={blur} />
         <JetPack pods={pods} flames={flames} />

@@ -37,8 +37,7 @@ import { TouchHud } from './TouchHud';
 import { AimReticle } from './AimReticle';
 import { TouchGamepad } from '../devices/TouchGamepad';
 import { aim, isTouchDevice } from './input';
-import { useTvStatus } from '../tv/tvBus';
-import { speakerDistance } from '../tv/surround';
+import { getTvStatus, publishTvStatus, useTvStatus, type TvStatus } from '../tv/tvBus';
 import { tvMusicLevel } from '../tv/tvDuck';
 import { TvRemote } from '../tv/TvRemote';
 import { DeviceGestures } from '../devices/DeviceGestures';
@@ -434,19 +433,12 @@ export function WalkRoom({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [radioState.power]);
 
-  // The TV and the bedroom tape don't play over each other either: the set
-  // ducks the tape near it, and the tape comes back as you walk off or when
-  // the set goes off. The TV itself stays in the room's HRTF speakers.
+  // The TV takes over the room's sound: while the set is on the bedroom tape is
+  // muted all the way, so the only thing you hear is the TV, coming from the set
+  // through its HRTF speaker and tracking as you move. Off, the tape comes back.
   useEffect(() => {
-    if (tvStatus.mode === 'off') {
-      sound.setBedDuck(1);
-      return;
-    }
-    const update = () => sound.setBedDuck(tvMusicLevel(tvStatus.mode, speakerDistance('tv'), tvOn));
-    update();
-    const id = window.setInterval(update, 250);
-    return () => window.clearInterval(id);
-  }, [tvStatus.mode, tvOn]);
+    sound.setBedDuck(tvMusicLevel(tvStatus.mode));
+  }, [tvStatus.mode]);
 
   useEffect(() => () => sound.setBedDuck(1), []);
 
@@ -1084,10 +1076,17 @@ export function WalkRoom({
   // (dev server, or ?diag=1 on a build for the perf scripts).
   useEffect(() => {
     if (!diagOn) return;
-    const w = window as unknown as { __cardAction?: typeof runCardAction; __lightsOut?: (out: boolean) => void; __pcPower?: () => void };
+    const w = window as unknown as {
+      __cardAction?: typeof runCardAction;
+      __lightsOut?: (out: boolean) => void;
+      __pcPower?: () => void;
+      __tvMode?: (mode: TvStatus['mode']) => void;
+    };
     w.__cardAction = runCardAction;
     w.__lightsOut = setLightsOut;
     w.__pcPower = powerOnPc;
+    // Turn the set on/off without aiming at it, for capture and tests.
+    w.__tvMode = mode => publishTvStatus({ ...getTvStatus(), mode });
   }, [runCardAction, diagOn]);
 
   // An old commercial on a card pauses the room music; closing it brings the music back.
