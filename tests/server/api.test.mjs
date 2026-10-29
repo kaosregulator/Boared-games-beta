@@ -85,3 +85,82 @@ test('guest session, results, awards and the leaderboard over HTTP', async () =>
     await close();
   }
 });
+
+test('Discord sign-in over HTTP: state checked, guest upgraded, membership verified by the bot, early member, generation, admin gate', async () => {
+  const db = await openSqlite(':memory:');
+  const discordId = '555666777888';
+  const rest = {
+    member: async (_g, id) => {
+      if (id === discordId) return { roles: [] };
+      throw Object.assign(new Error('Unknown Member'), { status: 404 });
+    },
+    roles: async () => [],
+    addMemberRole: async () => {},
+    removeMemberRole: async () => {},
+  };
+  const fetchImpl = async url =>
+    String(url).endsWith('/oauth2/token')
+      ? { ok: true, status: 200, json: async () => ({ access_token: 'at' }) }
+      : { ok: true, status: 200, json: async () => ({ id: discordId, username: 'radkid', global_name: 'Rad Kid', avatar: null }) };
+  const env = { DISCORD_CLIENT_ID: '1', DISCORD_CLIENT_SECRET: 's', PUBLIC_URL: 'http://127.0.0.1', ADMIN_DISCORD_IDS: '42' };
+  const app = express();
+  app.use(express.json());
+  app.use('/api', createRoomApi({ db, env, rest, fetchImpl, worker: false }));
+  const server = await new Promise(resolve => {
+    const s = app.listen(0, '127.0.0.1', () => resolve(s));
+  });
+  const base = `http://127.0.0.1:${server.address().port}/api`;
+  const jar = new Map();
+  const go = async (method, path, body) => {
+    const res = await fetch(base + path, {
+      method,
+      redirect: 'manual',
+      headers: { 'content-type': 'application/json', cookie: [...jar].map(([k, v]) => `${k}=${v}`).join('; ') },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    for (const c of res.headers.getSetCookie?.() ?? []) {
+      const [pair] = c.split(';');
+      const i = pair.indexOf('=');
+      const v = pair.slice(i + 1);
+      if (v) jar.set(pair.slice(0, i), v);
+      else jar.delete(pair.slice(0, i));
+    }
+    const text = await res.text();
+    let json = null;
+    try { json = JSON.parse(text); } catch { json = null; }
+    return { status: res.status, location: res.headers.get('location'), body: json };
+  };
+  try {
+    assert.deepEqual((await go('GET', '/auth/status')).body, { discord: true });
+    const guest = (await go('POST', '/session')).body.player;
+    await go('POST', '/scores', { game: 'pc-tetris', metric: 'lines', value: 44, idem: 'guest-lines-1' });
+
+    const start = await go('GET', '/auth/discord?returnTo=/room');
+    assert.equal(start.status, 302);
+    const state = new URL(start.location).searchParams.get('state');
+    assert.equal((await go('GET', `/auth/discord/callback?state=wrong&code=c`)).location, '/?signin=expired');
+
+    const again = await go('GET', '/auth/discord?returnTo=/room');
+    const good = new URL(again.location).searchParams.get('state');
+    assert.notEqual(good, state);
+    const cb = await go('GET', `/auth/discord/callback?state=${good}&code=c`);
+    assert.equal(cb.location, '/room?signin=ok');
+
+    const me = (await go('GET', '/me')).body;
+    assert.equal(me.player.id, guest.id, 'the guest became the account');
+    assert.equal(me.player.kind, 'discord');
+    assert.equal(me.player.displayName, 'Rad Kid');
+    assert.ok(me.awards.some(a => a.key === 'game.pc-tetris.long-bar'), 'guest history kept');
+    assert.ok(me.awards.some(a => a.key === 'community.you-had-to-be-there'), 'early member for a verified member');
+
+    const discord = (await go('GET', '/me/discord')).body;
+    assert.equal(discord.membership, 'member');
+    assert.ok(discord.sync.some(s => s.key === 'game.pc-tetris.long-bar' && s.status === 'pending'));
+
+    assert.equal((await go('PUT', '/me/generation', { key: 'gen.x' })).body.player.generation, 'gen.x');
+    assert.equal((await go('PUT', '/me/generation', { key: 'game.chess.win' })).status, 400);
+    assert.equal((await go('GET', '/admin/rewards')).status, 403);
+  } finally {
+    await new Promise(r => server.close(r));
+  }
+});

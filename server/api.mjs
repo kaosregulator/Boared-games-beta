@@ -4,7 +4,10 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { sharedDb } from './db.mjs';
 import { indexBoards, leaderboard, personalBest, recordEvent, recordScore, validateEvent, validateScore } from './leaderboard.mjs';
-import { clearSessionCookie, createGuest, getPlayer, playerFromRequest, publicPlayer, sessionCookie, setLanguage } from './players.mjs';
+import { clearSessionCookie, createGuest, createSession, getPlayer, playerFromRequest, publicPlayer, sessionCookie, setLanguage } from './players.mjs';
+import { checkState, clearOAuthCookie, exchangeCode, linkDiscord, oauthConfig, SignInError, startSignIn } from './auth/discord.mjs';
+import { createDiscordRest } from './discord/rest.mjs';
+import { createMembers } from './discord/members.mjs';
 import { evaluateAwards } from './rewards/engine.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -24,7 +27,16 @@ const loadJson = rel => JSON.parse(fs.readFileSync(path.join(here, '..', rel), '
  * A player only ever reads or writes their own records: the player comes from
  * the session cookie, never from the request body.
  */
-export function createRoomApi({ db = null, catalog = loadJson('src/rewards/catalog.json'), boards = loadJson('src/rewards/leaderboards.json'), onAwards = null } = {}) {
+export function createRoomApi({
+  db = null,
+  catalog = loadJson('src/rewards/catalog.json'),
+  boards = loadJson('src/rewards/leaderboards.json'),
+  onAwards = null,
+  env = process.env,
+  rest = env.DISCORD_BOT_TOKEN ? createDiscordRest({ token: env.DISCORD_BOT_TOKEN }) : null,
+  fetchImpl = globalThis.fetch,
+  worker = true,
+} = {}) {
   const router = express.Router();
   const games = indexBoards(boards);
   const getDb = () => (db ? Promise.resolve(db) : sharedDb());
@@ -32,6 +44,13 @@ export function createRoomApi({ db = null, catalog = loadJson('src/rewards/catal
   const h = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
   const cache = new Map();
   const CACHE_MS = 10_000;
+  const guildId = env.DISCORD_GUILD_ID || '1562976671622103161';
+  const members = createMembers({ db: getDb, rest, guildId, catalog });
+  const admins = new Set(String(env.ADMIN_DISCORD_IDS ?? '').split(',').map(s => s.trim()).filter(Boolean));
+  if (worker && rest) {
+    // Sends queued roles to Discord. Failures stay in the queue with backoff.
+    setInterval(() => members.processQueue().catch(() => {}), 30_000).unref();
+  }
 
   // Per-player allowance on writes, on top of the per-address limit in server.mjs.
   const writes = new Map();
@@ -83,6 +102,7 @@ export function createRoomApi({ db = null, catalog = loadJson('src/rewards/catal
   async function afterResult(player, game) {
     for (const key of cache.keys()) if (key.startsWith(`${game}|`)) cache.delete(key);
     const fresh = await evaluateAwards(await getDb(), player.id, catalog);
+    if (fresh.length && player.kind === 'discord') for (const key of fresh) await members.queue(player.id, key, 'add');
     if (fresh.length && onAwards) onAwards(player, fresh);
     return fresh;
   }
@@ -114,6 +134,111 @@ export function createRoomApi({ db = null, catalog = loadJson('src/rewards/catal
     if (who) await (await getDb()).query('DELETE FROM sessions WHERE token_hash = $1', [who.tokenHash]);
     res.setHeader('Set-Cookie', clearSessionCookie({ secure: secure(req) }));
     res.json({ ok: true });
+  }));
+
+  // --- Sign in with Discord -------------------------------------------------
+
+  router.get('/auth/status', (_req, res) => {
+    res.json({ discord: oauthConfig(env).ready });
+  });
+
+  router.get('/auth/discord', (req, res) => {
+    const config = oauthConfig(env);
+    if (!config.ready) return res.redirect(302, '/?signin=unavailable');
+    const { url, cookie } = startSignIn(config, req.query.returnTo, { secure: secure(req) });
+    res.setHeader('Set-Cookie', cookie);
+    res.redirect(302, url);
+  });
+
+  router.get('/auth/discord/callback', h(async (req, res) => {
+    const sec = secure(req);
+    const back = (returnTo, result) => {
+      res.setHeader('Set-Cookie', clearOAuthCookie({ secure: sec }));
+      const sep = returnTo.includes('?') ? '&' : '?';
+      res.redirect(302, `${returnTo}${sep}signin=${result}`);
+    };
+    const state = checkState(req);
+    if (!state) return back('/', 'expired');
+    if (req.query.error) return back(state.returnTo, 'cancelled');
+    const config = oauthConfig(env);
+    if (!config.ready || !req.query.code) return back(state.returnTo, 'unavailable');
+    let user;
+    try {
+      user = await exchangeCode(config, String(req.query.code), fetchImpl);
+    } catch (err) {
+      return back(state.returnTo, err instanceof SignInError ? err.code : 'failed');
+    }
+    const d = await getDb();
+    const who = await current(req);
+    const playerId = await linkDiscord(d, { guestId: who?.player.id ?? null, user });
+    if (who) await d.query('DELETE FROM sessions WHERE token_hash = $1', [who.tokenHash]);
+    const token = await createSession(d, playerId);
+    res.setHeader('Set-Cookie', [clearOAuthCookie({ secure: sec }), sessionCookie(token, { secure: sec })]);
+    // Roles earned as a guest go to Discord now; early member if eligible.
+    await members.queueAll(playerId);
+    const m = await members.membership(user.id);
+    if (m.status === 'member') await members.claimEarly(playerId);
+    const sep = state.returnTo.includes('?') ? '&' : '?';
+    res.redirect(302, `${state.returnTo}${sep}signin=ok`);
+  }));
+
+  /** The signed-in player's Discord standing, checked by the bot on the server. */
+  router.get('/me/discord', h(async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    const player = await requirePlayer(req, res);
+    if (!player) return;
+    if (!player.discord_id) return res.json({ linked: false, membership: null, signInAvailable: oauthConfig(env).ready });
+    const m = await members.membership(player.discord_id);
+    if (m.status === 'member') await members.claimEarly(player.id);
+    const d = await getDb();
+    const sync = (await d.query('SELECT role_key, action, status, last_error FROM role_sync WHERE player_id = $1', [player.id])).rows.map(r => ({
+      key: r.role_key,
+      action: r.action,
+      status: r.status,
+      error: r.last_error ?? null,
+    }));
+    res.json({ linked: true, membership: m.status, guildId, sync });
+  }));
+
+  router.put('/me/generation', h(async (req, res) => {
+    const player = await requirePlayer(req, res);
+    if (!player) return;
+    const key = req.body?.key ?? null;
+    await members.setGeneration(player.id, key === null ? null : String(key));
+    res.json(await profile(await getPlayer(await getDb(), player.id)));
+  }));
+
+  // --- Admin (Discord ids in ADMIN_DISCORD_IDS) -------------------------------
+
+  async function requireAdmin(req, res) {
+    const player = await requirePlayer(req, res);
+    if (!player) return null;
+    if (!player.discord_id || !admins.has(player.discord_id)) {
+      res.status(403).json({ error: 'Admins only' });
+      return null;
+    }
+    return player;
+  }
+
+  router.get('/admin/rewards', h(async (req, res) => {
+    if (!(await requireAdmin(req, res))) return;
+    const d = await getDb();
+    const awards = (await d.query('SELECT role_key, COUNT(*) AS n FROM awards GROUP BY role_key ORDER BY role_key')).rows.map(r => ({ key: r.role_key, count: Number(r.n) }));
+    const failed = (
+      await d.query(
+        `SELECT q.role_key, q.action, q.attempts, q.last_error, p.display_name FROM role_sync q JOIN players p ON p.id = q.player_id
+         WHERE q.status = 'failed' ORDER BY q.updated_at DESC LIMIT 100`,
+      )
+    ).rows.map(r => ({ key: r.role_key, action: r.action, attempts: Number(r.attempts), error: r.last_error, player: r.display_name }));
+    const pending = Number((await d.one("SELECT COUNT(*) AS n FROM role_sync WHERE status = 'pending'")).n);
+    res.json({ earlyMember: await members.earlyStatus(), awards, pending, failed });
+  }));
+
+  router.post('/admin/sync/retry', h(async (req, res) => {
+    if (!(await requireAdmin(req, res))) return;
+    const d = await getDb();
+    const r = await d.query("UPDATE role_sync SET status = 'pending', attempts = 0, next_at = $1 WHERE status = 'failed'", [Date.now()]);
+    res.json({ requeued: r.rowCount });
   }));
 
   router.post('/play/event', h(async (req, res) => {

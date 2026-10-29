@@ -78,6 +78,7 @@ import { disposeIfUnshared } from '../engine/cache';
 import { openMiniGame, setMiniGamePhase } from '../engine/lifecycle';
 import type { RoomMood } from './moods';
 import { LeaderboardPanel } from './LeaderboardPanel';
+import { ProfilePanel, takeSignInResult } from './ProfilePanel';
 import { AwardToast } from './AwardToast';
 
 const DiagnosticsPanel = lazy(() => import('../engine/DiagnosticsPanel').then(m => ({ default: m.DiagnosticsPanel })));
@@ -242,6 +243,9 @@ export function WalkRoom({
     override.tour || override.film || override.shot !== undefined || Boolean(override.card) || override.capture || Boolean(override.cam);
   const [menuOpen, setMenuOpen] = useState(override.menu);
   const [scoresOpen, setScoresOpen] = useState(false);
+  // Coming back from Discord sign-in opens the profile with the result.
+  const [signInNotice] = useState(takeSignInResult);
+  const [profileOpen, setProfileOpen] = useState(() => signInNotice !== null);
   // L opens the leaderboard from anywhere in the room (not while typing).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -1388,7 +1392,17 @@ export function WalkRoom({
         Scores
       </button>
       )}
+      {!toyMode && !overlayGame && !menuOpen && (engaged || scripted) && !device && !seated && !holding && !furbyHeld && !override.capture && (
+      <button
+        type="button"
+        onClick={() => setProfileOpen(true)}
+        className="absolute left-[10.75rem] top-4 z-40 rounded-xl border border-white/20 bg-black/50 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.18em] text-amber-100 backdrop-blur-xl hover:bg-black/70"
+      >
+        Profile
+      </button>
+      )}
       <LeaderboardPanel open={scoresOpen} onClose={() => setScoresOpen(false)} />
+      <ProfilePanel open={profileOpen} onClose={() => setProfileOpen(false)} notice={signInNotice} />
       <AwardToast />
       <RoomStudio
         open={menuOpen}
