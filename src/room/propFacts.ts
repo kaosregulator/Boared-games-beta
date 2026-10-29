@@ -438,11 +438,11 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     ]
   },
   "ns-clock": {
-    "kind": "Alarm clock",
+    "kind": "Clock radio",
     "year": "1990s",
-    "maker": null,
+    "maker": "RCA",
     "joke": "Set it seven minutes fast. Then remember it's seven minutes fast. Then snooze seven times. Science.",
-    "history": "Digital alarm clocks with glowing red seven-segment LED numbers became common in the 1970s and stayed on nightstands through the 90s. Many still lost the time whenever the power blinked, which is why so many 90s houses had a clock flashing 12:00. Snooze buttons appeared on alarm clocks in the 1950s.",
+    "history": "RCA, General Electric and the rest sold millions of these red-LED clock radios, the kind that lived on every 90s nightstand. A glowing red seven-segment display, an AM/FM dial, a buzzer or wake-to-radio alarm, and a snooze bar the size of the whole top. Many lost the time whenever the power blinked, which is why so many houses had a clock flashing 12:00. Snooze buttons go back to the 1950s.",
     "facts": [
       {
         "label": "Display",
@@ -2654,8 +2654,8 @@ export const PROP_VIDEOS: Record<string, CardVideo | null> = {
   "door-pins": null,
   "nightstand": null,
   "ns-clock": {
-    "archiveId": "bose-wave-radio-commercial-1994_202407",
-    "title": "Bose Wave clock radio commercial, 1994"
+    "archiveId": "genral-electric-c-4315-a-clock-radio-1980s-esgw-zao-ke-wc",
+    "title": "Vintage red-LED clock radio, like the RCA on the nightstand"
   },
   "ns-lava": {
     "archiveId": "pm-lamp",
@@ -2678,8 +2678,9 @@ export const PROP_VIDEOS: Record<string, CardVideo | null> = {
     "title": "Nintendo Yoshi commercial, 1992"
   },
   "ns-tapes": {
-    "archiveId": "MNN-018_38481-38889",
-    "title": "Goosebumps on Fox Kids promo, 1996"
+    "archiveId": "goosebumps-s01",
+    "file": "S01_01-02.mp4",
+    "title": "Goosebumps · The Haunted Mask (1995)"
   },
   "ns-vhs": {
     "archiveId": "toy-story-1995_202411",

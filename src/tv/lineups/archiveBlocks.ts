@@ -63,6 +63,34 @@ const CCF_DIR = 'Cartoon Cartoon Fridays 2000 The Mayor Hosts/VIDEO_TS/';
  * Courage the Cowardly Dog and Ed, Edd n Eddy.
  * https://archive.org/details/CCF-2000
  */
+/**
+ * Goosebumps, the 1995 TV series, every Season 1 episode back to back on the
+ * shared clock. The AI-enhanced season sits in one Internet Archive item, one
+ * file per broadcast (the double-length premieres and two-parters play whole).
+ * https://archive.org/details/goosebumps-s01
+ */
+export const GOOSEBUMPS_S01: ArchiveBlock = {
+  id: 'goosebumps-s01',
+  parts: [
+    { file: 'S01_01-02.mp4', seconds: 2589, title: 'Goosebumps · Episodes 1–2 · The Haunted Mask' },
+    { file: 'S01_03.mp4', seconds: 1317, title: 'Goosebumps · Episode 3' },
+    { file: 'S01_04.mp4', seconds: 1290, title: 'Goosebumps · Episode 4' },
+    { file: 'S01_05.mp4', seconds: 1320, title: 'Goosebumps · Episode 5' },
+    { file: 'S01_06.mp4', seconds: 1320, title: 'Goosebumps · Episode 6' },
+    { file: 'S01_07.mp4', seconds: 1282, title: 'Goosebumps · Episode 7' },
+    { file: 'S01_08.mp4', seconds: 1316, title: 'Goosebumps · Episode 8' },
+    { file: 'S01_09.mp4', seconds: 1317, title: 'Goosebumps · Episode 9' },
+    { file: 'S01_10.mp4', seconds: 1313, title: 'Goosebumps · Episode 10' },
+    { file: 'S01_11.mp4', seconds: 1313, title: 'Goosebumps · Episode 11' },
+    { file: 'S01_12.mp4', seconds: 1312, title: 'Goosebumps · Episode 12' },
+    { file: 'S01_13.mp4', seconds: 1313, title: 'Goosebumps · Episode 13' },
+    { file: 'S01_14.mp4', seconds: 1313, title: 'Goosebumps · Episode 14' },
+    { file: 'S01_15.mp4', seconds: 1312, title: 'Goosebumps · Episode 15' },
+    { file: 'S01_E16-E17.mp4', seconds: 2652, title: 'Goosebumps · Episodes 16–17' },
+    { file: 'S01_E18-E19.mp4', seconds: 2694, title: 'Goosebumps · Episodes 18–19' },
+  ],
+};
+
 export const CCF_2000: ArchiveBlock = {
   id: 'CCF-2000',
   parts: [
