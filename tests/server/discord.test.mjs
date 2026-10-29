@@ -175,3 +175,24 @@ test('the early-member reward stops at its cap even when everyone claims at once
     delete process.env.EARLY_MEMBER_CAP;
   }
 });
+
+test('renaming a role in Discord keeps it working: its id is remembered once found', async () => {
+  const db = await openSqlite();
+  const guildRoles = [{ id: 'R-CHESS', name: '♟️ Kitchen Table Grandmaster', managed: false }];
+  const rest = fakeRest({ members: { '8': true }, roles: guildRoles });
+  let clock = 1;
+  const m = createMembers({ db, rest, guildId: 'G', catalog, now: () => clock });
+  assert.equal(await m.rememberRoles(), 1);
+  // Staff rename it, and another role later takes the old name.
+  guildRoles[0].name = '🏆 Chess Boss';
+  guildRoles.push({ id: 'R-IMPOSTOR', name: 'Kitchen Table Grandmaster', managed: false });
+  clock += 11 * 60_000;
+  const pid = await signedIn(db, '8');
+  await m.queue(pid, 'game.chess.win', 'add');
+  await m.processQueue();
+  assert.deepEqual(rest.calls, [['add', '8', 'R-CHESS']]);
+  // A role that was deleted is found by name again.
+  guildRoles.splice(0, 1);
+  clock += 11 * 60_000;
+  assert.equal((await m.roleIds()).get('game.chess.win'), 'R-IMPOSTOR');
+});

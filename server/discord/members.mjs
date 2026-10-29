@@ -43,18 +43,50 @@ export function createMembers({ db, rest, guildId, catalog, now = () => Date.now
     return value;
   }
 
+  /**
+   * Catalogue key -> Discord role id. A role is found by name once, and its id
+   * is remembered in the database; after that the id is what counts, so staff
+   * can rename (or re-emoji, or recolour) a role in Discord and it keeps
+   * working. Only a role that was deleted is looked up by name again.
+   */
   async function roleIds() {
     if (roleCache && now() - roleCache.at < ROLES_TTL) return roleCache.map;
     const roles = await rest.roles(guildId);
+    const live = new Set(roles.map(r => r.id));
     const byName = new Map(roles.filter(r => !r.managed).map(r => [normalizeRoleName(r.name), r.id]));
+    const d = await getDb();
+    const saved = new Map((await d.query('SELECT role_key, role_id FROM discord_role_ids')).rows.map(r => [r.role_key, r.role_id]));
     const map = new Map();
+    const taken = new Set();
+    // Remembered ids first, so a renamed role can't be claimed by another key's name.
     for (const role of catalog.roles) {
+      const id = saved.get(role.key);
+      if (id && live.has(id)) {
+        map.set(role.key, id);
+        taken.add(id);
+      }
+    }
+    for (const role of catalog.roles) {
+      if (map.has(role.key)) continue;
       const names = [role.reuseExisting, displayName(role), role.name].filter(Boolean).map(normalizeRoleName);
-      const id = names.map(n => byName.get(n)).find(Boolean);
-      if (id) map.set(role.key, id);
+      const id = names.map(n => byName.get(n)).find(x => x && !taken.has(x));
+      if (!id) continue;
+      map.set(role.key, id);
+      taken.add(id);
+      await d.query(
+        'INSERT INTO discord_role_ids (role_key, role_id, updated_at) VALUES ($1, $2, $3) ON CONFLICT (role_key) DO UPDATE SET role_id = $2, updated_at = $3',
+        [role.key, id, now()],
+      );
     }
     roleCache = { at: now(), map };
     return map;
+  }
+
+  /** Remember every role's id now, so renames made before anyone earns a role are safe too. */
+  async function rememberRoles() {
+    if (!rest || !guildId) return 0;
+    roleCache = null;
+    return (await roleIds()).size;
   }
 
   async function queue(playerId, roleKey, action) {
@@ -191,5 +223,5 @@ export function createMembers({ db, rest, guildId, catalog, now = () => Date.now
     return { role: role?.key ?? null, cap, issued, remaining: Math.max(0, cap - issued) };
   }
 
-  return { membership, queue, queueAll, processQueue, setGeneration, claimEarly, earlyStatus, roleIds };
+  return { membership, queue, queueAll, processQueue, setGeneration, claimEarly, earlyStatus, roleIds, rememberRoles };
 }

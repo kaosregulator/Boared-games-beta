@@ -50,6 +50,8 @@ export function createRoomApi({
   if (worker && rest) {
     // Sends queued roles to Discord. Failures stay in the queue with backoff.
     setInterval(() => members.processQueue().catch(() => {}), 30_000).unref();
+    // Learn every role's id at startup, so renaming a role in Discord never loses it.
+    setTimeout(() => members.rememberRoles().catch(() => {}), 5_000).unref();
   }
 
   // Per-player allowance on writes, on top of the per-address limit in server.mjs.

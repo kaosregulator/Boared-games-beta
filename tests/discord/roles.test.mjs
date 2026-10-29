@@ -64,12 +64,12 @@ test('plan reuses existing roles and never duplicates them', () => {
   assert.ok(!ids.includes('bot'));
 });
 
-test('plan follows the saved mapping and fixes drift on roles it owns', () => {
-  const roles = [...guild, { id: 'r1', name: 'Old Name', position: 1, managed: false, color: 0 }];
+test('plan follows the saved mapping and leaves a renamed role alone', () => {
+  const roles = [...guild, { id: 'r1', name: 'Renamed By Staff', position: 1, managed: false, color: 0 }];
   const p = planRoleSync({ catalog, guildRoles: roles, mapping: { 'game.chess.win': { id: 'r1', created: true } }, botTopPosition: 9, only: new Set(['game.chess.win']) });
   assert.equal(p.actions.length, 1);
-  assert.equal(p.actions[0].type, 'update');
-  assert.equal(p.actions[0].patch.name, '♟️ Kitchen Table Grandmaster');
+  assert.equal(p.actions[0].type, 'keep');
+  assert.equal(p.actions[0].roleId, 'r1');
 });
 
 test('plan warns when the bot sits at the bottom and could not hand out new roles', () => {

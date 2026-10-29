@@ -1,3 +1,0 @@
-shot ns-clock
-shot ns-gameboy
-shot ts-skateboard
