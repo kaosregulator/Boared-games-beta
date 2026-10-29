@@ -13,6 +13,7 @@ on:
     branches-ignore: [main]
     paths:
       - scripts/restore-model-detail.mjs
+      - scripts/preview/**
       - .github/workflows/restore-model-detail.yml
 
 permissions:
@@ -49,6 +50,13 @@ jobs:
       - name: Rebuild models
         run: node --max-old-space-size=8000 scripts/restore-model-detail.mjs "${{ inputs.only }}" | tee restore-report.txt
 
+      - name: Render before / after previews
+        if: always()
+        run: |
+          npm i --no-save playwright
+          npx playwright install --with-deps chromium
+          node scripts/preview/render-previews.mjs toyshelf.glb window.glb crt.glb gameboy.glb boombox.glb army.glb clutterdesk.glb cards.glb dresser.glb shelf.glb vhs_stack.glb nes.glb
+
       - name: Commit the rebuilt models
         if: always()
         run: |
@@ -56,6 +64,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add public/models/*.glb
+          if [ -d docs/model-previews ]; then git add docs/model-previews; fi
           if git diff --cached --quiet; then echo "No model changes"; exit 0; fi
           git commit -m "Restore detail to the room's furniture and props" -m "$(cat restore-report.txt)"
           git push
