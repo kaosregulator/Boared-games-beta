@@ -15,7 +15,7 @@ import { LAYOUT } from '../../src/room/roomLayout.ts';
 import { HOTSPOTS } from '../../src/room/hotspots.ts';
 
 const base = process.argv[2] ?? 'http://127.0.0.1:3000';
-const { ids, extra = '' } = JSON.parse(fs.readFileSync('scripts/preview/room-shots.json', 'utf8'));
+const { ids, cards = [], extra = '' } = JSON.parse(fs.readFileSync('scripts/preview/room-shots.json', 'utf8'));
 fs.mkdirSync('docs/room-shots', { recursive: true });
 
 /** World centre of a hotspot and the direction its prop faces. */
@@ -46,30 +46,48 @@ process.on('uncaughtException', e => {
 });
 
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
-const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
-page.on('pageerror', e => log(`[page] ${e.message}`));
-page.on('console', m => m.type() === 'error' && log(`[console] ${m.text().slice(0, 300)}`));
-for (const id of ids) {
-  const spot = locate(id);
-  if (!spot) {
-    log(`no hotspot ${id}`);
-    continue;
+/** One shot in a fresh page, with generous timeouts: software WebGL is slow. */
+async function shoot(name, query, hover) {
+  const page = await browser.newPage({ viewport: { width: 1024, height: 640 } });
+  page.setDefaultTimeout(240_000);
+  page.on('pageerror', e => log(`[page] ${e.message}`));
+  page.on('console', m => m.type() === 'error' && log(`[console] ${m.text().slice(0, 300)}`));
+  try {
+    await page.goto(`${base}/${query}${extra}`, { waitUntil: 'domcontentloaded' });
+    // Models stream in; software rendering is slow. Wait for the room to settle.
+    await page.waitForTimeout(40_000);
+    if (hover) {
+      await page.mouse.move(512, 320);
+      await page.mouse.move(513, 321);
+      await page.waitForTimeout(4_000);
+    }
+    await page.screenshot({ path: `docs/room-shots/${name}.png`, timeout: 240_000 });
+    log(`shot ${name}`);
+  } catch (e) {
+    log(`[shot ${name}] ${e.message.split('\n')[0]}`);
+  } finally {
+    await page.close().catch(() => {});
   }
+}
+
+function camFor(id) {
+  const spot = locate(id);
+  if (!spot) return null;
   const [cx, cy, cz] = spot.centre;
   const [fx, , fz] = spot.front;
   const at = [cx + fx * 0.75, cy + 0.32, cz + fz * 0.75].map(n => n.toFixed(3));
   const look = [cx, cy, cz].map(n => n.toFixed(3));
-  try {
-  await page.goto(`${base}/?cam=${[...at, ...look].join(',')}${extra}`, { waitUntil: 'load' });
-  // Models stream in; software rendering is slow. Wait for the room to settle.
-  await page.waitForTimeout(25_000);
-  await page.mouse.move(640, 360);
-  await page.mouse.move(641, 361);
-  await page.waitForTimeout(2_500);
-  await page.screenshot({ path: `docs/room-shots/${id}.png` });
-  log(`shot ${id}`);
-  } catch (e) {
-    log(`[shot ${id}] ${e.message}`);
-  }
+  return [...at, ...look].join(',');
+}
+
+for (const id of ids) {
+  const cam = camFor(id);
+  if (!cam) log(`no hotspot ${id}`);
+  else await shoot(id, `?cam=${cam}`, true);
+}
+// Open time capsules: ?card= opens the card for that hotspot.
+for (const id of cards) {
+  const cam = camFor(id);
+  await shoot(`${id}-card`, `?${cam ? `cam=${cam}&` : ''}card=${encodeURIComponent(id)}`, false);
 }
 await browser.close();
