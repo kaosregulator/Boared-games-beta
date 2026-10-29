@@ -33,9 +33,11 @@ jobs:
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/api/health && break; sleep 1; done
       - name: Screenshots
         run: |
-          npm i --no-save playwright
-          npx playwright install --with-deps chromium
+          mkdir -p docs/room-shots
+          npm i --no-save playwright > docs/room-shots/log-install.txt 2>&1
+          npx playwright install --with-deps chromium >> docs/room-shots/log-install.txt 2>&1
           node --import tsx scripts/preview/room-shots.mjs
+          git checkout -- package.json package-lock.json || true
       - name: Commit the screenshots
         if: always()
         run: |
@@ -44,5 +46,5 @@ jobs:
           if [ -d docs/room-shots ]; then git add docs/room-shots; fi
           if git diff --cached --quiet; then echo "No screenshots"; exit 0; fi
           git commit -m "Room screenshots"
-          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
           git push

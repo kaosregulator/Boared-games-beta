@@ -34,19 +34,32 @@ function locate(id) {
   return null;
 }
 
+const logLines = [];
+const log = line => {
+  console.log(line);
+  logLines.push(line);
+  fs.writeFileSync('docs/room-shots/log.txt', logLines.join('\n') + '\n');
+};
+process.on('uncaughtException', e => {
+  log(`[fatal] ${e.stack ?? e}`);
+  process.exit(1);
+});
+
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
-page.on('pageerror', e => console.log(`[page] ${e.message}`));
+page.on('pageerror', e => log(`[page] ${e.message}`));
+page.on('console', m => m.type() === 'error' && log(`[console] ${m.text().slice(0, 300)}`));
 for (const id of ids) {
   const spot = locate(id);
   if (!spot) {
-    console.log(`::error::no hotspot ${id}`);
+    log(`no hotspot ${id}`);
     continue;
   }
   const [cx, cy, cz] = spot.centre;
   const [fx, , fz] = spot.front;
   const at = [cx + fx * 0.75, cy + 0.32, cz + fz * 0.75].map(n => n.toFixed(3));
   const look = [cx, cy, cz].map(n => n.toFixed(3));
+  try {
   await page.goto(`${base}/?cam=${[...at, ...look].join(',')}${extra}`, { waitUntil: 'load' });
   // Models stream in; software rendering is slow. Wait for the room to settle.
   await page.waitForTimeout(25_000);
@@ -54,6 +67,9 @@ for (const id of ids) {
   await page.mouse.move(641, 361);
   await page.waitForTimeout(2_500);
   await page.screenshot({ path: `docs/room-shots/${id}.png` });
-  console.log(`shot ${id}`);
+  log(`shot ${id}`);
+  } catch (e) {
+    log(`[shot ${id}] ${e.message}`);
+  }
 }
 await browser.close();
