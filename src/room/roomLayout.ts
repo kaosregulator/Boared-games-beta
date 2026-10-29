@@ -138,6 +138,12 @@ const doorZ = flushNorth(doorSize.sz);
 
 const toyX = EAST_X - toySize.sz / 2 - 0.05;
 const toyZ = 0.05;
+/**
+ * Where the toy shelf's front was at its old 1.32 m size. The Hot Wheels set
+ * and the Battleship box on the floor in front of it keep their spots (and the
+ * race track's lanes) now that the shelf is smaller and its front sits back.
+ */
+const toyFrontX = EAST_X - fit(N.toyshelf, 'y', 1.32).sz - 0.05;
 
 /** Height of the PC desk's top, under the computer: 37% of the mesh's height. */
 export const PC_DESK_TOP = (deskSize.sx / N.desk[0]) * 0.37;
@@ -435,7 +441,7 @@ export const LAYOUT = {
   },
   battleship: {
     id: 'battleship',
-    x: toyX - toySize.sz / 2 - 0.32,
+    x: toyFrontX - 0.32,
     y: 0,
     z: toyZ - 0.35,
     rotY: -Math.PI / 2,
@@ -496,7 +502,7 @@ export const LAYOUT = {
   /** Built on the floor in front of the toy shelf, loop facing the room. */
   hotwheels: {
     id: 'hotwheels',
-    x: toyX - toySize.sz / 2 - 0.5,
+    x: toyFrontX - 0.5,
     y: 0,
     z: toyZ - 0.3,
     rotY: -Math.PI / 2 + 0.35,
