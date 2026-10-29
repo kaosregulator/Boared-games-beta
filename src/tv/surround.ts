@@ -223,6 +223,14 @@ export interface Ears {
 
 const distances: Partial<Record<SpeakerId, number>> = {};
 
+/**
+ * The listener is the camera, the same for every speaker, so only the first
+ * anchor to report each frame needs to move it. The rest share that frame's
+ * audio clock, so this skips their identical listener writes (with five
+ * speakers now, that's four redundant sets a frame).
+ */
+let listenerSetAt = -1;
+
 /** Metres from the ears to a speaker, as of its anchor's last frame; null before the first. */
 export function speakerDistance(id: SpeakerId): number | null {
   return distances[id] ?? null;
@@ -242,20 +250,24 @@ export function placeSpeaker(id: SpeakerId, ears: Ears, spot: Vec, face: Vec) {
   const { at: ear, forward: fwd, up } = ears;
   const t = ctx.currentTime;
   const ramp = 0.04;
-  if (listener.positionX) {
-    listener.positionX.setTargetAtTime(ear.x, t, ramp);
-    listener.positionY.setTargetAtTime(ear.y, t, ramp);
-    listener.positionZ.setTargetAtTime(ear.z, t, ramp);
-    listener.forwardX.setTargetAtTime(fwd.x, t, ramp);
-    listener.forwardY.setTargetAtTime(fwd.y, t, ramp);
-    listener.forwardZ.setTargetAtTime(fwd.z, t, ramp);
-    listener.upX.setTargetAtTime(up.x, t, ramp);
-    listener.upY.setTargetAtTime(up.y, t, ramp);
-    listener.upZ.setTargetAtTime(up.z, t, ramp);
-  } else {
-    // Firefox before AudioParam listeners
-    listener.setPosition(ear.x, ear.y, ear.z);
-    listener.setOrientation(fwd.x, fwd.y, fwd.z, up.x, up.y, up.z);
+  // Only the first anchor each frame moves the shared listener.
+  if (t !== listenerSetAt) {
+    listenerSetAt = t;
+    if (listener.positionX) {
+      listener.positionX.setTargetAtTime(ear.x, t, ramp);
+      listener.positionY.setTargetAtTime(ear.y, t, ramp);
+      listener.positionZ.setTargetAtTime(ear.z, t, ramp);
+      listener.forwardX.setTargetAtTime(fwd.x, t, ramp);
+      listener.forwardY.setTargetAtTime(fwd.y, t, ramp);
+      listener.forwardZ.setTargetAtTime(fwd.z, t, ramp);
+      listener.upX.setTargetAtTime(up.x, t, ramp);
+      listener.upY.setTargetAtTime(up.y, t, ramp);
+      listener.upZ.setTargetAtTime(up.z, t, ramp);
+    } else {
+      // Firefox before AudioParam listeners
+      listener.setPosition(ear.x, ear.y, ear.z);
+      listener.setOrientation(fwd.x, fwd.y, fwd.z, up.x, up.y, up.z);
+    }
   }
   if (!s) return;
   const { panner } = s;
