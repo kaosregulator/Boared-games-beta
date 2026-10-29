@@ -10,6 +10,9 @@
  * motor ran with the speech chip.
  */
 
+import { audio as roomAudio } from '../../tv/noise';
+import { speakerInput } from '../../tv/surround';
+
 export type FurbyTag =
   | 'talk'
   | 'chirp'
@@ -84,15 +87,19 @@ let loading: Promise<void> | null = null;
 const lastPlayed = new Map<FurbyTag, string[]>();
 
 function audio() {
-  if (!ctx && typeof window !== 'undefined') {
-    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (!Ctx) return null;
-    ctx = new Ctx();
-    master = ctx.createGain();
+  // Share the room's one audio context so the Furby lives in the same HRTF
+  // room as the TV, the PC and the music: its voice comes from wherever it's
+  // sitting, tracking as you walk and turn. Falls back to plain output if the
+  // room has no spatial speaker (no Web Audio, or the context isn't up yet).
+  const ac = roomAudio();
+  if (!ac) return null;
+  if (ctx !== ac || !master) {
+    ctx = ac;
+    master = ac.createGain();
     master.gain.value = audible ? MASTER_GAIN : 0;
-    master.connect(ctx.destination);
+    master.connect(speakerInput('furby') ?? ac.destination);
   }
-  if (ctx?.state === 'suspended') void ctx.resume();
+  if (ac.state === 'suspended') void ac.resume();
   return ctx;
 }
 

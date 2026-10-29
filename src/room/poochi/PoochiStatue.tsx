@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import type { HoverTarget } from '../Interactable';
+import { SpeakerAnchor } from '../../tv/SpeakerAnchor';
 import { LAYOUT } from '../roomLayout';
 
 export const POOCHI_CARD = 'poochi';
@@ -45,6 +46,8 @@ export function PoochiStatue({ hovered, away }: { hovered: boolean; away: boolea
   const p = POOCHI_SPOT;
   return (
     <group position={[p.x, p.y, p.z]} rotation={[0, p.rotY, 0]}>
+      {/* Poo-Chi's barks and gearbox come from where he sits, in the room's HRTF speakers. */}
+      <SpeakerAnchor id="poochi" position={[0, HEIGHT * 0.6, 0.04]} />
       <Suspense fallback={null}>
         <Statue />
       </Suspense>

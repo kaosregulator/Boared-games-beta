@@ -17,7 +17,7 @@ import { audio } from './noise';
  * <video> element alone can't do.
  */
 
-export type SpeakerId = 'tv' | 'boombox' | 'pc';
+export type SpeakerId = 'tv' | 'boombox' | 'pc' | 'furby' | 'poochi';
 
 /** TV volume tops out here: 1 is the set's old full volume, the rest is boost. */
 export const TV_MAX_VOLUME = 2;
@@ -42,6 +42,10 @@ const SPECS: Record<SpeakerId, SpeakerSpec> = {
   boombox: { volume: 1, backGain: 0.85 },
   // A beige tower's little speakers: loud system sounds and quiet MIDI alike.
   pc: { level: { threshold: -24, ratio: 3, makeup: 1.3 }, volume: 1, backGain: 0.75 },
+  // Toys babble in every direction, so the cone barely narrows — you still hear
+  // which corner the Furby is chattering from as you turn.
+  furby: { volume: 1, backGain: 0.92 },
+  poochi: { volume: 1, backGain: 0.92 },
 };
 
 interface Speaker {

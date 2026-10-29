@@ -17,6 +17,9 @@
  * never had them), so they are made here on the spot.
  */
 
+import { audio as roomAudio } from '../../tv/noise';
+import { speakerInput } from '../../tv/surround';
+
 export type PoochiTag = 'press' | 'bark' | 'beep' | 'whir' | 'song';
 
 export interface PoochiClip {
@@ -41,15 +44,18 @@ let loading: Promise<void> | null = null;
 let lastBark = '';
 
 function audio() {
-  if (!ctx && typeof window !== 'undefined') {
-    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (!Ctx) return null;
-    ctx = new Ctx();
-    master = ctx.createGain();
+  // Poo-Chi shares the room's HRTF context too, so his barks and gearbox come
+  // from the dresser where he sits and track as you move. Plain output if the
+  // room has no spatial speaker.
+  const ac = roomAudio();
+  if (!ac) return null;
+  if (ctx !== ac || !master) {
+    ctx = ac;
+    master = ac.createGain();
     master.gain.value = 0.9;
-    master.connect(ctx.destination);
+    master.connect(speakerInput('poochi') ?? ac.destination);
   }
-  if (ctx?.state === 'suspended') void ctx.resume();
+  if (ac.state === 'suspended') void ac.resume();
   return ctx;
 }
 

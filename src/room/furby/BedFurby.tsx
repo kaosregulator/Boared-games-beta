@@ -2,6 +2,7 @@ import React, { Suspense, useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { HoverTarget } from '../Interactable';
+import { SpeakerAnchor } from '../../tv/SpeakerAnchor';
 import { FurbyPuppet, FURBY_HEIGHT } from './FurbyPuppet';
 import { bedBrain, furbyAnchors, setFurbyDark, useFurby } from './furbyStore';
 
@@ -51,6 +52,8 @@ export function BedFurby({
 
   return (
     <group ref={anchor} position={position} rotation={rotation}>
+      {/* The Furby's voice comes from its beak, in the room's HRTF speakers. */}
+      <SpeakerAnchor id="furby" position={[0, FURBY_HEIGHT * 0.7, 0.05]} />
       <Suspense fallback={null}>
         <FurbyPuppet brain={bedBrain} visible={!away} />
       </Suspense>
