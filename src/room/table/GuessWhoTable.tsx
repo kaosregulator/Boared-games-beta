@@ -15,6 +15,7 @@ import {
 import { sound } from '../../utils/audio';
 import { pushHud, type HudAction } from './tableHud';
 import { setTableView, type Shot } from './tableCam';
+import { useMatchResult } from '../../net/useMatchResult';
 
 /**
  * Guess Who on the card table, using their red and blue trays and hinged stands.
@@ -68,6 +69,7 @@ export function GuessWhoTable({ onLeave }: { onLeave: () => void }) {
   const scene = useMemo(() => buildGuessWhoBoardScene(), []);
   const pickFrame = useMemo(makePickFrame, []);
 
+  useMatchResult('guesswho', state.winner === 'player' ? 'won' : state.winner === 'ai' ? 'lost' : null);
   useEffect(() => setTableView(guessing ? GUESS_VIEW : VIEW, true), [guessing]);
   useEffect(() => () => pushHud(null), []);
 

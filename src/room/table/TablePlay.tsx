@@ -1,10 +1,11 @@
-import React, { Suspense, lazy, useRef } from 'react';
+import React, { Suspense, lazy, useEffect, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { GameMetadata } from '../../types';
 import { sound } from '../../utils/audio';
 import { PLAY_TABLE } from '../roomLayout';
 import { BoxUnfold } from './BoxUnfold';
+import { reportEvent } from '../../net/roomApi';
 
 // Each table game loads when it's first played (warmTableGames fetches them in
 // the background once the room is up), so the room itself starts sooner.
@@ -102,6 +103,9 @@ function SpawnedTable({ leaving, children }: { leaving: boolean; children: React
   return <group ref={group}>{children}</group>;
 }
 
+/** Table game ids that report under a different leaderboard id. */
+const LAUNCH_ID: Record<string, string> = { poochi: 'bone-hunt' };
+
 export function PlayTable({
   session,
   onUnfolded,
@@ -113,6 +117,12 @@ export function PlayTable({
   onPacked: () => void;
   onLeave: () => void;
 }) {
+  // One launch per table session, for the leaderboard and the "play N games" roles.
+  const playing = session?.phase === 'play' ? session : null;
+  const launchId = playing ? LAUNCH_ID[playing.game.id] ?? playing.game.id : null;
+  useEffect(() => {
+    if (launchId && launchId !== 'furby') reportEvent(launchId, 'launch');
+  }, [launchId, playing?.key]);
   if (!session) return null;
   const { game, phase } = session;
   return (

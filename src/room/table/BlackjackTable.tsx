@@ -9,6 +9,7 @@ import { followAction, setTableView, type Shot } from './tableCam';
 import { GhostHand } from './GhostHand';
 import { CARD_W, Card3D, ChipStacks, useCardMaterial, useChipMaterial, type CardPose } from './cards3d';
 import { BANK_AT, BET_AT, DEALER_ROW, PLAYER_ROW, SHOE_AT, blackjackShot, settleBeats, type BlackjackBeat } from './blackjackCam';
+import { reportEvent } from '../../net/roomApi';
 
 /**
  * Blackjack on green felt with real cards and chips (Tabletop Club's CC0
@@ -168,6 +169,7 @@ export function BlackjackTable({ onLeave }: { onLeave: () => void }) {
     follow(first);
     const finish = () => {
       setStreak(s => (pay > stake ? { ...s, won: s.won + 1 } : pay < stake ? { ...s, lost: s.lost + 1 } : s));
+      if (pay !== stake) reportEvent('blackjack', pay > stake ? 'won' : 'lost');
       setPhase('done');
       handOn.current = false;
       grip.current = 0;

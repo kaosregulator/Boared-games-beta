@@ -50,6 +50,7 @@ import {
   type Denom,
 } from './monopolyArt';
 import { TOKEN_DEFS, useTokenFactory } from './monopolyTokens';
+import { useMatchResult } from '../../net/useMatchResult';
 
 /**
  * Monopoly on the card table, US edition: the Atlantic City board printed from
@@ -725,6 +726,7 @@ export function MonopolyTable({ onLeave }: { onLeave: () => void }) {
   });
 
   // Close up on the piece in hand while choosing; the whole board once playing.
+  useMatchResult('monopoly', state?.stage === 'over' ? (state.winner === state.players.find(p => !p.isAI)?.name ? 'won' : 'lost') : null);
   useEffect(() => {
     if (setup) {
       const p = pickPos(setup.pick);

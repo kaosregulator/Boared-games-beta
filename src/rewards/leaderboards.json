@@ -1,0 +1,69 @@
+{
+  "$comment": "What each game reports and how its leaderboard ranks. better: higher or lower. min/max reject impossible values; integer rejects fractions. kind: best (one best value per player) or count (how many times the player logged countEvent). events lists everything a game may report; anything else is refused. All of these are reported by the player's browser, so the board shows them as self-reported until a game validates its results on the server.",
+  "games": [
+    { "id": "pc-tetris", "label": "Tetris (PC)", "events": ["launch", "game-over"],
+      "metrics": [
+        { "id": "score", "label": "High score", "better": "higher", "min": 0, "max": 9999999, "integer": true, "kind": "best" },
+        { "id": "lines", "label": "Most lines", "better": "higher", "min": 0, "max": 9999, "integer": true, "kind": "best" },
+        { "id": "level", "label": "Highest level", "better": "higher", "min": 1, "max": 99, "integer": true, "kind": "best" }
+      ] },
+    { "id": "pc-minesweeper", "label": "Minesweeper", "events": ["launch", "won", "won-expert", "lost"], "modes": ["beginner", "intermediate", "expert"],
+      "metrics": [
+        { "id": "time", "label": "Fastest clear", "unit": "s", "better": "lower", "min": 1, "max": 999, "integer": true, "kind": "best" }
+      ] },
+    { "id": "pc-solitaire", "label": "Solitaire", "events": ["launch", "won"],
+      "metrics": [
+        { "id": "score", "label": "Best score", "better": "higher", "min": 0, "max": 100000, "integer": true, "kind": "best" },
+        { "id": "wins", "label": "Wins", "better": "higher", "kind": "count", "countEvent": "won" }
+      ] },
+    { "id": "pc-pinball", "label": "Pinball", "events": ["launch"], "metrics": [] },
+    { "id": "pc-taipei", "label": "Taipei", "events": ["launch", "won"], "metrics": [] },
+    { "id": "pc-paint", "label": "Paint", "events": ["launch"], "metrics": [] },
+    { "id": "gb-tetris", "label": "Tetris (Game Boy)", "events": ["launch"], "metrics": [] },
+    { "id": "nes", "label": "NES", "events": ["launch"], "metrics": [] },
+    { "id": "hotwheels", "label": "Hot Wheels race", "events": ["launch", "finished-race"],
+      "metrics": [
+        { "id": "race-time", "label": "Fastest race", "unit": "s", "better": "lower", "min": 10, "max": 1800, "integer": false, "kind": "best" }
+      ] },
+    { "id": "heli-rings", "label": "Toy helicopter rings", "events": ["launch", "all-rings"],
+      "metrics": [
+        { "id": "course-time", "label": "Fastest course", "unit": "s", "better": "lower", "min": 5, "max": 1800, "integer": false, "kind": "best" }
+      ] },
+    { "id": "army-defense", "label": "Army men: hold the town", "events": ["launch", "held-the-town", "lost"], "metrics": [
+        { "id": "holds", "label": "Towns held", "better": "higher", "kind": "count", "countEvent": "held-the-town" }
+      ] },
+    { "id": "duck-range", "label": "Duck range", "events": ["launch", "perfect-round", "round-over"],
+      "metrics": [
+        { "id": "round", "label": "Furthest round", "better": "higher", "min": 1, "max": 999, "integer": true, "kind": "best" }
+      ] },
+    { "id": "rubik", "label": "Rubik's Cube", "events": ["launch", "solved"],
+      "metrics": [
+        { "id": "solve-time", "label": "Fastest solve", "unit": "s", "better": "lower", "min": 5, "max": 36000, "integer": true, "kind": "best" },
+        { "id": "moves", "label": "Fewest moves", "better": "lower", "min": 20, "max": 20000, "integer": true, "kind": "best" }
+      ] },
+    { "id": "bone-hunt", "label": "Poo-Chi's bone hunt", "events": ["launch", "found-all"], "metrics": [] },
+    { "id": "ispy", "label": "I Spy", "events": ["launch", "page-complete"],
+      "metrics": [
+        { "id": "pages", "label": "Pages finished", "better": "higher", "kind": "count", "countEvent": "page-complete" }
+      ] },
+    { "id": "monopoly", "label": "Monopoly", "events": ["launch", "won", "lost"], "metrics": [{ "id": "wins", "label": "Wins", "better": "higher", "kind": "count", "countEvent": "won" }] },
+    { "id": "chess", "label": "Wizard Chess", "events": ["launch", "won", "lost"], "metrics": [{ "id": "wins", "label": "Wins", "better": "higher", "kind": "count", "countEvent": "won" }] },
+    { "id": "checkers", "label": "Checkers", "events": ["launch", "won", "lost"], "metrics": [{ "id": "wins", "label": "Wins", "better": "higher", "kind": "count", "countEvent": "won" }] },
+    { "id": "battleship", "label": "Battleship", "events": ["launch", "won", "lost"], "metrics": [{ "id": "wins", "label": "Wins", "better": "higher", "kind": "count", "countEvent": "won" }] },
+    { "id": "connect4", "label": "Connect Four", "events": ["launch", "won", "lost"], "metrics": [{ "id": "wins", "label": "Wins", "better": "higher", "kind": "count", "countEvent": "won" }] },
+    { "id": "clue", "label": "Clue", "events": ["launch", "won", "lost"], "metrics": [{ "id": "wins", "label": "Wins", "better": "higher", "kind": "count", "countEvent": "won" }] },
+    { "id": "life", "label": "The Game of Life", "events": ["launch", "won", "lost"], "metrics": [{ "id": "wins", "label": "Wins", "better": "higher", "kind": "count", "countEvent": "won" }] },
+    { "id": "pawnrush", "label": "Sorry!", "events": ["launch", "won", "lost"], "metrics": [{ "id": "wins", "label": "Wins", "better": "higher", "kind": "count", "countEvent": "won" }] },
+    { "id": "yahtzee", "label": "Yahtzee", "events": ["launch", "won", "lost", "rolled-yahtzee"], "metrics": [
+        { "id": "score", "label": "Best score", "better": "higher", "min": 0, "max": 1575, "integer": true, "kind": "best" },
+        { "id": "wins", "label": "Wins", "better": "higher", "kind": "count", "countEvent": "won" }
+      ] },
+    { "id": "blackjack", "label": "Blackjack", "events": ["launch", "won", "lost"], "metrics": [{ "id": "wins", "label": "Hands won", "better": "higher", "kind": "count", "countEvent": "won" }] },
+    { "id": "gofish", "label": "Go Fish", "events": ["launch", "won", "lost"], "metrics": [{ "id": "wins", "label": "Wins", "better": "higher", "kind": "count", "countEvent": "won" }] },
+    { "id": "guesswho", "label": "Guess Who", "events": ["launch", "won", "lost"], "metrics": [{ "id": "wins", "label": "Wins", "better": "higher", "kind": "count", "countEvent": "won" }] },
+    { "id": "mousetrap", "label": "Mouse Trap", "events": ["launch", "won", "lost"], "metrics": [{ "id": "wins", "label": "Wins", "better": "higher", "kind": "count", "countEvent": "won" }] },
+    { "id": "poker", "label": "Texas Hold'em", "events": ["launch", "won", "lost"], "metrics": [{ "id": "wins", "label": "Wins", "better": "higher", "kind": "count", "countEvent": "won" }] },
+    { "id": "trivia", "label": "Throwback Trivia", "events": ["launch", "won", "lost"], "metrics": [{ "id": "wins", "label": "Wins", "better": "higher", "kind": "count", "countEvent": "won" }] },
+    { "id": "casino", "label": "Casino Lounge", "events": ["launch"], "metrics": [] }
+  ]
+}

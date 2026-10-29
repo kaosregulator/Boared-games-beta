@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
 import { OrbitControls, RoundedBox } from '@react-three/drei';
 import * as THREE from 'three';
 import { sound } from '../utils/audio';
+import { reportEvent, reportScore } from '../net/roomApi';
 
 /**
  * The Rubik's Cube off the wall shelf, in your hands. Swipe a sticker to
@@ -320,6 +321,9 @@ export function RubikPlay({ onClose }: { onClose: () => void }) {
         scrambled.current = false;
         const secs = Math.round((Date.now() - startRef.current) / 1000);
         setSolved({ moves: movesRef.current, secs });
+        reportEvent('rubik', 'solved');
+        reportScore('rubik', 'solve-time', secs);
+        reportScore('rubik', 'moves', movesRef.current);
         startRef.current = null;
         setStarted(null);
         sound.playVictoryFanfare();

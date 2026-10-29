@@ -6,6 +6,7 @@ import { sound } from '../../utils/audio';
 import { pushHud, type HudAction } from './tableHud';
 import { followAction, setTableView, wasDrag, type Shot } from './tableCam';
 import { Card3D, useCardMaterial, type CardPose } from './cards3d';
+import { useMatchResult } from '../../net/useMatchResult';
 
 /**
  * Go Fish on the felt. Your hand is face up, the other hands are face down,
@@ -112,6 +113,7 @@ export function GoFishTable({ onLeave }: { onLeave: () => void }) {
   const [rank, setRank] = useState<CardRank | null>(null);
   const [hint, setHint] = useState<string | null>(null);
 
+  useMatchResult('gofish', state.over ? (state.winner === 0 ? 'won' : 'lost') : null);
   useEffect(() => setTableView(TABLE_VIEW), []);
   useEffect(() => () => pushHud(null), []);
   useEffect(() => {

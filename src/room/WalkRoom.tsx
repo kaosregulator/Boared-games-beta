@@ -77,6 +77,8 @@ import { noteContextLoss, noteContextRestored } from '../engine/recovery';
 import { disposeIfUnshared } from '../engine/cache';
 import { openMiniGame, setMiniGamePhase } from '../engine/lifecycle';
 import type { RoomMood } from './moods';
+import { LeaderboardPanel } from './LeaderboardPanel';
+import { AwardToast } from './AwardToast';
 
 const DiagnosticsPanel = lazy(() => import('../engine/DiagnosticsPanel').then(m => ({ default: m.DiagnosticsPanel })));
 
@@ -239,6 +241,19 @@ export function WalkRoom({
   const scripted =
     override.tour || override.film || override.shot !== undefined || Boolean(override.card) || override.capture || Boolean(override.cam);
   const [menuOpen, setMenuOpen] = useState(override.menu);
+  const [scoresOpen, setScoresOpen] = useState(false);
+  // L opens the leaderboard from anywhere in the room (not while typing).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'l' && e.key !== 'L') return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      setScoresOpen(open => !open);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   const [mood, setMood] = useState<RoomMood>('warm-night');
   const [musicOn, setMusicOn] = useState(true);
   const [musicVolume, setMusicVolume] = useState(() => sound.getMusicVolume());
@@ -1363,6 +1378,18 @@ export function WalkRoom({
         Menu
       </button>
       )}
+      {!toyMode && !overlayGame && !menuOpen && (engaged || scripted) && !device && !seated && !holding && !furbyHeld && !override.capture && (
+      <button
+        type="button"
+        onClick={() => setScoresOpen(true)}
+        title="Leaderboard (L)"
+        className="absolute left-[5.5rem] top-4 z-40 rounded-xl border border-white/20 bg-black/50 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.18em] text-amber-100 backdrop-blur-xl hover:bg-black/70"
+      >
+        Scores
+      </button>
+      )}
+      <LeaderboardPanel open={scoresOpen} onClose={() => setScoresOpen(false)} />
+      <AwardToast />
       <RoomStudio
         open={menuOpen}
         mood={mood}

@@ -23,6 +23,7 @@ import { SpeechBubble } from '../army/SpeechBubble';
 import { motorSpeed, raceSfx, startMotor, stopRaceAudio, wakeRaceAudio } from './raceAudio';
 import { openMiniGame } from '../../engine/lifecycle';
 import { screenPan } from './screenPan';
+import { reportEvent, reportScore } from '../../net/roomApi';
 
 export type HwCam = 'chase' | 'hood' | 'birdseye';
 type Phase = 'countdown' | 'racing' | 'roam';
@@ -790,6 +791,8 @@ export function HotWheelsWorld({ spot, skipCountdown }: { spot: string | null; s
             saveBest(hwRace.time);
           }
           hwRace.result = { time: hwRace.time, best };
+          reportEvent('hotwheels', 'finished-race');
+          reportScore('hotwheels', 'race-time', Math.round(hwRace.time * 100) / 100);
           hwRace.phase = 'roam';
           raceSfx.finish();
           banner(best ? 'New best!' : 'Finished!', `${formatRaceTime(hwRace.time)} · free roam until you cross the line again`, 4);

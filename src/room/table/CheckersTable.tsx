@@ -17,6 +17,7 @@ import { pushHud } from './tableHud';
 import { followAction, setTableView, tableCam, wasDrag, type Shot } from './tableCam';
 import { GhostHand } from './GhostHand';
 import { useStudioEnv } from './monopolyTokens';
+import { useMatchResult } from '../../net/useMatchResult';
 
 /**
  * Checkers with Kytric's voxel set (CC0): the brown and tan board and its red and black men.
@@ -188,6 +189,7 @@ export function CheckersTable({ onLeave }: { onLeave: () => void }) {
   const plane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), []);
   const hit = useMemo(() => new THREE.Vector3(), []);
 
+  useMatchResult('checkers', over?.startsWith('You win') ? 'won' : over?.startsWith('The ghost wins') ? 'lost' : null);
   useEffect(() => setTableView(PLAY_VIEW), []);
 
   const at = (r: number, c: number) => men.find(m => m.out === null && m.r === r && m.c === c);

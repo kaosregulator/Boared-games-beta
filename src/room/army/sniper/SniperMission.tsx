@@ -37,6 +37,7 @@ import { DUCK_STORY, loadSarge, sargeClips, sargePlay, sargeReady, sargeSay, sar
 import { headOnScreen } from '../SpeechBubble';
 import { lineSeconds } from '../tutorial';
 import { Quipper, quipSeconds } from '../../roomQuips';
+import { reportEvent, reportScore } from '../../../net/roomApi';
 
 /**
  * The shelf sniper mission. Land the chopper on the shelf over the TV and the
@@ -947,6 +948,8 @@ export function SniperMission({
               sniper.stage = 'over';
               sniperSfx.over();
               line('over', 5);
+              reportEvent('duck-range', 'round-over');
+              reportScore('duck-range', 'round', sniper.round);
               if (sniper.score > sniper.best) {
                 sniper.best = sniper.score;
                 saveBest(sniper.score);
@@ -958,6 +961,7 @@ export function SniperMission({
                 sniperSfx.perfect();
                 banner('Perfect!', `+${PERFECT_BONUS} · ${r.roundHits}/10 ducks`, 2.6);
                 line('perfect');
+                reportEvent('duck-range', 'perfect-round');
               } else {
                 sniperSfx.round();
                 banner(`Round ${sniper.round} clear`, `${r.roundHits}/10 ducks`, 2.6);
