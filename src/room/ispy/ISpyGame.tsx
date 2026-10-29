@@ -455,7 +455,7 @@ export function ISpyBookProp({ hovered, hidden }: { hovered: boolean; hidden: bo
   const target = useMemo(() => ({ id: 'ispy-book', kind: 'prop' as const, label: 'I Spy book', hint: 'Examine' }), []);
   if (hidden) return null;
   return (
-    <group position={[BOOK_SPOT.x, 0.005, BOOK_SPOT.z]} rotation={[0, BOOK_SPOT.rotY, 0]}>
+    <group position={[BOOK_SPOT.x, 0.005, BOOK_SPOT.z]} rotation={[0, BOOK_SPOT.rotY, 0]} userData={{ holoRoot: 'ispy-book' }}>
       <mesh position={[0, BOOK_T / 2, 0]} userData={{ interactable: target, volume: BOOK_W * BOOK_D * BOOK_T }}>
         <boxGeometry args={[BOOK_W + 0.04, BOOK_T + 0.02, BOOK_D + 0.04]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />

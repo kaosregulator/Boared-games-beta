@@ -24,3 +24,23 @@ export const HOLO_POSE: Record<string, [number, number, number]> = {
   // The loose tapes lie flat on the shelf; stand them on their side for the capsule.
   'vhs-loose': [Math.PI / 2, 0, 0],
 };
+
+/**
+ * Cards that are a flat decal on a wall or a surface — posters, stickers, pins,
+ * a sketch pad. There's nothing to turn in 3D (a cut of them is a paper-thin
+ * sliver that looks broken spinning), so the capsule skips the hologram and
+ * just shows the card. The art still lives on the card's photos.
+ */
+export const HOLO_SKIP = new Set<string>([
+  'dr-stickers',
+  'dr-nofear',
+  'door-pins',
+  'door-poster',
+  'pc-stickers',
+  'cd-stickers',
+  'cd-sketch',
+  'poster-pokemon',
+  'poster-mummy',
+  'poster-giant',
+  'poster-babe',
+]);

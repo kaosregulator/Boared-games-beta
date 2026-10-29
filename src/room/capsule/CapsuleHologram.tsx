@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { capsule, setCapsulePiece } from './capsuleBus';
 import { cloneModelPiece, disposePiece, extractPiece, type Piece } from './extractPiece';
-import { HOLO_BORROW, HOLO_POSE } from './holoAssets';
+import { HOLO_BORROW, HOLO_POSE, HOLO_SKIP } from './holoAssets';
 import { holoMaterial, holoUniforms, tickHolo } from './holoMaterial';
 
 /**
@@ -90,6 +90,13 @@ export function CapsuleHologram() {
     if (!id) {
       setPiece(null);
       source.current = null;
+      return;
+    }
+    // A flat decal (poster, sticker) has no 3D to turn; show the card, no hologram.
+    if (HOLO_SKIP.has(id)) {
+      setPiece(null);
+      source.current = null;
+      setCapsulePiece(false);
       return;
     }
     let made: Piece | null = null;

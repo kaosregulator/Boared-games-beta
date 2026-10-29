@@ -199,7 +199,9 @@ export function cloneModelPiece(root: THREE.Object3D, rotation?: [number, number
     if (!mesh.visible) return;
     const mat = mesh.material as THREE.Material | THREE.Material[];
     const first = Array.isArray(mat) ? mat[0] : mat;
-    if (!first || first.visible === false || (first.transparent && (first as THREE.Material).opacity === 0)) return;
+    // Skip the toy's own helper meshes — an invisible pick box, or a soft glow
+    // halo drawn without depth — so a clone is just the toy, not a blob of light.
+    if (!first || first.visible === false || (first.transparent && (first.opacity === 0 || first.depthWrite === false))) return;
     // A rigged mesh (the Furby) is frozen at its current pose into static
     // geometry; a plain mesh shares the room's geometry as is.
     const skinned = (mesh as THREE.SkinnedMesh).isSkinnedMesh;

@@ -130,7 +130,7 @@ export function Tamagotchi({
   });
 
   return (
-    <group position={position} rotation={rotation} scale={1.3}>
+    <group position={position} rotation={rotation} scale={1.3} userData={{ holoRoot: 'tamagotchi' }}>
       <mesh geometry={lathe} castShadow>
         <meshPhysicalMaterial color="#8b45d6" roughness={0.28} clearcoat={1} clearcoatRoughness={0.15} sheen={0.4} sheenColor="#ffb3f0" />
       </mesh>
