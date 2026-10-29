@@ -304,6 +304,9 @@ export function RoomModel({
     });
     return clone;
   }, [scene, tintAmount, castShadow, receiveShadow, maxAnisotropy]);
+  // Mark this as the real model behind its card, so a time capsule can clone the
+  // whole prop by itself instead of cutting a boxy chunk out of the room scan.
+  if (interactable?.id) root.userData.holoRoot = interactable.id;
   // A soft lamp-lit lift on the whole model while it's the thing being pointed at.
   useWarmHover(root, hovered);
   useEffect(() => {

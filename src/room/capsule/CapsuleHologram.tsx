@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { capsule, setCapsulePiece } from './capsuleBus';
-import { disposePiece, extractPiece, type Piece } from './extractPiece';
+import { cloneModelPiece, disposePiece, extractPiece, type Piece } from './extractPiece';
+import { HOLO_BORROW, HOLO_POSE } from './holoAssets';
 import { holoMaterial, holoUniforms, tickHolo } from './holoMaterial';
 
 /**
@@ -31,6 +32,16 @@ function findHotspot(scene: THREE.Object3D, id: string): THREE.Mesh | null {
   return hit;
 }
 
+/** The real, whole model behind a card (tagged in RoomModel), for a clean clone. */
+function findHoloRoot(scene: THREE.Object3D, id: string): THREE.Object3D | null {
+  let hit: THREE.Object3D | null = null;
+  scene.traverse(o => {
+    if (hit) return;
+    if (o.visible && o.userData?.holoRoot === id) hit = o;
+  });
+  return hit;
+}
+
 const reduceMotion = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 /** Draw the piece over the room as a hologram: after everything else, depth cleared first. */
@@ -39,7 +50,8 @@ function overlay(piece: Piece) {
   piece.group.traverse(o => {
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh) return;
-    if (!mesh.geometry.getAttribute('normal')) mesh.geometry.computeVertexNormals();
+    // Only a fresh cut may have its normals rebuilt; a clone shares the room's geometry.
+    if (!piece.shared && !mesh.geometry.getAttribute('normal')) mesh.geometry.computeVertexNormals();
     const mat = holoMaterial(mesh.material as THREE.Material, !!mesh.geometry.getAttribute('uv'), !!mesh.geometry.getAttribute('color'));
     clones.push(mat);
     mesh.material = mat;
@@ -79,17 +91,27 @@ export function CapsuleHologram() {
     // Cut it a frame after the card opens, so its first paint isn't held up. A card
     // opened before the room has loaded keeps looking until the room is in.
     const attempt = () => {
-      const spot = findHotspot(scene, id);
-      if (spot) {
-        spot.updateWorldMatrix(true, false);
-        if (!spot.geometry.boundingBox) spot.geometry.computeBoundingBox();
-        const cut = spot.userData.cut as { offset: [number, number, number]; size: [number, number, number] } | undefined;
-        if (cut) {
-          _box.setFromCenterAndSize(new THREE.Vector3(...cut.offset), new THREE.Vector3(...cut.size));
-        } else _box.copy(spot.geometry.boundingBox!);
-        _box.applyMatrix4(spot.matrixWorld).expandByScalar(0.008);
-        source.current = _box.getCenter(new THREE.Vector3());
-        made = extractPiece(scene, _box, holder.current);
+      // A prop with its own scanned model gets cloned whole — the real thing by
+      // itself, no shelf or desk around it. Everything else falls back to cutting
+      // a box out of the room scan.
+      const root = findHoloRoot(scene, HOLO_BORROW[id] ?? id);
+      if (root) {
+        made = cloneModelPiece(root, HOLO_POSE[id]);
+        if (made) source.current = new THREE.Box3().setFromObject(root).getCenter(new THREE.Vector3());
+      }
+      if (!made) {
+        const spot = findHotspot(scene, id);
+        if (spot) {
+          spot.updateWorldMatrix(true, false);
+          if (!spot.geometry.boundingBox) spot.geometry.computeBoundingBox();
+          const cut = spot.userData.cut as { offset: [number, number, number]; size: [number, number, number] } | undefined;
+          if (cut) {
+            _box.setFromCenterAndSize(new THREE.Vector3(...cut.offset), new THREE.Vector3(...cut.size));
+          } else _box.copy(spot.geometry.boundingBox!);
+          _box.applyMatrix4(spot.matrixWorld).expandByScalar(0.008);
+          source.current = _box.getCenter(new THREE.Vector3());
+          made = extractPiece(scene, _box, holder.current);
+        }
       }
       if (made) {
         holoUniforms.uReveal.value = 0;

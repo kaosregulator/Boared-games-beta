@@ -14,6 +14,11 @@ export interface Piece {
   /** Radius of the piece's bounding sphere, metres. */
   radius: number;
   triangles: number;
+  /**
+   * The piece's geometry is shared with the room (a clone of a real prop, not
+   * a fresh cut), so it must not be disposed with the hologram.
+   */
+  shared?: boolean;
 }
 
 /** Fewer triangles than this and the box missed: no piece. */
@@ -121,5 +126,64 @@ export function extractPiece(root: THREE.Object3D, box: THREE.Box3, skip?: THREE
 }
 
 export function disposePiece(piece: Piece | null) {
-  piece?.group.traverse(o => (o as THREE.Mesh).geometry?.dispose());
+  // A cloned prop shares the room's geometry; disposing it would wreck the room.
+  if (!piece || piece.shared) return;
+  piece.group.traverse(o => (o as THREE.Mesh).geometry?.dispose());
+}
+
+const _rootInv = new THREE.Matrix4();
+const _rel = new THREE.Matrix4();
+const _cloneBox = new THREE.Box3();
+const _cloneCentre = new THREE.Vector3();
+const _cloneSize = new THREE.Vector3();
+
+/**
+ * The hologram of a prop that has its own scanned model: a clone of the real
+ * thing in the room — the exact asset, by itself, with nothing of the shelf or
+ * desk it sits on. Meshes are copied in the model's own frame (so it stands the
+ * way it does in the room), their geometry shared with the room, centred on the
+ * origin, with an optional extra rotation to pose it. The hologram look is put
+ * on afterwards, so the real materials are left untouched.
+ */
+export function cloneModelPiece(root: THREE.Object3D, rotation?: [number, number, number]): Piece | null {
+  root.updateWorldMatrix(true, true);
+  _rootInv.copy(root.matrixWorld).invert();
+  const inner = new THREE.Group();
+  let triangles = 0;
+  root.traverse(o => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh || (mesh as THREE.SkinnedMesh).isSkinnedMesh || (mesh as THREE.InstancedMesh).isInstancedMesh) return;
+    if (!mesh.visible) return;
+    const mat = mesh.material as THREE.Material | THREE.Material[];
+    const first = Array.isArray(mat) ? mat[0] : mat;
+    if (!first || first.visible === false || (first.transparent && (first as THREE.Material).opacity === 0)) return;
+    const copy = new THREE.Mesh(mesh.geometry, first);
+    copy.matrixAutoUpdate = false;
+    _rel.multiplyMatrices(_rootInv, mesh.matrixWorld);
+    copy.matrix.copy(_rel);
+    copy.frustumCulled = false;
+    inner.add(copy);
+    const pos = mesh.geometry.getAttribute('position');
+    if (pos) triangles += (mesh.geometry.getIndex()?.count ?? pos.count) / 3;
+  });
+  // A whole scanned prop is a clean clone; a whole piece of furniture is far too
+  // many triangles to spin as a hologram, so let it fall back to the bounded cut.
+  if (!inner.children.length || triangles > MAX_TRIANGLES) {
+    return null;
+  }
+  inner.updateMatrixWorld(true);
+  _cloneBox.setFromObject(inner);
+  _cloneBox.getCenter(_cloneCentre);
+  inner.position.sub(_cloneCentre);
+  const group = new THREE.Group();
+  if (rotation) {
+    const posed = new THREE.Group();
+    posed.rotation.set(rotation[0], rotation[1], rotation[2]);
+    posed.add(inner);
+    group.add(posed);
+  } else {
+    group.add(inner);
+  }
+  const radius = Math.max(0.001, _cloneBox.getSize(_cloneSize).length() / 2);
+  return { group, radius, triangles, shared: true };
 }

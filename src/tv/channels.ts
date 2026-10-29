@@ -1,6 +1,6 @@
 import { SNICK_DURATIONS, SNICK_EPISODES, epKey, snickShowAt, type SnickEpisode } from './snick';
 import { TV247_ON } from './tv247';
-import { CCF_2000, CN_TAPES, FOX_KIDS, KIDS_WB_2001, NICK_CN_2003, blockOnAir, segmentAt, showTitleAt, type ArchiveBlock } from './lineups/archiveBlocks';
+import { CCF_2000, CN_TAPES, FOX_KIDS, GOOSEBUMPS_S01, KIDS_WB_2001, NICK_CN_2003, blockOnAir, segmentAt, showTitleAt, type ArchiveBlock } from './lineups/archiveBlocks';
 import { ARTHUR } from './lineups/arthur';
 import { ADS_NUMBER, adsGuide } from './lineups/ads90s';
 import { MTV_CHANNEL, PICK_CHANNEL, YT_CHANNELS, ytOnAir, ytShowAt, type YtChannel } from './lineups/youtube247';
@@ -164,6 +164,7 @@ export const CHANNELS: Channel[] = [
     pack: pack.id,
     cartoons: filmsFor(pack.id),
   })),
+  { number: 15, call: 'GOOSE', kind: 'block', name: 'Goosebumps — Season 1, every episode (1995)', block: GOOSEBUMPS_S01 },
   // Nothing but 90s commercial breaks, on the channel number of the decade.
   { number: ADS_NUMBER, call: 'ADS', kind: 'ads', name: '90s Commercial Breaks' },
   ...(TV247_ON ? [ytChannel(MTV_CHANNEL), ytChannel(PICK_CHANNEL)] : []),
