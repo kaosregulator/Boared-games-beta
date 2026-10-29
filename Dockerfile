@@ -17,5 +17,8 @@ COPY --from=build /app/dist ./dist
 COPY server.mjs ./server.mjs
 COPY logCore.mjs ./logCore.mjs
 COPY radioBrowserApi.mjs ./radioBrowserApi.mjs
+COPY server ./server
+COPY scripts/discord-roles.mjs ./scripts/discord-roles.mjs
+COPY src/rewards ./src/rewards
 EXPOSE 3000
 CMD ["node", "server.mjs"]
