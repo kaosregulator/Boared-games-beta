@@ -617,3 +617,24 @@ button.tt-tile:not(:disabled):hover {
     transform: scaleY(1);
   }
 }
+
+/* Title screen music credits: a slow end-credits roll, faded at top and bottom. */
+.menu-credits {
+  mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent);
+  -webkit-mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent);
+}
+.menu-credits-roll {
+  animation: menu-credits-roll 26s linear infinite;
+}
+.menu-credits:hover .menu-credits-roll,
+.menu-credits:focus-within .menu-credits-roll {
+  animation-play-state: paused;
+}
+@keyframes menu-credits-roll {
+  from { transform: translateY(0); }
+  to { transform: translateY(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .menu-credits-roll { animation: none; }
+  .menu-credits { mask-image: none; -webkit-mask-image: none; height: auto; }
+}
