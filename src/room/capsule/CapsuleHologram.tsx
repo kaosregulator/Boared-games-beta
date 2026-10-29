@@ -83,7 +83,11 @@ export function CapsuleHologram() {
       if (spot) {
         spot.updateWorldMatrix(true, false);
         if (!spot.geometry.boundingBox) spot.geometry.computeBoundingBox();
-        _box.copy(spot.geometry.boundingBox!).applyMatrix4(spot.matrixWorld).expandByScalar(0.008);
+        const cut = spot.userData.cut as { offset: [number, number, number]; size: [number, number, number] } | undefined;
+        if (cut) {
+          _box.setFromCenterAndSize(new THREE.Vector3(...cut.offset), new THREE.Vector3(...cut.size));
+        } else _box.copy(spot.geometry.boundingBox!);
+        _box.applyMatrix4(spot.matrixWorld).expandByScalar(0.008);
         source.current = _box.getCenter(new THREE.Vector3());
         made = extractPiece(scene, _box, holder.current);
       }

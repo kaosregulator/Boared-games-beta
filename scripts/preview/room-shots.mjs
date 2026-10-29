@@ -15,7 +15,7 @@ import { LAYOUT } from '../../src/room/roomLayout.ts';
 import { HOTSPOTS } from '../../src/room/hotspots.ts';
 
 const base = process.argv[2] ?? 'http://127.0.0.1:3000';
-const { ids, cards = [], extra = '' } = JSON.parse(fs.readFileSync('scripts/preview/room-shots.json', 'utf8'));
+const { ids, cards = [], pieces = null, extra = '' } = JSON.parse(fs.readFileSync('scripts/preview/room-shots.json', 'utf8'));
 fs.mkdirSync('docs/room-shots', { recursive: true });
 
 /** World centre of a hotspot and the direction its prop faces. */
@@ -89,5 +89,33 @@ for (const id of ids) {
 for (const id of cards) {
   const cam = camFor(id);
   await shoot(`${id}-card`, `?${cam ? `cam=${cam}&` : ''}card=${encodeURIComponent(id)}`, false);
+}
+// Every time capsule's hologram, one page load: ?card opens the first, then
+// window.__showCard flips through the rest. Writes docs/room-shots/pieces/<id>.png.
+if (pieces) {
+  const all = pieces === true ? Object.values(HOTSPOTS).flat().filter(s => !s.gameId).map(s => s.id) : pieces;
+  fs.mkdirSync('docs/room-shots/pieces', { recursive: true });
+  const page = await browser.newPage({ viewport: { width: 1024, height: 640 } });
+  page.setDefaultTimeout(240_000);
+  page.on('pageerror', e => log(`[page] ${e.message}`));
+  try {
+    // Looking at the dark ceiling corner, so the blue reads.
+    await page.goto(`${base}/?cam=0,1.6,0,0,3,-3&card=${all[0]}${extra}`, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(45_000);
+    for (const id of all) {
+      try {
+        await page.evaluate(i => window.__showCard?.(i), id);
+        await page.waitForFunction(() => !document.querySelector('.hc-proj-note'), null, { timeout: 15_000 }).catch(() => log(`[piece ${id}] none`));
+        await page.waitForTimeout(2_500);
+        const box = await page.locator('.hc-proj').boundingBox();
+        if (box) await page.screenshot({ path: `docs/room-shots/pieces/${id}.png`, clip: box, timeout: 120_000 });
+      } catch (e) {
+        log(`[piece ${id}] ${e.message.split('\n')[0]}`);
+      }
+    }
+    log(`pieces ${all.length}`);
+  } catch (e) {
+    log(`[pieces] ${e.message.split('\n')[0]}`);
+  }
 }
 await browser.close();

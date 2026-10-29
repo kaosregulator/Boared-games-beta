@@ -8,7 +8,7 @@ import { leaseResource, noteCacheLookup, release, retain, unleaseResource } from
 import { collectGpuResources } from '../engine/gltfCache';
 import { log } from '../engine/log';
 import type { HoverTarget } from './Interactable';
-import type { Hotspot } from './hotspots';
+import { cutBox, type Hotspot } from './hotspots';
 import type { LavaSpec } from './LavaLamp';
 import { propCardFor } from './propCards';
 import { HoverGlow, useWarmHover } from './HoverGlow';
@@ -235,6 +235,13 @@ function Outline({ size, position }: { size: [number, number, number]; position:
 /** `?hotspots` outlines every hotspot box, for lining them up with the meshes. */
 const SHOW_ALL_HOTSPOTS = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('hotspots');
 
+/** The capsule's cut box relative to the hotspot box's own centre. */
+function cutOffset(spot: Hotspot, centre: [number, number, number]) {
+  if (!spot.grow) return undefined;
+  const cut = cutBox(spot);
+  return { offset: cut.centre.map((v, i) => v - centre[i]) as [number, number, number], size: cut.size };
+}
+
 function HotspotBox({ spot, active }: { spot: Hotspot; active: boolean }) {
   const card = propCardFor(spot.id);
   const target = useMemo<HoverTarget>(
@@ -248,7 +255,7 @@ function HotspotBox({ spot, active }: { spot: Hotspot; active: boolean }) {
   const centre: [number, number, number] = [spot.at[0], spot.at[1], spot.at[2] - d / 2];
   return (
     <>
-      <mesh position={centre} userData={{ interactable: target, volume: w * ht * d }}>
+      <mesh position={centre} userData={{ interactable: target, volume: w * ht * d, cut: cutOffset(spot, centre) }}>
         <boxGeometry args={[w, ht, d]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>

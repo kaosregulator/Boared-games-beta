@@ -1,1 +1,1 @@
-{ "ids": ["ns-gameboy"], "cards": ["ns-gameboy", "cd-snes", "crt-tv"], "extra": "", "run": 2 }
+{ "ids": [], "cards": ["cd-snes"], "pieces": true, "extra": "", "run": 3 }

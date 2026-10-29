@@ -18,6 +18,25 @@ export interface Hotspot {
   size: [number, number, number];
   /** Game boxes open the game card instead of a memory card. */
   gameId?: string;
+  /**
+   * The time capsule cuts the thing out of the room with this box. A box is
+   * sized for aiming at, so a thing that leans or sticks out past it gets cut
+   * off; this grows the cut, in metres: [left, right, down, up, back, front].
+   */
+  grow?: [number, number, number, number, number, number];
+}
+
+/** The box a time capsule cuts its piece out with: centre and size, in the prop's frame. */
+export function cutBox(spot: Hotspot): { centre: [number, number, number]; size: [number, number, number] } {
+  const [w, ht, d] = spot.size;
+  const [l, r, dn, up, back, front] = spot.grow ?? [0, 0, 0, 0, 0, 0];
+  const x0 = spot.at[0] - w / 2 - l;
+  const x1 = spot.at[0] + w / 2 + r;
+  const y0 = spot.at[1] - ht / 2 - dn;
+  const y1 = spot.at[1] + ht / 2 + up;
+  const z0 = spot.at[2] - d - back;
+  const z1 = spot.at[2] + front;
+  return { centre: [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2], size: [x1 - x0, y1 - y0, z1 - z0] };
 }
 
 const h = (id: string, x: number, y: number, zFront: number, w: number, ht: number, d: number, gameId?: string): Hotspot => ({
