@@ -77,7 +77,8 @@ const bedSize = fit(N.bed, 'y', 0.95);
 const shelfSize = fit(N.shelf, 'y', 2.05);
 const dresserSize = fit(N.dresser, 'y', 0.84);
 const crtSize = fit(N.crt, 'x', 0.62);
-const toySize = fit(N.toyshelf, 'y', 1.32);
+/** 1.16 m including the lava lamp (was 1.32, which read as oversized next to the bed and desk). */
+const toySize = fit(N.toyshelf, 'y', 1.16);
 /** The retro PC desk: 1.65m long, so the top lands at about 62cm. */
 const deskSize = fit(N.desk, 'x', 1.65);
 const nightSize = fit(N.nightstand, 'y', 0.9);
@@ -228,7 +229,7 @@ export const LAYOUT = {
     z: toyZ,
     rotY: -Math.PI / 2,
     axis: 'y' as const,
-    meters: 1.32,
+    meters: 1.16,
     ...toySize,
   },
   shelf: {

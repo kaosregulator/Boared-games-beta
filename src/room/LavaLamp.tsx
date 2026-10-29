@@ -222,6 +222,6 @@ export function LavaLamp({ spec, light = true }: { spec: LavaSpec; light?: boole
 export const LAVA: Record<'nightstand' | 'teddy' | 'toyshelf' | 'clutterdesk', LavaSpec> = {
   nightstand: { x: 0.026, z: -0.165, y0: 0.638, y1: 0.816, r0: 0.079, r1: 0.05, liquid: '#e0105c', wax: '#ffc04a', seed: 3 },
   teddy: { x: -0.622, z: 0.04, y0: 0.399, y1: 0.583, r0: 0.066, r1: 0.0345, liquid: '#ef1d5a', wax: '#ffd44f', seed: 41 },
-  toyshelf: { x: 0.587, z: -0.165, y0: 0.935, y1: 1.251, r0: 0.0936, r1: 0.0435, liquid: '#d81a10', wax: '#ffae3a', seed: 77 },
+  toyshelf: { x: 0.516, z: -0.145, y0: 0.822, y1: 1.099, r0: 0.0823, r1: 0.0382, liquid: '#d81a10', wax: '#ffae3a', seed: 77 },
   clutterdesk: { x: -0.791, z: -0.342, y0: 0.817, y1: 1.027, r0: 0.075, r1: 0.038, liquid: '#e2163e', wax: '#ffc747', seed: 19 },
 };
