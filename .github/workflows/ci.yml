@@ -22,6 +22,14 @@ jobs:
       - name: Type check
         run: npm run lint
       - name: Tests
-        run: npm test
+        run: |
+          set +e
+          npm test 2>&1 | tee test.log
+          status=${PIPESTATUS[0]}
+          # Failing test names as annotations, readable without opening the log.
+          grep -E "^\s*not ok" test.log | grep -v "# SKIP" | head -15 | sed 's/^ *//; s/^/::error::/'
+          grep -E "^\s+(error|expected|actual):" -A2 test.log | head -30 | tr '\n' ' ' | sed 's/^/::error::/'
+          echo
+          exit $status
       - name: Production build
         run: npm run build
