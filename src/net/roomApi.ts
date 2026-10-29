@@ -215,3 +215,53 @@ export async function fetchLeaderboard(q: { game: string; metric: string; mode?:
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => void flush());
 }
+
+export interface DiscordStatus {
+  linked: boolean;
+  membership: 'member' | 'not-member' | 'unavailable' | null;
+  signInAvailable?: boolean;
+  sync?: { key: string; action: 'add' | 'remove'; status: 'pending' | 'synced' | 'failed'; error: string | null }[];
+}
+
+export async function fetchAuthStatus(): Promise<{ discord: boolean }> {
+  try {
+    return (await call<{ discord: boolean }>('GET', '/auth/status')).data ?? { discord: false };
+  } catch {
+    return { discord: false };
+  }
+}
+
+export async function fetchDiscordStatus(): Promise<DiscordStatus | null> {
+  try {
+    const r = await call<DiscordStatus>('GET', '/me/discord');
+    return r.status === 200 ? r.data : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function chooseGeneration(key: string | null): Promise<PlayerProfile | null> {
+  try {
+    const r = await call<PlayerProfile>('PUT', '/me/generation', { key });
+    if (r.status === 200 && r.data) for (const fn of profileListeners) fn(r.data);
+    return r.status === 200 ? r.data : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Ends this browser's session; a fresh guest session starts right after. */
+export async function signOut() {
+  try {
+    await call('POST', '/session/end');
+  } catch {
+    // offline: the cookie stays; nothing else to do
+  }
+  session = null;
+  return ensureSession();
+}
+
+export function signInUrl() {
+  const back = `${location.pathname}${location.search.replace(/([?&])signin=[^&]*&?/, '$1').replace(/[?&]$/, '')}`;
+  return `/api/auth/discord?returnTo=${encodeURIComponent(back || '/')}`;
+}

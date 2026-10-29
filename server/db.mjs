@@ -84,12 +84,39 @@ export const MIGRATIONS = [
     `;
     },
   },
+  {
+    id: 2,
+    name: 'discord role sync queue, counters',
+    sql: dialect => {
+      const big = dialect === 'pg' ? 'BIGINT' : 'INTEGER';
+      return `
+      CREATE TABLE role_sync (
+        player_id TEXT NOT NULL REFERENCES players(id),
+        role_key TEXT NOT NULL,
+        action TEXT NOT NULL CHECK (action IN ('add', 'remove')),
+        status TEXT NOT NULL CHECK (status IN ('pending', 'synced', 'failed')),
+        attempts INTEGER NOT NULL DEFAULT 0,
+        last_error TEXT,
+        next_at ${big} NOT NULL,
+        updated_at ${big} NOT NULL,
+        PRIMARY KEY (player_id, role_key)
+      );
+      CREATE INDEX role_sync_due ON role_sync(status, next_at);
+      CREATE TABLE counters (
+        name TEXT PRIMARY KEY,
+        value INTEGER NOT NULL
+      );
+      INSERT INTO counters (name, value) VALUES ('early-member', 0);
+    `;
+    },
+  },
 ];
 
 /** $1, $2 ... -> ?1, ?2 ... (SQLite's numbered parameters). */
 const toSqlite = sql => sql.replace(/\$(\d+)/g, '?$1');
 
 function sqliteAdapter(db) {
+  let txQueue = Promise.resolve();
   const run = (sql, params = []) => {
     const stmt = db.prepare(toSqlite(sql));
     if (/^\s*(select|with)\b/i.test(sql) || /\breturning\b/i.test(sql)) {
@@ -111,17 +138,23 @@ function sqliteAdapter(db) {
     async exec(sql) {
       db.exec(sql);
     },
-    // BEGIN IMMEDIATE takes the write lock up front, so check-then-insert can't race.
-    async tx(fn) {
-      db.exec('BEGIN IMMEDIATE');
-      try {
-        const out = await fn(api);
-        db.exec('COMMIT');
-        return out;
-      } catch (err) {
-        db.exec('ROLLBACK');
-        throw err;
-      }
+    // One connection, so transactions take turns. BEGIN IMMEDIATE takes the
+    // write lock up front, so check-then-insert can't race another process either.
+    tx(fn) {
+      const run = async () => {
+        db.exec('BEGIN IMMEDIATE');
+        try {
+          const out = await fn(api);
+          db.exec('COMMIT');
+          return out;
+        } catch (err) {
+          db.exec('ROLLBACK');
+          throw err;
+        }
+      };
+      const result = txQueue.then(run, run);
+      txQueue = result.catch(() => {});
+      return result;
     },
     async close() {
       db.close();
