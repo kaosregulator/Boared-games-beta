@@ -67,4 +67,5 @@ jobs:
           if [ -d docs/model-previews ]; then git add docs/model-previews; fi
           if git diff --cached --quiet; then echo "No model changes"; exit 0; fi
           git commit -m "Restore detail to the room's furniture and props" -m "$(cat restore-report.txt)"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
           git push
