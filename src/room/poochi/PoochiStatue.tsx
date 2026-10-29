@@ -31,6 +31,8 @@ function Statue() {
       const m = o as THREE.Mesh;
       if (m.isMesh) m.castShadow = true;
     });
+    // The capsule clones this real model, so Poo-Chi floats clean with no dresser slab.
+    s.userData.holoRoot = POOCHI_CARD;
     return s;
   }, [gltf.scene]);
   return <primitive object={scene} scale={SCALE} />;

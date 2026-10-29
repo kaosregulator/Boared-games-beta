@@ -25,6 +25,12 @@ export interface Piece {
 export const MIN_TRIANGLES = 40;
 /** Safety cap so a huge scan can't stall the frame. */
 export const MAX_TRIANGLES = 120_000;
+/**
+ * Clone the whole model up to here; past it (a piece of furniture like the toy
+ * shelf or the PC desk) fall back to the bounded cut. A detailed toy such as
+ * the Poo-Chi statue (~125k) is still a prop and clones clean.
+ */
+export const CLONE_MAX_TRIANGLES = 160_000;
 
 const _a = new THREE.Vector3();
 const _b = new THREE.Vector3();
@@ -126,9 +132,13 @@ export function extractPiece(root: THREE.Object3D, box: THREE.Box3, skip?: THREE
 }
 
 export function disposePiece(piece: Piece | null) {
-  // A cloned prop shares the room's geometry; disposing it would wreck the room.
-  if (!piece || piece.shared) return;
-  piece.group.traverse(o => (o as THREE.Mesh).geometry?.dispose());
+  if (!piece) return;
+  piece.group.traverse(o => {
+    const geo = (o as THREE.Mesh).geometry;
+    // A cut piece owns all its geometry; a clone shares the room's, except for
+    // baked skinned geometry it made itself (holoOwned). Never free the room's.
+    if (geo && (!piece.shared || geo.userData.holoOwned)) geo.dispose();
+  });
 }
 
 const _rootInv = new THREE.Matrix4();
@@ -136,6 +146,39 @@ const _rel = new THREE.Matrix4();
 const _cloneBox = new THREE.Box3();
 const _cloneCentre = new THREE.Vector3();
 const _cloneSize = new THREE.Vector3();
+const _bakeV = new THREE.Vector3();
+
+/**
+ * Freeze a skinned mesh at its current pose into a plain static geometry, in
+ * the mesh's own local frame. A rigged toy like the Furby has no scan to box
+ * out of the room and its bones can't ride the hologram's simple shader, so
+ * the capsule shows it held in the pose it's in right now. Owns its geometry
+ * (marked holoOwned) so the hologram disposes it without touching the room.
+ */
+function bakeSkinned(mesh: THREE.SkinnedMesh): THREE.BufferGeometry | null {
+  const src = mesh.geometry;
+  const pos = src.getAttribute('position') as THREE.BufferAttribute | undefined;
+  if (!pos) return null;
+  mesh.skeleton.update();
+  const out = new Float32Array(pos.count * 3);
+  for (let i = 0; i < pos.count; i += 1) {
+    _bakeV.fromBufferAttribute(pos, i);
+    mesh.applyBoneTransform(i, _bakeV);
+    out[i * 3] = _bakeV.x;
+    out[i * 3 + 1] = _bakeV.y;
+    out[i * 3 + 2] = _bakeV.z;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(out, 3));
+  if (src.getIndex()) geo.setIndex(src.getIndex()!.clone());
+  const uv = src.getAttribute('uv');
+  if (uv) geo.setAttribute('uv', uv.clone());
+  const col = src.getAttribute('color');
+  if (col) geo.setAttribute('color', col.clone());
+  geo.computeVertexNormals();
+  geo.userData.holoOwned = true;
+  return geo;
+}
 
 /**
  * The hologram of a prop that has its own scanned model: a clone of the real
@@ -152,23 +195,32 @@ export function cloneModelPiece(root: THREE.Object3D, rotation?: [number, number
   let triangles = 0;
   root.traverse(o => {
     const mesh = o as THREE.Mesh;
-    if (!mesh.isMesh || (mesh as THREE.SkinnedMesh).isSkinnedMesh || (mesh as THREE.InstancedMesh).isInstancedMesh) return;
+    if (!mesh.isMesh || (mesh as THREE.InstancedMesh).isInstancedMesh) return;
     if (!mesh.visible) return;
     const mat = mesh.material as THREE.Material | THREE.Material[];
     const first = Array.isArray(mat) ? mat[0] : mat;
     if (!first || first.visible === false || (first.transparent && (first as THREE.Material).opacity === 0)) return;
-    const copy = new THREE.Mesh(mesh.geometry, first);
+    // A rigged mesh (the Furby) is frozen at its current pose into static
+    // geometry; a plain mesh shares the room's geometry as is.
+    const skinned = (mesh as THREE.SkinnedMesh).isSkinnedMesh;
+    const geometry = skinned ? bakeSkinned(mesh as THREE.SkinnedMesh) : mesh.geometry;
+    if (!geometry) return;
+    const copy = new THREE.Mesh(geometry, first);
     copy.matrixAutoUpdate = false;
     _rel.multiplyMatrices(_rootInv, mesh.matrixWorld);
     copy.matrix.copy(_rel);
     copy.frustumCulled = false;
     inner.add(copy);
-    const pos = mesh.geometry.getAttribute('position');
-    if (pos) triangles += (mesh.geometry.getIndex()?.count ?? pos.count) / 3;
+    const pos = geometry.getAttribute('position');
+    if (pos) triangles += (geometry.getIndex()?.count ?? pos.count) / 3;
   });
   // A whole scanned prop is a clean clone; a whole piece of furniture is far too
   // many triangles to spin as a hologram, so let it fall back to the bounded cut.
-  if (!inner.children.length || triangles > MAX_TRIANGLES) {
+  if (!inner.children.length || triangles > CLONE_MAX_TRIANGLES) {
+    for (const c of inner.children) {
+      const g = (c as THREE.Mesh).geometry;
+      if (g?.userData.holoOwned) g.dispose();
+    }
     return null;
   }
   inner.updateMatrixWorld(true);

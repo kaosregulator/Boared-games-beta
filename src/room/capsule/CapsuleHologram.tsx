@@ -32,12 +32,20 @@ function findHotspot(scene: THREE.Object3D, id: string): THREE.Mesh | null {
   return hit;
 }
 
+/** True only if this object and every ancestor is visible (world-visible). */
+function shownInWorld(o: THREE.Object3D): boolean {
+  for (let n: THREE.Object3D | null = o; n; n = n.parent) if (!n.visible) return false;
+  return true;
+}
+
 /** The real, whole model behind a card (tagged in RoomModel), for a clean clone. */
 function findHoloRoot(scene: THREE.Object3D, id: string): THREE.Object3D | null {
   let hit: THREE.Object3D | null = null;
   scene.traverse(o => {
     if (hit) return;
-    if (o.visible && o.userData?.holoRoot === id) hit = o;
+    // The toy may be in the scene several times (bed / hand / table); take the
+    // one actually on screen, so a held Furby doesn't clone the hidden bed one.
+    if (o.userData?.holoRoot === id && shownInWorld(o)) hit = o;
   });
   return hit;
 }

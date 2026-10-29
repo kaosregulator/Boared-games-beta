@@ -37,7 +37,13 @@ export function FurbyPuppet({
   children?: React.ReactNode;
 }) {
   const gltf = useGLTF(FURBY_URL);
-  const rig = useMemo(() => buildFurbyRig(gltf.scene, tint), [gltf.scene, tint]);
+  const rig = useMemo(() => {
+    const built = buildFurbyRig(gltf.scene, tint);
+    // So a time capsule can show the real Furby (its rig is skinned, so it's
+    // baked to a static pose for the hologram) instead of cutting the bed.
+    built.root.userData.holoRoot = 'furby';
+    return built;
+  }, [gltf.scene, tint]);
   useEffect(() => () => rig.dispose(), [rig]);
   useEffect(() => () => brain.dispose(), [brain]);
   useFrame((_, dt) => {
