@@ -14,6 +14,13 @@ import { dedup, prune, simplify, weld } from '@gltf-transform/functions';
 import { MeshoptSimplifier } from 'meshoptimizer';
 import draco3d from 'draco3dgltf';
 
+// RETIRED: this kept 2% of every mesh at a 2% tolerance and is what wiped the
+// detail off the furniture (commit 57cabf3). Use restore-model-detail.mjs.
+if (!process.argv.includes('--i-know')) {
+  console.error('simplify-room-models.mjs is retired: it destroys model detail. See scripts/restore-model-detail.mjs.');
+  process.exit(1);
+}
+
 const DIR = path.resolve('public/models');
 
 function triangles(doc) {

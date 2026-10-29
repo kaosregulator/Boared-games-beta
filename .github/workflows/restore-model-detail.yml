@@ -1,0 +1,61 @@
+name: Restore model detail
+
+# Re-cuts the room models from their full-detail versions in git history and
+# commits the result onto the same branch. Runs when the script changes, or by hand.
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Comma-separated model files. Empty = all."
+        required: false
+        default: ""
+  push:
+    branches-ignore: [main]
+    paths:
+      - scripts/restore-model-detail.mjs
+      - .github/workflows/restore-model-detail.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: restore-model-detail-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install tools
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          npm ci --ignore-scripts
+          npm i --no-save @gltf-transform/cli@4 sharp
+          gh release download --repo KhronosGroup/KTX-Software --pattern '*-Linux-x86_64.deb' --dir /tmp/ktx
+          sudo apt-get install -y /tmp/ktx/*.deb
+          toktx --version
+
+      - name: Rebuild models
+        run: node --max-old-space-size=8000 scripts/restore-model-detail.mjs "${{ inputs.only }}" | tee restore-report.txt
+
+      - name: Commit the rebuilt models
+        if: always()
+        run: |
+          { echo '### Restored models'; echo '```'; cat restore-report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/models/*.glb
+          if git diff --cached --quiet; then echo "No model changes"; exit 0; fi
+          git commit -m "Restore detail to the room's furniture and props" -m "$(cat restore-report.txt)"
+          git push
