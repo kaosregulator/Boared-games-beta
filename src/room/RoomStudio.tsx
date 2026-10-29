@@ -4,7 +4,7 @@ import { setAdaptive, setGraphicsPreset, type GraphicsPreset } from '../engine/g
 import { useGraphics } from '../engine/useGraphics';
 import { setControlPreset, setInvertLook, setLookSensitivity, useControlSettings, type ControlPreset } from './controls';
 import { MOOD_LABEL, type RoomMood } from './moods';
-import { sound, ROOM_TRACKS, type RoomTrackId } from '../utils/audio';
+import { sound, MUSIC_CREDITS, ROOM_TRACKS, type RoomTrackId } from '../utils/audio';
 
 interface RoomStudioProps {
   open: boolean;
@@ -78,6 +78,7 @@ export function RoomStudio(props: RoomStudioProps) {
   const controls = useControlSettings();
   const gfx = useGraphics();
   const [tab, setTab] = useState<StudioTab>('look');
+  const [shuffle, setShuffle] = useState(() => sound.getShuffle());
 
   useEffect(() => {
     if (props.placing) setTab('place');
@@ -270,6 +271,30 @@ export function RoomStudio(props: RoomStudioProps) {
             ))}
           </select>
         </label>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              sound.playButtonClick();
+              sound.skipTrack();
+            }}
+            className="min-h-11 flex-1 rounded-xl border border-white/20 text-[11px] font-bold uppercase tracking-[0.16em] text-white/85 hover:bg-white/10"
+          >
+            Skip ›
+          </button>
+          <label className="flex min-h-11 flex-1 items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/30 px-3">
+            <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/85">Shuffle</span>
+            <input
+              type="checkbox"
+              className="h-5 w-5"
+              checked={shuffle}
+              onChange={e => {
+                sound.setShuffle(e.target.checked);
+                setShuffle(e.target.checked);
+              }}
+            />
+          </label>
+        </div>
         <label className="flex flex-col gap-1">
           <span className="text-[10px] uppercase tracking-[0.18em] text-white/50 font-bold">
             Volume {Math.round(props.musicVolume * 100)}
@@ -284,6 +309,25 @@ export function RoomStudio(props: RoomStudioProps) {
             className="h-11 w-full min-w-0 accent-amber-200"
           />
         </label>
+        <div className="flex flex-col gap-1 text-[10px] leading-relaxed text-white/45">
+          <span className="font-bold uppercase tracking-[0.18em] text-white/50">Music credits</span>
+          {MUSIC_CREDITS.map(c => (
+            <span key={c.title}>
+              “{c.title}” by {c.artist} ·{' '}
+              <a href={c.source} target="_blank" rel="noreferrer" className="underline decoration-white/30 hover:text-white/80">
+                source
+              </a>{' '}
+              ·{' '}
+              {c.licenseUrl ? (
+                <a href={c.licenseUrl} target="_blank" rel="noreferrer" className="underline decoration-white/30 hover:text-white/80">
+                  {c.license}
+                </a>
+              ) : (
+                c.license
+              )}
+            </span>
+          ))}
+        </div>
           </>
         )}
 

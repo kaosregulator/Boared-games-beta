@@ -262,6 +262,8 @@ export function WalkRoom({
   const [musicOn, setMusicOn] = useState(true);
   const [musicVolume, setMusicVolume] = useState(() => sound.getMusicVolume());
   const [track, setTrack] = useState(() => sound.getTrack());
+  // Shuffle and Skip change the song on their own; keep the picker showing what's playing.
+  useEffect(() => sound.onTrackChange(setTrack), []);
   const queryTable = useMemo(() => tableFromQuery(games), [games]);
   const raceBoot = useMemo(() => {
     if (typeof window === 'undefined') return null;

@@ -110,6 +110,17 @@ export const MIGRATIONS = [
     `;
     },
   },
+  {
+    id: 3,
+    name: 'remembered discord role ids',
+    sql: dialect => `
+      CREATE TABLE discord_role_ids (
+        role_key TEXT PRIMARY KEY,
+        role_id TEXT NOT NULL,
+        updated_at ${dialect === 'pg' ? 'BIGINT' : 'INTEGER'} NOT NULL
+      );
+    `,
+  },
 ];
 
 /** $1, $2 ... -> ?1, ?2 ... (SQLite's numbered parameters). */

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { setControlPreset, useControlSettings, type ControlPreset } from './controls';
-import { sound } from '../utils/audio';
+import { sound, MUSIC_CREDITS } from '../utils/audio';
 
 interface MenuReelProps {
   /** At full black: the room takes over underneath. */
@@ -141,6 +141,35 @@ export function MenuReel({ onEnter, onDone }: MenuReelProps) {
           transition: `opacity ${phase === 'out' ? FADE_OUT_MS : FADE_IN_MS}ms ease-in-out`,
         }}
       />
+
+      {phase === 'reel' && (
+        <div className="menu-credits absolute inset-x-0 bottom-[calc(max(12px,env(safe-area-inset-bottom))+1.35rem)] mx-auto h-[3.6rem] max-w-md overflow-hidden px-4 text-center" aria-label="Music credits">
+          <div className="menu-credits-roll" style={{ fontFamily: '"IBM Plex Mono", ui-monospace, monospace' }}>
+            {[0, 1].map(copy => (
+              <div key={copy} aria-hidden={copy === 1} className="flex flex-col gap-1 pb-4">
+                <span className="text-[9px] font-bold uppercase tracking-[0.32em] text-white/45">Music</span>
+                {MUSIC_CREDITS.map(c => (
+                  <span key={c.title} className="text-[10px] leading-snug text-white/55">
+                    “{c.title}” by {c.artist}
+                    <br />
+                    <a href={c.source} target="_blank" rel="noreferrer" tabIndex={copy === 1 ? -1 : 0} className="underline decoration-white/25 hover:text-white/85">
+                      breakingcopyright.com
+                    </a>{' '}
+                    ·{' '}
+                    {c.licenseUrl ? (
+                      <a href={c.licenseUrl} target="_blank" rel="noreferrer" tabIndex={copy === 1 ? -1 : 0} className="underline decoration-white/25 hover:text-white/85">
+                        {c.license}
+                      </a>
+                    ) : (
+                      c.license
+                    )}
+                  </span>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {phase === 'reel' && (
         <footer

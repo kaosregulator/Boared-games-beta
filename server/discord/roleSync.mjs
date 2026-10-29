@@ -73,11 +73,9 @@ export function planRoleSync({ catalog, guildRoles, mapping = {}, botTopPosition
     }
     if (existing) {
       claimed.add(existing.id);
+      // A role that already exists is left exactly as it is in Discord. Staff can
+      // rename or recolour any role there; the game follows its id, not its name.
       const patch = {};
-      // A reused hand-made role keeps its own name and colour; only roles the sync owns follow the catalogue.
-      const owned = saved?.created === true || via === 'mapped';
-      if (owned && existing.name !== name && !role.reuseExisting) patch.name = name;
-      if (owned && existing.color !== color && !role.reuseExisting) patch.color = color;
       actions.push({ type: Object.keys(patch).length ? 'update' : 'keep', key: role.key, roleId: existing.id, name: existing.name, via, patch, created: saved?.created === true });
       if (botTopPosition !== null && existing.position >= botTopPosition) {
         warnings.push(`"${existing.name}" sits at or above the bot's highest role, so the bot can't hand it out. Drag the bot's role above it in Server Settings → Roles.`);
