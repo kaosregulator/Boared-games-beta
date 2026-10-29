@@ -19,6 +19,7 @@ import {
   type Shots,
 } from './battleshipFleet';
 import { MARKER_H, MARKER_KINDS, MARKER_W, drawMarker, markerCanvas, markersFor, onMarkerArt, type MarkerKind } from './battleshipMarkers';
+import { useMatchResult } from '../../net/useMatchResult';
 
 /**
  * Battleship live on the card table, built from Arrq54's
@@ -377,6 +378,7 @@ export function BattleshipTable({ onLeave }: { onLeave: () => void }) {
     clockRef.current = clock.elapsedTime;
   });
 
+  useMatchResult('battleship', winner === 'me' ? 'won' : winner === 'them' ? 'lost' : null);
   useEffect(() => {
     if (phase !== 'place') return;
     const onKey = (e: KeyboardEvent) => {

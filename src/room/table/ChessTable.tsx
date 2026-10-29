@@ -24,6 +24,7 @@ import {
   type Shard,
   type Vec3,
 } from './wizardMelee';
+import { useMatchResult } from '../../net/useMatchResult';
 
 /**
  * Wizard chess on this room's card table: the owner's sculpted statues on the
@@ -325,6 +326,7 @@ export function ChessTable({ onLeave }: { onLeave: () => void }) {
   const frameCache = useRef<{ now: number; dance: Dance | null; frame: ChoreoFrame | null }>({ now: -1, dance: null, frame: null });
   const camLook = useRef(new THREE.Vector3());
 
+  useMatchResult('chess', over?.includes('You win') ? 'won' : over?.includes('ghost wins') ? 'lost' : null);
   useEffect(() => {
     setTableView({ ...PLAY_VIEW, yaw: you === 'b' ? Math.PI : 0 });
   }, [you]);

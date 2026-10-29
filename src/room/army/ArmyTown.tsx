@@ -68,6 +68,7 @@ import { useWarmReveal } from '../../engine/SceneWarmup';
 import { SniperMission } from './sniper/SniperMission';
 import { SniperHud, SquadPrompt } from './sniper/SniperHud';
 import { sniper, sniperBusy, sniperControls, useSniper } from './sniper/state';
+import { reportEvent, reportScore } from '../../net/roomApi';
 
 /**
  * Shrunk down to army-man size on the bedroom floor. The town is set up on
@@ -1331,6 +1332,7 @@ function Crowd({ boot, film = false, onBuilt }: { boot: ArmyBoot | null; film?: 
           armySfx.victory();
           sarge('win', { cut: true });
           banner('Town saved!', 'The tan army is flat on the carpet. Go fly the chopper!', 4);
+          reportEvent('army-defense', 'held-the-town');
           waveTimer.current = 3;
         } else {
           startWave(army.wave + 1);
@@ -1486,6 +1488,8 @@ function Crowd({ boot, film = false, onBuilt }: { boot: ArmyBoot | null; film?: 
               saveBest(c.time);
             }
             c.last = { time: c.time, best };
+            reportEvent('heli-rings', 'all-rings');
+            reportScore('heli-rings', 'course-time', Math.round(c.time * 100) / 100);
             c.active = false;
             c.next = 0;
             armySfx.finish();

@@ -16,6 +16,7 @@ import {
 import { sound } from '../../utils/audio';
 import { pushHud, type HudAction } from './tableHud';
 import { setTableView, type Shot } from './tableCam';
+import { useMatchResult } from '../../net/useMatchResult';
 
 /**
  * Mouse Trap on the card table, using the marble-run scene from Bored-games.
@@ -42,6 +43,7 @@ export function MouseTrapTable({ onLeave }: { onLeave: () => void }) {
     return handles;
   }, []);
 
+  useMatchResult('mousetrap', state.winner ? (state.winner === YOU ? 'won' : 'lost') : null);
   useEffect(() => setTableView(VIEW), []);
   useEffect(() => () => pushHud(null), []);
 

@@ -3,6 +3,7 @@ import { readStore, writeStore } from '../os/settings';
 import { sfx, tone } from '../os/sound';
 import { MenuBar } from '../os/Window';
 import { closeWindow, messageBox, type WinState } from '../os/wm';
+import { reportEvent, reportScore } from '../../net/roomApi';
 
 /**
  * Tetris, remade after the Windows Entertainment Pack version (1990): a
@@ -186,6 +187,10 @@ export function Tetris({ win }: { win: WinState }) {
     if (!fits(s.grid, s.piece)) {
       s.over = true;
       sfx.chord();
+      reportEvent('pc-tetris', 'game-over');
+      reportScore('pc-tetris', 'score', s.score);
+      reportScore('pc-tetris', 'lines', s.lines);
+      reportScore('pc-tetris', 'level', s.level);
       if (s.score > best) {
         setBest(s.score);
         writeStore('tetris.best', s.score);

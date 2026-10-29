@@ -3,6 +3,7 @@ import { hourglass } from './settings';
 import { sfx } from './sound';
 import { messageBox, openWindow, type AppId } from './wm';
 import { CRUNCHLING, openWebGame, SANDWICH_STACKER, THING_THING } from '../apps/webgames';
+import { reportEvent } from '../../net/roomApi';
 
 /** Title, icon and opening size for every program. The components live in apps/index.tsx. */
 export type LaunchId = Exclude<AppId, 'dialog' | 'popup' | 'antivirus' | 'webgame'>;
@@ -32,8 +33,20 @@ export const APP_INFO: Record<LaunchId, { title: string; icon: IconName; w: numb
   arcade: { title: 'Cartoon Network Arcade', icon: 'arcade', w: 520, h: 440, single: true, load: 900 },
 };
 
+/** Programs that count for the leaderboard and the "open three programs" role. */
+const TRACKED: Partial<Record<LaunchId, string>> = {
+  tetris: 'pc-tetris',
+  minesweeper: 'pc-minesweeper',
+  solitaire: 'pc-solitaire',
+  pinball: 'pc-pinball',
+  taipei: 'pc-taipei',
+  paint: 'pc-paint',
+};
+
 export function launch(app: LaunchId, arg?: unknown, title?: string) {
   const info = APP_INFO[app];
+  const tracked = TRACKED[app];
+  if (tracked) reportEvent(tracked, 'launch');
   if (info.load) {
     hourglass(info.load);
     sfx.disk(info.load / 1000, 0.8);

@@ -17,6 +17,7 @@ import { sound } from '../../utils/audio';
 import { pushHud, type HudAction } from './tableHud';
 import { followAction, setTableView, type Shot } from './tableCam';
 import { movePaths, moveDestination, pawnUV } from './sorryMotion';
+import { useMatchResult } from '../../net/useMatchResult';
 
 /**
  * Sorry on the card table, using their board texture, deck, and pawns.
@@ -58,6 +59,7 @@ export function SorryTable({ onLeave }: { onLeave: () => void }) {
   const walks = useRef(new Map<string, Walk>());
   const shownCard = state.currentCard;
 
+  useMatchResult('pawnrush', state.winner ? (state.winner === YOU ? 'won' : 'lost') : null);
   useEffect(() => setTableView(VIEW), []);
   useEffect(() => () => pushHud(null), []);
   useEffect(() => {

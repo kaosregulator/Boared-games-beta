@@ -3,6 +3,7 @@ import { readStore, writeStore } from '../os/settings';
 import { sfx } from '../os/sound';
 import { MenuBar } from '../os/Window';
 import { closeWindow, messageBox, updateWindow, type WinState } from '../os/wm';
+import { reportEvent, reportScore } from '../../net/roomApi';
 
 /**
  * Minesweeper: Beginner, Intermediate, Expert. First click is always safe,
@@ -188,6 +189,9 @@ export function Minesweeper({ win }: { win: WinState }) {
       });
       setStatus('won');
       sfx.tada();
+      reportEvent('pc-minesweeper', 'won', level);
+      if (level === 'expert') reportEvent('pc-minesweeper', 'won-expert', level);
+      reportScore('pc-minesweeper', 'time', time, { mode: level });
       const best = readStore<Record<Level, number>>('mine.best', { beginner: 999, intermediate: 999, expert: 999 });
       if (time < best[level]) {
         best[level] = time;
@@ -198,6 +202,7 @@ export function Minesweeper({ win }: { win: WinState }) {
         );
       }
     } else {
+      reportEvent('pc-minesweeper', 'lost', level);
       next.forEach((c, i) => {
         if (c.mine && c.mark !== 1) c.open = true;
         if (!c.mine && c.mark === 1) c.wrong = true;

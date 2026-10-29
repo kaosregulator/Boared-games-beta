@@ -42,6 +42,7 @@ import { ClueFigure, SUSPECT_COLOUR, type Spot } from './ClueFigure';
 import { ClueRooms } from './ClueRooms';
 import { pushHud, type HudAction } from './tableHud';
 import { followAction, setTableView, wasDrag, type Shot } from './tableCam';
+import { useMatchResult } from '../../net/useMatchResult';
 
 /**
  * Clue on the card table, as a pop-up mansion. The box unfolds to the classic
@@ -343,6 +344,7 @@ export function ClueTable({ onLeave }: { onLeave: () => void }) {
   });
 
   // The flat board first, then the mansion pops up, then choose who you are.
+  useMatchResult('clue', state?.winner ? (state.winner === 'You' ? 'won' : 'lost') : null);
   useEffect(() => {
     setTableView(OVERVIEW);
     const a = window.setTimeout(() => setRaised(true), 900);

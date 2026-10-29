@@ -9,6 +9,7 @@ import { checkConnect4Win, createEmptyConnect4Board, getBestConnect4Move, getLow
 import type { DiscColor } from '../../types';
 import { sound } from '../../utils/audio';
 import { pushHud } from './tableHud';
+import { useMatchResult } from '../../net/useMatchResult';
 
 /**
  * Connect Four on BertovDev's frame and discs (3D-Connect-Four). You pick a
@@ -140,6 +141,8 @@ export function ConnectFourTable({ onLeave }: { onLeave: () => void }) {
     }, 700);
     return true;
   };
+
+  useMatchResult('connect4', result.winner === 'red' ? 'won' : result.winner === 'yellow' ? 'lost' : null);
 
   // The rival lifts a green disc off its pile, carries it over, lets go.
   useEffect(() => {

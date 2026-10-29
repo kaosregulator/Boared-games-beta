@@ -1,7 +1,8 @@
-import React, { Suspense, lazy, useState } from "react";
+import React, { Suspense, lazy, useEffect, useState } from "react";
 import { GameId, GameMetadata, ViewMode, UserProfile } from "./types";
 import { GAME_CATALOG, INITIAL_USER_PROFILE } from "./utils/gameData";
 import { sound } from "./utils/audio";
+import { ensureSession, reportEvent } from "./net/roomApi";
 
 import { InRoomTable } from "./components/InRoomTable";
 import { WalkRoom } from "./room/WalkRoom";
@@ -46,6 +47,11 @@ export default function App() {
   const [userProfile, setUserProfile] =
     useState<UserProfile>(INITIAL_USER_PROFILE);
   const [launchTable, setLaunchTable] = useState<GameMetadata | null>(null);
+
+  // Start (or resume) the guest session once the room is up, so results have somewhere to go.
+  useEffect(() => {
+    void ensureSession();
+  }, []);
 
   const handleLaunchGameById = (id: GameId) => {
     const found = GAME_CATALOG.find((g) => g.id === id);
@@ -103,6 +109,7 @@ export default function App() {
               onUpdateUserProfile={setUserProfile}
               onUpdateChips={handleUpdateChips}
               onGameOver={(winnerName, isRealMatch) => {
+                if (isRealMatch) reportEvent(activeGame.id, winnerName.includes("You") ? "won" : "lost");
                 if (isRealMatch && winnerName.includes("You")) {
                   setUserProfile((prev) => ({
                     ...prev,

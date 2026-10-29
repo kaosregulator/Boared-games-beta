@@ -3,6 +3,7 @@ import { readStore, writeStore } from '../os/settings';
 import { sfx } from '../os/sound';
 import { MenuBar } from '../os/Window';
 import { closeWindow, messageBox, type WinState } from '../os/wm';
+import { reportEvent, reportScore } from '../../net/roomApi';
 
 /**
  * Klondike Solitaire: drag cards between piles, double-click to send one
@@ -101,6 +102,8 @@ export function Solitaire({ win }: { win: WinState }) {
   useEffect(() => {
     if (!won) return;
     sfx.tada();
+    reportEvent('pc-solitaire', 'won');
+    reportScore('pc-solitaire', 'score', Math.max(0, Math.round(score)));
     const c = cascade.current!;
     const g = c.getContext('2d')!;
     const W = c.width;
