@@ -1,4 +1,0 @@
-shot ns-gameboy
-shot ns-gameboy-card
-shot cd-snes-card
-shot crt-tv-card
