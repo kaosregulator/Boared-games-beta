@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { aim } from './input';
 import type { Aimed } from './ReachRaycaster';
+import { labelledIds } from './HoverGlow';
 
 /**
  * The dot in the middle of the screen and the name of what you're pointing
@@ -10,6 +11,8 @@ import type { Aimed } from './ReachRaycaster';
 export function AimReticle({ aimed, showDot, touch }: { aimed: Aimed | null; showDot: boolean; touch: boolean }) {
   const dot = useRef<HTMLDivElement>(null);
   const label = useRef<HTMLDivElement>(null);
+  const aimedRef = useRef(aimed);
+  aimedRef.current = aimed;
 
   useEffect(() => {
     let raf = 0;
@@ -20,6 +23,9 @@ export function AimReticle({ aimed, showDot, touch }: { aimed: Aimed | null; sho
         const x = cursor ? aim.px.x : window.innerWidth / 2;
         const y = cursor ? aim.px.y + 26 : window.innerHeight / 2 + 30;
         label.current.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translateX(-50%)`;
+        // Things that show their own floating name card don't need this one too.
+        const own = Boolean(aimedRef.current?.inReach && labelledIds.has(aimedRef.current.id));
+        label.current.style.visibility = own ? 'hidden' : 'visible';
       }
       raf = requestAnimationFrame(tick);
     };

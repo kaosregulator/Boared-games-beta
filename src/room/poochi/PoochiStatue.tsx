@@ -37,7 +37,7 @@ function Statue() {
 
 export function PoochiStatue({ hovered, away }: { hovered: boolean; away: boolean }) {
   const glow = useRef<THREE.MeshBasicMaterial>(null);
-  const target = useMemo<HoverTarget>(() => ({ id: POOCHI_CARD, kind: 'prop', label: 'Poo-Chi', hint: 'Time capsule' }), []);
+  const target = useMemo<HoverTarget>(() => ({ id: POOCHI_CARD, kind: 'prop', label: 'Poo-Chi', hint: 'Examine' }), []);
   useFrame(({ clock }) => {
     if (glow.current) glow.current.opacity = hovered ? 0.16 : Math.max(0, Math.sin(clock.elapsedTime * 1.3 + 1)) * 0.03;
   });
