@@ -141,7 +141,8 @@ function rateLimit(perMinute) {
 app.use('/api/generate-trivia', rateLimit(6));
 app.use('/api/radio', rateLimit(120));
 app.use('/api/client-log', rateLimit(30));
-app.use(['/api/session', '/api/me', '/api/play', '/api/scores', '/api/leaderboard', '/api/leaderboards'], rateLimit(240));
+app.use(['/api/session', '/api/me', '/api/play', '/api/scores', '/api/leaderboard', '/api/leaderboards', '/api/admin'], rateLimit(240));
+app.use('/api/auth', rateLimit(30));
 // Player profiles, results and leaderboards (server/api.mjs). The database opens on first use.
 app.use('/api', createRoomApi());
 
