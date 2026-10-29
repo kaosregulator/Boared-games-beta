@@ -60,7 +60,10 @@ export function resolveArchive(id: string, kind: 'video' | 'audio', hint?: strin
   const key = `${kind}:${id}:${hint ?? ''}`;
   const hit = cache.get(key);
   if (hit) return hit;
-  const job = fetch(`https://archive.org/metadata/${encodeURIComponent(id)}`)
+  // archive.org's metadata API sometimes hangs; give up after 10 s so the set can retry.
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 10_000);
+  const job = fetch(`https://archive.org/metadata/${encodeURIComponent(id)}`, { signal: ctrl.signal })
     .then(res => (res.ok ? res.json() : null))
     .then((meta: { files?: MetaFile[] } | null) => {
       const file = meta?.files ? pick(meta.files, kind, hint) : null;
@@ -72,7 +75,8 @@ export function resolveArchive(id: string, kind: 'video' | 'audio', hint?: strin
         name: file.name,
       };
     })
-    .catch(() => null);
+    .catch(() => null)
+    .finally(() => clearTimeout(timer));
   cache.set(key, job);
   // A failed lookup should be retried next time, not cached forever.
   job.then(result => {

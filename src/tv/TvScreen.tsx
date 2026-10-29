@@ -107,6 +107,13 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
   const snow = useRef<HTMLCanvasElement>(null);
   const hiss = useRef<StaticHandle | null>(null);
   const tuneToken = useRef(0);
+  /**
+   * A channel that doesn't lock on is tried again before the set gives up:
+   * two quick retries under the static, then NO SIGNAL, then a quiet retry
+   * every 20 s while you stay on it, so a slow archive.org start recovers on
+   * its own instead of needing a channel flip.
+   */
+  const autoTune = useRef({ channel: -1, tries: 0, quiet: false, timer: 0 });
   const osdTimer = useRef<number | null>(null);
   const guideList = useRef<HTMLDivElement>(null);
   const emu = useRef<HTMLIFrameElement>(null);
@@ -200,13 +207,44 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
     }
     const ch = CHANNELS.find(c => c.number === channel) ?? CHANNELS[0];
     const token = ++tuneToken.current;
-    setTuning(true);
-    setSignal('ok');
-    channelClick();
-    hiss.current?.stop(0.02);
-    hiss.current = startStatic(plainVolume(volume), 'tv');
-    showOsd(`CH ${String(ch.number).padStart(2, '0')}  ${ch.call}`);
+    const auto = autoTune.current;
+    window.clearTimeout(auto.timer);
+    if (auto.channel !== ch.number) {
+      auto.channel = ch.number;
+      auto.tries = 0;
+      auto.quiet = false;
+    }
+    const quietRetry = auto.quiet;
+    auto.quiet = false;
+    if (!quietRetry) {
+      // A background retry from NO SIGNAL keeps that screen up until a picture arrives.
+      setTuning(true);
+      setSignal('ok');
+      channelClick();
+      hiss.current?.stop(0.02);
+      hiss.current = startStatic(plainVolume(volume), 'tv');
+      showOsd(`CH ${String(ch.number).padStart(2, '0')}  ${ch.call}`);
+    }
     const tunedAt = performance.now();
+    /** Nothing came through: retry under the static, or show NO SIGNAL and keep trying quietly. */
+    const deadAir = () => {
+      if (token !== tuneToken.current) return;
+      if (auto.tries < 2) {
+        auto.tries += 1;
+        auto.timer = window.setTimeout(() => {
+          if (token === tuneToken.current) setRetune(r => r + 1);
+        }, 1200);
+        return;
+      }
+      setTuning(false);
+      setSignal('none');
+      hiss.current?.setLevel(plainVolume(volume) * 0.45);
+      auto.timer = window.setTimeout(() => {
+        if (token !== tuneToken.current) return;
+        auto.quiet = true;
+        setRetune(r => r + 1);
+      }, 20_000);
+    };
 
     if (ch.kind === 'youtube' || ch.kind === 'ads') {
       // The YouTube player or the ad reel (rendered below) does the playing; the set just waits for it to lock.
@@ -275,18 +313,33 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
 
     let giveUp = window.setTimeout(() => {
       if (token !== tuneToken.current) return;
-      setTuning(false);
-      setSignal('none');
-      hiss.current?.setLevel(plainVolume(volume) * 0.45);
+      // Drop the half-loaded stream so the retry starts clean.
+      el.removeAttribute('src');
+      el.load();
+      deadAir();
     }, 14000);
+
+    /** Once a picture is up, a stream that stops buffering for 15 s is retuned (the set goes back to snow). */
+    let stallTimer = 0;
+    const onWaiting = () => {
+      window.clearTimeout(stallTimer);
+      stallTimer = window.setTimeout(() => {
+        if (token === tuneToken.current) setRetune(r => r + 1);
+      }, 15_000);
+    };
+    const onResumed = () => window.clearTimeout(stallTimer);
+    const watchStall = () => {
+      el.addEventListener('waiting', onWaiting);
+      el.addEventListener('stalled', onWaiting);
+      el.addEventListener('playing', onResumed);
+      el.addEventListener('timeupdate', onResumed);
+    };
 
     lookup.then(found => {
       if (token !== tuneToken.current) return;
       if (!found) {
         window.clearTimeout(giveUp);
-        setTuning(false);
-        setSignal('none');
-        hiss.current?.setLevel(plainVolume(volume) * 0.45);
+        deadAir();
         return;
       }
       const host = hostOf(found.file.url);
@@ -312,10 +365,12 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
         window.setTimeout(() => {
           if (token !== tuneToken.current) return;
           window.clearTimeout(giveUp);
+          auto.tries = 0;
           setTuning(false);
           setSignal('ok');
           hiss.current?.stop(0.25);
           hiss.current = null;
+          watchStall();
           setLowerThird(found.label);
           window.setTimeout(() => setLowerThird(cur => (cur === found.label ? null : cur)), 4200);
         }, wait);
@@ -337,9 +392,7 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
           return;
         }
         window.clearTimeout(giveUp);
-        setTuning(false);
-        setSignal('none');
-        hiss.current?.setLevel(plainVolume(volume) * 0.45);
+        deadAir();
       };
       el.addEventListener('loadedmetadata', onMeta, { once: true });
       el.addEventListener('playing', onPlaying, { once: true });
@@ -355,6 +408,12 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
     return () => {
       window.clearTimeout(giveUp);
       giveUp = 0;
+      window.clearTimeout(stallTimer);
+      window.clearTimeout(auto.timer);
+      el.removeEventListener('waiting', onWaiting);
+      el.removeEventListener('stalled', onWaiting);
+      el.removeEventListener('playing', onResumed);
+      el.removeEventListener('timeupdate', onResumed);
     };
     // volume is applied separately; retuning on volume would restart the stream
     // eslint-disable-next-line react-hooks/exhaustive-deps

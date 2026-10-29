@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Type check
+        run: npm run lint
+      - name: Tests
+        run: |
+          set +e
+          npm test 2>&1 | tee test.log
+          status=${PIPESTATUS[0]}
+          # Failing test names as annotations, readable without opening the log.
+          grep -E "^\s*not ok" test.log | grep -v "# SKIP" | head -15 | sed 's/^ *//; s/^/::error::/'
+          grep -E "^\s+(error|expected|actual):" -A2 test.log | head -30 | tr '\n' ' ' | sed 's/^/::error::/'
+          echo
+          exit $status
+      - name: Production build
+        run: npm run build

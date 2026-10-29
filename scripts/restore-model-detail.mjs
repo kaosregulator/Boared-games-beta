@@ -37,7 +37,11 @@ const TMP = path.resolve('.restore-tmp');
 const BUDGET = { hero: 80_000, closeup: 50_000, prop: 25_000 };
 const ERROR = 0.001;
 
-/** Room model -> [detail class, git blob of its full-detail version]. */
+/**
+ * Room model -> [detail class, git blob of its full-detail version, overrides].
+ * Overrides: drive (a public Google Drive file id of the original export, used
+ * instead of the blob), triangles and colorPx.
+ */
 export const SOURCES = {
   'bed.glb': ['hero', '9114c7efe61040bdd108ce48feaed8971ecde986'],
   'shelf.glb': ['hero', '68ad1e44dd1b1d5241d91569211406b3a7de4d1f'],
@@ -45,7 +49,9 @@ export const SOURCES = {
   'dresser.glb': ['hero', '280bcedea718dfb5284086c3df9c2d360a471fb9'],
   'nightstand.glb': ['hero', 'a60698aa37e7badef0e6d958a0978594e23ca68b'],
   'window.glb': ['hero', 'b0a81e4972090d1666efacd3ac1ee36fe3a4e03d'],
-  'toyshelf.glb': ['hero', '7b828bbfb89cbd06ead0b5ad042919c0bd804841'],
+  // The toy shelf is looked at up close (the bins by the skateboard), so it gets
+  // the original export at 4096 px and more triangles than the rest.
+  'toyshelf.glb': ['hero', '7b828bbfb89cbd06ead0b5ad042919c0bd804841', { drive: '1TdoaDHGeEtCGL5zB6gmEYvMsyhH9ERtO', triangles: 240_000, colorPx: 4096 }],
   'door.glb': ['hero', 'e174800cd86a24396d369f9d208c49122b454537'],
   'clutterdesk.glb': ['hero', '2501e3b54c6c590dbe6141eba7d81948cf984bad'],
   'gameboy.glb': ['closeup', 'c6edd2e43d7eb248ceee4b1240573ed6e8586d72'],
@@ -104,25 +110,35 @@ const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies(
 const only = process.argv[2] ? new Set(process.argv[2].split(',')) : null;
 await mkdir(TMP, { recursive: true });
 let failed = 0;
-for (const [file, [cls, blob]] of Object.entries(SOURCES)) {
+for (const [file, [cls, blob, extra = {}]] of Object.entries(SOURCES)) {
   if (only && !only.has(file)) continue;
   const src = path.join(TMP, `src-${file}`);
   const stage1 = path.join(TMP, `s1-${file}`);
   const stage2 = path.join(TMP, `s2-${file}`);
   const out = path.join('public/models', file);
   try {
-    await writeFile(src, execFileSync('git', ['cat-file', 'blob', blob], { maxBuffer: 1 << 30 }));
+    if (extra.drive) {
+      // Public file: Drive's direct download endpoint, confirm=t skips the large-file warning page.
+      const url = `https://drive.usercontent.google.com/download?id=${extra.drive}&export=download&confirm=t`;
+      execFileSync('curl', ['-sSL', '--fail', '-o', src, url]);
+      const head = (await import('node:fs')).readFileSync(src).subarray(0, 4).toString();
+      if (head !== 'glTF') throw new Error(`Drive returned something other than a GLB for ${file}`);
+    } else {
+      await writeFile(src, execFileSync('git', ['cat-file', 'blob', blob], { maxBuffer: 1 << 30 }));
+    }
+    const budget = extra.triangles ?? BUDGET[cls];
+    const colorPx = extra.colorPx ?? 1536;
     const doc = await io.read(src);
     await doc.transform(weld({ tolerance: 0.00005 }));
     const before = triangles(doc);
-    await doc.transform(simplify({ simplifier: MeshoptSimplifier, ratio: Math.min(1, BUDGET[cls] / before), error: ERROR }));
-    permissive(doc, BUDGET[cls]);
+    await doc.transform(simplify({ simplifier: MeshoptSimplifier, ratio: Math.min(1, budget / before), error: ERROR }));
+    permissive(doc, budget);
     // Draco off: the room loads meshopt geometry. PNG here is only a lossless hand-off to the KTX2 pass.
     for (const ext of doc.getRoot().listExtensionsUsed()) if (ext.extensionName === 'KHR_draco_mesh_compression') ext.dispose();
     await doc.transform(
       dedup(),
       prune(),
-      textureCompress({ encoder: sharp, targetFormat: 'png', resize: [1536, 1536], slots: /^baseColor/ }),
+      textureCompress({ encoder: sharp, targetFormat: 'png', resize: [colorPx, colorPx], slots: /^baseColor/ }),
       textureCompress({ encoder: sharp, targetFormat: 'png', resize: [1024, 1024], slots: /^(?!baseColor)/ }),
     );
     await io.write(stage1, doc);
