@@ -54,7 +54,6 @@ export type IconName =
   | 'pegged'
   | 'arcade'
   | 'sandwich'
-  | 'crunch'
   | 'thing'
   | 'dos';
 
@@ -463,20 +462,6 @@ const DRAW: Record<IconName, () => React.ReactNode> = {
       <rect x={3} y={15} width={26} height={3} fill="#fd3" />
       <rect x={3} y={18} width={26} height={4} fill="#a0522d" />
       <rect x={3} y={22} width={26} height={5} fill="#e3a857" stroke={O} />
-    </>
-  ),
-  // A cereal box with a crunchling peeking over the top.
-  crunch: () => (
-    <>
-      <rect x={7} y={6} width={18} height={24} fill="#1f4fbf" stroke={O} />
-      <rect x={9} y={10} width={14} height={7} fill="#f2c200" stroke={O} />
-      <rect x={9} y={19} width={14} height={8} fill="#e33" />
-      <circle cx={13} cy={23} r={1.6} fill="#fd3" />
-      <circle cx={18} cy={22} r={1.6} fill="#fd3" />
-      <circle cx={16} cy={25} r={1.6} fill="#fd3" />
-      <circle cx={16} cy={5} r={4} fill="#7c3" stroke={O} />
-      <circle cx={14.5} cy={4} r={0.9} fill="#000" />
-      <circle cx={17.5} cy={4} r={0.9} fill="#000" />
     </>
   ),
   thing: () => (
