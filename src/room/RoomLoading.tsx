@@ -25,8 +25,8 @@ export function loadedShare(p: NetProgress) {
 /**
  * True once everything the room asked for is in. It stays true: something
  * downloaded later (a game's pieces) has its own loading, not this one.
- * `stalled` turns on if nothing has arrived for a while, so nobody is ever
- * stuck behind a bar that won't move.
+ * `stalled` turns on if nothing has arrived for a while, or a model gave up
+ * after its retries, so nobody is ever stuck behind a bar that won't move.
  */
 export function useRoomReady() {
   const p = useNetProgress();
@@ -34,7 +34,10 @@ export function useRoomReady() {
   const [stalled, setStalled] = useState(false);
   const lastMove = useRef({ at: Date.now(), key: '' });
 
-  const settled = p.open && p.idle && p.files > 0;
+  // A model that never came (after its retries) keeps the room covered: the
+  // player gets "Go in anyway" at once instead of a room with a hole in it.
+  const settled = p.open && p.idle && p.files > 0 && p.failed === 0;
+  const gaveUp = p.open && p.idle && p.failed > 0;
   useEffect(() => {
     if (ready || !settled) return;
     const id = window.setTimeout(() => setReady(true), SETTLE_MS);
@@ -49,7 +52,7 @@ export function useRoomReady() {
     return () => window.clearInterval(id);
   }, [ready]);
 
-  return { ready, stalled: stalled && !ready, progress: p };
+  return { ready, stalled: (stalled || gaveUp) && !ready, progress: p };
 }
 
 const mb = (bytes: number) => (bytes / 1e6).toFixed(bytes < 1e7 ? 1 : 0);
@@ -79,7 +82,11 @@ export function LoadingMeter({ progress, label = 'Loading the room' }: { progres
           </span>
         )}
       </p>
-      {progress.failed > 0 && <p className="text-[10px] text-amber-200/70">Retrying a piece that didn't come through…</p>}
+      {progress.failed > 0 && progress.idle && (
+        <p className="text-[10px] text-amber-200/70">
+          {progress.failed === 1 ? 'One piece' : `${progress.failed} pieces`} of the room didn't come through. Refresh to try again.
+        </p>
+      )}
     </div>
   );
 }

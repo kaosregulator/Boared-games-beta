@@ -44,6 +44,7 @@ export interface NetProgress {
   /** Model files asked for so far, and how many are in. */
   files: number;
   done: number;
+  /** Gave up on (after retries), not counting downloads the page itself called off. */
   failed: number;
   /** Bytes in, and the bytes expected (from the manifest; 0 when it isn't there). */
   loaded: number;
@@ -67,6 +68,8 @@ const got = new Map<string, number>();
 let files = 0;
 let done = 0;
 let failed = 0;
+/** Called off by the page (a loader aborted it): not a failure. */
+let cancelled = 0;
 let snapshot: NetProgress = { files: 0, done: 0, failed: 0, loaded: 0, total: 0, idle: true, open: false };
 const listeners = new Set<() => void>();
 let notifyQueued = false;
@@ -238,7 +241,7 @@ export function installNetQueue() {
       }
       checking -= 1;
       if (signal.aborted) {
-        failed += 1;
+        cancelled += 1;
         publish();
         throw abortedErr();
       }
@@ -249,6 +252,7 @@ export function installNetQueue() {
           finished = true;
           running -= 1;
           if (ok) done += 1;
+          else if (signal.aborted) cancelled += 1;
           else failed += 1;
           pump();
         };
@@ -304,7 +308,7 @@ export function installNetQueue() {
             const i = waiting.indexOf(item);
             if (i < 0) return;
             waiting.splice(i, 1);
-            failed += 1;
+            cancelled += 1;
             publish();
             reject(abortedErr());
           },
