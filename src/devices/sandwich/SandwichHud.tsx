@@ -231,6 +231,7 @@ function Card({ title, lines, favs, action, onAction }: { title: string; lines: 
   );
 }
 
+/** Under the desk on a phone held upright; halfway up the sides when it's on its side, clear of 625's walk. */
 function HoldButton({ dir, className }: { dir: -1 | 1; className: string }) {
   const hold = (on: boolean) => {
     if (on) desk.touchMove = dir;
@@ -248,7 +249,7 @@ function HoldButton({ dir, className }: { dir: -1 | 1; className: string }) {
       onPointerUp={() => hold(false)}
       onPointerCancel={() => hold(false)}
       onContextMenu={e => e.preventDefault()}
-      className={`pointer-events-auto absolute bottom-5 ${className} flex h-24 w-24 items-center justify-center rounded-full border-4 border-amber-200/70 bg-black/55 text-4xl font-black text-amber-100 active:bg-amber-300/40`}
+      className={`pointer-events-auto absolute bottom-5 ${className} landscape:bottom-auto landscape:top-1/2 landscape:-translate-y-1/2 flex h-24 w-24 items-center justify-center rounded-full border-4 border-amber-200/70 bg-black/55 text-4xl font-black text-amber-100 active:bg-amber-300/40`}
       style={{ touchAction: 'none' }}
     >
       {dir < 0 ? '◀' : '▶'}
