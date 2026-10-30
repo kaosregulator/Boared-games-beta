@@ -2,7 +2,7 @@ import type { IconName } from './icons';
 import { hourglass } from './settings';
 import { sfx } from './sound';
 import { messageBox, openWindow, type AppId } from './wm';
-import { CRUNCHLING, openWebGame, playSandwich, THING_THING } from '../apps/webgames';
+import { openWebGame, playSandwich, THING_THING } from '../apps/webgames';
 import { reportEvent } from '../../net/roomApi';
 
 /** Title, icon and opening size for every program. The components live in apps/index.tsx. */
@@ -87,8 +87,6 @@ export const COMMANDS: Record<string, () => void> = {
   arcade: () => launch('arcade'),
   sandwich: () => playSandwich(),
   thingthing: () => openWebGame(THING_THING),
-  crunch: () => openWebGame(CRUNCHLING),
-  crunchling: () => openWebGame(CRUNCHLING),
   control: () => launch('explorer', 'Control Panel', 'Control Panel'),
   winhelp: () => launch('help'),
   'desk.cpl': () => launch('display'),
