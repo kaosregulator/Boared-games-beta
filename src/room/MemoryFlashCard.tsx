@@ -5,6 +5,7 @@ import { GAME_PHOTOS } from './gamePhotos';
 import { ChevronLeft, ChevronRight, Play, Radio, Square, X } from 'lucide-react';
 import { capsule, setCapsuleMode, setCapsuleStage, useCapsulePiece } from './capsule/capsuleBus';
 import { sound } from '../utils/audio';
+import { ArchiveThanks } from '../components/ArchiveThanks';
 import { loadVoiceManifest, playOpenBeeps, useHoloVoice, useVoiceManifest, voiceFile } from './capsule/holoVoice';
 import { gameKindLine, gamePages, narrate, propKindLine, propPages, voiceKey, type CapsuleNode, type CapsulePage } from './capsuleText';
 import './holoCard.css';
@@ -423,6 +424,7 @@ function Capsule({
           ))}
         </div>
       )}
+      <ArchiveThanks className="hc-thanks" />
     </div>
   );
 }
@@ -583,6 +585,7 @@ function Screen({
           <Square className="h-3 w-3" />
         </Key>
       </div>
+      <ArchiveThanks className="hm-screen-thanks" />
     </div>
   );
 }

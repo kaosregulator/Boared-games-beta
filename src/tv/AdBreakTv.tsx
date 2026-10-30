@@ -1,7 +1,45 @@
 import React, { useEffect, useRef } from 'react';
 import { nowSeconds } from './channels';
 import { isRouted, routeToSpeaker, setSpeakerVolume, unroute } from './surround';
-import { adAfter, adLabel, adsOnAir, slotAfter, type Ad, type AdAir } from './lineups/ads90s';
+import { adAfter, adLabel, adsOnAir, slotAfter, type Ad, type AdAir, type Slot } from './lineups/ads90s';
+
+/** Where the spots come from: channel 90's all-day schedule, or one break on another channel. */
+export interface AdSource {
+  onAir: (at: number) => AdAir | null;
+  slotAfter: (air: AdAir) => AdAir | null;
+  adAfter: (air: AdAir) => { ad: Ad; inSeconds: number } | null;
+  /** A break that has run its course (the channel goes back to the show). */
+  over?: (at: number) => boolean;
+}
+
+const CHANNEL_90: AdSource = { onAir: at => adsOnAir(at), slotAfter: air => slotAfter(air), adAfter: air => adAfter(air) };
+
+/** One commercial break on a show channel: `spots` back to back from `startAt` on the shared clock. */
+export function breakSource(spots: Ad[], startAt: number): AdSource {
+  const slots: Slot[] = [];
+  let at = 0;
+  for (const ad of spots) {
+    slots.push({ at, seconds: ad.seconds, ad });
+    at += ad.seconds;
+  }
+  const total = at;
+  const airAt = (index: number, offset: number): AdAir | null => (index < slots.length ? { slot: slots[index], index, offset, day: 0 } : null);
+  return {
+    onAir: now => {
+      const t = Math.max(0, now - startAt);
+      if (t >= total) return null;
+      let i = 0;
+      while (i + 1 < slots.length && slots[i + 1].at <= t) i += 1;
+      return airAt(i, t - slots[i].at);
+    },
+    slotAfter: air => airAt(air.index + 1, 0),
+    adAfter: air => {
+      const next = airAt(air.index + 1, 0);
+      return next?.slot.ad ? { ad: next.slot.ad, inSeconds: air.slot.seconds - air.offset } : null;
+    },
+    over: now => now - startAt >= total - 0.25,
+  };
+}
 
 interface AdBreakTvProps {
   style: React.CSSProperties;
@@ -14,6 +52,10 @@ interface AdBreakTvProps {
   onMuted: () => void;
   /** Throwback Trivia borrowed the speakers. */
   quiet?: boolean;
+  /** One break on a show channel instead of channel 90. */
+  source?: AdSource;
+  /** The break ended: back to the show. */
+  onDone?: () => void;
 }
 
 /** Spots that won't play in a row before the set gives up and shows NO SIGNAL. */
@@ -32,20 +74,22 @@ const SNAP_SECONDS = 1.5;
  * headers; if a browser won't take them, the channel plays straight from the
  * <video> rather than not at all).
  */
-export function AdBreakTv({ style, volume, onPlaying, onFail, onMuted, quiet = false }: AdBreakTvProps) {
+export function AdBreakTv({ style, volume, onPlaying, onFail, onMuted, quiet = false, source = CHANNEL_90, onDone }: AdBreakTvProps) {
   const host = useRef<HTMLDivElement>(null);
   const volumeRef = useRef(volume);
   volumeRef.current = volume;
   const quietRef = useRef(quiet);
   quietRef.current = quiet;
-  const cb = useRef({ onPlaying, onFail, onMuted });
-  cb.current = { onPlaying, onFail, onMuted };
+  const cb = useRef({ onPlaying, onFail, onMuted, onDone });
+  cb.current = { onPlaying, onFail, onMuted, onDone };
+  const src = useRef(source);
   /** Set by the running channel so volume and Throwback holds reach it. */
   const control = useRef<{ volume: () => void; hold: (on: boolean) => void } | null>(null);
 
   useEffect(() => {
     const box = host.current;
     if (!box) return;
+    const { onAir, slotAfter, adAfter, over } = src.current;
     let alive = true;
     /** Try levelled sound first; drop it if the first spot won't load that way. */
     let cors = true;
@@ -149,12 +193,19 @@ export function AdBreakTv({ style, volume, onPlaying, onFail, onMuted, quiet = f
     const sync = (after?: AdAir) => {
       if (!alive) return;
       window.clearTimeout(gapTimer);
-      let air = adsOnAir(nowSeconds());
+      let air = onAir(nowSeconds());
       if (air && after && air.day === after.day && air.index <= after.index) air = slotAfter(after);
       // jump over spots already known not to play
       for (let guard = 0; air && air.slot.ad && failed.has(air.slot.ad.index) && guard < 50; guard += 1) air = slotAfter(air);
       if (!air) {
-        cb.current.onFail();
+        if (over?.(nowSeconds())) cb.current.onDone?.();
+        else if (after && over) {
+          // the last spot quit early: black until the break's time is up
+          playing?.abort();
+          active.pause();
+          show(null);
+          gapTimer = window.setTimeout(() => sync(after), 250);
+        } else cb.current.onFail();
         return;
       }
       if (held) return;
@@ -221,7 +272,7 @@ export function AdBreakTv({ style, volume, onPlaying, onFail, onMuted, quiet = f
           }
           failed.add(ad.index);
           fails += 1;
-          if (fails >= MAX_FAILS) {
+          if (fails >= MAX_FAILS && !over) {
             cb.current.onFail();
             return;
           }

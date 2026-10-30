@@ -2,16 +2,17 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { setPadFrame } from '../devices/gameboyBus';
 import { CHANNELS, guideRow, nowSeconds, snickOnAir, type Channel } from './channels';
 import { packOnAir } from './packSchedule';
-import { resolveArchive } from './archive';
+import { resolveArchive, type ArchiveFile } from './archive';
 import { forgetVault, isVaultUrl, resolveVault } from './vault';
 import { channelClick, paintSnow, startStatic, type StaticHandle } from './noise';
 import { snickShowAt } from './snick';
 import { mayTurnOn } from '../room/houseRules';
-import { blockOnAir, showTitleAt } from './lineups/archiveBlocks';
+import { blockOnAir, showTitleAt, type ArchiveBlock } from './lineups/archiveBlocks';
 import { CARTRIDGES, cartridgeSrc, type Cartridge } from '../devices/cartridges';
 import { TV247_ON } from './tv247';
 import { YouTubeTv } from './YouTubeTv';
-import { AdBreakTv } from './AdBreakTv';
+import { ARCHIVE_THANKS_SHORT, HEART_RED } from '../components/ArchiveThanks';
+import { AdBreakTv, breakSource, type AdSource } from './AdBreakTv';
 import { useTvQuiet } from './tvBus';
 import { PICK_NUMBER, setPick } from './lineups/youtube247';
 import { TV_MAX_VOLUME, isRouted, routeWhenReady, setSpeakerVolume } from './surround';
@@ -61,6 +62,17 @@ const hostOf = (url: string) => {
 
 /** What the set's own speaker and <video>.volume can do; the rest is the room speaker's boost. */
 const plainVolume = (v: number) => Math.min(1, v);
+
+/**
+ * What a block has on now. A part with under a second left hands straight to
+ * the next one, so a retune as a break ends goes back to the show instead of
+ * replaying the tail of the last spot.
+ */
+function partOnAir(block: ArchiveBlock, at: number) {
+  const air = blockOnAir(block, at);
+  const left = air.part.seconds - air.offset;
+  return left < 1 ? blockOnAir(block, at + left + 0.01) : air;
+}
 
 function clockLabel(at: Date) {
   return at.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -176,6 +188,16 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
   );
 
   const watching = mode === 'tv' || mode === 'guide';
+  /** A show channel in one of its commercial breaks: the ad reel plays instead of the tape. */
+  const breakReel = useMemo((): { key: string; source: AdSource } | null => {
+    if (!watching) return null;
+    const ch = CHANNELS.find(c => c.number === channel);
+    if (!ch || ch.kind !== 'block') return null;
+    const at = nowSeconds();
+    const air = partOnAir(ch.block, at);
+    if (!air.part.spots) return null;
+    return { key: `break-${ch.number}-${retune}`, source: breakSource(air.part.spots, at - air.offset) };
+  }, [channel, retune, watching]);
 
   // A Throwback cue borrows the set. Resume only if this pause is the one that stopped it.
   useEffect(() => {
@@ -246,7 +268,7 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
       }, 20_000);
     };
 
-    if (ch.kind === 'youtube' || ch.kind === 'ads') {
+    if (ch.kind === 'youtube' || ch.kind === 'ads' || breakReel) {
       // The YouTube player or the ad reel (rendered below) does the playing; the set just waits for it to lock.
       el.pause();
       el.removeAttribute('src');
@@ -286,7 +308,7 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
     }
     ytTune.current = null;
 
-    const lookup =
+    const lookup: Promise<{ file: ArchiveFile; offset: number; label: string; cutAt?: number } | null> =
       ch.kind === 'snick'
         ? (() => {
             const air = snickOnAir();
@@ -296,10 +318,12 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
           })()
         : ch.kind === 'block'
         ? (() => {
-            const air = blockOnAir(ch.block, nowSeconds());
+            const air = partOnAir(ch.block, nowSeconds());
             const fromVault = ch.block.vaultShow && air.part.vault ? resolveVault(ch.block.vaultShow, air.part.vault) : Promise.resolve(null);
+            // On a channel with commercial breaks, the show cuts away when its slot is up.
+            const cutAt = ch.block.parts.some(p => p.spots) ? (air.part.from ?? 0) + air.part.seconds : undefined;
             return fromVault.then(local => local ?? resolveArchive(air.part.id ?? ch.block.id, 'video', air.part.file)).then(file =>
-              file ? { file, offset: air.offset, label: showTitleAt(air.part, air.offset) } : null,
+              file ? { file, offset: (air.part.from ?? 0) + air.offset, label: showTitleAt(air.part, air.offset), cutAt } : null,
             );
           })()
         : (() => {
@@ -328,6 +352,18 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
       }, 15_000);
     };
     const onResumed = () => window.clearTimeout(stallTimer);
+    /** The show's slot is up: roll on to the break without the snow and click of a channel change. */
+    let cutAt = Infinity;
+    const onCutCheck = () => {
+      if (el.currentTime < cutAt || token !== tuneToken.current) return;
+      cutAt = Infinity;
+      autoTune.current.quiet = true;
+      setRetune(r => r + 1);
+    };
+    const watchCut = (at: number) => {
+      cutAt = at - 0.1;
+      el.addEventListener('timeupdate', onCutCheck);
+    };
     const watchStall = () => {
       el.addEventListener('waiting', onWaiting);
       el.addEventListener('stalled', onWaiting);
@@ -371,6 +407,7 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
           hiss.current?.stop(0.25);
           hiss.current = null;
           watchStall();
+          if (found.cutAt !== undefined) watchCut(found.cutAt);
           setLowerThird(found.label);
           window.setTimeout(() => setLowerThird(cur => (cur === found.label ? null : cur)), 4200);
         }, wait);
@@ -414,6 +451,7 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
       el.removeEventListener('stalled', onWaiting);
       el.removeEventListener('playing', onResumed);
       el.removeEventListener('timeupdate', onResumed);
+      el.removeEventListener('timeupdate', onCutCheck);
     };
     // volume is applied separately; retuning on volume would restart the stream
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -610,10 +648,13 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
     userSelect: 'none',
   };
 
+  // Archive.org channels keep a thin strip under the picture for the thank-you, so it never covers the show.
+  const thanks = mode === 'tv' && current.kind !== 'youtube';
+  const strip = thanks ? Math.round(height * 0.045) : 0;
   const videoStyle: React.CSSProperties =
     mode === 'guide'
       ? { position: 'absolute', left: 18, top: 16, width: width * 0.42, height: height * 0.36, objectFit: 'cover', border: '3px solid #f4f1c8' }
-      : { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' };
+      : { position: 'absolute', left: 0, top: 0, width: '100%', height: height - strip, objectFit: 'cover' };
 
   return (
     <div style={box} data-ui="tv">
@@ -628,11 +669,15 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
         }}
         playsInline
         preload="auto"
-        style={{ ...videoStyle, visibility: watching && current.kind !== 'youtube' && current.kind !== 'ads' ? 'visible' : 'hidden', background: '#000' }}
+        style={{ ...videoStyle, visibility: watching && current.kind !== 'youtube' && current.kind !== 'ads' && !breakReel ? 'visible' : 'hidden', background: '#000' }}
         onEnded={() => {
           // SNICK and the tape blocks roll into the next archive. A cartoon
           // pack loops the short until its slot ends, then the slot timer retunes.
-          if (current.kind === 'snick' || current.kind === 'block') setRetune(r => r + 1);
+          if (current.kind === 'block' && current.block.parts.some(p => p.spots)) {
+            // a show channel with breaks goes straight to commercial, no channel-change snow
+            autoTune.current.quiet = true;
+            setRetune(r => r + 1);
+          } else if (current.kind === 'snick' || current.kind === 'block') setRetune(r => r + 1);
           else if (video.current) {
             video.current.currentTime = 0;
             void video.current.play();
@@ -662,6 +707,23 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
           onPlaying={label => ytTune.current?.onPlaying(label)}
           onFail={() => ytTune.current?.onFail()}
           onMuted={() => showOsd('MUTED — PRESS VOL +', 4000)}
+        />
+      )}
+
+      {watching && breakReel && (
+        <AdBreakTv
+          key={breakReel.key}
+          style={videoStyle}
+          volume={volume}
+          quiet={quiet}
+          source={breakReel.source}
+          onPlaying={label => ytTune.current?.onPlaying(label)}
+          onFail={() => ytTune.current?.onFail()}
+          onMuted={() => showOsd('MUTED — PRESS VOL +', 4000)}
+          onDone={() => {
+            autoTune.current.quiet = true;
+            setRetune(r => r + 1);
+          }}
         />
       )}
 
@@ -695,7 +757,7 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
           style={{
             position: 'absolute',
             left: 24,
-            bottom: 22,
+            bottom: 22 + strip,
             maxWidth: width - 48,
             background: 'rgba(0,0,0,0.6)',
             padding: '6px 12px',
@@ -706,6 +768,27 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
         >
           {String(current.number).padStart(2, '0')} {current.call} · {lowerThird}
         </div>
+      )}
+
+      {thanks && (
+        <p
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: strip,
+            lineHeight: `${strip}px`,
+            fontSize: Math.round(strip * 0.55),
+            textAlign: 'center',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            color: 'rgba(255,255,255,0.55)',
+            background: '#000',
+          }}
+        >
+          <span style={{ color: HEART_RED }}>♥</span> {ARCHIVE_THANKS_SHORT}
+        </p>
       )}
 
       {mode === 'off' && <div style={{ position: 'absolute', inset: 0, background: '#020202' }} />}
