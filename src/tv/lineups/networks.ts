@@ -963,9 +963,22 @@ export const CBS = lineup('CBS_Thursday_Block_WOC_2001-03-29', {
 
 // ---- VH1 ----
 
-/** VH1's I Love the 90s, off tape. */
+/** VH1 in the 90s off tape: Pop-Up Video, Behind the Music, I Love the '90s, Divas Live and whole nights. */
 export const VH1 = lineup('VH1ILoveThe90s', {
-  tapes: [tape('VH1ILoveThe90s', 'VH1 - I Love the 90s (96-99) WOC.mp4', 11895.16, "VH1 · I Love the '90s · 1996–99")],
+  tapes: [
+    tape('VH1ILoveThe90s', 'VH1 - I Love the 90s (96-99) WOC.mp4', 11895.16, "VH1 · I Love the '90s · 1996–99"),
+    tape('pop-up-video-episode-10', 'Pop-Up Video Episode 10.ia.mp4', 1353.79, 'Pop-Up Video · episode 10'),
+    tape('2022.1.1-vh-1-1991-flix', '2022.1.1-VH1_1991-FLIX.mp4', 1828, 'VH1 · FLIX · 1991'),
+    tape('2022.1.1-vh-1-1991-flix', '2022.1.2-VH1_1991-The Soul of VH1 - Cover Songs.mp4', 3719, 'The Soul of VH1 · Cover Songs · 1991'),
+    tape('TheVistaGroup-TVBroadcastFleetwoodMacBehindtheMusicVH1_1997', '~Fleetwood Mac', 2678, 'Behind the Music · Fleetwood Mac · 1997'),
+    tape('20250408_20250408_2141', '~8-Track Flashback', 7373.87, 'VH1 · 8-Track Flashback, Archives, Classic Albums · May 1997'),
+    tape('pop-up-video-elton-john', 'Pop-Up Video Elton John.ia.mp4', 1324, 'Pop-Up Video · Elton John special'),
+    tape('1997-06-19-vh-1-hollywood-vinyl-batman-lost-world-lost-videos-disney-videos', '~Hollywood & Vinyl', 5937, 'VH1 · Hollywood & Vinyl · June 19, 1997'),
+    tape('behind-the-music-styx', 'Behind the Music - Styx.mp4', 2605, 'Behind the Music · Styx'),
+    tape('vh1-divas-live', 'Analog 20220902 1004-A-A.mp4', 4803.37, 'VH1 Divas Live · 1998'),
+    tape('pop-up-video-cold-war-80s', "Pop-Up Video Cold War 80's.ia.mp4", 1323, "Pop-Up Video · Cold War '80s"),
+    tape('random-vh-1-and-a-ray-charles-concert-1999', 'Random VH1 and a Ray Charles concert, 1999.ia.mp4', 5383, 'VH1 · 1999, with a Ray Charles concert'),
+  ],
   audience: 'teen',
   seed: 28,
 });
@@ -992,4 +1005,53 @@ export const UPN = lineup('upn-woc', {
   ],
   audience: 'teen',
   seed: 27,
+});
+
+// ---- Comedy Central ----
+
+/** Comedy Central off tape: MST3K, Dr. Katz, South Park's first season, Win Ben Stein's Money, BattleBots. */
+export const COMEDY_CENTRAL = lineup('Dr_Katz_Comedy_Central_WOC_1997-10', {
+  tapes: [
+    tape('423-1-23-93', '423 1-23-93.mp4', 7861.25, 'Mystery Science Theater 3000 · Bride of the Monster · January 1993'),
+    tape('Dr_Katz_Comedy_Central_WOC_1997-10', 'Dr_Katz_Comedy_Central_WOC_1997-10.mp4', 2408, 'Dr. Katz, Professional Therapist · October 1997'),
+    tape('stuffandthenSOUTHPARKYAYYY', 'stuffandthenSOUTHPARKYAYYY.mp4', 19914, 'Discovery, Cinemax & Comedy Central · South Park · 1997'),
+    tape('win-ben-steins-money-march-1999-with-ads', "Win Ben Stein's Money - March 1999 with ads.mp4", 1846, "Win Ben Stein's Money · March 30, 1999"),
+    tape('615-3-14-96', '615 3-14-96.mp4', 7279, 'Mystery Science Theater 3000 · Kitten with a Whip · March 1996'),
+    tape('uncommon-ephemera-vhs-V1910-1', 'V1910-1.mp4', 1992.97, 'Comedy Central breaks from South Park season 1 · 1997–98'),
+    tape('the-n.-y.-friars-club-roast-of-jerry-stiller-october-27th-1999-woc', '~.ia.mp4', 3596, 'The Friars Club Roast of Jerry Stiller · October 1999'),
+    tape('battlebotstape1', 'battle bots tape 1.mp4', 3563.38, 'BattleBots · Comedy Central · 2001'),
+  ],
+  audience: 'adult',
+  seed: 29,
+});
+
+// ---- Wrestling ----
+
+/** A Monday Nitro night: the uploader names each file by its date. */
+const nitro = (id: string, date: string, seconds: number) => tape(id, `${date.toUpperCase()}.mp4`, seconds, `WCW Monday Nitro · ${date}`);
+
+/**
+ * WWF pay-per-views and Saturday Night's Main Event, against WCW Monday Nitro
+ * from the end of the Monday Night War, all off tape.
+ */
+export const WRESTLING = lineup('nov.-09-1997', {
+  tapes: [
+    tape('nov.-09-1997', 'NOV. 09, 1997.mp4', 9775.7, 'WWF Survivor Series · November 9, 1997'),
+    nitro('nov.-1999', 'Nov. 01, 1999', 8260),
+    tape('1987-wwf-saturday-night-main-event-10-w.-o.-c-720p', '~.ia.mp4', 5200, "WWF Saturday Night's Main Event · 1987"),
+    nitro('nov.-1999', 'Nov. 08, 1999', 7999),
+    tape('oct.-05-1997', 'OCT. 05, 1997.mp4', 10158, 'WWF Badd Blood: In Your House · October 5, 1997'),
+    nitro('nov.-1999', 'Nov. 15, 1999', 8213),
+    tape('wwf-wrestlemanias-greatest-matches-1994-vhs', '20240816_024519.ia.mp4', 3522, "WWF WrestleMania's Greatest Matches · 1994 tape"),
+    nitro('nov.-1999', 'Nov. 22, 1999', 8300),
+    tape('dec.-07-1997', 'DEC. 07, 1997.mp4', 9930, 'WWF D-Generation X: In Your House · December 7, 1997'),
+    nitro('nov.-1999', 'Nov. 29, 1999', 8374),
+    nitro('dec.-1999', 'Dec. 06, 1999', 8145),
+    tape('may-31-1998', 'MAY 31, 1998.mp4', 10044, 'WWF Over the Edge: In Your House · May 31, 1998'),
+    nitro('dec.-1999', 'Dec. 13, 1999', 8121),
+    nitro('dec.-1999', 'Dec. 20, 1999', 8604),
+    nitro('dec.-1999', 'Dec. 27, 1999', 6889),
+  ],
+  audience: 'teen',
+  seed: 30,
 });
