@@ -7,6 +7,7 @@ import { MTV_CHANNEL, PICK_CHANNEL, YT_CHANNELS, ytOnAir, ytShowAt, type YtChann
 import { PACK_SLOT, packOnAir } from './packSchedule';
 import {
   ANIMAL_PLANET,
+  BOOMERANG,
   CBS,
   COMEDY_CENTRAL,
   DISCOVERY,
@@ -208,6 +209,7 @@ export const CHANNELS: Channel[] = [
   { number: 33, call: 'NITE', kind: 'block', name: 'Nick at Nite & TV Land', block: NICK_AT_NITE },
   { number: 34, call: 'SCFI', kind: 'block', name: 'Sci-Fi Channel — Star Trek, MST3K, Godzilla', block: SCI_FI },
   { number: 35, call: 'TBS', kind: 'block', name: 'TBS & TNT — Superstation days', block: TURNER },
+  { number: 36, call: 'BOOM', kind: 'block', name: 'Boomerang — Hanna-Barbera & friends', block: BOOMERANG },
   // Nothing but 90s commercial breaks, on the channel number of the decade.
   { number: ADS_NUMBER, call: 'ADS', kind: 'ads', name: '90s Commercial Breaks' },
   ...(TV247_ON ? [ytChannel(MTV_CHANNEL), ytChannel(PICK_CHANNEL)] : []),

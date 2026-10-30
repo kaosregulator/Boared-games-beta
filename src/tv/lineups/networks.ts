@@ -1186,3 +1186,19 @@ export const TURNER = lineup('tnt-toons-1993-woc', {
   audience: 'family',
   seed: 35,
 });
+
+// ---- Boomerang ----
+
+/** Boomerang, Cartoon Network's classic-cartoon block and then its own channel, plus a 1994 Scooby-Doo marathon. */
+export const BOOMERANG = lineup('cartoon-network-boomerang-block-1965-january-20th-2001-woc', {
+  tapes: [
+    tape('cartoon-network-boomerang-block-1965-january-20th-2001-woc', '~Boomerang Block 1965', 7428, 'Cartoon Network · Boomerang 1965 · January 20, 2001'),
+    tape('pixie-dixie-boomerang-recording-may-june-2000', '~.ia.mp4', 1274, 'Boomerang · Pixie & Dixie · 2000'),
+    tape('cartoon-network-october-november-1994-woc', 'cartoonnetwork_scoobydoomarathon1994.mp4', 19520.83, 'Cartoon Network · Scooby-Doo marathon · fall 1994'),
+    tape('top-cat-boomerang-recording-may-june-2000', '~.ia.mp4', 1374, 'Boomerang · Top Cat · 2000'),
+    tape('cartoon-network-boomerang-marathon-april-1-2000-woc', '~.ia.mp4', 11832, 'Cartoon Network · Boomerang marathon & Super Chunk · April 1, 2000'),
+    tape('boomerang-august-18-2002-woc', '~.ia.mp4', 9560.37, 'Boomerang · August 18, 2002'),
+  ],
+  audience: 'kids',
+  seed: 36,
+});
