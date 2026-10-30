@@ -7,7 +7,7 @@ import { useSyncExternalStore } from 'react';
  */
 
 export type RoomCmd = { source: 'pc98-room'; cmd: 'focus'; on: boolean } | { source: 'pc98-room'; cmd: 'power' };
-export type PcEvent = { source: 'pc98'; evt: 'escape' } | { source: 'pc98'; evt: 'power'; on: boolean };
+export type PcEvent = { source: 'pc98'; evt: 'escape' } | { source: 'pc98'; evt: 'power'; on: boolean } | { source: 'pc98'; evt: 'sandwich' };
 
 let focused = window.parent === window;
 const listeners = new Set<() => void>();
@@ -25,7 +25,7 @@ window.addEventListener('message', e => {
   }
 });
 
-export function toRoom(evt: { evt: 'escape' } | { evt: 'big' } | { evt: 'power'; on: boolean }) {
+export function toRoom(evt: { evt: 'escape' } | { evt: 'big' } | { evt: 'sandwich' } | { evt: 'power'; on: boolean }) {
   if (window.parent === window) return;
   window.parent.postMessage({ source: 'pc98', ...evt }, location.origin);
 }

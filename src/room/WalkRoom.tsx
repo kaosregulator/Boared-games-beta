@@ -22,6 +22,8 @@ import { DeviceFocus } from './DeviceFocus';
 import { DeviceOverlay } from './DeviceOverlay';
 import { TvGlass } from '../tv/TvSet';
 import { PcGlass, powerOnPc, setPcBig, setPcEscape, usePc } from '../devices/PcScreen';
+import { SandwichHud } from '../devices/sandwich/SandwichHud';
+import { desk as sandwichDesk, stopSandwich, useSandwichStage } from '../devices/sandwich/store';
 import { ParentYell } from './ParentYell';
 import { MenuReel } from './MenuReel';
 import { WalkKeys } from './WalkKeys';
@@ -395,7 +397,13 @@ export function WalkRoom({
   const big = rig.big && (tvOn || seated || atPc);
   const [flashPhase, setFlashPhase] = useState<'idle' | 'cover' | 'reveal'>('idle');
   /** Sat at the computer with the camera settled: the room draws on demand. */
-  const atPcStill = atPc && flashPhase === 'idle';
+  /** Sandwich Stacker is out on the desk: the room draws every frame and has the keys. */
+  const sandwichOn = useSandwichStage() !== 'off' && atPc;
+  const atPcStill = atPc && flashPhase === 'idle' && !sandwichOn;
+  // Stepping away from the desk mid-game ends it.
+  useEffect(() => {
+    if (!atPc) stopSandwich();
+  }, [atPc]);
   const radioState = useRadio();
   const tapeOn = radioState.power;
   const radioError = radioState.error;
@@ -1090,10 +1098,13 @@ export function WalkRoom({
       __lightsOut?: (out: boolean) => void;
       __pcPower?: () => void;
       __tvMode?: (mode: TvStatus['mode']) => void;
+      __sandwich?: typeof sandwichDesk;
     };
     w.__cardAction = runCardAction;
     w.__lightsOut = setLightsOut;
     w.__pcPower = powerOnPc;
+    // Sandwich Stacker's state on the desk (game, keys), for scripts.
+    w.__sandwich = sandwichDesk;
     // Turn the set on/off without aiming at it, for capture and tests.
     w.__tvMode = mode => publishTvStatus({ ...getTvStatus(), mode });
   }, [runCardAction, diagOn]);
@@ -1353,6 +1364,7 @@ export function WalkRoom({
         <TvRemote landscape={vp.landscape} big={big} onBig={toggleBig} padUp={padUp} />
       )}
       {(pc.on || atPc) && <PcGlass inRoom={!atPc} />}
+      {sandwichOn && <SandwichHud touch={touch} />}
       {(tvOn || tvInRoom) && <TvGlass initialMode={device === 'nes' ? 'gaming' : 'menu'} inRoom={tvInRoom} />}
       {furbyMuteAvailable({ tvMode: tvStatus.mode, atTelevision: tvOn || tvInRoom, radioOn: tapeOn }) && <FurbyQuiet />}
       {/* The Furby waits in its box for Unbox, so its HUD is up during the unfold too. */}
@@ -1506,7 +1518,8 @@ export function WalkRoom({
       {device && flashPhase !== 'cover' && (
         <DeviceOverlay
           big={big}
-          onBig={tvOn || atPc ? toggleBig : undefined}
+          onBig={tvOn || (atPc && !sandwichOn) ? toggleBig : undefined}
+          hint={sandwichOn ? false : undefined}
           touch={touch}
           device={device}
           radioError={radioError}

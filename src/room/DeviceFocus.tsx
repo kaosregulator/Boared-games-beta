@@ -6,6 +6,7 @@ import { frameSubject, freeArea, resetView, viewRig } from '../devices/viewRig';
 import type { DeviceId } from './devices';
 import { TvSet } from '../tv/TvSet';
 import { MONITOR, PC_SUBJECT, PcStudio } from '../devices/PcScreen';
+import { desk, sandwichActive, sandwichCamera, sandwichInsets } from '../devices/sandwich/store';
 import { radio, useRadio, type RadioSnapshot } from '../radio/radioEngine';
 import { FM_MAX, FM_MIN, STATIONS } from '../radio/stations';
 
@@ -50,8 +51,13 @@ const SUBJECT: Record<'wide' | 'tv' | 'boombox', { centre: [number, number, numb
 
 const CENTRE = new THREE.Vector3();
 
-function applyPose(cam: THREE.PerspectiveCamera, device: DeviceId, size: { width: number; height: number }) {
+function applyPose(cam: THREE.PerspectiveCamera, device: DeviceId, size: { width: number; height: number }, dt = 0) {
   const pose = POSE[device];
+  if (device === 'pc' && sandwichActive()) {
+    // Sandwich Stacker on the desk: blend out to a locked view square on to the desk front.
+    sandwichCamera(cam, size, STUDIO_Y, { at: pose.at, centre: PC_SUBJECT.centre, half: PC_SUBJECT }, sandwichInsets(desk.touch, size.width), dt);
+    return;
+  }
   cam.position.set(pose.at[0], STUDIO_Y + pose.at[1], pose.at[2]);
   const free = freeArea(viewRig.insets, size.width, size.height);
   const freeAspect = (free.fw * size.width) / Math.max(1, free.fh * size.height);
@@ -90,9 +96,9 @@ function FocusRig({ device }: { device: DeviceId | null }) {
   // loses that race.
   // Priority must stay 0. A positive priority tells fiber to skip its own
   // gl.render, which leaves the canvas blank for the whole room.
-  useFrame(() => {
+  useFrame((_, dt) => {
     if (!device) return;
-    applyPose(camera as THREE.PerspectiveCamera, device, size);
+    applyPose(camera as THREE.PerspectiveCamera, device, size, Math.min(0.05, dt));
   });
 
   return null;

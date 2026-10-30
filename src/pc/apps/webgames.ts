@@ -1,4 +1,5 @@
 import type { IconName } from '../os/icons';
+import { STANDALONE, toRoom } from '../os/bridge';
 import { hourglass } from '../os/settings';
 import { sfx } from '../os/sound';
 import { openWindow } from '../os/wm';
@@ -113,6 +114,22 @@ export function cnGame(show: string, title: string, id: string): WebGameSpec {
 }
 
 /** Open a web game in its own window, with the hourglass and a bit of disk noise first. */
+/**
+ * Sandwich Stacker doesn't open a window: in the room the computer hands it
+ * to the desk, where 625 pops out of the monitor and you play it right there
+ * (src/devices/sandwich). pc.html opened by itself has no desk, so it falls
+ * back to the web copy.
+ */
+export function playSandwich() {
+  if (STANDALONE) {
+    openWebGame(SANDWICH_STACKER);
+    return;
+  }
+  hourglass(500);
+  sfx.disk(0.5, 0.6);
+  toRoom({ evt: 'sandwich' });
+}
+
 export function openWebGame(spec: WebGameSpec) {
   hourglass(1200);
   sfx.disk(1.2, 0.8);

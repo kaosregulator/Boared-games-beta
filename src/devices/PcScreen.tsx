@@ -4,6 +4,8 @@ import { GlassAnchor, GlassSurface } from './GlassScreen';
 import { SafeRoomModel } from '../room/RoomModel';
 import { audio } from '../tv/noise';
 import { speakerInput } from '../tv/surround';
+import { SandwichDesk } from './sandwich/SandwichDesk';
+import { startSandwich, useSandwichStage } from './sandwich/store';
 
 /**
  * The family computer on the desk. Its Windows 98 (pc.html, src/pc/) runs in
@@ -90,6 +92,8 @@ if (typeof window !== 'undefined') {
     if (d?.source !== 'pc98') return;
     if (d.evt === 'escape') onEscape?.();
     else if (d.evt === 'big') onBig?.();
+    // Sandwich Stacker's icon: the game comes out onto the desk (only while sat at it).
+    else if (d.evt === 'sandwich' && state.near) startSandwich();
     else if (d.evt === 'power' && d.on === false && state.on) set({ ...state, on: false });
   });
 }
@@ -153,14 +157,30 @@ export function RoomPcGlass() {
   );
 }
 
-/** Close-up: the desk in the studio, with the glass on its monitor. */
+/**
+ * Close-up: the desk in the studio, with the glass on its monitor. While
+ * Sandwich Stacker is out on the desk, Windows goes under the canvas and shows
+ * through a hole (as in the room), so the food can fall in front of the screen.
+ */
 export function PcStudio() {
+  const game = useSandwichStage() !== 'off';
+  const hole = useMemo(
+    () => new THREE.MeshBasicMaterial({ color: '#000', opacity: 0, blending: THREE.NoBlending, fog: false, toneMapped: false }),
+    [],
+  );
+  useEffect(() => () => hole.dispose(), [hole]);
   return (
     <group>
       <SafeRoomModel id="desk" position={[0, 0, 0]} axis="x" meters={1.65} tintAmount={0} />
       <group position={GLASS_POS} rotation={GLASS_ROT}>
         <GlassAnchor id="pc" position={[0, 0, 0]} width={MONITOR.w} widthPx={SCREEN_PX} />
+        {game && (
+          <mesh material={hole}>
+            <planeGeometry args={[MONITOR.w, MONITOR.h]} />
+          </mesh>
+        )}
       </group>
+      {game && <SandwichDesk glass={MONITOR} />}
     </group>
   );
 }
@@ -176,6 +196,9 @@ export const PC_SUBJECT = { centre: [MONITOR.x, MONITOR.y, MONITOR.z] as [number
  */
 export function PcGlass({ inRoom }: { inRoom: boolean }) {
   const ref = useRef<HTMLIFrameElement>(null);
+  // Sandwich Stacker on the desk has the keys and draws over the screen.
+  const game = useSandwichStage() !== 'off';
+  const under = inRoom || game;
 
   useEffect(() => {
     frame = ref.current;
@@ -190,18 +213,19 @@ export function PcGlass({ inRoom }: { inRoom: boolean }) {
   }, [inRoom]);
 
   useEffect(() => {
-    tellPc({ cmd: 'focus', on: !inRoom });
-    if (!inRoom) {
+    tellPc({ cmd: 'focus', on: !under });
+    if (!under) {
       // hand Windows the keyboard
       const id = window.setTimeout(() => ref.current?.focus(), 120);
       return () => window.clearTimeout(id);
     }
     ref.current?.blur();
-  }, [inRoom]);
+    window.focus();
+  }, [under]);
 
   return (
     // in the room it sits under the canvas and shows through RoomPcGlass's hole
-    <GlassSurface id="pc" zIndex={inRoom ? -1 : 10}>
+    <GlassSurface id="pc" zIndex={under ? -1 : 10}>
       <iframe
         ref={ref}
         title="Windows 98"
@@ -209,8 +233,8 @@ export function PcGlass({ inRoom }: { inRoom: boolean }) {
         width={SCREEN_PX}
         height={600}
         allow="autoplay; fullscreen"
-        onLoad={() => tellPc({ cmd: 'focus', on: !inRoom })}
-        style={{ display: 'block', width: SCREEN_PX, height: 600, border: 0, background: '#000', pointerEvents: inRoom ? 'none' : 'auto' }}
+        onLoad={() => tellPc({ cmd: 'focus', on: !under })}
+        style={{ display: 'block', width: SCREEN_PX, height: 600, border: 0, background: '#000', pointerEvents: under ? 'none' : 'auto' }}
       />
     </GlassSurface>
   );
