@@ -5,7 +5,7 @@ import { ARTHUR } from './lineups/arthur';
 import { ADS_NUMBER, adsGuide } from './lineups/ads90s';
 import { MTV_CHANNEL, PICK_CHANNEL, YT_CHANNELS, ytOnAir, ytShowAt, type YtChannel } from './lineups/youtube247';
 import { PACK_SLOT, packOnAir } from './packSchedule';
-import { MTV_90S, ONE_SATURDAY_MORNING, SATURDAY_MORNING, TOONAMI } from './lineups/networks';
+import { ANIMAL_PLANET, DISCOVERY, DISNEY, MTV_90S, NICK_90S, ONE_SATURDAY_MORNING, PBS_KIDS, SATURDAY_MORNING, TOONAMI } from './lineups/networks';
 
 /**
  * The cable lineup. Channel 2 is SNICK, running the archived Saturday nights
@@ -171,6 +171,11 @@ export const CHANNELS: Channel[] = [
   { number: 17, call: 'MTV', kind: 'block', name: 'MTV — the 90s, off VHS', block: MTV_90S },
   { number: 18, call: 'SATAM', kind: 'block', name: 'Saturday Morning — ABC, CBS, Fox Kids, Kids\' WB', block: SATURDAY_MORNING },
   { number: 19, call: '1SAT', kind: 'block', name: "Disney's One Saturday Morning", block: ONE_SATURDAY_MORNING },
+  { number: 20, call: 'NK90', kind: 'block', name: 'Nickelodeon — the 90s', block: NICK_90S },
+  { number: 21, call: 'PBSK', kind: 'block', name: 'PBS Kids', block: PBS_KIDS },
+  { number: 22, call: 'ANML', kind: 'block', name: 'Animal Planet', block: ANIMAL_PLANET },
+  { number: 23, call: 'DISC', kind: 'block', name: 'Discovery — Wild Discovery (1995–99)', block: DISCOVERY },
+  { number: 24, call: 'DSNY', kind: 'block', name: 'The Disney Channel & Toon Disney', block: DISNEY },
   // Nothing but 90s commercial breaks, on the channel number of the decade.
   { number: ADS_NUMBER, call: 'ADS', kind: 'ads', name: '90s Commercial Breaks' },
   ...(TV247_ON ? [ytChannel(MTV_CHANNEL), ytChannel(PICK_CHANNEL)] : []),
