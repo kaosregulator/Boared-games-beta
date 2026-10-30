@@ -1,0 +1,36 @@
+name: Card media lookup
+
+# Looks up the Internet Archive videos and Wikimedia Commons photos listed in
+# scripts/cards/media-queries.json and commits what it found to
+# scripts/cards/media-candidates.json on the same branch, for picking by hand.
+on:
+  push:
+    branches-ignore: [main]
+    paths: [scripts/cards/media-queries.json]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: card-media-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lookup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/cards/resolve-media.mjs
+      - name: Commit the candidates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/cards/media-candidates.json
+          if git diff --cached --quiet; then echo "Nothing new"; exit 0; fi
+          git commit -m "Card media candidates"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push
