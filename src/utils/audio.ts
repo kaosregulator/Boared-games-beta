@@ -3,7 +3,7 @@
  * Generates tactile clicks, wood knocks, radar pings, explosions, disc drops, dice shakes, cards, chips, slots, roulette, etc.
  */
 import { CHIP_TUNES, DEFAULT_TUNE, type ChipNote } from './chiptunes';
-import { routeWhenReady, unroute } from '../tv/surround';
+import { isRouted, routeWhenReady, unroute } from '../tv/surround';
 
 /**
  * The title screen's song: Brahe by Punch Deck, cut to start at 0:09. It plays
@@ -14,6 +14,44 @@ export const MENU_TRACK = { id: 'menu', title: 'Brahe (Punch Deck)', src: '/room
 
 /** Seconds of overlap when one song runs out and the next comes in. */
 const SONG_CROSSFADE = 4;
+/** Seconds before a room song ends that the next one is picked and starts buffering, so there's no gap. */
+const NEXT_SONG_LEAD = 30;
+/** How often the room checks the song is still going when it should be. */
+const BED_WATCH_MS = 3000;
+
+/**
+ * Events that count as a gesture for sound in every browser. A touch's
+ * pointerdown does not (only its pointerup/touchend does), so listening for
+ * pointerdown alone left phones and iPads silent after the first tap.
+ */
+const GESTURES = ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'] as const;
+
+/** A tenth of a second of silence. Playing it during a tap lets that audio element play later without one. */
+function silentWav() {
+  const n = 800;
+  const bytes = new Uint8Array(44 + n);
+  const v = new DataView(bytes.buffer);
+  const tag = (at: number, text: string) => {
+    for (let i = 0; i < 4; i += 1) bytes[at + i] = text.charCodeAt(i);
+  };
+  tag(0, 'RIFF');
+  v.setUint32(4, 36 + n, true);
+  tag(8, 'WAVE');
+  tag(12, 'fmt ');
+  v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true);
+  v.setUint16(22, 1, true);
+  v.setUint32(24, 8000, true);
+  v.setUint32(28, 8000, true);
+  v.setUint16(32, 1, true);
+  v.setUint16(34, 8, true);
+  tag(36, 'data');
+  v.setUint32(40, n, true);
+  bytes.fill(128, 44);
+  let text = '';
+  for (const b of bytes) text += String.fromCharCode(b);
+  return `data:audio/wav;base64,${btoa(text)}`;
+}
 
 /**
  * Room music, out of the boombox. It shuffles (a new song each time one
@@ -64,6 +102,9 @@ function savedTrack(): RoomTrackId {
   return ROOM_TRACKS[0].id;
 }
 
+let silent: string | null = null;
+const SILENT_WAV = () => (silent ??= silentWav());
+
 class SoundEngine {
   private ctx: AudioContext | null = null;
   private muted: boolean = false;
@@ -78,6 +119,23 @@ class SoundEngine {
   private bedAudio: HTMLAudioElement | null = null;
   private bedFade: number | null = null;
   private bedUnlock: (() => void) | null = null;
+  /**
+   * Audio elements that have already played once during a tap. Safari lets an
+   * element play on its own only after that, so a fresh element for the next
+   * song stayed silent until you touched the room again. Every song plays out
+   * of one of these, and finished ones come back here.
+   */
+  private spareBeds: HTMLAudioElement[] = [];
+  private blessing = 0;
+  private gesturesWatched = false;
+  /** The next room song, picked and buffering before this one runs out. */
+  private nextBed: { id: RoomTrackId; audio: HTMLAudioElement } | null = null;
+  private songListeners = new WeakMap<HTMLAudioElement, AbortController>();
+  /** Elements that have made sound at least once, so the browser lets them play again. */
+  private playedBeds = new WeakSet<HTMLAudioElement>();
+  /** Songs in a row that failed to load; stops a dead connection skipping forever. */
+  private bedErrors = 0;
+  private bedWatch: number | null = null;
   private track: RoomTrackId = typeof window === 'undefined' ? ROOM_TRACKS[0].id : savedTrack();
   private shuffleOn = typeof window === 'undefined' ? true : savedShuffle();
   private trackListeners = new Set<(id: RoomTrackId) => void>();
@@ -186,6 +244,7 @@ class SoundEngine {
 
   /** Skip to the next song now, with a short crossfade. */
   public skipTrack() {
+    this.dropNextBed();
     this.track = this.nextTrack();
     for (const fn of this.trackListeners) fn(this.track);
     if (!this.menuMusic) this.swapBed(0.8);
@@ -194,6 +253,7 @@ class SoundEngine {
   /** Swap the room music. A playing track crossfades into the new one. */
   public setTrack(id: RoomTrackId) {
     if (id === this.track) return;
+    this.dropNextBed();
     this.track = id;
     try {
       window.localStorage.setItem('room-track', id);
@@ -235,9 +295,7 @@ class SoundEngine {
       old.volume = Math.max(0, from * (1 - k));
       if (k >= 1) {
         window.clearInterval(fade);
-        old.pause();
-        unroute(old);
-        old.remove();
+        this.recycleBed(old);
       }
     }, 50);
     // the next song comes up over the same stretch the last one goes down
@@ -251,7 +309,7 @@ class SoundEngine {
     if (this.menuMusic) this.menuMusic = false;
     else {
       // just this visit; the picker's choice is still where it starts next time
-      this.track = this.nextTrack();
+      this.track = this.nextBed?.id ?? this.nextTrack();
       for (const fn of this.trackListeners) fn(this.track);
     }
     this.swapBed(SONG_CROSSFADE);
@@ -261,12 +319,15 @@ class SoundEngine {
     if (this.bedAudio) return this.bedAudio;
     const menu = this.menuMusic;
     const src = menu ? MENU_TRACK.src : ROOM_TRACKS.find(t => t.id === this.track)?.src ?? ROOM_TRACKS[0].src;
-    const audio = new Audio(src);
+    const queued = !menu && this.nextBed?.id === this.track ? this.nextBed.audio : null;
+    if (!queued) this.dropNextBed();
+    this.nextBed = null;
+    const audio = queued ?? this.takeBed(src, menu);
     // Stream it. A separate full-file fetch used to run ahead of this element
     // and the title video, and this element then downloaded the song again.
     audio.preload = 'auto';
+    audio.autoplay = menu;
     if (menu) {
-      audio.autoplay = true;
       try {
         (audio as HTMLAudioElement & { fetchPriority?: string }).fetchPriority = 'high';
       } catch {
@@ -275,23 +336,155 @@ class SoundEngine {
     }
     audio.volume = 0;
     audio.setAttribute('data-bedroom-music', menu ? 'menu' : this.track);
+    this.songListeners.get(audio)?.abort();
+    const listen = new AbortController();
+    this.songListeners.set(audio, listen);
+    const { signal } = listen;
     let ending = false;
     audio.addEventListener('timeupdate', () => {
-      if (ending || !Number.isFinite(audio.duration)) return;
-      if (audio.duration - audio.currentTime > SONG_CROSSFADE) return;
+      if (ending || audio !== this.bedAudio || !Number.isFinite(audio.duration)) return;
+      const left = audio.duration - audio.currentTime;
+      if (!menu && left <= NEXT_SONG_LEAD) this.queueNextBed();
+      if (left > SONG_CROSSFADE) return;
       ending = true;
       this.songEnding(audio);
-    });
+    }, { signal });
     audio.addEventListener('ended', () => {
       if (ending) return;
       ending = true;
       this.songEnding(audio);
-    });
-    // The room music comes out of the boombox; the menu song stays plain stereo over the title screen.
-    if (!menu) audio.addEventListener('playing', () => routeWhenReady(audio, 'boombox'), { once: true });
+    }, { signal });
+    audio.addEventListener('playing', () => {
+      this.bedErrors = 0;
+      this.playedBeds.add(audio);
+      // The room music comes out of the boombox; the menu song stays plain stereo over the title screen.
+      if (!menu) routeWhenReady(audio, 'boombox');
+    }, { signal });
+    // A song that won't load (a dropped connection, a bad deploy) moves on to the next one instead of leaving the room quiet.
+    audio.addEventListener('error', () => {
+      if (ending || audio !== this.bedAudio) return;
+      this.bedErrors += 1;
+      if (this.bedErrors > ROOM_TRACKS.length + 1) return;
+      ending = true;
+      window.setTimeout(() => this.songEnding(audio), 1200);
+    }, { signal });
     if (typeof document !== 'undefined') document.body.appendChild(audio);
     this.bedAudio = audio;
     return audio;
+  }
+
+  /** An element for a song: one already allowed to play if there is one. The plain menu song never takes one wired to the boombox. */
+  private takeBed(src: string, plain: boolean) {
+    const i = this.spareBeds.findIndex(a => !plain || !isRouted(a));
+    const audio = i >= 0 ? this.spareBeds.splice(i, 1)[0] : new Audio();
+    audio.src = src;
+    return audio;
+  }
+
+  /** A song that has faded out goes back on the shelf for the next one. */
+  private recycleBed(audio: HTMLAudioElement) {
+    this.songListeners.get(audio)?.abort();
+    this.songListeners.delete(audio);
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.removeAttribute('data-bedroom-music');
+    audio.load();
+    audio.remove();
+    // one the browser never let play would only be held again
+    if (this.playedBeds.has(audio) && this.spareBeds.length < 3) this.spareBeds.push(audio);
+    else unroute(audio);
+  }
+
+  /** Pick the next room song now and let it buffer, so it starts the moment this one fades. */
+  private queueNextBed() {
+    if (this.nextBed || this.menuMusic) return;
+    const id = this.nextTrack();
+    const src = ROOM_TRACKS.find(t => t.id === id)?.src;
+    if (!src) return;
+    const audio = this.takeBed(src, false);
+    audio.preload = 'auto';
+    audio.autoplay = false;
+    audio.volume = 0;
+    audio.load();
+    this.nextBed = { id, audio };
+  }
+
+  private dropNextBed() {
+    const next = this.nextBed;
+    this.nextBed = null;
+    if (next) this.recycleBed(next.audio);
+  }
+
+  /** From the first song on, every tap keeps two elements ready to play and frees a song the browser was holding. */
+  private watchGestures() {
+    if (this.gesturesWatched || typeof window === 'undefined') return;
+    this.gesturesWatched = true;
+    const onGesture = () => {
+      this.bedUnlock?.();
+      this.blessSpares();
+    };
+    for (const type of GESTURES) window.addEventListener(type, onGesture, { capture: true, passive: true });
+  }
+
+  private blessSpares() {
+    while (this.spareBeds.length + this.blessing < 2) {
+      const audio = new Audio(SILENT_WAV());
+      this.blessing += 1;
+      void audio
+        .play()
+        .then(() => {
+          audio.pause();
+          audio.removeAttribute('src');
+          audio.load();
+          this.playedBeds.add(audio);
+          this.spareBeds.push(audio);
+        })
+        // not a gesture this browser counts; the next one will be
+        .catch(() => undefined)
+        .finally(() => {
+          this.blessing -= 1;
+        });
+    }
+  }
+
+  /** The browser held the song: the next tap or key starts it. */
+  private armUnlock() {
+    this.watchGestures();
+    if (this.bedUnlock) return;
+    const resume = () => {
+      const audio = this.bedAudio;
+      if (!this.nostalgiaOn || !audio) {
+        if (this.bedUnlock === resume) this.bedUnlock = null;
+        return;
+      }
+      if (this.bedroomHeld || !audio.paused) return;
+      void audio
+        .play()
+        .then(() => {
+          if (this.bedUnlock === resume) this.bedUnlock = null;
+          if (this.nostalgiaOn) this.fadeBed(this.bedLevel());
+        })
+        .catch(() => undefined);
+    };
+    this.bedUnlock = resume;
+  }
+
+  /**
+   * Every few seconds: the song should be playing, so make sure it is. Covers
+   * anything that stops it without saying so (the system taking the audio
+   * for a call or another tab, a song that ended without the swap).
+   */
+  private watchBed() {
+    if (this.bedWatch !== null || typeof window === 'undefined') return;
+    this.bedWatch = window.setInterval(() => {
+      const audio = this.bedAudio;
+      if (!this.nostalgiaOn || this.bedroomHeld || !audio || this.bedUnlock) return;
+      if (audio.ended) {
+        this.songEnding(audio);
+        return;
+      }
+      if (audio.paused && !audio.error) void audio.play().catch(() => this.armUnlock());
+    }, BED_WATCH_MS);
   }
 
   /** Ease the tape in or out. A new fade replaces one already running. */
@@ -1604,13 +1797,15 @@ class SoundEngine {
     if (!this.nostalgiaOn) return;
     const audio = this.ensureBed();
     if (audio.paused) {
-      void audio.play().catch(() => {});
+      void audio.play().catch(() => this.armUnlock());
     }
     this.fadeBed(this.bedLevel());
   }
 
   public startNostalgia() {
     this.nostalgiaOn = true;
+    this.watchGestures();
+    this.watchBed();
     if (this.nostalgiaTimer !== null) {
       window.clearTimeout(this.nostalgiaTimer);
       this.nostalgiaTimer = null;
@@ -1620,22 +1815,8 @@ class SoundEngine {
     const target = this.bedLevel();
     if (audio.paused) {
       audio.volume = 0;
-      void audio.play().catch(() => {
-        // Browsers hold the tape until the first gesture. Any click or key resumes it.
-        if (this.bedUnlock) return;
-        const resume = () => {
-          this.bedUnlock = null;
-          window.removeEventListener('pointerdown', resume);
-          window.removeEventListener('keydown', resume);
-          if (!this.nostalgiaOn || !this.bedAudio) return;
-          void this.bedAudio.play().then(() => {
-            if (this.nostalgiaOn) this.fadeBed(this.bedLevel());
-          }).catch(() => {});
-        };
-        this.bedUnlock = resume;
-        window.addEventListener('pointerdown', resume);
-        window.addEventListener('keydown', resume);
-      });
+      // Browsers hold the song until the first gesture. Any click, tap or key starts it.
+      void audio.play().catch(() => this.armUnlock());
     }
     this.fadeBed(target);
   }
@@ -1667,16 +1848,7 @@ class SoundEngine {
    * when the song is already playing.
    */
   public retryBlockedMusic() {
-    const audio = this.bedAudio;
-    const resume = this.bedUnlock;
-    if (!audio || !resume) return;
-    void audio.play().then(() => {
-      if (this.bedUnlock !== resume) return;
-      this.bedUnlock = null;
-      window.removeEventListener('pointerdown', resume);
-      window.removeEventListener('keydown', resume);
-      if (this.nostalgiaOn) this.fadeBed(this.bedLevel());
-    }).catch(() => undefined);
+    this.bedUnlock?.();
   }
 }
 
