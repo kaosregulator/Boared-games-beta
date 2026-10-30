@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { resolveArchive } from '../../tv/archive';
+import { ArchiveThanks } from '../../components/ArchiveThanks';
 
 /** A still that comes into focus on a timer. Answering snaps it clear. */
 export function FadePicture({
@@ -252,6 +253,7 @@ export function ArchiveClip({
         )}
       </div>
       {!fill && <figcaption className="px-3 py-1.5 text-[9px] text-white/55">{title} · Internet Archive</figcaption>}
+      {!fill && <ArchiveThanks className="px-3 pb-1.5 text-[8px] leading-snug text-white/45" />}
     </figure>
   );
 }

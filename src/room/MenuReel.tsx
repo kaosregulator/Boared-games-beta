@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { setControlPreset, useControlSettings, type ControlPreset } from './controls';
 import { sound, MUSIC_CREDITS, MENU_TRACK } from '../utils/audio';
 import { headStart } from '../engine/netQueue';
+import { ArchiveThanks } from '../components/ArchiveThanks';
 import { LoadingMeter, loadedShare, useRoomReady } from './RoomLoading';
 
 interface MenuReelProps {
@@ -230,6 +231,7 @@ export function MenuReel({ onEnter, onDone }: MenuReelProps) {
                     )}
                   </span>
                 ))}
+                <ArchiveThanks className="mt-2 text-[9px] leading-snug text-white/55" />
               </div>
             ))}
           </div>

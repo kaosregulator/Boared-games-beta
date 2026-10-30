@@ -808,7 +808,39 @@
 /* ------------------------------------------------------- narrow / short */
 
 /* A phone held upright: the ring on top, the writing in a list below it. */
+/* ------------------------------------------------------------------ thanks */
+
+/* The thank-you to the Internet Archive, small along the bottom of the screen. */
+.hc-thanks {
+  position: fixed;
+  left: 50%;
+  bottom: max(6px, env(safe-area-inset-bottom));
+  translate: -50% 0;
+  width: min(40rem, calc(100vw - 2rem));
+  margin: 0;
+  pointer-events: none;
+  text-align: center;
+  font: 500 10px / 1.35 'IBM Plex Mono', ui-monospace, monospace;
+  color: var(--hc-soft);
+  opacity: 0.75;
+}
+/* The stand-up video screen gets its own line under the player bar. */
+.hm-screen-thanks {
+  margin: 0;
+  text-align: center;
+  font: 500 clamp(7px, 1.1cqw, 9px) / 1.35 'IBM Plex Mono', ui-monospace, monospace;
+  color: var(--hc-soft);
+}
+
 @media (max-width: 640px) {
+  .hc-thanks {
+    position: static;
+    translate: none;
+    width: auto;
+    margin-top: auto;
+    padding: 0.5rem 0.5rem 0;
+    font-size: 9px;
+  }
   .hc {
     --D: min(calc(100vw - 0.75rem), 56dvh);
     flex-direction: column;

@@ -11,6 +11,7 @@ import { blockOnAir, showTitleAt, type ArchiveBlock } from './lineups/archiveBlo
 import { CARTRIDGES, cartridgeSrc, type Cartridge } from '../devices/cartridges';
 import { TV247_ON } from './tv247';
 import { YouTubeTv } from './YouTubeTv';
+import { ARCHIVE_THANKS_SHORT, HEART_RED } from '../components/ArchiveThanks';
 import { AdBreakTv, breakSource, type AdSource } from './AdBreakTv';
 import { useTvQuiet } from './tvBus';
 import { PICK_NUMBER, setPick } from './lineups/youtube247';
@@ -647,10 +648,13 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
     userSelect: 'none',
   };
 
+  // Archive.org channels keep a thin strip under the picture for the thank-you, so it never covers the show.
+  const thanks = mode === 'tv' && current.kind !== 'youtube';
+  const strip = thanks ? Math.round(height * 0.045) : 0;
   const videoStyle: React.CSSProperties =
     mode === 'guide'
       ? { position: 'absolute', left: 18, top: 16, width: width * 0.42, height: height * 0.36, objectFit: 'cover', border: '3px solid #f4f1c8' }
-      : { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' };
+      : { position: 'absolute', left: 0, top: 0, width: '100%', height: height - strip, objectFit: 'cover' };
 
   return (
     <div style={box} data-ui="tv">
@@ -753,7 +757,7 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
           style={{
             position: 'absolute',
             left: 24,
-            bottom: 22,
+            bottom: 22 + strip,
             maxWidth: width - 48,
             background: 'rgba(0,0,0,0.6)',
             padding: '6px 12px',
@@ -764,6 +768,27 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
         >
           {String(current.number).padStart(2, '0')} {current.call} · {lowerThird}
         </div>
+      )}
+
+      {thanks && (
+        <p
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: strip,
+            lineHeight: `${strip}px`,
+            fontSize: Math.round(strip * 0.55),
+            textAlign: 'center',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            color: 'rgba(255,255,255,0.55)',
+            background: '#000',
+          }}
+        >
+          <span style={{ color: HEART_RED }}>♥</span> {ARCHIVE_THANKS_SHORT}
+        </p>
       )}
 
       {mode === 'off' && <div style={{ position: 'absolute', inset: 0, background: '#020202' }} />}
