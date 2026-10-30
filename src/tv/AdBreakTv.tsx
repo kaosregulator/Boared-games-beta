@@ -198,8 +198,14 @@ export function AdBreakTv({ style, volume, onPlaying, onFail, onMuted, quiet = f
       // jump over spots already known not to play
       for (let guard = 0; air && air.slot.ad && failed.has(air.slot.ad.index) && guard < 50; guard += 1) air = slotAfter(air);
       if (!air) {
-        if (over?.(nowSeconds()) || (after && over)) cb.current.onDone?.();
-        else cb.current.onFail();
+        if (over?.(nowSeconds())) cb.current.onDone?.();
+        else if (after && over) {
+          // the last spot quit early: black until the break's time is up
+          playing?.abort();
+          active.pause();
+          show(null);
+          gapTimer = window.setTimeout(() => sync(after), 250);
+        } else cb.current.onFail();
         return;
       }
       if (held) return;
