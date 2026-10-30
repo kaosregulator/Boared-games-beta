@@ -3,6 +3,7 @@ import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { leaseResource, noteCacheLookup, release, retain, unleaseResource } from '../engine/cache';
 import { collectGpuResources } from '../engine/gltfCache';
+import { hasPointLight } from '../engine/warmup';
 
 interface DynamicModelProps {
   url: string;
@@ -19,7 +20,8 @@ export function DynamicModel({ url, position, rotY, height }: DynamicModelProps)
   const { scene } = useGLTF(url);
   const root = useMemo(() => {
     const clone = scene.clone(true);
-    clone.userData.noPointLights = true;
+    // An upload may carry its own lights (KHR_lights_punctual): those still count toward the budget.
+    clone.userData.noPointLights = !hasPointLight(clone);
     clone.traverse(obj => {
       const mesh = obj as THREE.Mesh;
       if (!mesh.isMesh) return;

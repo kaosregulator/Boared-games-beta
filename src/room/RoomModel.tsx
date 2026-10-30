@@ -7,6 +7,7 @@ import { setAssetState } from '../engine/assets';
 import { leaseResource, noteCacheLookup, release, retain, unleaseResource } from '../engine/cache';
 import { collectGpuResources } from '../engine/gltfCache';
 import { log } from '../engine/log';
+import { hasPointLight } from '../engine/warmup';
 import type { HoverTarget } from './Interactable';
 import { cutBox, type Hotspot } from './hotspots';
 import type { LavaSpec } from './LavaLamp';
@@ -295,8 +296,8 @@ export function RoomModel({
   const { scene } = useGLTF(url, false, true, withKtx2);
   const root = useMemo(() => {
     const clone = scene.clone(true);
-    // No point lights live in these models. The per-frame light scan skips the subtree.
-    clone.userData.noPointLights = true;
+    // The per-frame light scan skips the subtree, unless the file brought its own point light.
+    clone.userData.noPointLights = !hasPointLight(clone);
     finishMaterials(clone, new THREE.Color('#7a5a52'), tintAmount, maxAnisotropy);
     clone.traverse(obj => {
       const mesh = obj as THREE.Mesh;
