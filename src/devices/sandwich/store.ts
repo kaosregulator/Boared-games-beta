@@ -142,6 +142,7 @@ export function cameraBlend() {
 const GAME_AT = new THREE.Vector3(FIELD_X, DESK_Y + 0.44, PLANE_Z + 1.3);
 const GAME_CENTRE = new THREE.Vector3(FIELD_X, DESK_Y + 0.32, PLANE_Z);
 const GAME_HALF = { w: 0.5, h: 0.35 };
+const LOCKED = { zoom: 1, panX: 0, panY: 0 };
 const AT = new THREE.Vector3();
 const CENTRE = new THREE.Vector3();
 const FROM_AT = new THREE.Vector3();
@@ -179,7 +180,8 @@ export function sandwichCamera(
   AT.y += baseY;
   CENTRE.y += baseY;
   cam.position.copy(AT);
-  frameSubject(cam, CENTRE, half, insets, size, 1.04);
+  // Locked: a scroll or pinch mid-game must not crop the play area.
+  frameSubject(cam, CENTRE, half, insets, size, 1.04, LOCKED);
 }
 
 /** What the HUD and touch buttons cover. */
