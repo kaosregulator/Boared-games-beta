@@ -157,6 +157,8 @@ function Capsule({
   const [page, setPage] = useState(0);
   const [slide, setSlide] = useState(0);
   const [screen, setScreen] = useState(false);
+  // The hologram stays while the screen stands up out of it, and steps aside while the video plays.
+  const [screenLive, setScreenLive] = useState(false);
   const piece = useCapsulePiece();
   const core = useRef<HTMLDivElement>(null);
   const at = Math.min(page, pages.length - 1);
@@ -168,8 +170,8 @@ function Capsule({
 
   // The card picks how the room draws the piece.
   useEffect(() => {
-    setCapsuleMode(screen ? 'off' : onImages && realSlide ? 'real' : 'holo');
-  }, [screen, onImages, realSlide]);
+    setCapsuleMode(screenLive ? 'off' : onImages && realSlide ? 'real' : 'holo');
+  }, [screenLive, onImages, realSlide]);
   useEffect(() => () => setCapsuleMode('holo'), []);
   useEffect(() => setSlide(0), [tab]);
 
@@ -223,7 +225,8 @@ function Capsule({
   const id = useMemo(() => `hm-${Math.random().toString(36).slice(2, 8)}`, []);
   const titleSize = Math.max(3, Math.min(5.6, 92 / Math.max(8, title.length * 0.95)));
   const kindText = kindLine.join(' • ');
-  const kindSize = Math.max(1.7, Math.min(2.5, 120 / Math.max(10, kindText.length * 0.95)));
+  // The kind line fits the arc between the tabs and the title: about 59 units long, each character about 0.9 of the size.
+  const kindSize = Math.max(1.35, Math.min(2.4, 57 / Math.max(10, kindText.length * 0.9)));
 
   return (
     <div
@@ -242,7 +245,7 @@ function Capsule({
         <svg className="hm-ring" viewBox="0 0 100 100" aria-hidden>
           <defs>
             <path id={`${id}-top`} d={arc(43.2, 196, 344, 1)} />
-            <path id={`${id}-top2`} d={arc(38.4, 204, 336, 1)} />
+            <path id={`${id}-top2`} d={arc(38.4, 226, 314, 1)} />
             <radialGradient id={`${id}-fill`}>
               <stop offset="0.36" stopColor="#04121f" stopOpacity="0" />
               <stop offset="0.5" stopColor="#04121f" stopOpacity="0.55" />
@@ -304,7 +307,7 @@ function Capsule({
 
         {/* The middle: the hologram turns here (drawn by the room behind the card). */}
         <div className="hm-core" ref={core}>
-          {!onImages && !screen && <Stage className="hm-stage" />}
+          {!onImages && !screenLive && <Stage className="hm-stage" />}
           {piece === null && <span className="hm-note">Tuning in…</span>}
           {piece === false && !onImages && (
             <span className="hm-emblem" aria-hidden>
@@ -335,7 +338,7 @@ function Capsule({
           />
         )}
 
-        {tab === 'video' && video && (
+        {tab === 'video' && video && !screen && (
           <p className="hm-caption">
             {video.title}
             <span> · Internet Archive</span>
@@ -393,7 +396,9 @@ function Capsule({
           <Screen
             video={video}
             onVideo={hold}
+            onLive={setScreenLive}
             onGone={() => {
+              setScreenLive(false);
               setScreen(false);
               setTab('history');
             }}
@@ -494,8 +499,20 @@ const archiveFile = (video: CardVideo) =>
  * projector, stands up out of the hologram, plays, and the moment it ends
  * folds back down the way it came and is gone, leaving the hologram.
  */
-function Screen({ video, onVideo, onGone }: { video: CardVideo; onVideo?: (playing: boolean) => void; onGone: () => void }) {
+function Screen({
+  video,
+  onVideo,
+  onLive,
+  onGone,
+}: {
+  video: CardVideo;
+  onVideo?: (playing: boolean) => void;
+  /** True once it's standing and playing, false as it starts to fold away. */
+  onLive: (live: boolean) => void;
+  onGone: () => void;
+}) {
   const [phase, setPhase] = useState<'rise' | 'play' | 'fall'>('rise');
+  useEffect(() => onLive(phase === 'play'), [phase, onLive]);
   const [useEmbed, setUseEmbed] = useState(!video.file);
   const [progress, setProgress] = useState(0);
   const player = useRef<HTMLVideoElement>(null);

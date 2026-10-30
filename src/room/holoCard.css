@@ -531,8 +531,8 @@
   position: absolute;
   left: 14%;
   right: 14%;
-  top: 23.5%;
-  bottom: 24%;
+  top: 23%;
+  bottom: 28%;
   display: flex;
   flex-direction: column;
   gap: 0.6em;
@@ -649,12 +649,12 @@
 @keyframes hm-rise {
   0% {
     opacity: 0;
-    transform: perspective(900px) rotateX(88deg) scale(0.3);
+    transform: perspective(900px) rotateX(74deg) scale(0.3);
     filter: brightness(3) blur(2px);
   }
   32% {
     opacity: 1;
-    transform: perspective(900px) rotateX(84deg) scale(1);
+    transform: perspective(900px) rotateX(70deg) scale(1);
     filter: brightness(2);
   }
   78% {
@@ -676,12 +676,12 @@
   }
   68% {
     opacity: 1;
-    transform: perspective(900px) rotateX(84deg) scale(1);
+    transform: perspective(900px) rotateX(70deg) scale(1);
     filter: brightness(2);
   }
   100% {
     opacity: 0;
-    transform: perspective(900px) rotateX(88deg) scale(0.3);
+    transform: perspective(900px) rotateX(74deg) scale(0.3);
     filter: brightness(3) blur(2px);
   }
 }
@@ -876,7 +876,9 @@
   .hm-line--bright,
   .hm-playbtn,
   .hm-note,
-  .hm-gallery {
+  .hm-gallery,
+  .hc[data-listening='1'] .hm-core::before,
+  .hc[data-listening='1'] .hm-core::after {
     animation: none;
   }
   .hm-screen[data-phase='rise'],
