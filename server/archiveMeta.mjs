@@ -145,10 +145,11 @@ export function createArchiveMeta({
 
   // ---- one request ---------------------------------------------------------
 
-  async function request(id) {
+  /** One GET of the item's metadata, cut off at timeoutMs or the lookup's deadline, whichever is sooner. */
+  async function request(id, expiresAt = Infinity) {
     stats.upstream++;
     const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), timeoutMs);
+    const t = setTimeout(() => ctrl.abort(), Math.max(0, Math.min(timeoutMs, expiresAt - Date.now())));
     try {
       const res = await fetchImpl(`https://archive.org/metadata/${encodeURIComponent(id)}`, {
         headers: { 'User-Agent': userAgent, Accept: 'application/json' },
@@ -174,7 +175,7 @@ export function createArchiveMeta({
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       let res = null;
       try {
-        res = await enqueue(() => request(id), started + deadlineMs);
+        res = await enqueue(() => request(id, started + deadlineMs), started + deadlineMs);
       } catch (err) {
         if (err instanceof ArchiveUnavailable) throw err;
         lastError = err?.name === 'AbortError' ? 'archive.org timed out' : 'archive.org could not be reached';

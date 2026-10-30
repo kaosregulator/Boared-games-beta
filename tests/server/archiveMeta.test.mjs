@@ -149,6 +149,21 @@ test('a slow lookup keeps going after the visitor is told to ask again', async (
   assert.equal(calls, 1);
 });
 
+test('a request never runs past the lookup deadline', async () => {
+  const fetchImpl = (url, init) =>
+    new Promise((resolve, reject) => {
+      const t = setTimeout(() => resolve(json(ITEM)), 500);
+      init.signal.addEventListener('abort', () => {
+        clearTimeout(t);
+        reject(Object.assign(new Error('aborted'), { name: 'AbortError' }));
+      });
+    });
+  const meta = createArchiveMeta({ ...quick, timeoutMs: 400, deadlineMs: 30, fetchImpl });
+  const started = Date.now();
+  await assert.rejects(meta.lookup('hung'));
+  assert.ok(Date.now() - started < 100, `took ${Date.now() - started} ms`);
+});
+
 test('errors retry with growing waits, then give up', async () => {
   const { calls, fetchImpl } = fakeArchive([json({}, 502)]);
   const meta = createArchiveMeta({ ...quick, fetchImpl, maxAttempts: 4 });
