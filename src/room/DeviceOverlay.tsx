@@ -11,6 +11,8 @@ interface DeviceOverlayProps {
   onBig?: (on: boolean) => void;
   radioError: string | null;
   onBack: () => void;
+  /** false hides the hint line (a game on the desk shows its own). */
+  hint?: false;
 }
 
 const HINT: Record<DeviceId, string> = {
@@ -24,7 +26,7 @@ const HINT: Record<DeviceId, string> = {
  * Leaning in hands every control to the 3D device itself. What stays on
  * screen is the way back out, big screen for the TV, and a one-line hint.
  */
-export function DeviceOverlay({ device, touch = false, big = false, onBig, radioError, onBack }: DeviceOverlayProps) {
+export function DeviceOverlay({ device, touch = false, big = false, onBig, radioError, onBack, hint }: DeviceOverlayProps) {
   return (
     <div data-ui="device" className="pointer-events-none absolute inset-0 z-40">
       <div className="pointer-events-auto absolute right-4 top-4 flex gap-2">
@@ -52,7 +54,8 @@ export function DeviceOverlay({ device, touch = false, big = false, onBig, radio
           </p>
         )
       ) : (
-        !big && (
+        !big &&
+        hint !== false && (
           <p className="pointer-events-none absolute bottom-3 left-1/2 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-center text-[11px] font-bold uppercase tracking-[0.16em] text-white/75">
             {HINT[device]} · Esc steps back
           </p>

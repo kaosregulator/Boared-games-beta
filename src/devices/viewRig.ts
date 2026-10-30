@@ -185,6 +185,8 @@ export function frameSubject(
   insets: Insets,
   size: { width: number; height: number },
   margin = 1.08,
+  /** The player's zoom and pan; a view that must stay put passes { zoom: 1, panX: 0, panY: 0 }. */
+  view: { zoom: number; panX: number; panY: number } = viewRig,
 ) {
   const d = Math.max(0.05, cam.position.distanceTo(centre));
   const aspect = size.width / Math.max(1, size.height);
@@ -192,7 +194,7 @@ export function frameSubject(
   // tan of the half vertical fov that just fits the subject in the free area.
   const byH = half.h / d / free.fh;
   const byW = half.w / d / (free.fw * aspect);
-  const tanV = (Math.max(byH, byW) * margin) / viewRig.zoom;
+  const tanV = (Math.max(byH, byW) * margin) / view.zoom;
   const fov = THREE.MathUtils.radToDeg(2 * Math.atan(tanV));
   if (Math.abs(cam.fov - fov) > 0.001 || cam.aspect !== aspect) {
     cam.fov = fov;
@@ -200,8 +202,8 @@ export function frameSubject(
     cam.updateProjectionMatrix();
   }
   // Where the subject's centre should land on screen.
-  const tx = free.cx - viewRig.panX * free.fw * 0.5;
-  const ty = free.cy - viewRig.panY * free.fh * 0.5;
+  const tx = free.cx - view.panX * free.fw * 0.5;
+  const ty = free.cy - view.panY * free.fh * 0.5;
   const tanH = tanV * aspect;
   M.lookAt(cam.position, centre, UP);
   Q0.setFromRotationMatrix(M);
