@@ -141,3 +141,151 @@ const MTV_TAPES: ArchivePart[] = [
 ];
 
 export const MTV_90S = lineup('1990.11.00_MTV_4_Hours_MultiRecording_November_1990', { tapes: MTV_TAPES, audience: 'teen', seed: 17 });
+
+// ---- Saturday morning ----
+
+/** A DVD-recorder rip: the tape's VIDEO_TS chapters, half an hour each. */
+const chapters = (id: string, title: string, lengths: number[]): ArchivePart[] =>
+  lengths.map((seconds, i) => tape(id, `~VTS_01_${i + 1}.mp4`, seconds, `${title} · part ${i + 1} of ${lengths.length}`));
+
+/** Spider-Man: The Animated Series (Fox Kids, 1994–98), all 65. */
+const SPIDER_MAN = series('spider-mantheanimatedseries', 'Spider-Man', [
+  ['~01x01 ', 1149.13, 'Night of the Lizard'],
+  ['~01x02 ', 1196.97, 'The Spider Slayer'],
+  ['~01x03 ', 1194.8, 'Return of the Spider Slayers'],
+  ['~01x04 ', 1185.77, 'Doctor Octopus - Armed and Dangerous'],
+  ['~01x05 ', 1155.02, 'The Menace of Mysterio'],
+  ['~01x06 ', 1192.72, 'The Sting of the Scorpion'],
+  ['~01x07 ', 1134.06, 'Kraven The Hunter'],
+  ['~01x08 ', 1212.81, 'The Alien Costume (Part 1)'],
+  ['~01x09 ', 1196.46, 'The Alien Costume (Part 2)'],
+  ['~01x10 ', 1192.17, 'The Alien Costume (Part 3)'],
+  ['~01x11 ', 1221.16, 'The Hobgoblin (Part 1)'],
+  ['~01x12 ', 1223.92, 'The Hobgoblin (Part 2)'],
+  ['~01x13 ', 1192.01, 'Day of the Chameleon'],
+  ['~02x01 ', 1220.24, 'The Insidious Six'],
+  ['~02x02 ', 1191.12, 'Battle of the Insidious Six'],
+  ['~02x03 ', 1190.86, 'Hydro-Man'],
+  ['~02x04 ', 1152.78, 'The Mutant Agenda'],
+  ['~02x05 ', 1218.48, 'Mutants\' Revenge'],
+  ['~02x06 ', 1221.42, 'Morbius'],
+  ['~02x07 ', 1220.11, 'Enter the Punisher'],
+  ['~02x08 ', 1220.81, 'Duel of the Hunters'],
+  ['~02x09 ', 1201.55, 'Blade, The Vampire Hunter'],
+  ['~02x10 ', 1222.48, 'The Immortal Vampire'],
+  ['~02x11 ', 1223.56, 'Tablet of Time'],
+  ['~02x12 ', 1220.81, 'Ravages of Time'],
+  ['~02x13 ', 1221.87, 'Shriek of the Vulture'],
+  ['~02x14 ', 1217.74, 'The Final Nightmare'],
+  ['~03x01 ', 1193.42, 'Doctor Strange'],
+  ['~03x02 ', 1221.9, 'Make A Wish'],
+  ['~03x03 ', 1221.9, 'Attack of the Octobot'],
+  ['~03x04 ', 1220.62, 'Enter the Green Goblin'],
+  ['~03x05 ', 1221.52, 'The Rocket Racer'],
+  ['~03x06 ', 1222.03, 'Framed'],
+  ['~03x07 ', 1221.64, 'The Man Without Fear'],
+  ['~03x08 ', 1221.32, 'The Ultimate Slayer'],
+  ['~03x09 ', 1220.33, 'Tombstone'],
+  ['~03x10 ', 1216.4, 'Venom Returns'],
+  ['~03x11 ', 1221.9, 'Carnage'],
+  ['~03x12 ', 1183.37, 'The Spot'],
+  ['~03x13 ', 1222.44, 'Goblin War'],
+  ['~03x14 ', 1222.73, 'Turning Point'],
+  ['~04x01 ', 1191.95, 'Guilty'],
+  ['~04x02 ', 1193.61, 'The Cat'],
+  ['~04x03 ', 1220.33, 'The Black Cat'],
+  ['~04x04 ', 1197.55, 'The Return of Kraven'],
+  ['~04x05 ', 1219.53, 'Partners'],
+  ['~04x06 ', 1219.92, 'The Awakening'],
+  ['~04x07 ', 1221.07, 'The Vampire Queen'],
+  ['~04x08 ', 1220.49, 'The Return of the Green Goblin'],
+  ['~04x09 ', 1222.03, 'The Haunting of Mary Jane Watson'],
+  ['~04x10 ', 1222.38, 'The Lizard King'],
+  ['~04x11 ', 1193.04, 'The Prowler'],
+  ['~05x01 ', 1220.75, 'The Wedding'],
+  ['~05x02 ', 1222.25, 'Six Forgotten Warriors'],
+  ['~05x03 ', 1220.46, 'Unclaimed Legacy'],
+  ['~05x04 ', 1221.9, 'Secrets of the Six'],
+  ['~05x05 ', 1221.23, 'The Six Fight Again'],
+  ['~05x06 ', 1221.36, 'The Price of Heroism'],
+  ['~05x07 ', 1221.42, 'The Return of Hydro-Man (Part 1)'],
+  ['~05x08 ', 1221.52, 'The Return of Hydro-Man (Part 2)'],
+  ['~05x09 ', 1192.17, 'Arrival'],
+  ['~05x10 ', 1221.32, 'The Gauntlet of the Red Skull'],
+  ['~05x11 ', 1220.68, 'Doom'],
+  ['~05x12 ', 1221.2, 'I Really, Really Hate Clones'],
+  ['~05x13 ', 1220.94, 'Farewell, Spider-Man'],
+]);
+
+/** X-Men: The Animated Series (Fox Kids, 1992), season 1. */
+const X_MEN = series('x-men-1_202406', 'X-Men', [
+  ['~EP01 - ', 1276.36, 'Night of the Sentinels'],
+  ['~EP02 - ', 1277.29, 'Night of the Sentinels Pt. 2'],
+  ['~EP03 - ', 1278.16, 'Enter Magneto'],
+  ['~EP04 - ', 1267.76, 'Deadly Reunions'],
+  ['~EP05 - ', 1276.36, 'Captive Hearts'],
+  ['~EP06 - ', 1277.74, 'Cold Vengeance'],
+  ['~EP07 - ', 1277.13, 'Slave Island'],
+  ['~EP08 - ', 1278.99, 'The Unstoppable Juggernaut'],
+  ['~EP09 - ', 1278.12, 'The Cure'],
+  ['~EP10 - ', 1278.41, 'Come the Apocalypse'],
+  ['~EP11 - ', 1279.24, 'Days of Future Past'],
+  ['~EP12 - ', 1278.12, 'Days of Future Past Pt. 2'],
+  ['~EP13 - ', 1276.46, 'The Final Decision'],
+]);
+
+/** Doug, the Nickelodeon years and Disney's One Saturday Morning run. */
+const DOUG = series('doug-cartoon-all-seasons', 'Doug', [
+  ['~S01 E01', 1419.89, 'Doug Bags a Neematoad'],
+  ['~S01 E02', 1420.02, 'Doug Can\'t Dance and Doug Gets Busted'],
+  ['~S01 E04', 1419.09, 'Doug\'s Dog Date and Doug\'s Big Nose'],
+  ['~S01 E06', 1415.95, 'Doug Takes a Hike and Doug Rocks'],
+  ['~S01 E08', 1421.39, 'Doug Can\'t Dig It and Doug Didn\'t Do It'],
+  ['~S01 E10', 1421.2, 'Mayor for a Day and Doug\'s No Dummy'],
+  ['~S01 E12', 1427.49, 'Doug\'s Cool Shoes and Doug to the Rescue'],
+  ['~S01 E14', 1418.18, 'Doug Gets His Ears Lowered and Doug on the Wild Side'],
+  ['~S02 E17', 1427.03, 'Doug\'s a Big Fat Liar and Doug Wears Tights'],
+  ['~S07 E20', 1373.78, 'Doug, Beebe Goes Broke'],
+  ['~S07 E22', 1370.37, 'Patti\'s Dad Dilemma'],
+  ['~S07 E30', 1369.73, 'Doug\'s Grand Band Plan'],
+]);
+
+
+/**
+ * Saturday morning on the big networks: ABC in 1993, CBS in 1990, Fox Kids'
+ * X-Men block and a 1994 Fox afternoon, a 1999 morning and Kids' WB in 2003,
+ * with Spider-Man and X-Men episodes between the tapes.
+ */
+export const SATURDAY_MORNING = lineup('vts-01-2_20200824', {
+  tapes: [
+    ...chapters('vts-01-2_20200824', 'ABC Saturday morning · Aug 21 1993', [1753.25, 1762.16, 1759.16, 1759.13]),
+    tape('videoplayback_20230810_1325', 'videoplayback.mp4', 7310.29, 'CBS Saturday morning · 1990'),
+    tape('fox-kids', '~.ia.mp4', 5129.24, 'Fox Kids · the X-Men block'),
+    tape('abc-sat-morning-4-3-93-woc-d-1', 'ABC Sat Morning 4-3-93 woc D1.mp4', 7239.76, 'ABC Saturday morning · Apr 3 1993'),
+    ...chapters('vts-01-1_20250621', 'Saturday morning · Sept 1999', [1806.91, 1713.61]),
+    tape('videoplayback_20230812', 'videoplayback.mp4', 7254.73, 'More CBS Saturday morning · 1990'),
+    tape('1994-08-19-block-of-fox-programming-animaniacs-batman-bonkers-full-house-star-tr_202508', '~Block of Fox programming', 10901.89, 'Fox: Animaniacs, Batman, Bonkers · Aug 1994'),
+    ...chapters('vts-01-3_20240907', 'ABC Saturday morning · Feb 6 1993', [1743.24, 1764.66, 1764.06, 1756.62]),
+    ...chapters('kids-wb-saturday-morning-cartoons-july-2003-woc', "Kids' WB Saturday morning · July 2003", [1796.3, 1812.85, 1815.05, 1341.31]),
+  ],
+  shows: [SPIDER_MAN, X_MEN],
+  audience: 'kids',
+  seed: 18,
+  perTape: 2,
+});
+
+/** Disney's One Saturday Morning on ABC, 1997–2000, with Doug between the tapes. */
+export const ONE_SATURDAY_MORNING = lineup('vts-01-1_20250118', {
+  tapes: [
+    tape('onesaturdaymorningonfridaynight1998', '~ABC.One Saturday Morning on Friday Night', 1635.38, 'One Saturday Morning on Friday Night · 1998'),
+    ...chapters('vts-01-1_20250118', "Disney's One Saturday Morning · 1998", [1807.81, 1813.61, 1807.41, 1800.77]),
+    tape('onesaturdaymorningonfridaynight1998', '~Preview.1996', 1369.31, 'ABC Saturday Morning Preview · 1996'),
+    tape('disneysonesaturdaymorningonabc2000', "~One Saturday Morning on ABC 2000", 18003.79, "Disney's One Saturday Morning · 2000"),
+    tape('onesaturdaymorningonfridaynight1998', '~Preview.1997', 1333.57, 'ABC Saturday Morning Preview · 1997'),
+    tape('onesaturdaymorningonfridaynight1998', '~Preview.1999', 1369.98, 'ABC Saturday Morning Preview · 1999'),
+  ],
+  shows: [DOUG],
+  audience: 'kids',
+  seed: 19,
+  perTape: 3,
+});
