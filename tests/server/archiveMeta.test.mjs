@@ -76,9 +76,9 @@ test('429 with Retry-After pauses the whole queue, then succeeds', async () => {
   assert.equal(meta.status().rateLimited, 1);
 });
 
-test('a long Retry-After answers 503 at once instead of holding the visitor', async () => {
+test('a Retry-After longer than the lookup deadline answers 503 at once', async () => {
   const { fetchImpl } = fakeArchive([json({}, 429, { 'retry-after': '120' })]);
-  const meta = createArchiveMeta({ ...quick, fetchImpl });
+  const meta = createArchiveMeta({ ...quick, deadlineMs: 60_000, fetchImpl });
   const sent = [];
   await meta.handle('busy', (status, body, headers) => sent.push({ status, body, headers }));
   assert.equal(sent[0].status, 503);
@@ -88,7 +88,7 @@ test('a long Retry-After answers 503 at once instead of holding the visitor', as
 
 test('during a long pause, other lookups answer 503 at once instead of queueing', async () => {
   const { calls, fetchImpl } = fakeArchive([json({}, 429, { 'retry-after': '120' }), json(ITEM)]);
-  const meta = createArchiveMeta({ ...quick, fetchImpl });
+  const meta = createArchiveMeta({ ...quick, deadlineMs: 60_000, fetchImpl });
   await assert.rejects(meta.lookup('first'));
   const sent = [];
   const started = Date.now();
@@ -123,6 +123,30 @@ test('an attempt already past its deadline is never sent, even with a slot free'
   const meta = createArchiveMeta({ ...quick, baseDelayMs: 40, maxDelayMs: 40, timeoutMs: -1000, deadlineMs: 20, fetchImpl });
   await assert.rejects(meta.lookup('late'), /waited too long/);
   assert.equal(calls.length, 1);
+});
+
+test('a slow lookup keeps going after the visitor is told to ask again', async () => {
+  let calls = 0;
+  const fetchImpl = async () => {
+    calls++;
+    await new Promise(r => setTimeout(r, 60));
+    return json(ITEM);
+  };
+  const meta = createArchiveMeta({ ...quick, respondWithinMs: 20, fetchImpl });
+  const sent = [];
+  const send = (status, body, headers) => sent.push({ status, body, headers });
+  await meta.handle('slow', send);
+  assert.equal(sent[0].status, 503);
+  assert.equal(sent[0].body.pending, true);
+  assert.equal(sent[0].headers['Retry-After'], '3');
+  // the retune a moment later joins the same lookup...
+  await meta.handle('slow', send);
+  assert.equal(sent[1].status, 503);
+  await new Promise(r => setTimeout(r, 40));
+  // ...and once it lands, the answer is in the shared cache
+  await meta.handle('slow', send);
+  assert.equal(sent[2].status, 200);
+  assert.equal(calls, 1);
 });
 
 test('errors retry with growing waits, then give up', async () => {
