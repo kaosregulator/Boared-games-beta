@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createServer } from 'node:http';
+import { readFileSync } from 'node:fs';
 import { app, cacheFor } from '../../server.mjs';
 import { configureLog } from '../../logCore.mjs';
 
@@ -13,6 +14,20 @@ test('pages are always rechecked, hashed bundles kept', () => {
   }
   assert.match(cacheFor('/assets/pc-abc123.js'), /immutable/);
   assert.match(cacheFor('/models/room.glb'), /max-age=86400/);
+});
+
+test('a model asked for by its content hash is kept a year, an old hash is rechecked', () => {
+  // an old page after a deploy must never pin today's file under yesterday's hash
+  assert.equal(cacheFor('/models/room.glb', 'not-the-hash'), 'no-cache');
+  assert.match(cacheFor('/models/room.glb', ''), /max-age=86400/);
+  let manifest = {};
+  try {
+    manifest = JSON.parse(readFileSync(new URL('../../dist/asset-manifest.json', import.meta.url), 'utf8'));
+  } catch {
+    // no build here: the matching case is covered wherever dist exists (CI builds after tests)
+  }
+  const [file, entry] = Object.entries(manifest)[0] ?? [];
+  if (file) assert.match(cacheFor(file, entry.h), /max-age=31536000, immutable/);
 });
 
 test('client log takes a beacon and health names the build', async () => {

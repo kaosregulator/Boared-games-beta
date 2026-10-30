@@ -1,3 +1,5 @@
+// First: holds the model downloads in line before any module asks for one.
+import './engine/netQueue';
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';

@@ -23,14 +23,19 @@ export interface Piece {
 
 /** Fewer triangles than this and the box missed: no piece. */
 export const MIN_TRIANGLES = 40;
-/** Safety cap so a huge scan can't stall the frame. */
-export const MAX_TRIANGLES = 120_000;
 /**
- * Clone the whole model up to here; past it (a piece of furniture like the toy
- * shelf or the PC desk) fall back to the bounded cut. A detailed toy such as
- * the Poo-Chi statue (~125k) is still a prop and clones clean.
+ * Safety cap so a huge scan can't stall the frame. It has to hold a whole piece
+ * of furniture: the cut walks the mesh in file order, so a cap smaller than
+ * the piece stops partway (the PC desk, 268k triangles since its detail was
+ * restored, came out as its bottom half at the old 120k).
  */
-export const CLONE_MAX_TRIANGLES = 160_000;
+export const MAX_TRIANGLES = 320_000;
+/**
+ * Clone the whole model up to here. A clone shares the room's geometry (no
+ * copy, no triangle walk), so even full-detail furniture — the PC desk (268k),
+ * the toy shelf (240k) — clones whole and instantly. Past it, the bounded cut.
+ */
+export const CLONE_MAX_TRIANGLES = 320_000;
 
 const _a = new THREE.Vector3();
 const _b = new THREE.Vector3();
@@ -216,8 +221,8 @@ export function cloneModelPiece(root: THREE.Object3D, rotation?: [number, number
     const pos = geometry.getAttribute('position');
     if (pos) triangles += (geometry.getIndex()?.count ?? pos.count) / 3;
   });
-  // A whole scanned prop is a clean clone; a whole piece of furniture is far too
-  // many triangles to spin as a hologram, so let it fall back to the bounded cut.
+  // A whole scanned prop is a clean clone; something bigger than the cap falls
+  // back to the bounded cut.
   if (!inner.children.length || triangles > CLONE_MAX_TRIANGLES) {
     for (const c of inner.children) {
       const g = (c as THREE.Mesh).geometry;

@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { setControlPreset, useControlSettings, type ControlPreset } from './controls';
-import { sound, MUSIC_CREDITS } from '../utils/audio';
+import { sound, MUSIC_CREDITS, MENU_TRACK } from '../utils/audio';
+import { headStart } from '../engine/netQueue';
+import { LoadingMeter, loadedShare, useRoomReady } from './RoomLoading';
 
 interface MenuReelProps {
   /** At full black: the room takes over underneath. */
@@ -17,7 +19,9 @@ const FADE_IN_MS = 900;
 /**
  * The title screen: a recorded walk through the room (public/menu/reel.mp4)
  * plays straight away while the real room loads behind it. One see-through
- * button stops the reel and fades through black into the room.
+ * button stops the reel and fades through black into the room. If the room
+ * isn't all in yet, the black holds with a loading bar (the title song keeps
+ * playing) until it is, so you never step into a half-built room.
  */
 const MENU_DEVICES: { id: Exclude<ControlPreset, 'custom'>; label: string }[] = [
   { id: 'desktop', label: 'Desktop' },
@@ -28,12 +32,24 @@ const MENU_DEVICES: { id: Exclude<ControlPreset, 'custom'>; label: string }[] = 
 
 export function MenuReel({ onEnter, onDone }: MenuReelProps) {
   const video = useRef<HTMLVideoElement>(null);
-  const [phase, setPhase] = useState<'reel' | 'out' | 'in'>('reel');
+  const [phase, setPhase] = useState<'reel' | 'out' | 'wait' | 'in'>('reel');
+  const { ready, stalled, progress } = useRoomReady();
+  const [skipWait, setSkipWait] = useState(false);
+  const entered = useRef(false);
+  // Browsers keep sound off until the first click or key; say so, so the song isn't just missing.
+  const [muted, setMuted] = useState(false);
+  useEffect(() => {
+    if (phase !== 'reel') return;
+    const id = window.setInterval(() => setMuted(sound.musicWaitingForGesture()), 400);
+    return () => window.clearInterval(id);
+  }, [phase]);
   const controls = useControlSettings();
   const year = new Date().getFullYear();
 
   // The title screen has its own song; the room music takes over when it goes.
   useEffect(() => {
+    // The song downloads before the room's models, so it's ready the moment you click.
+    headStart(MENU_TRACK.src);
     sound.setMenuMusic(true);
     return () => sound.setMenuMusic(false);
   }, []);
@@ -46,11 +62,26 @@ export function MenuReel({ onEnter, onDone }: MenuReelProps) {
   useEffect(() => {
     if (phase === 'out') {
       const id = window.setTimeout(() => {
-        video.current?.pause();
+        const reel = video.current;
+        if (reel) {
+          reel.pause();
+          // Stop it buffering ahead, so the room gets the whole connection.
+          reel.removeAttribute('src');
+          reel.load();
+        }
+        setPhase('wait');
+      }, FADE_OUT_MS);
+      return () => window.clearTimeout(id);
+    }
+    if (phase === 'wait') {
+      // At full black: in at once if the room is loaded, otherwise once it is.
+      if (!ready && !skipWait) return;
+      if (!entered.current) {
+        entered.current = true;
         sound.setMenuMusic(false);
         onEnter();
-        window.setTimeout(() => setPhase('in'), HOLD_MS);
-      }, FADE_OUT_MS);
+      }
+      const id = window.setTimeout(() => setPhase('in'), HOLD_MS);
       return () => window.clearTimeout(id);
     }
     if (phase === 'in') {
@@ -68,7 +99,7 @@ export function MenuReel({ onEnter, onDone }: MenuReelProps) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [phase, onEnter, onDone, play]);
+  }, [phase, onEnter, onDone, play, ready, skipWait]);
 
   return (
     <div className="absolute inset-0 z-[80]" style={{ pointerEvents: phase === 'in' ? 'none' : 'auto' }}>
@@ -93,6 +124,18 @@ export function MenuReel({ onEnter, onDone }: MenuReelProps) {
           className="pointer-events-none absolute inset-0"
           style={{ background: 'radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.45) 100%)' }}
         />
+      )}
+
+      {phase === 'reel' && muted && (
+        <button
+          type="button"
+          // the click itself is what lets the browser start the song
+          onClick={() => setMuted(false)}
+          className="absolute right-3 top-[max(12px,env(safe-area-inset-top))] z-[82] rounded-full border border-white/30 bg-black/45 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/85 backdrop-blur-sm hover:bg-black/65"
+          style={{ fontFamily: '"IBM Plex Mono", ui-monospace, monospace' }}
+        >
+          ♪ Tap for sound
+        </button>
       )}
 
       {phase === 'reel' && (
@@ -128,7 +171,13 @@ export function MenuReel({ onEnter, onDone }: MenuReelProps) {
             <span className="grid h-8 w-8 place-items-center rounded-full border border-white/40 bg-white/10 text-[13px] transition group-hover:bg-white/25">
               ▶
             </span>
-            <span className="text-[13px] font-bold uppercase tracking-[0.32em] sm:text-sm">Step through time</span>
+            <span className="flex flex-col items-start">
+              <span className="text-[13px] font-bold uppercase tracking-[0.32em] sm:text-sm">Step through time</span>
+              {/* the room loading behind the reel */}
+              <span className="text-[9px] font-semibold uppercase tracking-[0.24em] text-white/55" aria-live="polite">
+                {ready ? 'Room ready' : `Loading the room · ${Math.floor(loadedShare(progress) * 100)}%`}
+              </span>
+            </span>
           </button>
         </div>
       )}
@@ -137,10 +186,26 @@ export function MenuReel({ onEnter, onDone }: MenuReelProps) {
       <div
         className="pointer-events-none absolute inset-0 bg-black"
         style={{
-          opacity: phase === 'reel' ? 0 : phase === 'out' ? 1 : 0,
-          transition: `opacity ${phase === 'out' ? FADE_OUT_MS : FADE_IN_MS}ms ease-in-out`,
+          opacity: phase === 'out' || phase === 'wait' ? 1 : 0,
+          transition: `opacity ${phase === 'in' ? FADE_IN_MS : FADE_OUT_MS}ms ease-in-out`,
         }}
       />
+
+      {phase === 'wait' && !ready && !skipWait && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-5">
+          <LoadingMeter progress={progress} />
+          {stalled && (
+            <button
+              type="button"
+              onClick={() => setSkipWait(true)}
+              className="rounded-full border border-white/30 bg-white/[0.08] px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-white/80 hover:bg-white/[0.16]"
+              style={{ fontFamily: '"IBM Plex Mono", ui-monospace, monospace' }}
+            >
+              Go in anyway
+            </button>
+          )}
+        </div>
+      )}
 
       {phase === 'reel' && (
         <div className="menu-credits absolute inset-x-0 bottom-[calc(max(12px,env(safe-area-inset-bottom))+1.35rem)] mx-auto h-[3.6rem] max-w-md overflow-hidden px-4 text-center" aria-label="Music credits">

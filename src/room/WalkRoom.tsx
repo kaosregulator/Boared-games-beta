@@ -79,6 +79,8 @@ import type { RoomMood } from './moods';
 import { LeaderboardPanel } from './LeaderboardPanel';
 import { ProfilePanel, takeSignInResult } from './ProfilePanel';
 import { AwardToast } from './AwardToast';
+import { RoomLoadingCover } from './RoomLoading';
+import { openNetQueue } from '../engine/netQueue';
 
 const DiagnosticsPanel = lazy(() => import('../engine/DiagnosticsPanel').then(m => ({ default: m.DiagnosticsPanel })));
 
@@ -311,6 +313,13 @@ export function WalkRoom({
   const [diagOn] = useState(diagnosticsEnabled);
   /** The title reel, up until its fade into the room has finished. */
   const [menuShown, setMenuShown] = useState(() => !engaged);
+  /** No title in front of the room (a reload, a deep link): cover it until it has loaded. */
+  const [loadCover] = useState(() => engaged && !scripted);
+  // Without the title song to wait for, the models start downloading at once.
+  useEffect(() => {
+    if (!menuShown || scripted) openNetQueue();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   /** Bumped to rebuild the canvas after the browser drops its WebGL context. */
   const [glKey, setGlKey] = useState(0);
   const [glLost, setGlLost] = useState(false);
@@ -1517,6 +1526,7 @@ export function WalkRoom({
         </div>
       )}
 
+      {loadCover && <RoomLoadingCover />}
       {menuShown && !scripted && !overlayGame && (
         <MenuReel
           onEnter={() => {
