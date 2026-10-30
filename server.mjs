@@ -241,8 +241,12 @@ app.all(/^\/api\/radio\//, (req, res) => {
  * cores) a day, refreshed in the background for a week; the page itself is
  * always checked so a deploy shows up at once.
  */
-export function cacheFor(rel) {
+export function cacheFor(rel, version) {
   if (rel.startsWith('/assets/')) return 'public, max-age=31536000, immutable';
+  // A model asked for by its content hash (src/engine/netQueue.ts) never
+  // changes under that URL. A hash that isn't the current one is an old page
+  // after a deploy: it gets today's file, checked every time.
+  if (typeof version === 'string' && version) return assetHashes[rel]?.h === version ? 'public, max-age=31536000, immutable' : 'no-cache';
   // Every page (index.html, pc.html, the pinball and card-game hosts) and the
   // small files that name other files must be checked on each load, or a
   // browser keeps an old page pointing at old bundles after a deploy. This is
@@ -251,6 +255,15 @@ export function cacheFor(rel) {
   if (rel === '/' || /\.(html|webmanifest|json)$/.test(rel)) return 'no-cache';
   return 'public, max-age=86400, stale-while-revalidate=604800';
 }
+
+/** Content hash of every model file, by URL path, from scripts/precompress.mjs. */
+const assetHashes = (() => {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(distDir, 'asset-manifest.json'), 'utf8'));
+  } catch {
+    return {};
+  }
+})();
 
 /** Files that have a .br / .gz twin from scripts/precompress.mjs, by URL path. */
 const encoded = new Map();
@@ -285,7 +298,7 @@ app.use((req, res, next) => {
   if (!use) return next();
   res.type(path.extname(rel));
   res.setHeader('Content-Encoding', use === 'br' ? 'br' : 'gzip');
-  res.setHeader('Cache-Control', cacheFor(rel));
+  res.setHeader('Cache-Control', cacheFor(rel, req.query.v));
   res.sendFile(path.join(distDir, `${rel}.${use}`), { cacheControl: false, acceptRanges: false, dotfiles: 'deny' }, err => {
     if (err) next();
   });
@@ -296,7 +309,7 @@ app.use(
     index: false,
     cacheControl: false,
     setHeaders: (res, file) => {
-      res.setHeader('Cache-Control', cacheFor('/' + path.relative(distDir, file).split(path.sep).join('/')));
+      res.setHeader('Cache-Control', cacheFor('/' + path.relative(distDir, file).split(path.sep).join('/'), res.req?.query?.v));
     },
   }),
 );

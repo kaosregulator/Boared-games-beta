@@ -49,3 +49,61 @@ Scripts are in the session's scratchpad (`perf.cjs`, `pc.cjs`, `walk.cjs`), not 
 - Reloading mid-session skips the title reel, so there is no warm-up window; the first seconds compile as before.
 - The room is about 580k triangles and 157 draw calls. Merging static props would be the next big GPU win.
 - Hot Wheels adds a spot light (a different count from point lights), so starting a race still rebuilds the lit shaders once.
+
+# Loading and caching pass (October 30 2026)
+
+Handoff notes for the loading pass that came after the hologram PRs (#68–#71). Before this pass, the title song never seemed to start, a cleared cache dropped you into a half-built room, and so did a refresh. The family computer hologram also stopped halfway up the desk.
+
+## What was wrong
+
+| Symptom | Cause |
+| --- | --- |
+| Title song never starts | The room asks for all ~40 models (~112 MB) the moment the page loads. The 5 MB song and the title poster waited behind them: the song played 18–20 s in at 50 Mbps, after most of the room had arrived. On a cleared cache and a slower link, that was after you had pressed Play. Browsers also hold sound until the first click, and if that click was Play, the song started and faded out 0.65 s later. |
+| Cleared cache: an unloaded room | Play went straight into the room whatever had arrived. Nothing showed progress. |
+| Refresh didn't help | A reload within 45 minutes skips the title (`room-session-v1` in sessionStorage) and puts you back in the room, still loading, still uncovered. Every partly downloaded file started over. |
+| Cache trouble after deploys | Models were cached for a day, plus a week of stale-while-revalidate, under the same name. A model rebuilt in place (the detail restore) could show the old copy. |
+| Desk hologram only half there | `pcdesk.glb` is 268k triangles in one mesh since its detail was restored. The capsule only clones models under 160k, so it fell back to cutting the box out of the scan, and that cut stops at 120k triangles in file order: the bottom-left half. |
+
+## What changed
+
+- **Download line** (`src/engine/netQueue.ts`, imported first in `main.tsx`). It wraps `fetch` for same-origin `.glb/.gltf/.bin/.ktx2`. Everything else goes straight through.
+  - Models wait until the title song has a head start (`headStart()` from `MenuReel`: its first 1.5 MB, or 6 s at most). A reload or deep link with no title opens the line at once.
+  - Six download at a time, room furniture (`/models/`) first, so files finish whole and in order.
+  - A network error or a 502/503/504 is retried 3 times (1 s, 2 s, 4 s).
+  - Each model is asked for as `?v=<content hash>`. A file already in the browser cache under that hash skips the line (`cache: 'only-if-cached'`).
+  - Progress (bytes and files) is exposed through `netProgress()` / `onNetProgress()`.
+- **Asset manifest**: `scripts/precompress.mjs` writes `dist/asset-manifest.json` (sha256 prefix + size per model file). `server.mjs` `cacheFor(rel, v)` gives a matching hash `max-age=1 year, immutable`. A wrong (old) hash gets `no-cache`, so an old page after a deploy never pins today's file under yesterday's name. Unversioned requests keep the old rules.
+- **Loading UI** (`src/room/RoomLoading.tsx`):
+  - The Play button shows "Loading the room · N%", then "Room ready".
+  - Pressing Play before the room is in holds the black with a progress bar (MB of MB), and the title song keeps playing. You go in when everything is loaded.
+  - A reload or deep link covers the room with the same bar (`RoomLoadingCover`).
+  - If nothing arrives for 20 s, a "Go in anyway" button shows, so no one is ever stuck.
+  - The title reel stops buffering once you press Play, so the room gets the whole connection.
+- **Title song**: it is fetched whole into the browser cache first. The `<audio>` element uses `preload="none"` for the menu track and reads from the cache when it plays, so there is no second download. "♪ Tap for sound" shows while the browser is holding the sound.
+- **Hologram**: `CLONE_MAX_TRIANGLES` and `MAX_TRIANGLES` are now 320k. The desk and toy shelf clone whole (shared geometry, no copy, no triangle walk), and a cut can no longer stop partway through a piece.
+
+## How it was measured
+
+Production build, `node server.mjs`, headless Chromium with a disk profile (`launchPersistentContext`, so the disk cache works as it does for a player). The link is throttled to 50 Mbps with 20 ms latency. A click on the title at about 3 s counts as the first gesture. "Old" is main at `96efe0c` with the same precompressed files. The HTTP/2 rows run through a local HTTP/2 front (like Railway's edge). Chrome won't disk-cache a self-signed origin, so repeat visits are measured over HTTP/1.1 only. Scripts (`load2.cjs`, `h2proxy.mjs`, `holo.cjs`, `shots.cjs`) are in the session scratchpad, not the repo.
+
+| Moment (50 Mbps) | Old | New |
+| --- | --- | --- |
+| Title song actually playing (HTTP/1.1) | 18.3–18.6 s | 5.7–6.2 s |
+| Title song actually playing (HTTP/2) | 5.8 s | 5.0–5.4 s |
+| Title poster on screen (HTTP/1.1) | 8.8–18.0 s | 1.6–1.8 s |
+| Title poster on screen (HTTP/2) | 5.0 s | 0.8–1.7 s |
+| Every model in, cold (HTTP/2) | 22.3 s | 25.3 s, see below |
+| Repeat visit: bytes downloaded | 0 MB | 0 MB |
+| Repeat visit: every model in | 4.2 s | 4.4–5.0 s |
+| Repeat visit: "Room ready" | n/a | 6.6 s |
+| Refresh 12 s into a cold load: all models in after the refresh | 16.0 s | 16.2 s |
+| Entering before the room is loaded | half-built room | bar, then a whole room |
+
+The last model lands about 3 s later on a cold HTTP/2 load. With the models no longer hogging the link, the title reel buffers more (27 MB instead of 15 MB by then; the song's second download in the HTTP/2 run happens only on the self-signed test origin). That is bandwidth the reel uses while you watch it. Once you press Play the reel stops downloading.
+
+## Left to do / ideas
+
+- The 40 MB title reel (1080p, 4.4 Mbps, 74 s) is the biggest thing competing with the room on a first visit. A second, lighter encode for phones would help without touching the desktop one.
+- Textures loaded through `ImageLoader` (posters) and the radio/TV media don't go through the line. They are small or streamed.
+- `YahtzeeGame` is a 2.2 MB lazy chunk (something big is inlined); worth a look.
+- If a model is added under a new extension, add it to `HEAVY` in `netQueue.ts` and `VERSIONED` in `precompress.mjs`.

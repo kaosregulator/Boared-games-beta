@@ -252,7 +252,10 @@ class SoundEngine {
     const menu = this.menuMusic;
     const src = menu ? MENU_TRACK.src : ROOM_TRACKS.find(t => t.id === this.track)?.src ?? ROOM_TRACKS[0].src;
     const audio = new Audio(src);
-    audio.preload = 'auto';
+    // The title song is fetched whole into the browser cache ahead of the room
+    // (headStart in MenuReel); the element reads it from there when it plays
+    // instead of starting a second download of its own.
+    audio.preload = menu ? 'none' : 'auto';
     audio.volume = 0;
     audio.setAttribute('data-bedroom-music', menu ? 'menu' : this.track);
     let ending = false;
@@ -1634,6 +1637,11 @@ class SoundEngine {
 
   public nostalgiaPlaying() {
     return this.nostalgiaOn;
+  }
+
+  /** The browser is holding the song until the first click or key. */
+  public musicWaitingForGesture() {
+    return this.bedUnlock !== null;
   }
 }
 
