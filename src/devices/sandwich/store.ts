@@ -118,6 +118,8 @@ export function quitSandwich() {
 export function stopSandwich() {
   if (desk.stage === 'off') return;
   desk.game = null;
+  // A scroll or pinch during the game moved the shared rig: Windows comes back framed as it was.
+  resetView();
   setStage('off');
 }
 
