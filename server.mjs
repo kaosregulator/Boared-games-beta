@@ -7,6 +7,7 @@ import { GoogleGenAI } from '@google/genai';
 import { handleRadioRequest } from './radioBrowserApi.mjs';
 import { configureLog, getCorrelationId, log } from './logCore.mjs';
 import { createRoomApi } from './server/api.mjs';
+import { archiveMeta } from './server/archiveMeta.mjs';
 
 dotenv.config();
 configureLog({ console: 'json' });
@@ -140,6 +141,7 @@ function rateLimit(perMinute) {
 }
 app.use('/api/generate-trivia', rateLimit(6));
 app.use('/api/radio', rateLimit(120));
+app.use('/api/archive', rateLimit(240));
 app.use('/api/client-log', rateLimit(30));
 app.use(['/api/session', '/api/me', '/api/play', '/api/scores', '/api/leaderboard', '/api/leaderboards', '/api/admin'], rateLimit(240));
 app.use('/api/auth', rateLimit(30));
@@ -153,6 +155,7 @@ app.get('/api/health', (_req, res) => {
     version: '0.1.0-beta',
     build,
     uptimeSec: Math.round(process.uptime()),
+    archive: archiveMeta.status(),
   });
 });
 
@@ -228,6 +231,12 @@ app.post('/api/generate-trivia', async (req, res) => {
     log('error', 'trivia generation failed', { source: 'server', asset: '/api/generate-trivia', detail: message });
     res.status(500).json({ error: 'Failed to generate trivia pack' });
   }
+});
+
+// Which file of an archive.org item to play: looked up here for every visitor
+// (server/archiveMeta.mjs), with one shared cache and queue.
+app.get('/api/archive/:id', (req, res) => {
+  void archiveMeta.handle(req.params.id, (status, body, headers) => res.status(status).set(headers).json(body));
 });
 
 // The radio's backup source: Radio Browser, looked up here with a proper User-Agent.
