@@ -55,7 +55,7 @@ function applyPose(cam: THREE.PerspectiveCamera, device: DeviceId, size: { width
   const pose = POSE[device];
   if (device === 'pc' && sandwichActive()) {
     // Sandwich Stacker on the desk: blend out to a locked view square on to the desk front.
-    sandwichCamera(cam, size, STUDIO_Y, { at: pose.at, centre: PC_SUBJECT.centre, half: PC_SUBJECT }, sandwichInsets(desk.touch, size.width), dt);
+    sandwichCamera(cam, size, STUDIO_Y, { at: pose.at, centre: PC_SUBJECT.centre, half: PC_SUBJECT }, sandwichInsets(desk.touch, size.width, size.height), dt);
     return;
   }
   cam.position.set(pose.at[0], STUDIO_Y + pose.at[1], pose.at[2]);

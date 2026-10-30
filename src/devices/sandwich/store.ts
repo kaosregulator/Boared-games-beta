@@ -181,7 +181,9 @@ export function sandwichCamera(
 }
 
 /** What the HUD and touch buttons cover. */
-export function sandwichInsets(touch: boolean, width: number): Insets {
+export function sandwichInsets(touch: boolean, width: number, height: number): Insets {
   // Under 640 px wide the score box drops below the header (top-16 in SandwichHud).
-  return { top: width < 640 ? 124 : 64, right: 0, bottom: touch ? 130 : 48, left: 0 };
+  // A phone on its side has the move buttons out at the sides, so only upright keeps room under the desk.
+  const upright = width < height;
+  return { top: width < 640 ? 124 : 64, right: 0, bottom: touch ? (upright ? 130 : 12) : 48, left: 0 };
 }
