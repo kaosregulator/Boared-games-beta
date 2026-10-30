@@ -3,7 +3,7 @@ import { setControlPreset, useControlSettings, type ControlPreset } from './cont
 import { sound, MUSIC_CREDITS } from '../utils/audio';
 import { openNetQueue } from '../engine/netQueue';
 import { ArchiveThanks } from '../components/ArchiveThanks';
-import { LoadingMeter, loadedShare, useRoomReady } from './RoomLoading';
+import { LoadingMeter, useRoomReady } from './RoomLoading';
 
 interface MenuReelProps {
   /** At full black: the room takes over underneath. */
@@ -31,10 +31,14 @@ const MENU_DEVICES: { id: Exclude<ControlPreset, 'custom'>; label: string }[] = 
   { id: 'phone', label: 'Phone' },
 ];
 
-/** Percent under the enter button. Its own subscriber, so the video's parent does not re-render on every byte. */
-function MenuLoadLine() {
+/** The room's download, under the enter button. Its own subscriber, so the video's parent does not re-render on every byte. */
+function MenuLoadMeter() {
   const { ready, progress } = useRoomReady();
-  return <>{ready ? 'Room ready' : `Loading the room · ${Math.floor(loadedShare(progress) * 100)}%`}</>;
+  return (
+    <div className="menu-load-meter" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.6)' }} aria-live="polite">
+      <LoadingMeter progress={progress} ready={ready} className="w-[min(19rem,82vw)]" lineClassName="whitespace-nowrap tracking-[0.16em] sm:tracking-[0.22em]" />
+    </div>
+  );
 }
 
 export function MenuReel({ onEnter, onDone }: MenuReelProps) {
@@ -44,13 +48,6 @@ export function MenuReel({ onEnter, onDone }: MenuReelProps) {
   const markReady = useCallback(() => setRoomReady(true), []);
   const [skipWait, setSkipWait] = useState(false);
   const entered = useRef(false);
-  // Browsers keep sound off until the first click or key; say so, so the song isn't just missing.
-  const [muted, setMuted] = useState(false);
-  useEffect(() => {
-    if (phase !== 'reel') return;
-    const id = window.setInterval(() => setMuted(sound.musicWaitingForGesture()), 400);
-    return () => window.clearInterval(id);
-  }, [phase]);
   const controls = useControlSettings();
   const year = new Date().getFullYear();
 
@@ -144,20 +141,8 @@ export function MenuReel({ onEnter, onDone }: MenuReelProps) {
         />
       )}
 
-      {phase === 'reel' && muted && (
-        <button
-          type="button"
-          // the click itself is what lets the browser start the song
-          onClick={() => setMuted(false)}
-          className="absolute right-3 top-[max(12px,env(safe-area-inset-top))] z-[82] rounded-full border border-white/30 bg-black/45 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/85 backdrop-blur-sm hover:bg-black/65"
-          style={{ fontFamily: '"IBM Plex Mono", ui-monospace, monospace' }}
-        >
-          ♪ Tap for sound
-        </button>
-      )}
-
       {phase === 'reel' && (
-        <div className="absolute inset-x-0 bottom-[calc(18%+4.6rem)] z-[81] flex flex-wrap justify-center gap-1.5 px-3">
+        <div className="absolute inset-x-0 bottom-[calc(max(18%,8.5rem)+4.6rem)] z-[81] flex flex-wrap justify-center gap-1.5 px-3">
           {MENU_DEVICES.map(preset => (
             <button
               key={preset.id}
@@ -178,25 +163,25 @@ export function MenuReel({ onEnter, onDone }: MenuReelProps) {
       )}
 
       {phase === 'reel' && (
-        <div className="absolute inset-x-0 bottom-[18%] flex justify-center px-4">
-          <button
-            type="button"
-            onClick={play}
-            autoFocus
-            className="menu-play group flex items-center gap-3 rounded-full border border-white/30 bg-white/[0.08] px-7 py-3.5 text-white/90 shadow-[0_8px_40px_rgba(0,0,0,0.35)] backdrop-blur-[3px] transition hover:border-white/60 hover:bg-white/[0.16] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 active:scale-[0.98]"
-            style={{ fontFamily: '"IBM Plex Mono", ui-monospace, monospace' }}
-          >
-            <span className="grid h-8 w-8 place-items-center rounded-full border border-white/40 bg-white/10 text-[13px] transition group-hover:bg-white/25">
-              ▶
-            </span>
-            <span className="flex flex-col items-start">
-              <span className="text-[13px] font-bold uppercase tracking-[0.32em] sm:text-sm">Step through time</span>
-              {/* the room loading behind the reel */}
-              <span className="text-[9px] font-semibold uppercase tracking-[0.24em] text-white/55" aria-live="polite">
-                <MenuLoadLine />
+        <div className="absolute inset-x-0 bottom-[max(18%,8.5rem)] flex justify-center px-4">
+          <div className="relative flex justify-center">
+            <button
+              type="button"
+              onClick={play}
+              autoFocus
+              className="menu-play group flex items-center gap-3 rounded-full border border-white/30 bg-white/[0.08] px-7 py-3.5 text-white/90 shadow-[0_8px_40px_rgba(0,0,0,0.35)] backdrop-blur-[3px] transition hover:border-white/60 hover:bg-white/[0.16] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 active:scale-[0.98]"
+              style={{ fontFamily: '"IBM Plex Mono", ui-monospace, monospace' }}
+            >
+              <span className="grid h-8 w-8 place-items-center rounded-full border border-white/40 bg-white/10 text-[13px] transition group-hover:bg-white/25">
+                ▶
               </span>
-            </span>
-          </button>
+              <span className="text-[13px] font-bold uppercase tracking-[0.32em] sm:text-sm">Step through time</span>
+            </button>
+            {/* the room loading behind the reel, under the button so the button itself stays put */}
+            <div className="pointer-events-none absolute left-1/2 top-full mt-3 -translate-x-1/2">
+              <MenuLoadMeter />
+            </div>
+          </div>
         </div>
       )}
 

@@ -57,12 +57,23 @@ export function useRoomReady() {
 
 const mb = (bytes: number) => (bytes / 1e6).toFixed(bytes < 1e7 ? 1 : 0);
 
-/** The bar and the line under it. */
-export function LoadingMeter({ progress, label = 'Loading the room' }: { progress: NetProgress; label?: string }) {
-  const share = loadedShare(progress);
-  const pct = Math.floor(share * 100);
+/** The bar and the line under it. `ready` fills it and says so (the title screen keeps it up once the room is in). */
+export function LoadingMeter({
+  progress,
+  label = 'Loading the room',
+  ready = false,
+  className = 'w-[min(22rem,80vw)]',
+  lineClassName = 'tracking-[0.24em]',
+}: {
+  progress: NetProgress;
+  label?: string;
+  ready?: boolean;
+  className?: string;
+  lineClassName?: string;
+}) {
+  const pct = ready ? 100 : Math.floor(loadedShare(progress) * 100);
   return (
-    <div className="flex w-[min(22rem,80vw)] flex-col items-center gap-2" style={{ fontFamily: '"IBM Plex Mono", ui-monospace, monospace' }}>
+    <div className={`flex flex-col items-center gap-2 ${className}`} style={{ fontFamily: '"IBM Plex Mono", ui-monospace, monospace' }}>
       <div
         className="h-1.5 w-full overflow-hidden rounded-full bg-white/15"
         role="progressbar"
@@ -73,12 +84,12 @@ export function LoadingMeter({ progress, label = 'Loading the room' }: { progres
       >
         <div className="h-full rounded-full bg-amber-200/90 transition-[width] duration-300 ease-out" style={{ width: `${Math.max(2, pct)}%` }} />
       </div>
-      <p className="text-center text-[10px] font-semibold uppercase tracking-[0.24em] text-white/70">
-        {label} · {pct}%
-        {progress.total > 0 && (
+      <p className={`text-center text-[10px] font-semibold uppercase text-white/70 ${lineClassName}`}>
+        {ready ? 'Room ready' : `${label} · ${pct}%`}
+        {!ready && progress.total > 0 && (
           <span className="text-white/45">
             {' '}
-            · {mb(progress.loaded)} of {mb(progress.total)} MB
+            · {mb(progress.loaded)}/{mb(progress.total)} MB
           </span>
         )}
       </p>
