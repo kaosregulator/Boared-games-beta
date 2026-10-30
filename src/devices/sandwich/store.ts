@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import * as THREE from 'three';
-import { frameSubject, type Insets } from '../viewRig';
+import { frameSubject, resetView, type Insets } from '../viewRig';
 import { createGame, type Game } from './game';
 
 /**
@@ -100,6 +100,8 @@ export function startSandwich() {
   desk.shake = 1;
   desk.keys.left = desk.keys.right = false;
   desk.touchMove = 0;
+  // A zoom or pan left over from the computer close-up would crop the game.
+  resetView();
   setHud({ round: 1, score: 0, ick: 0, phase: 'play', paused: false, caught: 0, shout: null, points: null });
   setStage('intro');
 }
