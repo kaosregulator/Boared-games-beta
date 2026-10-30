@@ -295,6 +295,8 @@ export function RoomModel({
   const { scene } = useGLTF(url, false, true, withKtx2);
   const root = useMemo(() => {
     const clone = scene.clone(true);
+    // No point lights live in these models. The per-frame light scan skips the subtree.
+    clone.userData.noPointLights = true;
     finishMaterials(clone, new THREE.Color('#7a5a52'), tintAmount, maxAnisotropy);
     clone.traverse(obj => {
       const mesh = obj as THREE.Mesh;

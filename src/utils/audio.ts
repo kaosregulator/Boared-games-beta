@@ -208,6 +208,16 @@ class SoundEngine {
   public setMenuMusic(on: boolean) {
     if (on === this.menuMusic) return;
     this.menuMusic = on;
+    // Nothing is playing yet: start the title song now. Waiting for a later
+    // swap meant the song stayed silent until Play, and Play had already
+    // switched this flag off, so the title song never started at all.
+    if (!this.bedAudio) {
+      if (on) {
+        this.nextFadeIn = 0.25;
+        this.startNostalgia();
+      }
+      return;
+    }
     this.swapBed(on ? 0.6 : 1.4);
   }
 
@@ -252,10 +262,17 @@ class SoundEngine {
     const menu = this.menuMusic;
     const src = menu ? MENU_TRACK.src : ROOM_TRACKS.find(t => t.id === this.track)?.src ?? ROOM_TRACKS[0].src;
     const audio = new Audio(src);
-    // The title song is fetched whole into the browser cache ahead of the room
-    // (headStart in MenuReel); the element reads it from there when it plays
-    // instead of starting a second download of its own.
-    audio.preload = menu ? 'none' : 'auto';
+    // Stream it. A separate full-file fetch used to run ahead of this element
+    // and the title video, and this element then downloaded the song again.
+    audio.preload = 'auto';
+    if (menu) {
+      audio.autoplay = true;
+      try {
+        (audio as HTMLAudioElement & { fetchPriority?: string }).fetchPriority = 'high';
+      } catch {
+        // Older browsers ignore the hint; preload still starts the file.
+      }
+    }
     audio.volume = 0;
     audio.setAttribute('data-bedroom-music', menu ? 'menu' : this.track);
     let ending = false;
@@ -1642,6 +1659,24 @@ class SoundEngine {
   /** The browser is holding the song until the first click or key. */
   public musicWaitingForGesture() {
     return this.bedUnlock !== null;
+  }
+
+  /**
+   * Try the song again. A muted title video starting does not count as a
+   * gesture in every browser, but it does in some, and this costs nothing
+   * when the song is already playing.
+   */
+  public retryBlockedMusic() {
+    const audio = this.bedAudio;
+    const resume = this.bedUnlock;
+    if (!audio || !resume) return;
+    void audio.play().then(() => {
+      if (this.bedUnlock !== resume) return;
+      this.bedUnlock = null;
+      window.removeEventListener('pointerdown', resume);
+      window.removeEventListener('keydown', resume);
+      if (this.nostalgiaOn) this.fadeBed(this.bedLevel());
+    }).catch(() => undefined);
   }
 }
 

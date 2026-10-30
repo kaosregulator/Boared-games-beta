@@ -35,8 +35,35 @@ export function SceneWarmup({ everyMs = 700 }: { everyMs?: number }) {
       });
       return found;
     };
+    // Compiling a shader while the player is looking around or driving is the hitch.
+    // The work waits until they let go; behind the title screen nothing is held.
+    let pointers = 0;
+    const keys = new Set<string>();
+    const driving = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space']);
+    const onPointerDown = () => {
+      pointers += 1;
+    };
+    const onPointerUp = () => {
+      pointers = Math.max(0, pointers - 1);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!e.repeat && driving.has(e.code)) keys.add(e.code);
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      keys.delete(e.code);
+    };
+    const onBlur = () => {
+      pointers = 0;
+      keys.clear();
+    };
+    window.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', onBlur);
     const tick = () => {
-      if (busy || ac.signal.aborted || !fresh()) return;
+      if (busy || ac.signal.aborted || pointers > 0 || keys.size > 0 || !fresh()) return;
       busy = true;
       void warmObject(gl, scene, camera, scene, { signal: ac.signal, timeoutMs: 8000 }).finally(() => {
         busy = false;
@@ -48,6 +75,12 @@ export function SceneWarmup({ everyMs = 700 }: { everyMs?: number }) {
     return () => {
       ac.abort();
       window.clearInterval(id);
+      window.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', onBlur);
     };
   }, [gl, scene, camera, invalidate, everyMs]);
   return null;

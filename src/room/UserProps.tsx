@@ -19,6 +19,7 @@ export function DynamicModel({ url, position, rotY, height }: DynamicModelProps)
   const { scene } = useGLTF(url);
   const root = useMemo(() => {
     const clone = scene.clone(true);
+    clone.userData.noPointLights = true;
     clone.traverse(obj => {
       const mesh = obj as THREE.Mesh;
       if (!mesh.isMesh) return;

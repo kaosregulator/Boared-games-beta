@@ -117,7 +117,12 @@ interface Ground {
   piece: Piece | null;
 }
 
-/** Highest surface under (x, z) that is not above `maxY`. */
+const _ground: Ground = { y: 0, piece: null };
+
+/**
+ * Highest surface under (x, z) that is not above `maxY`.
+ * The same object comes back every call: read it before asking again.
+ */
 export function groundAt(x: number, z: number, maxY: number): Ground {
   let y = 0;
   let piece: Piece | null = null;
@@ -131,7 +136,9 @@ export function groundAt(x: number, z: number, maxY: number): Ground {
     y = hit.y;
     piece = hit.piece;
   }
-  return { y, piece };
+  _ground.y = y;
+  _ground.piece = piece;
+  return _ground;
 }
 
 /** What blocks the car's head from above at (x, z): for low cameras and the dark. */
@@ -150,6 +157,18 @@ const _m = new THREE.Matrix4();
 const _q = new THREE.Quaternion();
 const _r = new THREE.Vector3();
 const _u = new THREE.Vector3();
+const _dir = new THREE.Vector3();
+const _upv = new THREE.Vector3();
+const _basisFwd = new THREE.Vector3();
+const _hitN = new THREE.Vector3();
+const _rel = new THREE.Vector3();
+const _events: SimEvent[] = [];
+const _frame = {
+  p: new THREE.Vector3(),
+  tangent: new THREE.Vector3(),
+  up: new THREE.Vector3(),
+  total: 0,
+};
 
 function forward(heading: number, out = _fwd) {
   return out.set(Math.cos(heading), 0, Math.sin(heading));
@@ -202,23 +221,23 @@ function collide(car: CarState): THREE.Vector3 | null {
     if (!out) continue;
     p.x = out.x;
     p.z = out.z;
-    hit = new THREE.Vector3(out.nx, 0, out.nz);
+    hit = _hitN.set(out.nx, 0, out.nz);
   }
   if (p.x < ROOM.minX + r) {
     p.x = ROOM.minX + r;
-    hit = new THREE.Vector3(1, 0, 0);
+    hit = _hitN.set(1, 0, 0);
   }
   if (p.x > ROOM.maxX - r) {
     p.x = ROOM.maxX - r;
-    hit = new THREE.Vector3(-1, 0, 0);
+    hit = _hitN.set(-1, 0, 0);
   }
   if (p.z < ROOM.minZ + r) {
     p.z = ROOM.minZ + r;
-    hit = new THREE.Vector3(0, 0, 1);
+    hit = _hitN.set(0, 0, 1);
   }
   if (p.z > ROOM.maxZ - r) {
     p.z = ROOM.maxZ - r;
-    hit = new THREE.Vector3(0, 0, -1);
+    hit = _hitN.set(0, 0, -1);
   }
   return hit;
 }
@@ -232,12 +251,11 @@ function loopFrameAt(loop: Loop, s: number) {
   const a = loop.frames[i - 1];
   const b = loop.frames[i];
   const k = (t - lens[i - 1]) / Math.max(1e-6, lens[i] - lens[i - 1]);
-  return {
-    p: a.p.clone().lerp(b.p, k),
-    tangent: a.tangent.clone().lerp(b.tangent, k).normalize(),
-    up: a.up.clone().lerp(b.up, k).normalize(),
-    total,
-  };
+  _frame.p.copy(a.p).lerp(b.p, k);
+  _frame.tangent.copy(a.tangent).lerp(b.tangent, k).normalize();
+  _frame.up.copy(a.up).lerp(b.up, k).normalize();
+  _frame.total = total;
+  return _frame;
 }
 
 const lengthCache = new Map<Loop, number[]>();
@@ -254,7 +272,7 @@ function tryEnterLoop(car: CarState): Loop | null {
   if (car.mode !== 'ground' || car.speed < 0.05) return null;
   const f = forward(car.heading, _v);
   for (const loop of LOOPS) {
-    const rel = car.pos.clone().sub(loop.base);
+    const rel = _rel.copy(car.pos).sub(loop.base);
     if (Math.abs(rel.y) > 0.04) continue;
     const along = rel.dot(loop.dir);
     const side = Math.abs(rel.x * loop.dir.z - rel.z * loop.dir.x);
@@ -273,8 +291,8 @@ function orient(car: CarState, blend: number, up?: THREE.Vector3, tangent?: THRE
   const n = up ?? (car.mode === 'air' ? _u.set(0, 1, 0) : car.normal);
   _r.crossVectors(n, t).normalize();
   if (_r.lengthSq() < 1e-6) return;
-  const fwd = t.clone();
-  const upv = new THREE.Vector3().crossVectors(fwd, _r).normalize();
+  const fwd = _basisFwd.copy(t);
+  const upv = _upv.crossVectors(fwd, _r).normalize();
   // Model faces +Z with +Y up and +X to its left.
   _m.makeBasis(_r, upv, fwd);
   _q.setFromRotationMatrix(_m);
@@ -285,11 +303,11 @@ function orient(car: CarState, blend: number, up?: THREE.Vector3, tangent?: THRE
  * Advance the car. Returns events for sound and the HUD.
  */
 export function stepCar(car: CarState, input: DriveInput, dtFull: number, opts: DriveOptions = {}): SimEvent[] {
-  const events: SimEvent[] = [];
+  _events.length = 0;
   const steps = Math.max(1, Math.ceil(dtFull / (1 / 120)));
   const dt = dtFull / steps;
-  for (let i = 0; i < steps; i++) step(car, input, dt, events, opts.assist === true);
-  return events;
+  for (let i = 0; i < steps; i++) step(car, input, dt, _events, opts.assist === true);
+  return _events;
 }
 
 function step(car: CarState, input: DriveInput, dt: number, events: SimEvent[], assist: boolean) {
@@ -305,8 +323,8 @@ function step(car: CarState, input: DriveInput, dt: number, events: SimEvent[], 
 
   if (car.mode === 'loop' && car.loop) {
     const loop = car.loop;
-    const fr0 = loopFrameAt(loop, car.loopS);
-    const lift = (fr0.p.y - loop.base.y) / (2 * loop.r);
+    const baseY = loopFrameAt(loop, car.loopS).p.y;
+    const lift = (baseY - loop.base.y) / (2 * loop.r);
     const v = Math.max(car.speed, T.loopSpeed) * (1 - 0.22 * lift);
     car.loopS += v * dt;
     const fr = loopFrameAt(loop, car.loopS);
@@ -358,7 +376,7 @@ function step(car: CarState, input: DriveInput, dt: number, events: SimEvent[], 
   }
 
   if (grounded) {
-    const dir = surfaceDir(car.pos.x, car.pos.y, car.pos.z, car.heading, _v).clone();
+    const dir = _dir.copy(surfaceDir(car.pos.x, car.pos.y, car.pos.z, car.heading, _v));
     const lift = car.piece?.lift ?? 0;
     if (lift > 0) {
       if (car.speed < lift) car.speed = Math.min(lift, car.speed + 3.5 * dt);

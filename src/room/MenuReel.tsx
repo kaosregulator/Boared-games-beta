@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { setControlPreset, useControlSettings, type ControlPreset } from './controls';
-import { sound, MUSIC_CREDITS, MENU_TRACK } from '../utils/audio';
-import { headStart } from '../engine/netQueue';
+import { sound, MUSIC_CREDITS } from '../utils/audio';
+import { openNetQueue } from '../engine/netQueue';
 import { ArchiveThanks } from '../components/ArchiveThanks';
 import { LoadingMeter, loadedShare, useRoomReady } from './RoomLoading';
 
@@ -31,10 +31,17 @@ const MENU_DEVICES: { id: Exclude<ControlPreset, 'custom'>; label: string }[] = 
   { id: 'phone', label: 'Phone' },
 ];
 
+/** Percent under the enter button. Its own subscriber, so the video's parent does not re-render on every byte. */
+function MenuLoadLine() {
+  const { ready, progress } = useRoomReady();
+  return <>{ready ? 'Room ready' : `Loading the room · ${Math.floor(loadedShare(progress) * 100)}%`}</>;
+}
+
 export function MenuReel({ onEnter, onDone }: MenuReelProps) {
   const video = useRef<HTMLVideoElement>(null);
   const [phase, setPhase] = useState<'reel' | 'out' | 'wait' | 'in'>('reel');
-  const { ready, stalled, progress } = useRoomReady();
+  const [roomReady, setRoomReady] = useState(false);
+  const markReady = useCallback(() => setRoomReady(true), []);
   const [skipWait, setSkipWait] = useState(false);
   const entered = useRef(false);
   // Browsers keep sound off until the first click or key; say so, so the song isn't just missing.
@@ -47,12 +54,21 @@ export function MenuReel({ onEnter, onDone }: MenuReelProps) {
   const controls = useControlSettings();
   const year = new Date().getFullYear();
 
-  // The title screen has its own song; the room music takes over when it goes.
+  // Picture and song both start with the page. Play is only how you step into the room.
   useEffect(() => {
-    // The song downloads before the room's models, so it's ready the moment you click.
-    headStart(MENU_TRACK.src);
+    const reel = video.current;
+    reel?.setAttribute('fetchpriority', 'high');
+    const onPlaying = () => sound.retryBlockedMusic();
+    reel?.addEventListener('playing', onPlaying);
+    void reel?.play().catch(() => undefined);
     sound.setMenuMusic(true);
-    return () => sound.setMenuMusic(false);
+    // The video element is already in the document, so its request is in. Models may follow.
+    const open = window.setTimeout(openNetQueue, 0);
+    return () => {
+      window.clearTimeout(open);
+      reel?.removeEventListener('playing', onPlaying);
+      sound.setMenuMusic(false);
+    };
   }, []);
 
   const play = useCallback(() => {
@@ -76,7 +92,7 @@ export function MenuReel({ onEnter, onDone }: MenuReelProps) {
     }
     if (phase === 'wait') {
       // At full black: in at once if the room is loaded, otherwise once it is.
-      if (!ready && !skipWait) return;
+      if (!roomReady && !skipWait) return;
       if (!entered.current) {
         entered.current = true;
         sound.setMenuMusic(false);
@@ -100,10 +116,11 @@ export function MenuReel({ onEnter, onDone }: MenuReelProps) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [phase, onEnter, onDone, play, ready, skipWait]);
+  }, [phase, onEnter, onDone, play, roomReady, skipWait]);
 
   return (
     <div className="absolute inset-0 z-[80]" style={{ pointerEvents: phase === 'in' ? 'none' : 'auto' }}>
+      <RoomReadyWatch onReady={markReady} />
       {phase !== 'in' && (
         <video
           ref={video}
@@ -176,7 +193,7 @@ export function MenuReel({ onEnter, onDone }: MenuReelProps) {
               <span className="text-[13px] font-bold uppercase tracking-[0.32em] sm:text-sm">Step through time</span>
               {/* the room loading behind the reel */}
               <span className="text-[9px] font-semibold uppercase tracking-[0.24em] text-white/55" aria-live="polite">
-                {ready ? 'Room ready' : `Loading the room · ${Math.floor(loadedShare(progress) * 100)}%`}
+                <MenuLoadLine />
               </span>
             </span>
           </button>
@@ -192,20 +209,8 @@ export function MenuReel({ onEnter, onDone }: MenuReelProps) {
         }}
       />
 
-      {phase === 'wait' && !ready && !skipWait && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-5">
-          <LoadingMeter progress={progress} />
-          {stalled && (
-            <button
-              type="button"
-              onClick={() => setSkipWait(true)}
-              className="rounded-full border border-white/30 bg-white/[0.08] px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-white/80 hover:bg-white/[0.16]"
-              style={{ fontFamily: '"IBM Plex Mono", ui-monospace, monospace' }}
-            >
-              Go in anyway
-            </button>
-          )}
-        </div>
+      {phase === 'wait' && !roomReady && !skipWait && (
+        <MenuWait onReady={markReady} onSkip={() => setSkipWait(true)} />
       )}
 
       {phase === 'reel' && (
@@ -245,6 +250,39 @@ export function MenuReel({ onEnter, onDone }: MenuReelProps) {
         >
           kaosregulator™ · © {year}
         </footer>
+      )}
+    </div>
+  );
+}
+
+/** Watches the room download without re-rendering the title video, and reports once it has settled. */
+function RoomReadyWatch({ onReady }: { onReady: () => void }) {
+  const { ready } = useRoomReady();
+  useEffect(() => {
+    if (ready) onReady();
+  }, [ready, onReady]);
+  return null;
+}
+
+/** The black screen's bar. Subscribes to the download on its own, and tells the reel when the room is in. */
+function MenuWait({ onReady, onSkip }: { onReady: () => void; onSkip: () => void }) {
+  const { ready, stalled, progress } = useRoomReady();
+  useEffect(() => {
+    if (ready) onReady();
+  }, [ready, onReady]);
+  if (ready) return null;
+  return (
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-5">
+      <LoadingMeter progress={progress} />
+      {stalled && (
+        <button
+          type="button"
+          onClick={onSkip}
+          className="rounded-full border border-white/30 bg-white/[0.08] px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-white/80 hover:bg-white/[0.16]"
+          style={{ fontFamily: '"IBM Plex Mono", ui-monospace, monospace' }}
+        >
+          Go in anyway
+        </button>
       )}
     </div>
   );

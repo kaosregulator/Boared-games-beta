@@ -3,10 +3,11 @@
  * all go through fetch) waits its turn here instead of all ~40 starting at
  * once, so:
  *
- *  - the title song gets the connection to itself first. With everything at
- *    once it sat behind ~90 MB of models and only started after the room had
- *    loaded, which on a cleared cache meant never before you pressed Play;
- *  - models arrive whole, one after another (room furniture first), so the
+ *  - the title video and the title song start on their own elements. Models
+ *    wait until that first paint has asked for them, then download at a low
+ *    priority so they don't sit in front of the picture or the song. They do
+ *    not wait for the song file to finish;
+ *  - models arrive whole, a few at a time (room furniture first), so the
  *    loading bar means something and a refresh mid-load keeps every file that
  *    already finished in the browser cache instead of throwing away 40 halves;
  *  - a dropped connection or a Railway restart (502/503/504) is retried
@@ -25,8 +26,11 @@
 const HEAVY = /\.(glb|gltf|bin|ktx2)$/i;
 /** Files downloading at once: enough to fill the pipe, few enough to finish in order (and the most a browser opens to one host over HTTP/1.1). */
 const PARALLEL = 6;
-/** The title song gets this long on its own before the room starts downloading anyway. */
-const SONG_HEAD_START_MS = 6000;
+/**
+ * If nothing opens the line (no title screen), models start this soon anyway.
+ * The title screen opens it on the next turn, after the video element exists.
+ */
+const QUEUE_FALLBACK_MS = 400;
 const RETRIES = 3;
 
 interface Manifest {
@@ -73,13 +77,17 @@ let cancelled = 0;
 let snapshot: NetProgress = { files: 0, done: 0, failed: 0, loaded: 0, total: 0, idle: true, open: false };
 const listeners = new Set<() => void>();
 let notifyQueued = false;
+let lastNotify = 0;
 
 function publish() {
   if (notifyQueued) return;
   notifyQueued = true;
-  // Progress ticks on every chunk; tell React at most once a frame.
+  // Progress ticks on every chunk. Tell React a few times a second, not once
+  // a frame: a subscriber re-rendering the title screen that often stalls the
+  // video decoder on the same thread.
   const flush = () => {
     notifyQueued = false;
+    lastNotify = typeof performance !== 'undefined' ? performance.now() : Date.now();
     let loaded = 0;
     let total = 0;
     for (const [path, size] of expected) {
@@ -89,8 +97,11 @@ function publish() {
     snapshot = { files, done, failed, loaded, total, idle: running === 0 && waiting.length === 0 && checking === 0, open };
     for (const fn of listeners) fn();
   };
-  if (typeof requestAnimationFrame === 'function' && typeof document !== 'undefined' && !document.hidden) requestAnimationFrame(flush);
-  else setTimeout(flush, 50);
+  const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+  const wait = Math.max(0, 100 - (now - lastNotify));
+  if (typeof requestAnimationFrame === 'function' && typeof document !== 'undefined' && !document.hidden) {
+    setTimeout(() => requestAnimationFrame(flush), wait);
+  } else setTimeout(flush, Math.max(50, wait));
 }
 
 export function netProgress(): NetProgress {
@@ -120,49 +131,46 @@ function pump() {
   publish();
 }
 
-/** Let the models start downloading. Called once the title song can play, or on a timer. */
+const openWaiters: (() => void)[] = [];
+
+/** Let the models start downloading. The title screen calls this once its video element is in the page. */
 export function openNetQueue() {
   if (open) return;
   open = true;
+  const pending = openWaiters.splice(0);
+  for (const fn of pending) fn();
   pump();
 }
 
-let headStarts = 0;
-/** This much of a head-start file in, and the models may start: the rest streams in beside them. */
-const HEAD_START_BYTES = 1_500_000;
+function untilOpen(signal: AbortSignal) {
+  if (signal.aborted) return Promise.reject(new DOMException('Aborted', 'AbortError'));
+  if (open) return Promise.resolve();
+  return new Promise<void>((resolve, reject) => {
+    const go = () => {
+      signal.removeEventListener('abort', onAbort);
+      resolve();
+    };
+    const onAbort = () => {
+      const i = openWaiters.indexOf(go);
+      if (i >= 0) openWaiters.splice(i, 1);
+      reject(new DOMException('Aborted', 'AbortError'));
+    };
+    openWaiters.push(go);
+    signal.addEventListener('abort', onAbort, { once: true });
+  });
+}
 
 /**
- * Download `url` before any model (the title song) into the browser cache,
- * where the <audio> element picks it up, then open the line: once its first
- * HEAD_START_BYTES are in (about a minute of the song), so the room isn't
- * kept waiting for the whole file. The line opens anyway after
- * SONG_HEAD_START_MS.
+ * The title song used to be downloaded here, whole, and the room waited until
+ * the first 1.5 MB had been thrown away. That second copy of the song fought
+ * the title video, and the audio element then downloaded it again. The song
+ * now plays from its own element, which can start on the first bytes. This
+ * only opens the model line, on the next turn, so the video's request is
+ * already in.
  */
-export function headStart(url: string) {
+export function headStart(_url: string) {
   if (open || typeof window === 'undefined') return;
-  headStarts += 1;
-  let counted = false;
-  const release = () => {
-    if (counted) return;
-    counted = true;
-    headStarts -= 1;
-    if (headStarts === 0) openNetQueue();
-  };
-  const native = (window as unknown as { __netNative?: typeof fetch }).__netNative ?? window.fetch.bind(window);
-  void native(url)
-    .then(async res => {
-      const reader = res.body?.getReader();
-      if (!reader) return;
-      let seen = 0;
-      for (;;) {
-        const { done: end, value } = await reader.read();
-        if (end) break;
-        seen += value.byteLength;
-        if (seen >= HEAD_START_BYTES) release();
-      }
-    })
-    .catch(() => undefined)
-    .finally(release);
+  window.setTimeout(openNetQueue, 0);
 }
 
 function loadManifest(fetcher: typeof fetch) {
@@ -182,21 +190,38 @@ function loadManifest(fetcher: typeof fetch) {
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 const retryable = (status: number) => status === 502 || status === 503 || status === 504;
 
-/** Counts the bytes of a response body as they arrive. */
-function counted(res: Response, path: string): Response {
-  if (!res.body || typeof TransformStream === 'undefined') return res;
+/**
+ * Counts the bytes of a response body as they arrive, and says when the
+ * loader has read them all. One stream: splitting the body in two (`tee`)
+ * buffered a second copy of every model while the loader caught up, and that
+ * showed up as a hitch while you walked.
+ */
+function counted(res: Response, path: string, onDone: (ok: boolean) => void): Response {
+  if (!res.body || typeof TransformStream === 'undefined') {
+    onDone(true);
+    return res;
+  }
+  let settled = false;
+  const finish = (ok: boolean) => {
+    if (settled) return;
+    settled = true;
+    if (!expected.has(path)) expected.set(path, got.get(path) ?? 0);
+    onDone(ok);
+  };
   let seen = 0;
-  const body = res.body.pipeThrough(
-    new TransformStream<Uint8Array, Uint8Array>({
-      transform(chunk, ctl) {
-        seen += chunk.byteLength;
-        got.set(path, seen);
-        publish();
-        ctl.enqueue(chunk);
-      },
-    }),
-  );
-  return new Response(body, { status: res.status, statusText: res.statusText, headers: res.headers });
+  const decoded = new TransformStream<Uint8Array, Uint8Array>({
+    transform(chunk, ctl) {
+      seen += chunk.byteLength;
+      got.set(path, seen);
+      publish();
+      ctl.enqueue(chunk);
+    },
+    flush() {
+      finish(true);
+    },
+  });
+  void res.body.pipeTo(decoded.writable).catch(() => finish(false));
+  return new Response(decoded.readable, { status: res.status, statusText: res.statusText, headers: res.headers });
 }
 
 export function installNetQueue() {
@@ -204,7 +229,7 @@ export function installNetQueue() {
   (window as unknown as { __netQueue?: boolean }).__netQueue = true;
   const native = window.fetch.bind(window);
   (window as unknown as { __netNative?: typeof fetch }).__netNative = native;
-  window.setTimeout(openNetQueue, SONG_HEAD_START_MS);
+  window.setTimeout(openNetQueue, QUEUE_FALLBACK_MS);
 
   window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
     const req = new Request(input, init);
@@ -219,13 +244,25 @@ export function installNetQueue() {
     checking += 1;
     publish();
     return (async () => {
+      // No network at all until the title video has had a chance to start.
+      // A cache probe per file used to fire here, dozens at once, ahead of the video.
+      try {
+        await untilOpen(signal);
+      } catch (err) {
+        checking -= 1;
+        cancelled += 1;
+        publish();
+        throw err;
+      }
       await loadManifest(native);
       const entry = manifest?.[path];
       if (entry) {
         url.searchParams.set('v', entry.h);
         // Its size goes into the bar as soon as it's asked for, so the bar never runs backwards.
         if (!expected.has(path)) expected.set(path, entry.s);
-        // Already in the browser cache under this hash: no network, so no waiting in line.
+        // In the browser cache under this hash: no network, and no slot in the line.
+        // This runs only after the title video has started, so a cold visit's misses
+        // don't land ahead of the picture.
         try {
           const hit = await native(new Request(url.href, { cache: 'only-if-cached', mode: 'same-origin', signal }));
           if (hit.ok) {
@@ -267,7 +304,8 @@ export function installNetQueue() {
                 for (let attempt = 0; ; attempt += 1) {
                   if (signal.aborted) throw abortedErr();
                   try {
-                    res = await native(new Request(url.href, req));
+                    // Low priority: the title video and the song keep the fast lane.
+                    res = await native(new Request(url.href, req), { priority: 'low' });
                     if (!retryable(res.status) || attempt >= RETRIES) break;
                   } catch (err) {
                     if (signal.aborted || (err instanceof DOMException && err.name === 'AbortError') || attempt >= RETRIES) throw err;
@@ -279,22 +317,8 @@ export function installNetQueue() {
                   resolve(res);
                   return;
                 }
-                // Done counts once the body is all in, not when the headers land.
-                const tracked = counted(res, path);
-                const [forLoader, forCount] = tracked.body ? tracked.body.tee() : [null, null];
-                if (forCount) {
-                  const reader = forCount.getReader();
-                  void (async () => {
-                    try {
-                      for (;;) if ((await reader.read()).done) break;
-                      if (!expected.has(path)) expected.set(path, got.get(path) ?? 0);
-                      settle(true);
-                    } catch {
-                      settle(false);
-                    }
-                  })();
-                } else settle(true);
-                resolve(forLoader ? new Response(forLoader, { status: res.status, statusText: res.statusText, headers: res.headers }) : tracked);
+                // Done counts once the loader has read the body, not when the headers land.
+                resolve(counted(res, path, settle));
               } catch (err) {
                 settle(false);
                 reject(err);

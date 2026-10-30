@@ -329,10 +329,20 @@ export interface TrackHit {
  * Highest bit of plastic under (x, z) that the car could be standing on:
  * nothing more than `maxY` above the floor of the query.
  */
+// Two slots: a caller may hold the hit under the car and the one just ahead at the same time.
+// The result is only good until the call after next. Nothing here keeps it longer than that.
+const hitSlots: TrackHit[] = [
+  { y: 0, piece: null as unknown as Piece, lateral: 0, tangent: new THREE.Vector3(), right: new THREE.Vector3() },
+  { y: 0, piece: null as unknown as Piece, lateral: 0, tangent: new THREE.Vector3(), right: new THREE.Vector3() },
+];
+let hitSlot = 0;
+
 export function trackUnder(x: number, z: number, maxY: number, slack = 0): TrackHit | null {
   const list = grid.get(key(Math.floor(x / CELL), Math.floor(z / CELL)));
   if (!list) return null;
-  let best: TrackHit | null = null;
+  let bestY = -Infinity;
+  let bestLat = 0;
+  let bestSeg: (typeof list)[number] | null = null;
   for (const seg of list) {
     const ax = seg.a.p.x;
     const az = seg.a.p.z;
@@ -352,12 +362,21 @@ export function trackUnder(x: number, z: number, maxY: number, slack = 0): Track
     if (Math.abs(lateral) > seg.piece.half + slack) continue;
     const y = seg.a.p.y + (seg.b.p.y - seg.a.p.y) * tc;
     if (y > maxY) continue;
-    if (!best || y > best.y) {
-      const tangent = seg.b.p.clone().sub(seg.a.p).normalize();
-      best = { y, piece: seg.piece, lateral, tangent, right: seg.a.right };
+    if (!bestSeg || y > bestY) {
+      bestY = y;
+      bestLat = lateral;
+      bestSeg = seg;
     }
   }
-  return best;
+  if (!bestSeg) return null;
+  const slot = hitSlots[hitSlot];
+  hitSlot = hitSlot === 0 ? 1 : 0;
+  slot.y = bestY;
+  slot.piece = bestSeg.piece;
+  slot.lateral = bestLat;
+  slot.tangent.copy(bestSeg.b.p).sub(bestSeg.a.p).normalize();
+  slot.right = bestSeg.a.right;
+  return slot;
 }
 
 export const COURSE_FLOOR = FLOOR;
