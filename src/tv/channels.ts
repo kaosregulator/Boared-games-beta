@@ -5,7 +5,28 @@ import { ARTHUR } from './lineups/arthur';
 import { ADS_NUMBER, adsGuide } from './lineups/ads90s';
 import { MTV_CHANNEL, PICK_CHANNEL, YT_CHANNELS, ytOnAir, ytShowAt, type YtChannel } from './lineups/youtube247';
 import { PACK_SLOT, packOnAir } from './packSchedule';
-import { ANIMAL_PLANET, CBS, DISCOVERY, DISNEY, MTV_90S, NICK_90S, ONE_SATURDAY_MORNING, PBS_KIDS, SATURDAY_MORNING, TGIF, TOONAMI, UPN, VH1, COMEDY_CENTRAL, WRESTLING, NBC, FOX, NICK_AT_NITE } from './lineups/networks';
+import {
+  ANIMAL_PLANET,
+  CBS,
+  COMEDY_CENTRAL,
+  DISCOVERY,
+  DISNEY,
+  FOX,
+  MTV_90S,
+  NBC,
+  NICK_90S,
+  NICK_AT_NITE,
+  ONE_SATURDAY_MORNING,
+  PBS_KIDS,
+  SATURDAY_MORNING,
+  SCI_FI,
+  TGIF,
+  TOONAMI,
+  TURNER,
+  UPN,
+  VH1,
+  WRESTLING,
+} from './lineups/networks';
 
 /**
  * The cable lineup. Channel 2 is SNICK, running the archived Saturday nights
@@ -185,6 +206,8 @@ export const CHANNELS: Channel[] = [
   { number: 31, call: 'NBC', kind: 'block', name: 'NBC — Must See TV', block: NBC },
   { number: 32, call: 'FOX', kind: 'block', name: 'Fox — Simpsons, X-Files, 90210, MADtv', block: FOX },
   { number: 33, call: 'NITE', kind: 'block', name: 'Nick at Nite & TV Land', block: NICK_AT_NITE },
+  { number: 34, call: 'SCFI', kind: 'block', name: 'Sci-Fi Channel — Star Trek, MST3K, Godzilla', block: SCI_FI },
+  { number: 35, call: 'TBS', kind: 'block', name: 'TBS & TNT — Superstation days', block: TURNER },
   // Nothing but 90s commercial breaks, on the channel number of the decade.
   { number: ADS_NUMBER, call: 'ADS', kind: 'ads', name: '90s Commercial Breaks' },
   ...(TV247_ON ? [ytChannel(MTV_CHANNEL), ytChannel(PICK_CHANNEL)] : []),

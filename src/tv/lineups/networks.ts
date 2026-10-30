@@ -1145,3 +1145,44 @@ export const NICK_AT_NITE = lineup('nick-at-nite-1994_202601', {
   audience: 'family',
   seed: 33,
 });
+
+/** A tape whose one file is named after its item, the way most WOC uploads are. */
+const woc = (id: string, seconds: number, title: string) => tape(id, `${id}.mp4`, seconds, title);
+
+// ---- Sci-Fi Channel ----
+
+/** The Sci-Fi Channel off tape: Star Trek at 7:30, MST3K's Sci-Fi years, Godzilla and late-night movies. */
+export const SCI_FI = lineup('Star_Trek_Sci-Fi_Channel_WOC_1998-11-02_0730PM', {
+  tapes: [
+    woc('Star_Trek_Sci-Fi_Channel_WOC_1998-11-02_0730PM', 5280, 'Star Trek · Sci-Fi Channel · November 2, 1998'),
+    woc('Suspiria_Sci-Fi_Channel_WOC_1995-09-02', 7233, 'Suspiria · Sci-Fi Channel · September 2, 1995'),
+    woc('Star_Trek_Sci-Fi_Channel_WOC_1998-11-13_0730PM', 5379, 'Star Trek · Sci-Fi Channel · November 13, 1998'),
+    tape('godzilla-on-monster-island-godzilla-vs-hedorah-destroy-all-monsters-on-sci-fi-1996', '~.ia.mp4', 17499, 'Godzilla night · Sci-Fi Channel · 1996'),
+    woc('Star_Trek_Sci-Fi_Channel_WOC_1998-11-18_0730PM', 5343, 'Star Trek · Sci-Fi Channel · November 18, 1998'),
+    woc('MST3K_The_She_Creature_Sci-Fi_Channel_WOC_1998-09-12-11pm', 6930, 'Mystery Science Theater 3000 · The She-Creature · September 1998'),
+    woc('Time_Runner_Sci-Fi_Channel_WOC_1996-04-06', 6849, 'Time Runner · Sci-Fi Channel · April 6, 1996'),
+    woc('Star_Trek_Sci-Fi_Channel_WOC_1998-11-25_0730PM', 5293, 'Star Trek · Sci-Fi Channel · November 25, 1998'),
+    woc('Official_Denial_Sci-Fi_Channel_WOC_1995-09-16', 6900, 'Official Denial · Sci-Fi Channel · September 16, 1995'),
+  ],
+  audience: 'teen',
+  seed: 34,
+});
+
+// ---- TBS & TNT ----
+
+/** Turner's two superstations off tape: TNT Toons, MonsterVision, WCW, Little House, Babylon 5, Captain Planet. */
+export const TURNER = lineup('tnt-toons-1993-woc', {
+  tapes: [
+    tape('tnt-toons-1993-woc', '~TNT Toons', 6078.65, 'TNT Toons · Hanna-Barbera · September 26, 1993'),
+    tape('tbs-captain-planet-lpga-sega-womens-golf-april-1992', '~Captain Planet', 3782.78, 'TBS · Captain Planet · April 1992'),
+    tape('tnt-monstervionvision-june-12-1993-penn-and-teller-the-best-of-the-outer-limits-', '~Monstervionvision', 15425, 'TNT MonsterVision · The Outer Limits · June 12, 1993'),
+    ...[5218.11, 5243.64].map((seconds, i) => tape('1998_tbs_lhotp_marathon', `~VTS_01_${i + 1}.mp4`, seconds, `TBS · Little House on the Prairie marathon · 1998 · part ${i + 1}`)),
+    tape('wcw-all-nighter-1994', 'WCW ALL NIGHTER 1994.mp4', 18162, 'TBS · WCW All Nighter · 1994'),
+    woc('Mazes_And_Monsters_TBS_WOC_1995-02-11', 7226, 'TBS · Mazes and Monsters · February 11, 1995'),
+    ...[5236.5, 5240.9, 977.51].map((seconds, i) => tape('1998_tbs_lhotp_marathon', `~VTS_01_${i + 3}.mp4`, seconds, `TBS · Little House on the Prairie marathon · 1998 · part ${i + 3}`)),
+    woc('Babylon_5_S05E18_TNT_WOC_1998-10-28', 3792.32, 'Babylon 5 · TNT · October 28, 1998'),
+    woc('Werewolves_On_Wheels_TNT_WOC_1995-08-19', 6077, 'TNT MonsterVision · Werewolves on Wheels · August 1995'),
+  ],
+  audience: 'family',
+  seed: 35,
+});
