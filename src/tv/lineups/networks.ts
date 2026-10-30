@@ -1055,3 +1055,41 @@ export const WRESTLING = lineup('nov.-09-1997', {
   audience: 'teen',
   seed: 30,
 });
+
+// ---- NBC ----
+
+/** NBC's Must See TV years off tape: Seinfeld, Mad About You, Fresh Prince, SNL. */
+export const NBC = lineup('nbc-primetime-with-seinfeld-finale', {
+  tapes: [
+    tape('nbc-mtv-mad-about-you-seinfeld-the-real-world-fleetwood-mac-documentary-seinfeld-october-1994', '~Mad About You', 18844, 'NBC & MTV · Mad About You, Seinfeld, The Real World · October 1994'),
+    tape('acc-holl-1998-05-14', 'AccHoll-1998-05-14.mp4', 1746, 'Access Hollywood · May 14, 1998'),
+    tape('nbc-fresh-prince-of-bel-aire-blossom-nbc-mini-series-a-women-of-independent-mean', '~Fresh Prince', 21569, 'NBC · The Fresh Prince of Bel-Air, Blossom · February 1995'),
+    tape('union-square-1997-98', '~01 Union Square', 1677.32, 'Union Square · "Hasta la Muerta, Baby" · September 25, 1997'),
+    tape('20250714_20250714_0226', '~Saturday Night Live', 14857, 'Saturday Night Live · Joe Pesci & Spin Doctors · October 10, 1992'),
+    tape('union-square-1997-98', '~09_Union Square', 1645.62, 'Union Square · "No Sex \'Til After Homework"'),
+    tape('nbc-primetime-with-seinfeld-finale', 'NBC Primetime with Seinfeld Finale.ia.mp4', 22160, 'NBC prime time · the Seinfeld finale · May 14, 1998'),
+    tape('20YearsOfMustSeeTV', '20 Years of Must See TV.mp4', 5367.93, '20 Years of Must See TV · 2002'),
+  ],
+  audience: 'adult',
+  seed: 31,
+});
+
+// ---- Fox ----
+
+/** Fox prime time off tape: In Living Color, 90210, Married… with Children, The Simpsons, MADtv, The X-Files. */
+export const FOX = lineup('fox-march-2000', {
+  tapes: [
+    tape('vhs-fb-market-box-1-tape-38-in-living-color-broadcast-premiere-april-15-1990-wit', '~In Living Color', 8111, 'In Living Color · series premiere · April 15, 1990'),
+    tape('90210-marathon-1992', '~.ia.mp4', 7265, 'Beverly Hills, 90210 · back to back · August 26, 1992'),
+    tape('simpsons-halloween-specials-fox-no-woc-1993-10', 'simpsons-halloween-specials-fox-no-woc-1993-10.mp4', 5280, 'The Simpsons · Treehouse of Horror · October 1993'),
+    tape('fox-4-10-94', 'Fox 4-10-94.mp4', 1715.6, 'Married… with Children · April 10, 1994'),
+    ...[5452, 5466, 6668, 5282].map((seconds, i) => tape('vts-01-1_202603', `VTS_01_${i + 1}.mp4`, seconds, `Fox prime time · October 1994 · part ${i + 1}`)),
+    tape('fox-december-16th-1995-madtv-s-01e-9-episode-premiere-woc-te-nos', '~.ia.mp4', 3545, 'MADtv · season 1 · December 16, 1995'),
+    tape('fox-01-15-1997-tape3pt2yr2026', 'fox-01-15-1997-tape3pt2yr2026.mp4', 7194, 'Beverly Hills, 90210 & Party of Five · January 15, 1997'),
+    tape('10-25-to-11-20-1997-mst-3-k-x-files-mst-3-k-seinfeld-mst-3-k-te-nos', '~.ia.mp4', 22234, 'The X-Files, MST3K & Seinfeld · fall 1997'),
+    tape('madtv-s-4-e-23-woc-kbca-august-28-1999', '~.ia.mp4', 3605, 'MADtv · August 28, 1999'),
+    tape('fox-march-2000', 'fox march 2000.mp4', 22044, 'Fox prime time · March 2000'),
+  ],
+  audience: 'adult',
+  seed: 32,
+});

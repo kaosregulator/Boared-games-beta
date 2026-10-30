@@ -5,7 +5,7 @@ import { ARTHUR } from './lineups/arthur';
 import { ADS_NUMBER, adsGuide } from './lineups/ads90s';
 import { MTV_CHANNEL, PICK_CHANNEL, YT_CHANNELS, ytOnAir, ytShowAt, type YtChannel } from './lineups/youtube247';
 import { PACK_SLOT, packOnAir } from './packSchedule';
-import { ANIMAL_PLANET, CBS, DISCOVERY, DISNEY, MTV_90S, NICK_90S, ONE_SATURDAY_MORNING, PBS_KIDS, SATURDAY_MORNING, TGIF, TOONAMI, UPN, VH1, COMEDY_CENTRAL, WRESTLING } from './lineups/networks';
+import { ANIMAL_PLANET, CBS, DISCOVERY, DISNEY, MTV_90S, NICK_90S, ONE_SATURDAY_MORNING, PBS_KIDS, SATURDAY_MORNING, TGIF, TOONAMI, UPN, VH1, COMEDY_CENTRAL, WRESTLING, NBC, FOX } from './lineups/networks';
 
 /**
  * The cable lineup. Channel 2 is SNICK, running the archived Saturday nights
@@ -182,6 +182,8 @@ export const CHANNELS: Channel[] = [
   { number: 28, call: 'VH1', kind: 'block', name: 'VH1 — Pop-Up Video, Behind the Music and more', block: VH1 },
   { number: 29, call: 'CMDY', kind: 'block', name: 'Comedy Central — MST3K, South Park, Dr. Katz', block: COMEDY_CENTRAL },
   { number: 30, call: 'WRST', kind: 'block', name: 'Wrestling — WWF pay-per-views & WCW Nitro', block: WRESTLING },
+  { number: 31, call: 'NBC', kind: 'block', name: 'NBC — Must See TV', block: NBC },
+  { number: 32, call: 'FOX', kind: 'block', name: 'Fox — Simpsons, X-Files, 90210, MADtv', block: FOX },
   // Nothing but 90s commercial breaks, on the channel number of the decade.
   { number: ADS_NUMBER, call: 'ADS', kind: 'ads', name: '90s Commercial Breaks' },
   ...(TV247_ON ? [ytChannel(MTV_CHANNEL), ytChannel(PICK_CHANNEL)] : []),
