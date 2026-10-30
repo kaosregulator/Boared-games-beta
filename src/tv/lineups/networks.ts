@@ -963,9 +963,22 @@ export const CBS = lineup('CBS_Thursday_Block_WOC_2001-03-29', {
 
 // ---- VH1 ----
 
-/** VH1's I Love the 90s, off tape. */
+/** VH1 in the 90s off tape: Pop-Up Video, Behind the Music, I Love the '90s, Divas Live and whole nights. */
 export const VH1 = lineup('VH1ILoveThe90s', {
-  tapes: [tape('VH1ILoveThe90s', 'VH1 - I Love the 90s (96-99) WOC.mp4', 11895.16, "VH1 · I Love the '90s · 1996–99")],
+  tapes: [
+    tape('VH1ILoveThe90s', 'VH1 - I Love the 90s (96-99) WOC.mp4', 11895.16, "VH1 · I Love the '90s · 1996–99"),
+    tape('pop-up-video-episode-10', 'Pop-Up Video Episode 10.ia.mp4', 1353.79, 'Pop-Up Video · episode 10'),
+    tape('2022.1.1-vh-1-1991-flix', '2022.1.1-VH1_1991-FLIX.mp4', 1828, 'VH1 · FLIX · 1991'),
+    tape('2022.1.1-vh-1-1991-flix', '2022.1.2-VH1_1991-The Soul of VH1 - Cover Songs.mp4', 3719, 'The Soul of VH1 · Cover Songs · 1991'),
+    tape('TheVistaGroup-TVBroadcastFleetwoodMacBehindtheMusicVH1_1997', '~Fleetwood Mac', 2678, 'Behind the Music · Fleetwood Mac · 1997'),
+    tape('20250408_20250408_2141', '~8-Track Flashback', 7373.87, 'VH1 · 8-Track Flashback, Archives, Classic Albums · May 1997'),
+    tape('pop-up-video-elton-john', 'Pop-Up Video Elton John.ia.mp4', 1324, 'Pop-Up Video · Elton John special'),
+    tape('1997-06-19-vh-1-hollywood-vinyl-batman-lost-world-lost-videos-disney-videos', '~Hollywood & Vinyl', 5937, 'VH1 · Hollywood & Vinyl · June 19, 1997'),
+    tape('behind-the-music-styx', 'Behind the Music - Styx.mp4', 2605, 'Behind the Music · Styx'),
+    tape('vh1-divas-live', 'Analog 20220902 1004-A-A.mp4', 4803.37, 'VH1 Divas Live · 1998'),
+    tape('pop-up-video-cold-war-80s', "Pop-Up Video Cold War 80's.ia.mp4", 1323, "Pop-Up Video · Cold War '80s"),
+    tape('random-vh-1-and-a-ray-charles-concert-1999', 'Random VH1 and a Ray Charles concert, 1999.ia.mp4', 5383, 'VH1 · 1999, with a Ray Charles concert'),
+  ],
   audience: 'teen',
   seed: 28,
 });
@@ -992,4 +1005,200 @@ export const UPN = lineup('upn-woc', {
   ],
   audience: 'teen',
   seed: 27,
+});
+
+// ---- Comedy Central ----
+
+/** Comedy Central off tape: MST3K, Dr. Katz, South Park's first season, Win Ben Stein's Money, BattleBots. */
+export const COMEDY_CENTRAL = lineup('Dr_Katz_Comedy_Central_WOC_1997-10', {
+  tapes: [
+    tape('423-1-23-93', '423 1-23-93.mp4', 7861.25, 'Mystery Science Theater 3000 · Bride of the Monster · January 1993'),
+    tape('Dr_Katz_Comedy_Central_WOC_1997-10', 'Dr_Katz_Comedy_Central_WOC_1997-10.mp4', 2408, 'Dr. Katz, Professional Therapist · October 1997'),
+    tape('stuffandthenSOUTHPARKYAYYY', 'stuffandthenSOUTHPARKYAYYY.mp4', 19914, 'Discovery, Cinemax & Comedy Central · South Park · 1997'),
+    tape('win-ben-steins-money-march-1999-with-ads', "Win Ben Stein's Money - March 1999 with ads.mp4", 1846, "Win Ben Stein's Money · March 30, 1999"),
+    tape('615-3-14-96', '615 3-14-96.mp4', 7279, 'Mystery Science Theater 3000 · Kitten with a Whip · March 1996'),
+    tape('uncommon-ephemera-vhs-V1910-1', 'V1910-1.mp4', 1992.97, 'Comedy Central breaks from South Park season 1 · 1997–98'),
+    tape('the-n.-y.-friars-club-roast-of-jerry-stiller-october-27th-1999-woc', '~.ia.mp4', 3596, 'The Friars Club Roast of Jerry Stiller · October 1999'),
+    tape('battlebotstape1', 'battle bots tape 1.mp4', 3563.38, 'BattleBots · Comedy Central · 2001'),
+  ],
+  audience: 'adult',
+  seed: 29,
+});
+
+// ---- Wrestling ----
+
+/** A Monday Nitro night: the uploader names each file by its date. */
+const nitro = (id: string, date: string, seconds: number) => tape(id, `${date.toUpperCase()}.mp4`, seconds, `WCW Monday Nitro · ${date}`);
+
+/**
+ * WWF pay-per-views and Saturday Night's Main Event, against WCW Monday Nitro
+ * from the end of the Monday Night War, all off tape.
+ */
+export const WRESTLING = lineup('nov.-09-1997', {
+  tapes: [
+    tape('nov.-09-1997', 'NOV. 09, 1997.mp4', 9775.7, 'WWF Survivor Series · November 9, 1997'),
+    nitro('nov.-1999', 'Nov. 01, 1999', 8260),
+    tape('1987-wwf-saturday-night-main-event-10-w.-o.-c-720p', '~.ia.mp4', 5200, "WWF Saturday Night's Main Event · 1987"),
+    nitro('nov.-1999', 'Nov. 08, 1999', 7999),
+    tape('oct.-05-1997', 'OCT. 05, 1997.mp4', 10158, 'WWF Badd Blood: In Your House · October 5, 1997'),
+    nitro('nov.-1999', 'Nov. 15, 1999', 8213),
+    tape('wwf-wrestlemanias-greatest-matches-1994-vhs', '20240816_024519.ia.mp4', 3522, "WWF WrestleMania's Greatest Matches · 1994 tape"),
+    nitro('nov.-1999', 'Nov. 22, 1999', 8300),
+    tape('dec.-07-1997', 'DEC. 07, 1997.mp4', 9930, 'WWF D-Generation X: In Your House · December 7, 1997'),
+    nitro('nov.-1999', 'Nov. 29, 1999', 8374),
+    nitro('dec.-1999', 'Dec. 06, 1999', 8145),
+    tape('may-31-1998', 'MAY 31, 1998.mp4', 10044, 'WWF Over the Edge: In Your House · May 31, 1998'),
+    nitro('dec.-1999', 'Dec. 13, 1999', 8121),
+    nitro('dec.-1999', 'Dec. 20, 1999', 8604),
+    nitro('dec.-1999', 'Dec. 27, 1999', 6889),
+  ],
+  audience: 'teen',
+  seed: 30,
+});
+
+// ---- NBC ----
+
+/** NBC's Must See TV years off tape: Seinfeld, Mad About You, Fresh Prince, SNL. */
+export const NBC = lineup('nbc-primetime-with-seinfeld-finale', {
+  tapes: [
+    tape('nbc-mtv-mad-about-you-seinfeld-the-real-world-fleetwood-mac-documentary-seinfeld-october-1994', '~Mad About You', 18844, 'NBC & MTV · Mad About You, Seinfeld, The Real World · October 1994'),
+    tape('acc-holl-1998-05-14', 'AccHoll-1998-05-14.mp4', 1746, 'Access Hollywood · May 14, 1998'),
+    tape('nbc-fresh-prince-of-bel-aire-blossom-nbc-mini-series-a-women-of-independent-mean', '~Fresh Prince', 21569, 'NBC · The Fresh Prince of Bel-Air, Blossom · February 1995'),
+    tape('union-square-1997-98', '~01 Union Square', 1677.32, 'Union Square · "Hasta la Muerta, Baby" · September 25, 1997'),
+    tape('20250714_20250714_0226', '~Saturday Night Live', 14857, 'Saturday Night Live · Joe Pesci & Spin Doctors · October 10, 1992'),
+    tape('union-square-1997-98', '~09_Union Square', 1645.62, 'Union Square · "No Sex \'Til After Homework"'),
+    tape('nbc-primetime-with-seinfeld-finale', 'NBC Primetime with Seinfeld Finale.ia.mp4', 22160, 'NBC prime time · the Seinfeld finale · May 14, 1998'),
+    tape('20YearsOfMustSeeTV', '20 Years of Must See TV.mp4', 5367.93, '20 Years of Must See TV · 2002'),
+  ],
+  audience: 'adult',
+  seed: 31,
+});
+
+// ---- Fox ----
+
+/** Fox prime time off tape: In Living Color, 90210, Married… with Children, The Simpsons, MADtv, The X-Files. */
+export const FOX = lineup('fox-march-2000', {
+  tapes: [
+    tape('vhs-fb-market-box-1-tape-38-in-living-color-broadcast-premiere-april-15-1990-wit', '~In Living Color', 8111, 'In Living Color · series premiere · April 15, 1990'),
+    tape('90210-marathon-1992', '~.ia.mp4', 7265, 'Beverly Hills, 90210 · back to back · August 26, 1992'),
+    tape('simpsons-halloween-specials-fox-no-woc-1993-10', 'simpsons-halloween-specials-fox-no-woc-1993-10.mp4', 5280, 'The Simpsons · Treehouse of Horror · October 1993'),
+    tape('fox-4-10-94', 'Fox 4-10-94.mp4', 1715.6, 'Married… with Children · April 10, 1994'),
+    ...[5452, 5466, 6668, 5282].map((seconds, i) => tape('vts-01-1_202603', `VTS_01_${i + 1}.mp4`, seconds, `Fox prime time · October 1994 · part ${i + 1}`)),
+    tape('fox-december-16th-1995-madtv-s-01e-9-episode-premiere-woc-te-nos', '~.ia.mp4', 3545, 'MADtv · season 1 · December 16, 1995'),
+    tape('fox-01-15-1997-tape3pt2yr2026', 'fox-01-15-1997-tape3pt2yr2026.mp4', 7194, 'Beverly Hills, 90210 & Party of Five · January 15, 1997'),
+    tape('10-25-to-11-20-1997-mst-3-k-x-files-mst-3-k-seinfeld-mst-3-k-te-nos', '~.ia.mp4', 22234, 'The X-Files, MST3K & Seinfeld · fall 1997'),
+    tape('madtv-s-4-e-23-woc-kbca-august-28-1999', '~.ia.mp4', 3605, 'MADtv · August 28, 1999'),
+    tape('fox-march-2000', 'fox march 2000.mp4', 22044, 'Fox prime time · March 2000'),
+  ],
+  audience: 'adult',
+  seed: 32,
+});
+
+// ---- Nick at Nite ----
+
+/**
+ * Nick at Nite's 1998 "Norman Lear Picks" All in the Family marathon, every
+ * episode with the ads it aired with: [number, seconds, title].
+ */
+const AITF_1998: [string, number, string][] = [
+  ['01 1971', 1830.76, 'Meet the Bunkers'],
+  ['02 1971', 1845.59, 'Oh, My Aching Back'],
+  ['03 1971', 1801.26, 'Lionel Moves into the Neighborhood'],
+  ['04 1971', 1832.62, 'Archie Gives Blood'],
+  ['05 1971', 1789.44, "Mike's Problem"],
+  ['06 1971', 1816.75, 'The First and Last Supper'],
+  ['07 1971', 1848.04, 'Gloria Has a Belly Full'],
+  ['08 1971', 1681.71, 'Judging Books by Covers'],
+  ['09 1971', 1819.03, "Edith's Accident"],
+  ['10 1971', 1694.57, 'Mike Meets Archie'],
+  ['11 1972', 1805.48, "Sammy's Visit"],
+  ['12 1971', 1422.53, 'The Saga of Cousin Oscar'],
+  ['13 1971', 1779.65, 'Cousin Maude Comes to Visit'],
+  ['14 1972', 1773.78, 'The Elevator Story'],
+  ['15 1972', 1789.18, 'Archie and the Editorial'],
+  ['16 1973', 1696.04, 'Archie Is Branded'],
+  ['17 1972', 1757.8, 'Edith Flips Her Wig'],
+  ['18 1971', 1859.99, 'Edith Writes a Song'],
+  ['19 1972', 1834.73, "Edith's Problem"],
+  ['20 1972', 1797.99, 'The Bunkers and the Swingers'],
+  ['21 1973', 1789.12, "We're Having a Heat Wave"],
+  ['22 1973', 1790.06, "We're Still Having a Heat Wave"],
+  ['23 1973', 1832, 'Battle of the Month'],
+  ['24 1973', 1692.48, 'Edith Finds an Old Man'],
+  ['25 1975', 1851.67, 'The Very Moving Day'],
+];
+const AITF_ID = '1998-all-in-the-family-nick-at-nite-norman-lear-picks-marathon-5-nights-woc_202506';
+
+/** Nick at Nite and TV Land off tape: the classic sitcoms with their 90s promos and ads. */
+export const NICK_AT_NITE = lineup('nick-at-nite-1994_202601', {
+  tapes: [
+    tape('nick-at-nite-1994_202601', 'Nick At Nite 1994.mp4', 1630, 'Nick at Nite · 1994'),
+    ...AITF_1998.slice(0, 5).map(([n, seconds, title]) => tape(AITF_ID, `~WOC/${n}`, seconds, `All in the Family · "${title}" · Nick at Nite 1998`)),
+    ...[5435.4, 5464.56, 5476.34, 5599.33].map((seconds, i) => tape('vts-01-1_20260307', `VTS_01_${i + 1}.mp4`, seconds, `Fox 11, Nick at Nite & HBO · fall 1992 · part ${i + 1}`)),
+    ...AITF_1998.slice(5, 15).map(([n, seconds, title]) => tape(AITF_ID, `~WOC/${n}`, seconds, `All in the Family · "${title}" · Nick at Nite 1998`)),
+    tape('vb-tape-0043-commercials-and-promos-during-i-love-lucy-on-nick-at-nite', '~I Love Lucy', 4824, 'Nick at Nite · the breaks from I Love Lucy'),
+    tape('adam-12_202507', 'ADAM-12.mp4', 6702, 'Adam-12 · two hours'),
+    ...AITF_1998.slice(15).map(([n, seconds, title]) => tape(AITF_ID, `~WOC/${n}`, seconds, `All in the Family · "${title}" · Nick at Nite 1998`)),
+    tape('alfred-hitchcock-any-griffith-man-from-uncle-get-smart-x-2-mr.-and-mrs.-notyh-the-persuaders', '~Alfred Hitchcock', 20836, 'Hitchcock, Andy Griffith, U.N.C.L.E., Get Smart'),
+    tape('allinthe-family-special-at-end', 'AllintheFamily special at end.mp4', 18785, 'All in the Family · five hours'),
+  ],
+  audience: 'family',
+  seed: 33,
+});
+
+/** A tape whose one file is named after its item, the way most WOC uploads are. */
+const woc = (id: string, seconds: number, title: string) => tape(id, `${id}.mp4`, seconds, title);
+
+// ---- Sci-Fi Channel ----
+
+/** The Sci-Fi Channel off tape: Star Trek at 7:30, MST3K's Sci-Fi years, Godzilla and late-night movies. */
+export const SCI_FI = lineup('Star_Trek_Sci-Fi_Channel_WOC_1998-11-02_0730PM', {
+  tapes: [
+    woc('Star_Trek_Sci-Fi_Channel_WOC_1998-11-02_0730PM', 5280, 'Star Trek · Sci-Fi Channel · November 2, 1998'),
+    woc('Suspiria_Sci-Fi_Channel_WOC_1995-09-02', 7233, 'Suspiria · Sci-Fi Channel · September 2, 1995'),
+    woc('Star_Trek_Sci-Fi_Channel_WOC_1998-11-13_0730PM', 5379, 'Star Trek · Sci-Fi Channel · November 13, 1998'),
+    tape('godzilla-on-monster-island-godzilla-vs-hedorah-destroy-all-monsters-on-sci-fi-1996', '~.ia.mp4', 17499, 'Godzilla night · Sci-Fi Channel · 1996'),
+    woc('Star_Trek_Sci-Fi_Channel_WOC_1998-11-18_0730PM', 5343, 'Star Trek · Sci-Fi Channel · November 18, 1998'),
+    woc('MST3K_The_She_Creature_Sci-Fi_Channel_WOC_1998-09-12-11pm', 6930, 'Mystery Science Theater 3000 · The She-Creature · September 1998'),
+    woc('Time_Runner_Sci-Fi_Channel_WOC_1996-04-06', 6849, 'Time Runner · Sci-Fi Channel · April 6, 1996'),
+    woc('Star_Trek_Sci-Fi_Channel_WOC_1998-11-25_0730PM', 5293, 'Star Trek · Sci-Fi Channel · November 25, 1998'),
+    woc('Official_Denial_Sci-Fi_Channel_WOC_1995-09-16', 6900, 'Official Denial · Sci-Fi Channel · September 16, 1995'),
+  ],
+  audience: 'teen',
+  seed: 34,
+});
+
+// ---- TBS & TNT ----
+
+/** Turner's two superstations off tape: TNT Toons, MonsterVision, WCW, Little House, Babylon 5, Captain Planet. */
+export const TURNER = lineup('tnt-toons-1993-woc', {
+  tapes: [
+    tape('tnt-toons-1993-woc', '~TNT Toons', 6078.65, 'TNT Toons · Hanna-Barbera · September 26, 1993'),
+    tape('tbs-captain-planet-lpga-sega-womens-golf-april-1992', '~Captain Planet', 3782.78, 'TBS · Captain Planet · April 1992'),
+    tape('tnt-monstervionvision-june-12-1993-penn-and-teller-the-best-of-the-outer-limits-', '~Monstervionvision', 15425, 'TNT MonsterVision · The Outer Limits · June 12, 1993'),
+    ...[5218.11, 5243.64].map((seconds, i) => tape('1998_tbs_lhotp_marathon', `~VTS_01_${i + 1}.mp4`, seconds, `TBS · Little House on the Prairie marathon · 1998 · part ${i + 1}`)),
+    tape('wcw-all-nighter-1994', 'WCW ALL NIGHTER 1994.mp4', 18162, 'TBS · WCW All Nighter · 1994'),
+    woc('Mazes_And_Monsters_TBS_WOC_1995-02-11', 7226, 'TBS · Mazes and Monsters · February 11, 1995'),
+    ...[5236.5, 5240.9, 977.51].map((seconds, i) => tape('1998_tbs_lhotp_marathon', `~VTS_01_${i + 3}.mp4`, seconds, `TBS · Little House on the Prairie marathon · 1998 · part ${i + 3}`)),
+    woc('Babylon_5_S05E18_TNT_WOC_1998-10-28', 3792.32, 'Babylon 5 · TNT · October 28, 1998'),
+    woc('Werewolves_On_Wheels_TNT_WOC_1995-08-19', 6077, 'TNT MonsterVision · Werewolves on Wheels · August 1995'),
+  ],
+  audience: 'family',
+  seed: 35,
+});
+
+// ---- Boomerang ----
+
+/** Boomerang, Cartoon Network's classic-cartoon block and then its own channel, plus a 1994 Scooby-Doo marathon. */
+export const BOOMERANG = lineup('cartoon-network-boomerang-block-1965-january-20th-2001-woc', {
+  tapes: [
+    tape('cartoon-network-boomerang-block-1965-january-20th-2001-woc', '~Boomerang Block 1965', 7428, 'Cartoon Network · Boomerang 1965 · January 20, 2001'),
+    tape('pixie-dixie-boomerang-recording-may-june-2000', '~.ia.mp4', 1274, 'Boomerang · Pixie & Dixie · 2000'),
+    tape('cartoon-network-october-november-1994-woc', 'cartoonnetwork_scoobydoomarathon1994.mp4', 19520.83, 'Cartoon Network · Scooby-Doo marathon · fall 1994'),
+    tape('top-cat-boomerang-recording-may-june-2000', '~.ia.mp4', 1374, 'Boomerang · Top Cat · 2000'),
+    tape('cartoon-network-boomerang-marathon-april-1-2000-woc', '~.ia.mp4', 11832, 'Cartoon Network · Boomerang marathon & Super Chunk · April 1, 2000'),
+    tape('boomerang-august-18-2002-woc', '~.ia.mp4', 9560.37, 'Boomerang · August 18, 2002'),
+  ],
+  audience: 'kids',
+  seed: 36,
 });
