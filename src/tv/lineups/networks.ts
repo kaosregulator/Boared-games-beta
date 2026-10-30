@@ -849,3 +849,147 @@ export const DISNEY = lineup('katie-and-orbie-re-runs', {
   audience: 'kids',
   seed: 24,
 });
+
+// ---- ABC TGIF ----
+
+/** Muppets Tonight, both seasons (ABC TGIF, 1996–98). */
+const MUPPETS_TONIGHT = series('Muppets-Tonight-1996', 'Muppets Tonight', [
+  ['~101 Michelle', 1512, 'Michelle Pfeiffer'],
+  ['~102 Martin', 1528.24, 'Martin Short'],
+  ['~103 Paula', 1501.74, 'Paula Abdul'],
+  ['~104 Billy', 1510.56, 'Billy Crystal and Larry King'],
+  ['~105 Garth', 1522.56, 'Garth Brooks'],
+  ['~106 John', 1501.92, 'John Goodman'],
+  ['~107 Cindy', 1522.08, 'Cindy Crawford'],
+  ['~108 Sandra', 1512, 'Sandra Bullock'],
+  ['~109 Tony', 1521.6, 'Tony Bennett'],
+  ['~110 Whoopi', 1517.2, 'Whoopi Goldberg'],
+  ['~111 Heather', 1500.65, 'Heather Locklear'],
+  ['~112 Jason', 1520.64, 'Jason Alexander'],
+  ['~113 Pierce', 1519.79, 'Pierce Brosnan'],
+  ['~201 Cameo', 1520.93, 'The Cameo Show'],
+  ['~202 Coolio', 1507.9, 'Coolio & Don Rickles'],
+  ['~203 Dennis', 1507.93, 'Dennis Quaid and Gilbert Gottfried'],
+  ['~204 Andie', 1507.81, 'Andie MacDowell, Captain Kangaroo, Ben Stein'],
+  ['~205 Gary', 1488.02, 'Penn & Teller'],
+  ['~206 Prince', 1503.5, 'Prince'],
+  ['~207 Rick', 1516.02, 'Rick Moranis'],
+  ['~208 Johnny', 1504.25, 'Johnny Fiama Leaves Home'],
+  ['~209 Best', 1501.87, 'Best of Muppets Tonight'],
+]);
+
+/** Teen Angel, all 17 (ABC TGIF, 1997–98). */
+const TEEN_ANGEL = series('teen-angel-1997-1998', 'Teen Angel', [
+  ['~01 Marty', 1248.03, 'Marty Buys the Farm'],
+  ['~02 Date', 1306.12, 'Date with an Angel'],
+  ['~03 Sings', 1190.46, 'Sings Like an Angel'],
+  ['~04 Honest', 1280.47, 'Honest Abe and Popular Steve'],
+  ['~05 Wrestling', 1279.88, 'Wrestling with an Angel'],
+  ['~06 I Love', 1297.97, 'I Love Nitzke'],
+  ['~07 One Dog', 1324.26, 'One Dog Night'],
+  ['~08 Jeremiah', 1226.5, 'Jeremiah Was a Bullfrog'],
+  ['~09 Feather', 1299.17, "Feather's Day"],
+  ['~10 The Play', 1279.86, "The Play's the Thing"],
+  ['~11 Living', 1324.1, 'Living Doll'],
+  ['~12 Steve', 1244.85, 'Steve & Marty & Jordan & Uncle Lou'],
+  ['~13 Grumpy', 1312.05, 'Grumpy Young Men'],
+  ['~14 Who', 1289.2, "Who's the Boss"],
+  ['~15 Look', 1279.17, 'Look Ma, No Face'],
+  ['~16 The Un', 1279.08, 'The Un-Natural'],
+  ['~17 Back', 1185.19, 'Back to Depolo'],
+]);
+
+/** You Wish, all 13 (ABC TGIF, 1997–98). */
+const YOU_WISH = series('you-wish-1997-1998', 'You Wish', [
+  ['~01 Pilot', 1242.28, 'Pilot'],
+  ['~02  Jillions', 1238.54, 'Jillions of Gillians'],
+  ['~03 The Bad', 1275.43, 'The Bad Influence'],
+  ['~04 A Real', 1265.23, 'A Real Don Juan'],
+  ['~05 The Big', 1271.11, 'The Big Ride'],
+  ['~06 Mind', 1144.44, 'Mind Games'],
+  ['~07 Halloween', 1302.77, 'Halloween'],
+  ['~08 Genie', 1300.74, 'Genie Without a Cause'],
+  ['~09 Future', 1280.98, 'Future Shock'],
+  ['~10 Welcome', 1280.02, 'Welcome to the Dollhouse'],
+  ['~11 All In', 1279.58, 'All in the Family Room'],
+  ['~12 Bride', 1264.5, 'Bride and Prejudice'],
+  ['~13 Gift', 1246.85, 'Gift of the Travi'],
+]);
+
+/** Aliens in the Family, all 8 (ABC TGIF, 1996). */
+const ALIENS_IN_THE_FAMILY = series('Aliens-in-the-Family', 'Aliens in the Family', [
+  ['~01 Meet', 1339.21, 'Meet the Brodys'],
+  ['~02 Bobut', 1339.01, 'Bobut Conquers All'],
+  ['~03 Cookie', 1337.15, 'Cookie Makes Some Dough'],
+  ['~04 You Don', 1285.32, "You Don't Have a Pet to Be Popular"],
+  ['~05 Too Good', 1348.55, 'Too Good to Be True'],
+  ['~06 Respect', 1339.07, 'Respect Your Elders'],
+  ['~07  Dissected', 1334.13, 'Dissected and Neglected'],
+  ['~08 A Very', 1343.31, 'A Very Brody Tweeznax'],
+]);
+
+
+/** ABC's Friday night TGIF, off tape, with the TGIF shows the uploaders kept whole. */
+export const TGIF = lineup('TGIF_ABC_WOC_1997-05-09', {
+  tapes: [
+    ...[1622.86, 1716.42, 1758.52, 1731.5].map((seconds, i) =>
+      tape('TGIF_-_Boy_Meets_World_-_Step_by_Step_-_December_1993', `~VTS_0${i + 1}_1.mp4`, seconds, `TGIF · December 1993 · part ${i + 1}`),
+    ),
+    tape('TGIF_ABC_WOC_1997-05-09', 'TGIF_ABC_WOC_1997-05-09.mp4', 7824.05, 'TGIF · May 9, 1997'),
+    tape('1997-11-07-the-tgif-time-warp', '1997-11-07 The TGIF Time Warp.mp4', 7075.15, 'TGIF Time Warp · November 7, 1997'),
+    tape('TGIF_ABC_WOC_1998-12-11', '~.mp4', 8660.49, 'TGIF · December 11, 1998'),
+  ],
+  shows: [MUPPETS_TONIGHT, TEEN_ANGEL, YOU_WISH, ALIENS_IN_THE_FAMILY],
+  audience: 'family',
+  seed: 25,
+});
+
+// ---- CBS ----
+
+/** Old CBS prime time and specials off tape, with the ads as they aired. */
+export const CBS = lineup('CBS_Thursday_Block_WOC_2001-03-29', {
+  tapes: [
+    tape('CBS_Thursday_Block_WOC_2001-03-29', 'CBS_Thursday_Block_WOC_2001-03-29.mp4', 11100.03, 'CBS Thursday · Survivor, CSI · March 29, 2001'),
+    tape('Mysteries_Of_Ancient_World_CBS_WOC_1994-04-28', 'Mysteries_Of_Ancient_World_CBS_WOC_1994-04-28.mp4', 7144.07, 'Mysteries of the Ancient World · CBS 1994'),
+    tape('the-outer-limits-s01e13-cbs-kyw3-woc-1995-10', 'the-outer-limits-s01e13-cbs-kyw3-woc-1995-10.mp4', 3582.48, 'The Outer Limits · CBS late night 1995'),
+    tape('Grumpy_Old_Men_CBS_WOC_1997-05-15', 'Grumpy_Old_Men_CBS_WOC_1997-05-15.mp4', 7102.04, 'CBS Thursday Movie · Grumpy Old Men · 1997'),
+    tape('blank-vhs-tape-5', '~.ia.mp4', 21856.7, 'Survivor: Borneo · episodes 1–6 · summer 2000'),
+    tape('Survivor_CBS_WOC_2001-02-22', 'Survivor_CBS_WOC_2001-02-22.mp4', 4105.04, 'Survivor: The Australian Outback · February 2001'),
+    tape('2025-08-24-08-38-23-1', '~.ia.mp4', 29533.2, 'CBS · November 26, 2000'),
+  ],
+  audience: 'adult',
+  seed: 26,
+});
+
+// ---- VH1 ----
+
+/** VH1's I Love the 90s, off tape. */
+export const VH1 = lineup('VH1ILoveThe90s', {
+  tapes: [tape('VH1ILoveThe90s', 'VH1 - I Love the 90s (96-99) WOC.mp4', 11895.16, "VH1 · I Love the '90s · 1996–99")],
+  audience: 'teen',
+  seed: 28,
+});
+
+// ---- UPN ----
+
+/** A UPN WOC tape: the uploaders name the file after the item. */
+const upn = (id: string, seconds: number, title: string) => tape(id, `${id}.mp4`, seconds, title);
+
+/** UPN off tape: Conan, Paranormal Borderline, Moesha, Buffy's sixth season and a Halloween night. */
+export const UPN = lineup('upn-woc', {
+  tapes: [
+    upn('The_Paranormal_Borderline_UPN_WOC_1996-03-19', 3598, 'The Paranormal Borderline · UPN · March 19, 1996'),
+    upn('Conan_The_Adventurer_S01E12_UPN_WOC_1998-01', 3752, 'Conan the Adventurer · UPN · January 1998'),
+    upn('Buffy_S06E04_UPN_WOC_2001-10-16', 3430.06, 'Buffy the Vampire Slayer · "Flooded" · UPN · October 16, 2001'),
+    tape('upn-woc', 'UPN WOC.ia.mp4', 7360.73, 'UPN Halloween night'),
+    upn('Conan_The_Adventurer_S01E15_UPN_WOC_1998-02', 3452, 'Conan the Adventurer · UPN · February 1998'),
+    upn('Buffy_S06E05_UPN_WOC_2001-10-23', 3827.42, 'Buffy the Vampire Slayer · "Life Serial" · UPN · October 23, 2001'),
+    tape('moesha-s-05e-12-woc', 'Moesha - s05e12 - WOC.mp4', 1961, 'Moesha · "He Doth Protest Too Much" · UPN'),
+    upn('Buffy_S06E06_UPN_WOC_2001-10-30', 3738.87, 'Buffy the Vampire Slayer · "All the Way" · UPN · October 30, 2001'),
+    upn('Conan_The_Adventurer_S01E20_UPN_WOC_1998-05', 3773, 'Conan the Adventurer · UPN · May 1998'),
+    upn('Buffy_S06E07_UPN_WOC_2001-11-06', 4161, 'Buffy the Vampire Slayer · "Once More, with Feeling" · UPN · November 6, 2001'),
+    upn('Buffy_S06E08_UPN_WOC_2001-11-13', 3758, 'Buffy the Vampire Slayer · "Tabula Rasa" · UPN · November 13, 2001'),
+  ],
+  audience: 'teen',
+  seed: 27,
+});
