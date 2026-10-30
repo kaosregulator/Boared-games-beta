@@ -12,7 +12,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "CRT television",
     "year": "1990s",
     "maker": null,
-    "joke": "Picture fuzzy? Smack the side of the TV. Still fuzzy? Smack it with feeling.",
+    "joke": "Picture fuzzy? One firm pat on the side really did fix a loose wire sometimes. Two pats is just being mean to the TV.",
     "history": "Back then, TVs were big glass boxes with a tube inside that shot tiny beams at the screen to make the picture. That's why they were so deep, so heavy, and why the screen zapped your arm hair. Flat TVs replaced them in the 2000s.",
     "facts": [
       {
@@ -37,7 +37,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "VCR",
     "year": "1980s–90s",
     "maker": null,
-    "joke": "Set the clock? Absolutely not. Put a piece of electrical tape over the blinking 12:00 and live your life.",
+    "joke": "Taping a show? Start the timer five minutes early and stop it five late. The TV clock and the VCR clock never agreed.",
     "history": "The VCR played and recorded VHS tapes. JVC made VHS in 1976, and it beat Sony's Betamax to become the tape everyone used. By the 90s one sat under almost every TV, blinking 12:00. The last ones were made in 2016.",
     "facts": [
       {
@@ -66,7 +66,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Cable box",
     "year": "1990s",
     "maker": null,
-    "joke": "Cable box lost signal? Unplug it, count to ten, plug it back in. You are now a cable technician.",
+    "joke": "Cable box frozen? Unplug it, count to ten, plug it back in. It really works. You are now a cable technician.",
     "history": "The cable box gave your TV dozens of extra channels and unlocked the ones your family paid for. The scrolling channel guide was the Prevue Channel, which ran on old Amiga computers. In 1999 it became the TV Guide Channel.",
     "facts": [
       {
@@ -87,7 +87,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Home console",
     "year": "1985",
     "maker": "Nintendo",
-    "joke": "Game won't load? Blow in the cartridge, push it down, then pray. Repeat until it works or dinner.",
+    "joke": "No save button? Write the password on paper the second it shows up. Lose that paper and you start over.",
     "history": "The Nintendo Entertainment System came out in the US in 1985, made to look like a VCR so stores would sell it. With Super Mario Bros., it brought video games back. Blowing in the cartridge never really fixed it. Pushing it back in did.",
     "facts": [
       {
@@ -112,7 +112,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Boombox",
     "year": "1980s",
     "maker": null,
-    "joke": "Making a mixtape? Finger on Pause, other finger on Record, breathe only during commercials.",
+    "joke": "Taping a song off the radio? Finger on Pause, other finger on Record, and let go the second the DJ stops talking.",
     "history": "A boombox was a big radio with tape decks and speakers you could carry anywhere. Two tape decks meant you could copy tapes and make mixtapes. They ate a lot of batteries, sometimes ten big D batteries at once.",
     "facts": [
       {
@@ -137,7 +137,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Handheld console",
     "year": "1989",
     "maker": "Nintendo",
-    "joke": "Can't see the screen? Tilt it toward the lamp at exactly 43 degrees and stop breathing.",
+    "joke": "Trading Pokémon? Plug in the link cable before turning both Game Boys on, and nobody touch the cord till it's done.",
     "history": "The Game Boy came out in 1989 with Tetris in the box. Nintendo gave it a simple green screen instead of color so four AA batteries would last for hours. With the Game Boy Color, it sold about 118 million.",
     "facts": [
       {
@@ -162,7 +162,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Virtual pet",
     "year": "1997",
     "maker": "Bandai",
-    "joke": "Pet dying during class? Ask to use the bathroom. Stay twenty minutes. Clean up its poop in peace.",
+    "joke": "Pet beeping during class? Ask to use the bathroom, stay twenty minutes, and clean up its poop in peace.",
     "history": "Tamagotchi was a tiny egg-shaped pet on a keychain. You fed it, cleaned up after it, and if you forgot, it died. It came to the US in 1997 and got banned at a lot of schools. About 98 million have been sold.",
     "facts": [
       {
@@ -187,7 +187,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Furniture",
     "year": null,
     "maker": null,
-    "joke": "Making your bed is pointless. You're getting back in it tonight. Present this argument calmly.",
+    "joke": "Building a fort? Tuck one edge of the blanket under the mattress and hold the other down with big books.",
     "history": "The bed was home base for sleepovers, pillow forts and reading with a flashlight after lights out. Twin beds became the normal kid bed in America. Jumping on the bed was banned in every house, and done in every house.",
     "facts": [
       {
@@ -208,7 +208,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Fair prize",
     "year": null,
     "maker": null,
-    "joke": "Missing every ring toss on purpose lowers their guard. Then you still miss. Take the smiley pillow anyway.",
+    "joke": "Pillow fight rule: hit with the smiley side first. Nobody can stay mad at a face that happy.",
     "history": "The smiley face was drawn in 1963 by an artist named Harvey Ball. He got paid $45 for it and never owned the rights. It ended up on buttons, shirts and carnival prizes everywhere.",
     "facts": [
       {
@@ -233,7 +233,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "School bag",
     "year": "1990s",
     "maker": null,
-    "joke": "Both straps is for nerds. One strap is for legends with a permanent lean to the left.",
+    "joke": "Write your name on the inside tag in marker on day one. Half the class had the same JanSport.",
     "history": "Backpacks became normal school gear in the 70s and 80s, with brands like JanSport. By the 90s your backpack showed who you were: pins, patches, keychains and your name in marker. One strap or two was a real debate.",
     "facts": [
       {
@@ -254,7 +254,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Furniture",
     "year": "1968",
     "maker": null,
-    "joke": "Getting out of a bean bag requires a plan, a grunt, and someone to blame for the noise.",
+    "joke": "Shake it up before you sit. Grab both sides and fluff it, or you'll end up sitting on the floor in a sack.",
     "history": "The bean bag chair started as a fancy Italian chair in 1968, a bag full of tiny foam beads that shapes itself around you. Cheaper ones landed in kids' rooms everywhere. Getting out of one gracefully is still impossible.",
     "facts": [
       {
@@ -279,7 +279,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Window",
     "year": null,
     "maker": null,
-    "joke": "Grounded? Bend one blind slat. Peek. Count how many kids are having fun without you.",
+    "joke": "Hear the ice cream truck? You have about one song to grab couch change, find your shoes and get to the curb. Go now.",
     "history": "Thin mini blinds were in almost every 80s and 90s house. Summer nights meant a box fan in the window and loud bugs outside. Some cicadas only come out every 13 or 17 years, so some summers were way louder.",
     "facts": [
       {
@@ -300,7 +300,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Window",
     "year": null,
     "maker": null,
-    "joke": "Reading Goosebumps by streetlight counts as bedtime if you're technically lying down.",
+    "joke": "Can't sleep? Count the headlights sliding across the ceiling. Nobody ever made it past twenty.",
     "history": "That orange glow outside came from streetlights made to save power. Their orange light made every color look the same at night. Most towns have since switched to bright white LED lights.",
     "facts": [
       {
@@ -317,7 +317,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Door",
     "year": null,
     "maker": null,
-    "joke": "A KEEP OUT sign is legally binding for siblings. Parents, unfortunately, have a butter knife.",
+    "joke": "Door won't stay shut? Fold a piece of paper a few times and wedge it by the latch. It stays closed, no lock needed.",
     "history": "Bedroom door locks aren't real locks. There's a little hole on the outside so anyone can pop it open with a thin tool in an emergency. That's how every parent got in. KEEP OUT signs were mostly for show.",
     "facts": [
       {
@@ -338,7 +338,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Poster",
     "year": "1993",
     "maker": null,
-    "joke": "Hang the alien poster facing out. That way they know you're on their side.",
+    "joke": "Watching The X-Files? Sit with your back to the wall so nothing sneaks up behind you. It doesn't help.",
     "history": "The X-Files started on TV in 1993. Two FBI agents, Mulder and Scully, chased aliens and weird mysteries. Mulder had an 'I Want to Believe' poster with a UFO in his office, and kids everywhere hung one too.",
     "facts": [
       {
@@ -367,7 +367,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Arcade prize",
     "year": "1978",
     "maker": "Taito",
-    "joke": "Wear the cap backwards. Forwards is for dads and baseball players who aren't cool.",
+    "joke": "Skee-Ball trick: roll it soft and straight up the middle. The 40 hole lands way more than the 100s.",
     "history": "Space Invaders came out in 1978 and was one of the first giant video game hits. Rows of aliens march down at you. They speed up as you shoot them because the machine has fewer to draw. That was an accident, and it made the game better.",
     "facts": [
       {
@@ -392,7 +392,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Pins",
     "year": null,
     "maker": null,
-    "joke": "One alien pin equals two Pokémon cards and a pudding cup. Do not let them talk you down.",
+    "joke": "Lost the back of a pin? Push a pencil eraser onto the point. It holds better than the real one.",
     "history": "People have collected and traded pins for more than 100 years. In the 90s they went on jean jackets, hats and backpacks. Pin trading is still a big hobby, especially at theme parks.",
     "facts": [
       {
@@ -413,7 +413,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Furniture",
     "year": null,
     "maker": null,
-    "joke": "Candy goes in the back of the drawer. Behind the socks. Under the instructions for the Game Boy.",
+    "joke": "Keep a flashlight in the drawer. Storms knock the power out, and the family flashlight always has dead batteries.",
     "history": "The bedside table was mission control: alarm clock, lamp, and a drawer full of things that weren't supposed to be there. Most were cheap wood-look boards, and the drawer stuck unless you lifted it as you pulled.",
     "facts": [
       {
@@ -434,7 +434,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Clock radio",
     "year": "1990s",
     "maker": "RCA",
-    "joke": "Set it seven minutes fast. Then remember it's seven minutes fast. Then snooze seven times. Science.",
+    "joke": "Put the alarm clock across the room. You have to get out of bed to turn it off, and by then you're up.",
     "history": "Red number clock radios sat on every nightstand. Big glowing numbers, a radio, an alarm, and a snooze button as big as the top. When the power blinked, they lost the time, so half the clocks in America flashed 12:00.",
     "facts": [
       {
@@ -484,7 +484,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Mug",
     "year": null,
     "maker": null,
-    "joke": "Correct marshmallow ratio: one cocoa packet, nine marshmallows, zero adult supervision.",
+    "joke": "Hot cocoa trick: stir in a splash of cold milk. It's cool enough to drink before the marshmallows melt.",
     "history": "Instant hot cocoa packets were made for snow days and after school, with tiny dried marshmallows right in the mix. A mug you made in art class was the official cup. A hard old marshmallow at the bottom was tradition.",
     "facts": [
       {
@@ -505,7 +505,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Teddy bear",
     "year": "1902",
     "maker": null,
-    "joke": "Monsters can't get you if a bear is watching the closet. This is a known rule. Look it up.",
+    "joke": "Monsters can't get you if a bear is watching the closet. Sit him facing the closet, not the bed. Known rule.",
     "history": "The teddy bear is named after President Teddy Roosevelt. In 1902 he refused to shoot a tied-up bear on a hunting trip, a newspaper drew a cartoon of it, and a shop owner started selling stuffed 'Teddy's bears.'",
     "facts": [
       {
@@ -530,7 +530,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Tape recorder",
     "year": "1980s",
     "maker": "Sony",
-    "joke": "Record your own radio show. Then hide the tape forever. Future you will thank you.",
+    "joke": "Press Record and Play down together. On a lot of tape recorders, Record alone won't go.",
     "history": "Cassette tapes came out in 1963, and small tape recorders let anyone record their voice, the radio or music. Sony even made bright My First Sony recorders for kids. Hearing your own voice played back was a shock.",
     "facts": [
       {
@@ -576,7 +576,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Book stack",
     "year": "1992–1997",
     "maker": null,
-    "joke": "Read Goosebumps under the covers. If the flashlight dies, the haunted mask wins.",
+    "joke": "Reading after lights out? Put a towel along the bottom of the door so the hallway can't see the flashlight.",
     "history": "Goosebumps started in 1992 with Welcome to Dead House. R.L. Stine wrote 62 books in the first series, and at its peak it sold about four million copies a month. Every chapter ended on a scary cliffhanger.",
     "facts": [
       {
@@ -605,7 +605,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "VHS tapes",
     "year": "1993–1995",
     "maker": null,
-    "joke": "Pausing a tape too long chews it up. Pause anyway. The kitchen scene needs studying.",
+    "joke": "Favorite tape going fuzzy? Run a head-cleaning tape through the VCR. It looks blank and works like magic.",
     "history": "Three movie night favorites. Jurassic Park (1993) mixed robot dinosaurs with computer ones. Hocus Pocus (1993) flopped in theaters and became a Halloween classic on tape. Toy Story (1995) was the first movie made all on computers.",
     "facts": [
       {
@@ -630,7 +630,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Handheld console",
     "year": "1989",
     "maker": "Nintendo",
-    "joke": "Batteries dying mid-boss? Raid the TV remote. Blame the cat. The cat can't argue.",
+    "joke": "Rechargeable batteries cost more but pay for themselves in about a month. Every Game Boy kid learned this the hard way.",
     "history": "The first Game Boy ran on four AA batteries and was really tough. One got caught in a fire during the 1991 Gulf War and still worked, and Nintendo showed it off in its New York store. Nintendo made Game Boys until 2003.",
     "facts": [
       {
@@ -726,7 +726,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Die-cast car",
     "year": "1968",
     "maker": "Mattel",
-    "joke": "Launching cars off the stairs is science. Write 'experiment' on a piece of paper first to make it official.",
+    "joke": "Want to win the race? Pick your heaviest car. The heavy ones beat the light ones down the orange track.",
     "history": "Mattel made Hot Wheels in 1968 to beat Matchbox cars. Their wheels barely touched anything, so they flew down the orange track. The very first one made was a dark blue Camaro.",
     "facts": [
       {
@@ -780,7 +780,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Handheld console",
     "year": "1989",
     "maker": "Nintendo",
-    "joke": "Taking the Game Boy to school is fine as long as nobody sees it, hears it, or knows you exist.",
+    "joke": "Taking the Game Boy to school? Turn the volume all the way down before you leave the house, not in class.",
     "history": "Game Boys were the thing teachers took away most in the 90s. In the US, 40,000 sold on day one. Pokémon Red and Blue in 1998 kept it going for years after other game systems from its time were gone.",
     "facts": [
       {
@@ -805,7 +805,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Action figure",
     "year": "1988",
     "maker": "Playmates",
-    "joke": "Being Leonardo is fine. Just tell everyone Leonardo is the leader, so technically you're in charge.",
+    "joke": "Playing Ninja Turtles with friends? Call Leonardo first. He's the leader, so you're technically in charge.",
     "history": "The Ninja Turtles started as a comic book in 1984. The cartoon came in 1987 and the toys in 1988, and they were some of the best-selling toys of the time. Leonardo wears blue and fights with two swords.",
     "facts": [
       {
@@ -834,7 +834,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Toy viewer",
     "year": "1939",
     "maker": null,
-    "joke": "Point it at a lamp for better pictures. Never point it at the sun. Ask someone who tried.",
+    "joke": "Point it at a lamp or a window for brighter pictures. Never point it at the sun. Ask someone who tried.",
     "history": "The View-Master came out around 1939. Each paper reel holds seven pairs of tiny photos, one for each eye, so the pictures pop out in 3D. It started as a travel souvenir and turned into a classic kids' toy.",
     "facts": [
       {
@@ -859,7 +859,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Books",
     "year": "1993–1995",
     "maker": null,
-    "joke": "Carry the giant book to look smart. Actually read the Goosebumps. Nobody needs the details.",
+    "joke": "Carry the big book to look smart. Actually read the Goosebumps. Nobody needs the details.",
     "history": "The Lost World (1995) was the sequel to Jurassic Park, and the movie came in 1997. Night of the Living Dummy (1993) was the Goosebumps book that brought us Slappy, the creepy dummy who became the most famous villain in the series.",
     "facts": [
       {
@@ -905,7 +905,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Teddy bear",
     "year": null,
     "maker": null,
-    "joke": "A teddy with no fur on one ear is how you know it's been doing its job.",
+    "joke": "A teddy with no fur on one ear is how you know it's been doing its job. Never let anybody fix that.",
     "history": "Most kids had one stuffed animal that went everywhere and came back worn out from being loved. Doctors even have a name for it: a comfort object that helps kids feel safe as they grow up.",
     "facts": [
       {
@@ -926,7 +926,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "LCD handheld",
     "year": "1990s",
     "maker": "Tiger Electronics",
-    "joke": "There is no volume button. There is only the beep. Parents learn to live with the beep.",
+    "joke": "High scores don't save. Write yours on the back of the box in marker so everybody knows.",
     "history": "Tiger Electronics made cheap handheld games of everything from Batman to Sonic. Each one played just one game, with pictures already printed on the screen that lit up. Toy maker Hasbro bought Tiger in 1998.",
     "facts": [
       {
@@ -951,7 +951,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Clock radio",
     "year": "1990s",
     "maker": null,
-    "joke": "Set the alarm to radio, not buzzer. Waking up to traffic news is worse, but at least it's somebody.",
+    "joke": "Set the alarm to radio, not buzzer. Waking up to a stranger talking about traffic is weird, but at least it's somebody.",
     "history": "Clock radios put an alarm and a radio in one box by the bed, so you could wake up to music or the morning DJ instead of a buzzer. The radio wire had to be moved around until the station came in.",
     "facts": [
       {
@@ -972,7 +972,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Skateboard",
     "year": "1990s",
     "maker": null,
-    "joke": "Sitting on the skateboard and rolling downhill is a real trick. It's called 'the Survivor.'",
+    "joke": "Learning to skate? Find your balance on the grass first, then move to the driveway. It hurts less.",
     "history": "Skateboarding started with California surfers in the 1950s and took off in 1972 when new rubbery wheels gave boards real grip. In 1999 Tony Hawk landed the first 900, two and a half spins in the air, at the X Games.",
     "facts": [
       {
@@ -997,7 +997,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "VHS tapes",
     "year": "1980s–90s",
     "maker": null,
-    "joke": "Label every tape. Then tape over it anyway. The label is more of a guess.",
+    "joke": "Label every tape with what's on it and the date. Then tape over it anyway. The label is more of a guess.",
     "history": "Taping shows off TV onto blank VHS tapes was a family hobby, and in 1984 the Supreme Court said it was legal. The slowest speed fit six hours on one tape, but the picture looked worse.",
     "facts": [
       {
@@ -1072,7 +1072,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Game magazines",
     "year": "1988",
     "maker": "Nintendo",
-    "joke": "Up, Up, Down, Down, Left, Right, Left, Right, B, A, Start. Try it on homework. Didn't work.",
+    "joke": "Cut out the cheat codes and tape them inside the game box. Then you'll never lose the magazine page again.",
     "history": "Nintendo Power came out in 1988 and was where you got maps, tips and cheat codes. The most famous code was up, up, down, down, left, right, left, right, B, A, Start, which gave you 30 lives in Contra.",
     "facts": [
       {
@@ -1097,7 +1097,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Board games",
     "year": "1935",
     "maker": "Parker Brothers",
-    "joke": "Monopoly ends one of two ways: bankruptcy or somebody 'accidentally' flipping the board.",
+    "joke": "Count the pieces before you start a game, not after. Then you'll know the missing one isn't your fault.",
     "history": "Monopoly has been sold since 1935. It was based on an older game from 1904 that was made to show why monopolies are bad. Family game night meant Monopoly, Mouse Trap and Sorry!, all of them missing a few pieces.",
     "facts": [
       {
@@ -1122,7 +1122,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Football helmet",
     "year": "1990–1993",
     "maker": null,
-    "joke": "Tackling the hedges builds character. The hedges will not tackle back, which is the whole appeal.",
+    "joke": "Playing football in the yard? Make the tree the end zone. Nobody can argue with a tree.",
     "history": "The Buffalo Bills went to four Super Bowls in a row in the early 90s, the only team ever to do it. They lost all four. The first one ended when the winning kick sailed just wide right.",
     "facts": [
       {
@@ -1172,7 +1172,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Houseplant",
     "year": null,
     "maker": null,
-    "joke": "The secret to keeping a plant alive is forgetting it exists. Leftover Kool-Aid optional.",
+    "joke": "Most houseplants die from too much water, not too little. Forgetting it exists is basically the right move.",
     "history": "Tough houseplants like pothos and snake plants can live through almost anything, which is why they survive kids' rooms. NASA once tested plants for cleaning the air, but you'd need a jungle to make a real difference.",
     "facts": [
       {
@@ -1193,7 +1193,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "String lights",
     "year": "1882",
     "maker": null,
-    "joke": "One bulb dies, the whole strand dies. Test them one by one. Cancel your Saturday.",
+    "joke": "Bulb out on the strand? Test the dark ones one by one with a good bulb. Bring snacks. It's a while.",
     "history": "The first electric Christmas tree lights were put up in 1882 by a friend of Thomas Edison, with 80 red, white and blue bulbs. On older strands, one dead bulb makes the whole string go dark, so you had to test every bulb.",
     "facts": [
       {
@@ -1218,7 +1218,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Furniture",
     "year": null,
     "maker": null,
-    "joke": "Stickers on furniture are illegal. Unless they're Nintendo stickers. Then they're art.",
+    "joke": "Hide your stuff in the sock drawer, under the socks you never wear. Nobody looks there, not even you.",
     "history": "The dresser kept clothes in the bottom drawers and secrets in the top one. In a lot of 90s houses it was also covered in stickers from magazines, cereal boxes and the book fair. Those stickers never come all the way off.",
     "facts": [
       {
@@ -1239,7 +1239,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Stickers",
     "year": "1988",
     "maker": "Nintendo",
-    "joke": "Peeling a sticker halfway is the worst choice. Commit. Leave it or lose it forever.",
+    "joke": "Peeling a sticker halfway is the worst choice. Commit. Leave it, or lose it forever.",
     "history": "Mario first showed up in Donkey Kong in 1981, where he was called Jumpman. By the 90s Nintendo characters were on everything, and Nintendo Power came with posters and stickers. The magazine ran until 2012.",
     "facts": [
       {
@@ -1289,7 +1289,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Desk",
     "year": null,
     "maker": null,
-    "joke": "Homework done on the bus counts the same. The bus is just a moving desk.",
+    "joke": "Do your homework the minute you get home. Then the rest of the day is yours. Nobody ever followed this advice.",
     "history": "The desk was for homework, officially. Really it was for LEGO, drawing, snacks and games. The LEGO brick we know came out in 1958, and by the 90s every desk drawer had a few loose ones.",
     "facts": [
       {
@@ -1310,7 +1310,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Lava lamp",
     "year": "1963",
     "maker": null,
-    "joke": "Never put crayons next to the lava lamp. Unless you want a new crayon shaped like a puddle.",
+    "joke": "Keep crayons, gum and anything wax far away from the lava lamp base. It gets hot enough to melt them.",
     "history": "A lava lamp is just a bulb under a bottle of liquid and wax. The heat makes the wax rise, it cools off at the top, and it sinks again, over and over. The base gets really hot, so don't touch it.",
     "facts": [
       {
@@ -1331,7 +1331,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Pencil cup",
     "year": null,
     "maker": null,
-    "joke": "Every dead pen goes back in the cup. Someday one will work again. Hope is free.",
+    "joke": "Pen not writing? Scribble on the back of your hand or a rubber eraser to get the ink going. Works most of the time.",
     "history": "Gel pens were invented in Japan in 1984, and the glitter, milky and scented ones were all over 90s schools. Clicky pens are older: Parker's Jotter came out in 1954. Somebody always borrowed your best one.",
     "facts": [
       {
@@ -1356,7 +1356,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Rental tapes",
     "year": "1990s",
     "maker": null,
-    "joke": "Return the rental before it's due. Or don't, and owe the store a car payment.",
+    "joke": "Friday night rental trick: get there right after school. By seven o'clock every copy of the new game is gone.",
     "history": "You rented movies and video games from the video store, and Blockbuster was the biggest one. It started in 1985 and had about 9,000 stores by 2004, then streaming took over. One store is still open, in Bend, Oregon.",
     "facts": [
       {
@@ -1427,7 +1427,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Cell phone",
     "year": "1983",
     "maker": null,
-    "joke": "Snake isn't a game. It's 'checking if the phone still works.' For twenty minutes.",
+    "joke": "Snake gets faster as it grows. Stay near the edges and turn early. That's how the high scores were made.",
     "history": "The first cell phone you could buy came out in 1983, cost $3,995, and was so big people called it 'the brick.' Phones got much smaller in the 90s, and in 1997 Nokia added Snake, one of the first famous phone games.",
     "facts": [
       {
@@ -1481,7 +1481,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Doodle",
     "year": null,
     "maker": null,
-    "joke": "Drawing the Cool S is easy. Six lines, then six more, then connect. Takes a lifetime to master.",
+    "joke": "Cool S: three lines on top, three on the bottom, then connect them. A minute to learn, a lifetime to master.",
     "history": "The 'Cool S' was drawn on every notebook in every school, and nobody knows who started it. It's made from two rows of three lines, which is why so many kids figured it out on their own.",
     "facts": [
       {
@@ -1502,7 +1502,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Desk lamp",
     "year": null,
     "maker": null,
-    "joke": "Old desk lamps double as interrogation lights. Point it at your little brother. Ask where the remote went.",
+    "joke": "Old desk lamps double as interrogation lights. Point it at your little brother and ask where the remote went.",
     "history": "Old light bulbs turned most of their power into heat instead of light, which is why desk lamps burned your fingers. The bendy desk lamp design comes from the 1930s. Cooler LED bulbs have mostly taken over.",
     "facts": [
       {
@@ -1569,7 +1569,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "School photo",
     "year": "1990s",
     "maker": null,
-    "joke": "Practice your smile in the mirror for a week. Blink right as the flash goes off.",
+    "joke": "Picture day trick: think of something funny right before the flash. It beats the smile from the mirror.",
     "history": "Picture day meant a laser background, a free plastic comb, and tiny wallet photos to trade with friends. Companies like Lifetouch took millions of school pictures every year. Retake day was a second chance that rarely helped.",
     "facts": [
       {
@@ -1594,7 +1594,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Cup",
     "year": "1990",
     "maker": null,
-    "joke": "A pizza place cup holds markers forever. It also holds the smell of Sprite forever. Fair trade.",
+    "joke": "A plastic movie cup makes a perfect marker holder. It also holds the smell of Sprite forever. Fair trade.",
     "history": "Turtle mania was huge: the cartoon started in 1987 and the first live-action movie came out in 1990, with turtle suits made by Jim Henson's team. Turtles were on cups, cereal and toys, and pizza places loved them.",
     "facts": [
       {
@@ -1619,7 +1619,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Cassette player",
     "year": "1979",
     "maker": "Sony",
-    "joke": "Save batteries: rewind tapes with a pencil. Spin it fast. Your wrist will survive.",
+    "joke": "Save batteries: rewind tapes with a pencil in the hole. Spin it fast. Your wrist will survive.",
     "history": "Sony's first Walkman came out in 1979 and let you carry your music anywhere. Later ones could flip the tape for you, called auto-reverse. Sony sold about 220 million tape Walkmans before stopping in 2010.",
     "facts": [
       {
@@ -1644,7 +1644,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "SNES game",
     "year": "1994",
     "maker": "Rare",
-    "joke": "If it doesn't work, just blow in it. Nothing says advanced troubleshooting like a little 90s spit.",
+    "joke": "Donkey Kong Country secret: on the game select screen, press B, A, R, R, A, L for 50 lives.",
     "history": "Donkey Kong Country came out for the Super Nintendo in 1994. The team built the characters on powerful computers first, so the game looked way better than anything else on the system. It sold over 9 million copies.",
     "facts": [
       {
@@ -1669,7 +1669,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Yo-yo",
     "year": "1929",
     "maker": "Duncan",
-    "joke": "Practice 'walk the dog' away from the dog. Practice 'around the world' away from the lamp. So, outside.",
+    "joke": "String twisted? Let the yo-yo hang and spin until it straightens. Then practice 'walk the dog' away from the dog.",
     "history": "Yo-yos took off in America in the 1920s and 30s when Duncan sent yo-yo pros to schools to show off tricks and run contests. The 90s had its own yo-yo craze, done the same way.",
     "facts": [
       {
@@ -1840,7 +1840,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "CRT monitor",
     "year": "1990s",
     "maker": null,
-    "joke": "Turn on the 3D Pipes screensaver and stare at it. You are now doing computer stuff.",
+    "joke": "Leave a screensaver on when you walk away. It isn't just for fun. It keeps the picture from burning into the screen.",
     "history": "Computer screens in the 90s were big beige boxes with a tube inside, just like TVs. A 15-inch one only showed about 14 inches of picture. They were heavy, they hummed, and they zapped you with static.",
     "facts": [
       {
@@ -1911,7 +1911,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Keyboard",
     "year": "1987",
     "maker": null,
-    "joke": "Learn to type with Mavis Beacon. Then actually learn to type in chat rooms at 2 a.m.",
+    "joke": "Home row is A, S, D, F and J, K, L, semicolon. Feel for the little bumps on F and J and you'll never have to look down.",
     "history": "Mavis Beacon Teaches Typing came out in 1987 and was how kids learned to type. Fun fact: Mavis wasn't a real person. The woman on the box was a model. Old IBM keyboards were loud, clicky and nearly unbreakable.",
     "facts": [
       {
@@ -1961,7 +1961,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Software",
     "year": "1990s",
     "maker": null,
-    "joke": "Free AOL CDs make great coasters, mirrors, and ninja stars. Only one of those is allowed.",
+    "joke": "Free AOL CDs make great coasters, mirrors and ninja stars. Only one of those is allowed.",
     "history": "Software used to come on floppy disks, and Windows 95 needed 13 of them. CDs held way more, about as much as 450 floppies, so they took over. AOL mailed free trial discs to basically every house in America.",
     "facts": [
       {
@@ -2007,7 +2007,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Stickers",
     "year": "1981",
     "maker": "MTV",
-    "joke": "Put the rebel sticker on the drawer. Being caught means you're a rebel. Not being caught means you're a genius.",
+    "joke": "Put the sticker on the inside of the drawer. Mom never checks in there, and it lasts forever.",
     "history": "MTV started on August 1, 1981, playing music videos all day. By the 90s it had shows like The Real World and TRL, and the logo was on notebooks, stickers and shirts everywhere.",
     "facts": [
       {
@@ -2032,7 +2032,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "PC games",
     "year": "1990s",
     "maker": null,
-    "joke": "Read the whole manual while it installs. You've got an hour. Learn the backstory of every elf.",
+    "joke": "Read the whole manual while the game installs. You've got an hour. Learn the backstory of every elf.",
     "history": "90s computer games came in huge boxes with thick manuals and maps, even though the disc was tiny. Myst (1993) was the best-selling computer game until The Sims in 2002. The big boxes went away in the early 2000s.",
     "facts": [
       {
@@ -2057,7 +2057,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Fruit snack",
     "year": "1991",
     "maker": "Betty Crocker",
-    "joke": "Gushers are cafeteria currency. Never spend them on gum. Gum has terrible exchange rates.",
+    "joke": "Freeze your Gushers overnight. The juice turns into a cold little slush and they last way longer.",
     "history": "Fruit Gushers came out in 1991: chewy fruit snacks with juice inside. The first flavors were strawberry and grape. The commercials showed kids' heads turning into fruit after one bite. That never happened. We checked.",
     "facts": [
       {
@@ -2082,7 +2082,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Trading cards",
     "year": "1999",
     "maker": "Wizards of the Coast",
-    "joke": "Never trade a holo Charizard for a bike. Unless it's a really good bike. It's never a good enough bike.",
+    "joke": "Put your best cards in plastic sleeves and keep them out of your back pocket. Bent cards lose all their trade value.",
     "history": "Pokémon cards hit the US on January 9, 1999. The first set had 102 cards, 16 of them shiny, and the shiny Charizard was the card every kid wanted. First-edition ones are now worth a fortune.",
     "facts": [
       {
@@ -2111,7 +2111,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Frozen snack",
     "year": "1983",
     "maker": "Chef America",
-    "joke": "Hot Pocket strategy: bite the frozen middle first. The lava edge is a trap. It's always a trap.",
+    "joke": "Hot Pocket strategy: let it sit one whole minute after the microwave. The middle stops being frozen.",
     "history": "Hot Pockets came out in 1983, made by two brothers, and the crispy sleeve was the big idea. Pizza rolls are older, from 1968, and became Totino's in 1993. Both burned the roof of your mouth. Both were worth it.",
     "facts": [
       {
@@ -2140,7 +2140,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Sneakers",
     "year": "1985",
     "maker": "Nike",
-    "joke": "New sneakers rule: walk like a robot so they don't crease. Look weird. Stay fresh.",
+    "joke": "New sneakers rule: stuff the toes with socks so they don't crease. Clean the soles with a toothbrush.",
     "history": "Nike signed Michael Jordan and made the first Air Jordans in 1985. They became the most famous sneakers ever. Kids saved up for months, and a crease in the toe felt like the end of the world.",
     "facts": [
       {
@@ -2165,7 +2165,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "RC trucks",
     "year": "1990s",
     "maker": null,
-    "joke": "Batteries not included means no fun on Christmas until the store opens. Steal from the remote. You know the drill.",
+    "joke": "Batteries not included means no fun on Christmas morning. Ask for a pack of batteries on your list too. Trust us.",
     "history": "Cheap remote control trucks were a top Christmas gift in the 80s and 90s. Many used the same radio signal, so your remote could steer your friend's truck. Batteries were never included.",
     "facts": [
       {
@@ -2182,7 +2182,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Toy track",
     "year": "1968",
     "maker": "Mattel",
-    "joke": "Every loop needs a test car. Use your sibling's. That's not cruel, that's engineering.",
+    "joke": "Car flying off the loop? Start it higher. Speed holds it in. A stack of books makes a great hill.",
     "history": "Mattel made Hot Wheels in 1968, with bright orange track you could snap into loops, jumps and long ramps. Kids built tracks across whole houses. Hot Wheels became one of the best-selling toys of all time.",
     "facts": [
       {
@@ -2232,7 +2232,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Picture book",
     "year": "1992",
     "maker": "Scholastic",
-    "joke": "Found every item? Circle them in pen for the next kid. Being helpful is its own reward.",
+    "joke": "Stuck on a page? Turn the book upside down. Your eyes stop seeing the picture and start seeing the shapes.",
     "history": "I Spy came out in 1992 with rhyming riddles by Jean Marzollo and photos by Walter Wick. Every page was built by hand from real toys and things, then photographed. No computers. The series sold tens of millions.",
     "facts": [
       {
@@ -2261,7 +2261,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Robot toy",
     "year": "1998",
     "maker": "Tiger Electronics",
-    "joke": "Furby can't be turned off. Put it in a drawer. It will say 'me sleepy' at 3 a.m. anyway.",
+    "joke": "Furby can't be turned off. To get some sleep, put it somewhere dark and quiet, and it will go to sleep too. Mostly.",
     "history": "Furby came out in October 1998 for about $35. It spoke its own language, Furbish, and seemed to learn English over time, but the words were already inside it. It sold millions, and the NSA banned it from its offices just in case.",
     "facts": [
       {
@@ -2290,7 +2290,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Robot dog",
     "year": "2000",
     "maker": "Sega Toys",
-    "joke": "Poo-Chis can talk to each other. Hold two nose to nose all recess. Report back. Nobody reports back.",
+    "joke": "Talk to Poo-Chi up close and clear. In a noisy room he ignores you, just like a real dog.",
     "history": "Poo-Chi was a robot puppy from Sega Toys that came out in 2000 for $24.99. He had red light-up eyes, listened to your voice, and sang songs when you pressed his head. Over 10 million sold in about eight months.",
     "facts": [
       {
@@ -2319,7 +2319,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Action figure",
     "year": "1982",
     "maker": "Hasbro",
-    "joke": "Accessories last one hour. Gun: couch. Backpack: vacuum. Helmet: the dog. Read the file card while it lasts.",
+    "joke": "Keep the tiny guns and backpacks in a film canister or an old Altoids tin. They'll be lost within the hour otherwise.",
     "history": "Hasbro made up the term 'action figure' in 1964 for G.I. Joe, so boys' dolls would sound tougher. In 1982 the figures got small, and each package had a card on the back with the character's code name and story.",
     "facts": [
       {
@@ -2344,7 +2344,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Puzzle",
     "year": "1974",
     "maker": null,
-    "joke": "Peeling the stickers counts as solving it. Peeling them back on badly is the real puzzle.",
+    "joke": "Solve one side, then finish the whole top layer before you touch the rest. That's how the fast kids did it.",
     "history": "Ernő Rubik invented the cube in Hungary in 1974 and it went worldwide in 1980. It can be scrambled about 43 quintillion ways, and in 2010 people proved every one can be solved in 20 moves or less.",
     "facts": [
       {
@@ -2369,7 +2369,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "VHS tapes",
     "year": "1993–1999",
     "maker": null,
-    "joke": "Holding Play while fast-forwarding is how you watch previews in fast motion. It's also how VCRs die.",
+    "joke": "Hold Play while you fast-forward to watch the previews zip by. It's also how VCRs get tired.",
     "history": "Power Rangers started on TV in 1993, built from Japanese fight scenes with American kids added in. The Pokémon cartoon came to the US in 1998 and the first movie in 1999. Tapes like these got watched until the boxes wore white.",
     "facts": [
       {
@@ -2394,7 +2394,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "VHS tapes",
     "year": "1980s–90s",
     "maker": null,
-    "joke": "Want to protect a tape forever? Snap out the little tab on the back. Lose it. Tape over it anyway.",
+    "joke": "Want to save a tape forever? Snap out the little tab on the back. Then hide it from whoever owns the Scotch tape.",
     "history": "Every VHS tape has a little plastic tab on the back. Break it off and the VCR won't record over that tape. Put a piece of tape over the hole and it will, which is how 'DO NOT TAPE OVER' tapes got taped over.",
     "facts": [
       {
@@ -2419,7 +2419,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Books",
     "year": "1997–2007",
     "maker": null,
-    "joke": "Book report hack: read the back cover, the first page, and the last page. Call it 'a summary.'",
+    "joke": "Book report trick: read the first chapter, the last chapter and the back cover. Then the middle. Teachers ask about the middle.",
     "history": "Harry Potter came to the US in September 1998 and turned millions of kids into readers. Captain Underpants started in 1997. Diary of a Wimpy Kid didn't come out until 2007, so that one belongs to a little brother.",
     "facts": [
       {
@@ -2444,7 +2444,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "kind": "Poster",
     "year": "1998",
     "maker": null,
-    "joke": "Hang a magazine poster with one piece of tape. When it falls, use the entire roll. That's the rule.",
+    "joke": "Hang a poster with tape rolled into loops on the back, not across the corners. It stays up longer and doesn't rip.",
     "history": "Pokémon started in Japan in 1996 as a Game Boy game. Pikachu, number 25, became the face of it all because of the cartoon. In the US, posters from game magazines were the easiest way to get Pokémon on your wall.",
     "facts": [
       {

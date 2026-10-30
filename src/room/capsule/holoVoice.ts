@@ -10,10 +10,13 @@ import { sound } from '../../utils/audio';
 
 export type VoiceId = 'transmission' | 'message' | 'computer';
 
+/** Hologram Message reads by default; the list runs in the order the menu shows it. */
+export const DEFAULT_VOICE: VoiceId = 'message';
+
 export const VOICES: { id: VoiceId; name: string; blurb: string }[] = [
-  { id: 'transmission', name: 'Old Transmission', blurb: 'An older man, calm and a little mysterious, over a crackly radio' },
   { id: 'message', name: 'Hologram Message', blurb: 'A recorded plea from far away, flickering in and out' },
   { id: 'computer', name: 'Ship Computer', blurb: 'The starship talking, crisp and a little robotic' },
+  { id: 'transmission', name: 'Old Transmission', blurb: 'An older man, calm and a little mysterious, over a crackly radio' },
 ];
 
 const KEY = 'holo-voice';
@@ -36,9 +39,9 @@ function write(key: string, value: string) {
 }
 
 let voice: VoiceId | 'off' = (() => {
-  if (typeof window === 'undefined') return 'transmission';
+  if (typeof window === 'undefined') return DEFAULT_VOICE;
   const v = read(KEY);
-  return v === 'off' || VOICES.some(x => x.id === v) ? (v as VoiceId | 'off') : 'transmission';
+  return v === 'off' || VOICES.some(x => x.id === v) ? (v as VoiceId | 'off') : DEFAULT_VOICE;
 })();
 let beeps = typeof window === 'undefined' ? true : read(BEEPS_KEY) !== '0';
 
