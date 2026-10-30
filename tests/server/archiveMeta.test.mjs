@@ -108,7 +108,10 @@ test('a lookup still queued at its deadline gives up without using a request', a
   let calls = 0;
   const meta = createArchiveMeta({ ...quick, concurrency: 1, deadlineMs: 30, fetchImpl: (...a) => (calls++, fetchImpl(...a)) });
   const first = meta.lookup('slow');
+  // rejected at its 30 ms deadline, while 'slow' still holds the only slot
+  const started = Date.now();
   await assert.rejects(meta.lookup('stuck'), /waited too long/);
+  assert.ok(Date.now() - started < 55, `took ${Date.now() - started} ms`);
   assert.equal((await first).files.length, 2);
   assert.equal(calls, 1);
 });

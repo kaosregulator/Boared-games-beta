@@ -80,7 +80,18 @@ export function createArchiveMeta({
         reject(new ArchiveUnavailable('archive lookup queue is full', 5_000));
         return;
       }
-      waiting.push({ task, resolve, reject, expiresAt });
+      const job = { task, resolve, reject, expiry: null };
+      if (Number.isFinite(expiresAt)) {
+        // Its visitor gives up at the deadline: drop it then, even while every
+        // slot is still busy, rather than spend a request on it later.
+        job.expiry = setTimeout(() => {
+          const at = waiting.indexOf(job);
+          if (at === -1) return;
+          waiting.splice(at, 1);
+          reject(new ArchiveUnavailable('archive lookup waited too long in the queue', 5_000));
+        }, Math.max(0, expiresAt - Date.now()));
+      }
+      waiting.push(job);
       pump();
     });
   }
@@ -90,7 +101,10 @@ export function createArchiveMeta({
     // holding them past the browser's timeout.
     const paused = pausedUntil - Date.now();
     if (paused > maxWaitMs) {
-      for (const job of waiting.splice(0)) job.reject(new ArchiveUnavailable('archive.org asked us to wait', paused));
+      for (const job of waiting.splice(0)) {
+        clearTimeout(job.expiry);
+        job.reject(new ArchiveUnavailable('archive.org asked us to wait', paused));
+      }
       return;
     }
     if (timer) return;
@@ -104,11 +118,7 @@ export function createArchiveMeta({
         return;
       }
       const job = waiting.shift();
-      if (job.expiresAt <= Date.now()) {
-        // Its visitor has given up; don't spend a request slot on it.
-        job.reject(new ArchiveUnavailable('archive lookup waited too long in the queue', 5_000));
-        continue;
-      }
+      clearTimeout(job.expiry);
       active++;
       lastStart = Date.now();
       Promise.resolve()
