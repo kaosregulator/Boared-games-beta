@@ -76,9 +76,9 @@ test('429 with Retry-After pauses the whole queue, then succeeds', async () => {
   assert.equal(meta.status().rateLimited, 1);
 });
 
-test('a long Retry-After answers 503 at once instead of holding the visitor', async () => {
+test('a Retry-After longer than the lookup deadline answers 503 at once', async () => {
   const { fetchImpl } = fakeArchive([json({}, 429, { 'retry-after': '120' })]);
-  const meta = createArchiveMeta({ ...quick, fetchImpl });
+  const meta = createArchiveMeta({ ...quick, deadlineMs: 60_000, fetchImpl });
   const sent = [];
   await meta.handle('busy', (status, body, headers) => sent.push({ status, body, headers }));
   assert.equal(sent[0].status, 503);
@@ -88,7 +88,7 @@ test('a long Retry-After answers 503 at once instead of holding the visitor', as
 
 test('during a long pause, other lookups answer 503 at once instead of queueing', async () => {
   const { calls, fetchImpl } = fakeArchive([json({}, 429, { 'retry-after': '120' }), json(ITEM)]);
-  const meta = createArchiveMeta({ ...quick, fetchImpl });
+  const meta = createArchiveMeta({ ...quick, deadlineMs: 60_000, fetchImpl });
   await assert.rejects(meta.lookup('first'));
   const sent = [];
   const started = Date.now();
@@ -98,6 +98,70 @@ test('during a long pause, other lookups answer 503 at once instead of queueing'
   assert.ok(Number(sent[0].headers['Retry-After']) >= 119);
   assert.equal(calls.length, 1);
   assert.equal(meta.status().queued, 0);
+});
+
+test('a lookup still queued at its deadline gives up without using a request', async () => {
+  const fetchImpl = async () => {
+    await new Promise(r => setTimeout(r, 60));
+    return json(ITEM);
+  };
+  let calls = 0;
+  const meta = createArchiveMeta({ ...quick, concurrency: 1, deadlineMs: 30, fetchImpl: (...a) => (calls++, fetchImpl(...a)) });
+  const first = meta.lookup('slow');
+  // rejected at its 30 ms deadline, while 'slow' still holds the only slot
+  const started = Date.now();
+  await assert.rejects(meta.lookup('stuck'), /waited too long/);
+  assert.ok(Date.now() - started < 55, `took ${Date.now() - started} ms`);
+  assert.equal((await first).files.length, 2);
+  assert.equal(calls, 1);
+});
+
+test('an attempt already past its deadline is never sent, even with a slot free', async () => {
+  const { calls, fetchImpl } = fakeArchive([json({}, 502), json(ITEM)]);
+  // the retry wait (40 ms) ends after the 20 ms deadline; the deadline check is
+  // made loose so the retry still gets queued
+  const meta = createArchiveMeta({ ...quick, baseDelayMs: 40, maxDelayMs: 40, timeoutMs: -1000, deadlineMs: 20, fetchImpl });
+  await assert.rejects(meta.lookup('late'), /waited too long/);
+  assert.equal(calls.length, 1);
+});
+
+test('a slow lookup keeps going after the visitor is told to ask again', async () => {
+  let calls = 0;
+  const fetchImpl = async () => {
+    calls++;
+    await new Promise(r => setTimeout(r, 60));
+    return json(ITEM);
+  };
+  const meta = createArchiveMeta({ ...quick, respondWithinMs: 20, fetchImpl });
+  const sent = [];
+  const send = (status, body, headers) => sent.push({ status, body, headers });
+  await meta.handle('slow', send);
+  assert.equal(sent[0].status, 503);
+  assert.equal(sent[0].body.pending, true);
+  assert.equal(sent[0].headers['Retry-After'], '3');
+  // the retune a moment later joins the same lookup...
+  await meta.handle('slow', send);
+  assert.equal(sent[1].status, 503);
+  await new Promise(r => setTimeout(r, 40));
+  // ...and once it lands, the answer is in the shared cache
+  await meta.handle('slow', send);
+  assert.equal(sent[2].status, 200);
+  assert.equal(calls, 1);
+});
+
+test('a request never runs past the lookup deadline', async () => {
+  const fetchImpl = (url, init) =>
+    new Promise((resolve, reject) => {
+      const t = setTimeout(() => resolve(json(ITEM)), 500);
+      init.signal.addEventListener('abort', () => {
+        clearTimeout(t);
+        reject(Object.assign(new Error('aborted'), { name: 'AbortError' }));
+      });
+    });
+  const meta = createArchiveMeta({ ...quick, timeoutMs: 400, deadlineMs: 30, fetchImpl });
+  const started = Date.now();
+  await assert.rejects(meta.lookup('hung'));
+  assert.ok(Date.now() - started < 100, `took ${Date.now() - started} ms`);
 });
 
 test('errors retry with growing waits, then give up', async () => {

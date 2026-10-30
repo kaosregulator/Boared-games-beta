@@ -62,8 +62,9 @@ export function resolveArchive(id: string, kind: 'video' | 'audio', hint?: strin
   const key = `${kind}:${id}:${hint ?? ''}`;
   const hit = cache.get(key);
   if (hit) return hit;
-  // The server retries archive.org with backoff for up to ~20 s; give up after
-  // 30 s so the set can retry.
+  // The server answers within ~20 s: the file, or "still looking" while it
+  // keeps trying archive.org in the background. Either way the set retunes and
+  // asks again, and the next ask finds the answer in the server's cache.
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 30_000);
   const job = fetch(`/api/archive/${encodeURIComponent(id)}`, { signal: ctrl.signal })

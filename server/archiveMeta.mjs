@@ -11,7 +11,9 @@ import { log as defaultLog } from '../logCore.mjs';
  *  - one cache shared by every visitor (6 h per item, 10 min for a missing one);
  *  - one request queue: at most 2 lookups at a time, spaced out;
  *  - 429 / 503 pause the whole queue for Retry-After;
- *  - failures retry with exponential backoff and jitter;
+ *  - failures retry with exponential backoff and jitter, for up to 2 minutes
+ *    in the background; a visitor waits at most 20 s, then asks again and
+ *    joins the same lookup or finds the answer cached;
  *  - while archive.org is down, an item already looked up keeps its old answer.
  *
  * Only the media files are sent on, so the browser gets a few KB, not the
@@ -44,14 +46,20 @@ export function createArchiveMeta({
   userAgent = USER_AGENT,
   concurrency = 2,
   spacingMs = 250,
-  timeoutMs = 10_000,
-  maxAttempts = 4,
+  /** One request to archive.org; its metadata API can be slow on a bad day. */
+  timeoutMs = 20_000,
+  maxAttempts = 6,
   baseDelayMs = 1_000,
   maxDelayMs = 30_000,
-  /** A visitor won't wait longer than this for a Retry-After; they get a 503 instead. */
-  maxWaitMs = 20_000,
-  /** Give up on one lookup after this long, so the browser (30 s) hears back first. */
-  deadlineMs = 25_000,
+  /**
+   * How long one lookup keeps trying, retries and Retry-After waits included.
+   * It runs in the background, not tied to any one visitor: the answer lands
+   * in the shared cache, so a TV that retunes (or a viewer who flips away and
+   * back) picks it up.
+   */
+  deadlineMs = 2 * 60 * 1000,
+  /** How long a visitor's request waits on a slow lookup before hearing "still looking, ask again". */
+  respondWithinMs = 20_000,
   ttlMs = 6 * 60 * 60 * 1000,
   missTtlMs = 10 * 60 * 1000,
   staleGraceMs = 5 * 60 * 1000,
@@ -73,24 +81,38 @@ export function createArchiveMeta({
 
   // ---- the shared queue ----------------------------------------------------
 
-  function enqueue(task) {
+  /** Run task in the shared queue; give up if it hasn't started by expiresAt. */
+  function enqueue(task, expiresAt = Infinity) {
     return new Promise((resolve, reject) => {
       if (waiting.length >= maxQueue) {
         reject(new ArchiveUnavailable('archive lookup queue is full', 5_000));
         return;
       }
-      waiting.push({ task, resolve, reject });
+      const job = { task, resolve, reject, expiresAt, expiry: null };
+      if (Number.isFinite(expiresAt)) {
+        // Its visitor gives up at the deadline: drop it then, even while every
+        // slot is still busy, rather than spend a request on it later.
+        job.expiry = setTimeout(() => {
+          const at = waiting.indexOf(job);
+          if (at === -1) return;
+          waiting.splice(at, 1);
+          reject(new ArchiveUnavailable('archive lookup waited too long in the queue', 5_000));
+        }, Math.max(0, expiresAt - Date.now()));
+      }
+      waiting.push(job);
       pump();
     });
   }
 
   function pump() {
-    // A long pause: tell everyone waiting to come back later instead of
-    // holding them past the browser's timeout.
-    const paused = pausedUntil - Date.now();
-    if (paused > maxWaitMs) {
-      for (const job of waiting.splice(0)) job.reject(new ArchiveUnavailable('archive.org asked us to wait', paused));
-      return;
+    // A pause that outlasts a lookup's deadline: tell that lookup now
+    // rather than hold it until it expires.
+    for (let i = waiting.length - 1; i >= 0; i--) {
+      const job = waiting[i];
+      if (job.expiresAt > pausedUntil) continue;
+      waiting.splice(i, 1);
+      clearTimeout(job.expiry);
+      job.reject(new ArchiveUnavailable('archive.org asked us to wait', pausedUntil - Date.now()));
     }
     if (timer) return;
     while (active < concurrency && waiting.length) {
@@ -103,6 +125,12 @@ export function createArchiveMeta({
         return;
       }
       const job = waiting.shift();
+      clearTimeout(job.expiry);
+      if (job.expiresAt <= Date.now()) {
+        // Past its deadline before its timer ran: never send it.
+        job.reject(new ArchiveUnavailable('archive lookup waited too long in the queue', 5_000));
+        continue;
+      }
       active++;
       lastStart = Date.now();
       Promise.resolve()
@@ -117,10 +145,11 @@ export function createArchiveMeta({
 
   // ---- one request ---------------------------------------------------------
 
-  async function request(id) {
+  /** One GET of the item's metadata, cut off at timeoutMs or the lookup's deadline, whichever is sooner. */
+  async function request(id, expiresAt = Infinity) {
     stats.upstream++;
     const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), timeoutMs);
+    const t = setTimeout(() => ctrl.abort(), Math.max(0, Math.min(timeoutMs, expiresAt - Date.now())));
     try {
       const res = await fetchImpl(`https://archive.org/metadata/${encodeURIComponent(id)}`, {
         headers: { 'User-Agent': userAgent, Accept: 'application/json' },
@@ -146,7 +175,7 @@ export function createArchiveMeta({
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       let res = null;
       try {
-        res = await enqueue(() => request(id));
+        res = await enqueue(() => request(id, started + deadlineMs), started + deadlineMs);
       } catch (err) {
         if (err instanceof ArchiveUnavailable) throw err;
         lastError = err?.name === 'AbortError' ? 'archive.org timed out' : 'archive.org could not be reached';
@@ -170,7 +199,7 @@ export function createArchiveMeta({
           pausedUntil = Math.max(pausedUntil, Date.now() + hold);
           delay = Math.max(delay, hold);
           log('warn', 'archive.org rate limited', { source: 'archive', item: id, status: res.status, retryAfterMs: res.retryAfterMs, attempt });
-          if (hold > maxWaitMs) throw new ArchiveUnavailable(lastError, hold);
+          if (Date.now() - started + hold > deadlineMs) throw new ArchiveUnavailable(lastError, hold);
         }
       }
       if (attempt === maxAttempts - 1 || Date.now() - started + delay + timeoutMs > deadlineMs) break;
@@ -234,13 +263,26 @@ export function createArchiveMeta({
       send(400, { error: 'Not an archive.org identifier' }, { 'Cache-Control': 'no-store' });
       return;
     }
+    let wait = null;
     try {
-      const { files, missing } = await lookup(id);
+      // A slow lookup keeps going in the background; this visitor hears
+      // "ask again in a few seconds" and the next ask joins it or finds it cached.
+      const stillLooking = new Promise(resolve => {
+        wait = setTimeout(() => resolve(null), respondWithinMs);
+      });
+      const result = await Promise.race([lookup(id), stillLooking]);
+      if (!result) {
+        send(503, { error: 'Still looking this one up, ask again', pending: true }, { 'Cache-Control': 'no-store', 'Retry-After': '3' });
+        return;
+      }
+      const { files, missing } = result;
       if (missing) send(404, { error: 'No playable files', id }, { 'Cache-Control': 'public, max-age=600' });
       else send(200, { id, files }, { 'Cache-Control': 'public, max-age=3600' });
     } catch (err) {
       const secs = Math.max(1, Math.ceil((err?.retryAfterMs || 5_000) / 1000));
       send(503, { error: 'archive.org is busy, try again soon' }, { 'Cache-Control': 'no-store', 'Retry-After': String(secs) });
+    } finally {
+      clearTimeout(wait);
     }
   }
 
