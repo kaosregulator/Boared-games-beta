@@ -1093,3 +1093,55 @@ export const FOX = lineup('fox-march-2000', {
   audience: 'adult',
   seed: 32,
 });
+
+// ---- Nick at Nite ----
+
+/**
+ * Nick at Nite's 1998 "Norman Lear Picks" All in the Family marathon, every
+ * episode with the ads it aired with: [number, seconds, title].
+ */
+const AITF_1998: [string, number, string][] = [
+  ['01 1971', 1830.76, 'Meet the Bunkers'],
+  ['02 1971', 1845.59, 'Oh, My Aching Back'],
+  ['03 1971', 1801.26, 'Lionel Moves into the Neighborhood'],
+  ['04 1971', 1832.62, 'Archie Gives Blood'],
+  ['05 1971', 1789.44, "Mike's Problem"],
+  ['06 1971', 1816.75, 'The First and Last Supper'],
+  ['07 1971', 1848.04, 'Gloria Has a Belly Full'],
+  ['08 1971', 1681.71, 'Judging Books by Covers'],
+  ['09 1971', 1819.03, "Edith's Accident"],
+  ['10 1971', 1694.57, 'Mike Meets Archie'],
+  ['11 1972', 1805.48, "Sammy's Visit"],
+  ['12 1971', 1422.53, 'The Saga of Cousin Oscar'],
+  ['13 1971', 1779.65, 'Cousin Maude Comes to Visit'],
+  ['14 1972', 1773.78, 'The Elevator Story'],
+  ['15 1972', 1789.18, 'Archie and the Editorial'],
+  ['16 1973', 1696.04, 'Archie Is Branded'],
+  ['17 1972', 1757.8, 'Edith Flips Her Wig'],
+  ['18 1971', 1859.99, 'Edith Writes a Song'],
+  ['19 1972', 1834.73, "Edith's Problem"],
+  ['20 1972', 1797.99, 'The Bunkers and the Swingers'],
+  ['21 1973', 1789.12, "We're Having a Heat Wave"],
+  ['22 1973', 1790.06, "We're Still Having a Heat Wave"],
+  ['23 1973', 1832, 'Battle of the Month'],
+  ['24 1973', 1692.48, 'Edith Finds an Old Man'],
+  ['25 1975', 1851.67, 'The Very Moving Day'],
+];
+const AITF_ID = '1998-all-in-the-family-nick-at-nite-norman-lear-picks-marathon-5-nights-woc_202506';
+
+/** Nick at Nite and TV Land off tape: the classic sitcoms with their 90s promos and ads. */
+export const NICK_AT_NITE = lineup('nick-at-nite-1994_202601', {
+  tapes: [
+    tape('nick-at-nite-1994_202601', 'Nick At Nite 1994.mp4', 1630, 'Nick at Nite · 1994'),
+    ...AITF_1998.slice(0, 5).map(([n, seconds, title]) => tape(AITF_ID, `~WOC/${n}`, seconds, `All in the Family · "${title}" · Nick at Nite 1998`)),
+    ...[5435.4, 5464.56, 5476.34, 5599.33].map((seconds, i) => tape('vts-01-1_20260307', `VTS_01_${i + 1}.mp4`, seconds, `Fox 11, Nick at Nite & HBO · fall 1992 · part ${i + 1}`)),
+    ...AITF_1998.slice(5, 15).map(([n, seconds, title]) => tape(AITF_ID, `~WOC/${n}`, seconds, `All in the Family · "${title}" · Nick at Nite 1998`)),
+    tape('vb-tape-0043-commercials-and-promos-during-i-love-lucy-on-nick-at-nite', '~I Love Lucy', 4824, 'Nick at Nite · the breaks from I Love Lucy'),
+    tape('adam-12_202507', 'ADAM-12.mp4', 6702, 'Adam-12 · two hours'),
+    ...AITF_1998.slice(15).map(([n, seconds, title]) => tape(AITF_ID, `~WOC/${n}`, seconds, `All in the Family · "${title}" · Nick at Nite 1998`)),
+    tape('alfred-hitchcock-any-griffith-man-from-uncle-get-smart-x-2-mr.-and-mrs.-notyh-the-persuaders', '~Alfred Hitchcock', 20836, 'Hitchcock, Andy Griffith, U.N.C.L.E., Get Smart'),
+    tape('allinthe-family-special-at-end', 'AllintheFamily special at end.mp4', 18785, 'All in the Family · five hours'),
+  ],
+  audience: 'family',
+  seed: 33,
+});
