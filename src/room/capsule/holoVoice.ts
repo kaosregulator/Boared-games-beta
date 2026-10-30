@@ -75,6 +75,8 @@ export function loadVoiceManifest(): Promise<Manifest | null> {
     .catch(() => null)
     .then(m => {
       manifest = m;
+      // A failed fetch is tried again by the next card that opens.
+      if (!m) loading = null;
       emit();
       return m;
     });
