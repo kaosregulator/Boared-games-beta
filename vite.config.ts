@@ -24,6 +24,33 @@ function radioBrowserPlugin(): Plugin {
   };
 }
 
+/** The same archive.org lookups server.mjs makes, for the dev server. */
+function archiveMetaPlugin(): Plugin {
+  return {
+    name: 'archive-meta-api',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const m = req.url?.match(/^\/api\/archive\/([^/?#]+)/);
+        if (!m) return next();
+        let id = '';
+        try {
+          id = decodeURIComponent(m[1]);
+        } catch {
+          // a bad %-escape: the handler answers 400 for an empty id
+        }
+        void import('./server/archiveMeta.mjs').then(({ archiveMeta }) =>
+          archiveMeta.handle(id, (status: number, body: unknown, headers: Record<string, string>) => {
+            res.statusCode = status;
+            for (const [k, v] of Object.entries(headers)) res.setHeader(k, v);
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(body));
+          }),
+        );
+      });
+    },
+  };
+}
+
 /**
  * Which build this is: the git commit (Railway passes RAILWAY_GIT_COMMIT_SHA
  * as a Docker build arg), else the local checkout's, else the build time.
@@ -143,7 +170,7 @@ export default defineConfig(() => {
   // VITE_* from the environment reach the page as import.meta.env.*
   process.env.VITE_BUILD_ID = info.id;
   return {
-    plugins: [react(), tailwindcss(), geminiTriviaPlugin(), radioBrowserPlugin(), buildInfoPlugin(info)],
+    plugins: [react(), tailwindcss(), geminiTriviaPlugin(), radioBrowserPlugin(), archiveMetaPlugin(), buildInfoPlugin(info)],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

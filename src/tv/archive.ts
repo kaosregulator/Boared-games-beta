@@ -1,7 +1,9 @@
 /**
- * Internet Archive lookups. The metadata API is CORS-enabled, so the browser
- * asks it directly which file to stream; the media itself plays from
- * archive.org/download (display-only, so no CORS is needed for it).
+ * Internet Archive lookups. Which file to stream comes from our own server
+ * (GET /api/archive/<id>, server/archiveMeta.mjs), which asks archive.org with
+ * a proper User-Agent, one cache for every visitor and a shared, rate-limited
+ * queue. The media itself plays straight from archive.org/download
+ * (display-only, so no CORS is needed for it).
  */
 
 export interface ArchiveFile {
@@ -60,10 +62,11 @@ export function resolveArchive(id: string, kind: 'video' | 'audio', hint?: strin
   const key = `${kind}:${id}:${hint ?? ''}`;
   const hit = cache.get(key);
   if (hit) return hit;
-  // archive.org's metadata API sometimes hangs; give up after 10 s so the set can retry.
+  // The server retries archive.org with backoff for up to ~20 s; give up after
+  // 30 s so the set can retry.
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 10_000);
-  const job = fetch(`https://archive.org/metadata/${encodeURIComponent(id)}`, { signal: ctrl.signal })
+  const timer = setTimeout(() => ctrl.abort(), 30_000);
+  const job = fetch(`/api/archive/${encodeURIComponent(id)}`, { signal: ctrl.signal })
     .then(res => (res.ok ? res.json() : null))
     .then((meta: { files?: MetaFile[] } | null) => {
       const file = meta?.files ? pick(meta.files, kind, hint) : null;
