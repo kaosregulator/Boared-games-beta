@@ -15,7 +15,7 @@
     "simplify-models": "node --max-old-space-size=4096 scripts/simplify-room-models.mjs"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
