@@ -105,9 +105,9 @@ if (pieces) {
     for (const id of all) {
       try {
         await page.evaluate(i => window.__showCard?.(i), id);
-        await page.waitForFunction(() => !document.querySelector('.hc-proj-note'), null, { timeout: 15_000 }).catch(() => log(`[piece ${id}] none`));
+        await page.waitForFunction(() => !document.querySelector('.hm-note'), null, { timeout: 15_000 }).catch(() => log(`[piece ${id}] none`));
         await page.waitForTimeout(2_500);
-        const box = await page.locator('.hc-proj').boundingBox();
+        const box = await page.locator('.hm').boundingBox();
         if (box) await page.screenshot({ path: `docs/room-shots/pieces/${id}.png`, clip: box, timeout: 120_000 });
       } catch (e) {
         log(`[piece ${id}] ${e.message.split('\n')[0]}`);

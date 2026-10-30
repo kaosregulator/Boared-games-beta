@@ -5,7 +5,7 @@ import { capsule, setCapsulePiece } from './capsuleBus';
 import { cloneModelPiece, disposePiece, extractPiece, type Piece } from './extractPiece';
 import { HOLO_BORROW, HOLO_POSE, HOLO_SKIP } from './holoAssets';
 import { boardSrcFor, buildBoardPiece } from './gameBoard';
-import { holoMaterial, holoUniforms, tickHolo } from './holoMaterial';
+import { holoMaterial, holoUniforms, realMaterial, tickHolo } from './holoMaterial';
 
 /**
  * The time capsule's hologram: the real piece of the room the card is about,
@@ -53,21 +53,41 @@ function findHoloRoot(scene: THREE.Object3D, id: string): THREE.Object3D | null 
 
 const reduceMotion = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-/** Draw the piece over the room as a hologram: after everything else, depth cleared first. */
-function overlay(piece: Piece) {
-  const clones: THREE.Material[] = [];
+interface Looks {
+  meshes: THREE.Mesh[];
+  holo: THREE.Material[];
+  real: THREE.Material[];
+}
+
+/**
+ * Draw the piece over the room: after everything else, depth cleared first.
+ * Each mesh gets two looks, the hologram and the real thing in its own colours
+ * (the Images tab), swapped by the card.
+ */
+function overlay(piece: Piece): Looks {
+  const looks: Looks = { meshes: [], holo: [], real: [] };
   piece.group.traverse(o => {
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh) return;
     // Only a fresh cut may have its normals rebuilt; a clone shares the room's geometry.
     if (!piece.shared && !mesh.geometry.getAttribute('normal')) mesh.geometry.computeVertexNormals();
-    const mat = holoMaterial(mesh.material as THREE.Material, !!mesh.geometry.getAttribute('uv'), !!mesh.geometry.getAttribute('color'));
-    clones.push(mat);
-    mesh.material = mat;
+    const src = mesh.material as THREE.Material;
+    const uv = !!mesh.geometry.getAttribute('uv');
+    const color = !!mesh.geometry.getAttribute('color');
+    const holo = holoMaterial(src, uv, color);
+    looks.meshes.push(mesh);
+    looks.holo.push(holo);
+    looks.real.push(realMaterial(src, uv, color));
+    mesh.material = holo;
     mesh.renderOrder = 10001;
     mesh.frustumCulled = false;
   });
-  return clones;
+  return looks;
+}
+
+function wear(looks: Looks, real: boolean) {
+  const set = real ? looks.real : looks.holo;
+  looks.meshes.forEach((m, i) => (m.material = set[i]));
 }
 
 export function CapsuleHologram() {
@@ -76,10 +96,15 @@ export function CapsuleHologram() {
   const spin = useRef<THREE.Group>(null);
   const [piece, setPiece] = useState<Piece | null>(null);
   const [id, setId] = useState<string | null>(capsule.id);
+  const [mode, setMode] = useState(capsule.mode);
+  const looks = useRef<Looks | null>(null);
   const source = useRef<THREE.Vector3 | null>(null);
 
   useEffect(() => {
-    const on = () => setId(capsule.id);
+    const on = () => {
+      setId(capsule.id);
+      setMode(capsule.mode);
+    };
     capsule.listeners.add(on);
     return () => {
       capsule.listeners.delete(on);
@@ -101,7 +126,7 @@ export function CapsuleHologram() {
       return;
     }
     let made: Piece | null = null;
-    let clones: THREE.Material[] = [];
+    let madeLooks: Looks | null = null;
     let tries = 0;
     let timer = 0;
     // Cut it a frame after the card opens, so its first paint isn't held up. A card
@@ -143,7 +168,9 @@ export function CapsuleHologram() {
       }
       if (made) {
         holoUniforms.uReveal.value = 0;
-        clones = overlay(made);
+        madeLooks = overlay(made);
+        looks.current = madeLooks;
+        wear(madeLooks, capsule.mode === 'real');
         setPiece(made);
         setCapsulePiece(true);
       } else if (++tries < 40) timer = window.setTimeout(attempt, 500);
@@ -153,9 +180,17 @@ export function CapsuleHologram() {
     return () => {
       window.clearTimeout(timer);
       disposePiece(made);
-      for (const m of clones) m.dispose();
+      if (madeLooks) for (const m of [...madeLooks.holo, ...madeLooks.real]) m.dispose();
+      if (looks.current === madeLooks) looks.current = null;
     };
   }, [id, scene]);
+
+  // The card picks the look: the hologram builds itself up again each time it comes back.
+  useEffect(() => {
+    if (!looks.current) return;
+    wear(looks.current, mode === 'real');
+    if (mode === 'holo') holoUniforms.uReveal.value = 0;
+  }, [mode, piece]);
 
   // Clears the depth buffer just before the piece, so the room never cuts into it.
   const clearer = useMemo(() => {
@@ -174,6 +209,7 @@ export function CapsuleHologram() {
   }, [clearer]);
 
   const ring = useRef<THREE.Group>(null);
+  const projector = useRef<THREE.Group>(null);
   useFrame((state, dt) => {
     const g = holder.current;
     if (!g) return;
@@ -190,7 +226,7 @@ export function CapsuleHologram() {
     } else capsule.source = null;
 
     const stage = capsule.stage;
-    if (!piece || !stage || canvas.height <= 0) {
+    if (!piece || !stage || canvas.height <= 0 || capsule.mode === 'off') {
       g.visible = false;
       return;
     }
@@ -211,9 +247,14 @@ export function CapsuleHologram() {
     const along = DEPTH * Math.max(0.2, _dir.dot(_fwd));
     const viewH = 2 * along * Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2);
     const fit = (Math.min(r.height, r.width * 0.9) / canvas.height) * viewH;
-    g.scale.setScalar((fit * 0.56) / piece.radius);
+    const real = capsule.mode === 'real';
+    g.scale.setScalar((fit * (real ? 0.62 : 0.56)) / piece.radius);
     const still = reduceMotion();
     tickHolo(state.clock.elapsedTime, dt, still);
+    // The reveal and contour lines run bottom to top of the piece, in the world.
+    holoUniforms.uCenterY.value = g.position.y;
+    holoUniforms.uRadius.value = piece.radius * g.scale.x;
+    if (projector.current) projector.current.visible = !real;
     if (spin.current) {
       spin.current.rotation.y += dt * (still ? SPIN * 0.3 : SPIN);
       // It floats: a slow bob above the projector.
@@ -231,7 +272,10 @@ export function CapsuleHologram() {
             <group ref={spin}>
               <primitive object={piece.group} />
             </group>
-            <Projector radius={piece.radius} ring={ring} />
+            <group ref={projector}>
+              <Glow radius={piece.radius} />
+              <Projector radius={piece.radius} ring={ring} />
+            </group>
           </group>
         </>
       )}
@@ -266,5 +310,56 @@ function Projector({ radius, ring }: { radius: number; ring: RefObject<THREE.Gro
         <meshBasicMaterial color={BLUE} transparent opacity={0.022} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} side={THREE.DoubleSide} />
       </mesh>
     </group>
+  );
+}
+
+const GLOW_VERTEX = /* glsl */ `
+  varying vec3 vPosition;
+  varying vec3 vNormal;
+  void main() {
+    vec4 world = modelMatrix * vec4(position, 1.0);
+    vPosition = world.xyz;
+    vNormal = normalize(mat3(modelMatrix) * normal);
+    gl_Position = projectionMatrix * viewMatrix * world;
+  }
+`;
+
+// After Anderson Mancini's fake glow material: brightest facing you, falling off to nothing at the edge.
+const GLOW_FRAGMENT = /* glsl */ `
+  uniform vec3 uColor;
+  uniform float uFlicker;
+  varying vec3 vPosition;
+  varying vec3 vNormal;
+  void main() {
+    vec3 n = normalize(vNormal);
+    if (!gl_FrontFacing) n = -n;
+    float fresnel = max(dot(normalize(cameraPosition - vPosition), n), 0.0);
+    fresnel = pow(fresnel, 3.0);
+    float glow = fresnel * smoothstep(0.0, 0.35, fresnel) * 0.32 * uFlicker;
+    gl_FragColor = vec4(uColor * fresnel, glow);
+  }
+`;
+
+/** A soft halo of blue light around the hologram, so it glows instead of sitting flat on the room. */
+function Glow({ radius }: { radius: number }) {
+  const material = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        uniforms: { uColor: { value: new THREE.Color(BLUE) }, uFlicker: holoUniforms.uFlicker },
+        vertexShader: GLOW_VERTEX,
+        fragmentShader: GLOW_FRAGMENT,
+        transparent: true,
+        depthWrite: false,
+        depthTest: false,
+        blending: THREE.AdditiveBlending,
+        toneMapped: false,
+      }),
+    [],
+  );
+  useEffect(() => () => material.dispose(), [material]);
+  return (
+    <mesh renderOrder={10000.5} material={material}>
+      <sphereGeometry args={[radius * 1.15, 32, 16]} />
+    </mesh>
   );
 }
