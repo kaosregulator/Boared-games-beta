@@ -1,4 +1,5 @@
 import { TAPE_SEGMENTS } from './tapeSegments';
+import type { Ad } from './ads90s';
 
 /**
  * Whole recorded broadcasts on the Internet Archive that play as one channel,
@@ -9,8 +10,10 @@ import { TAPE_SEGMENTS } from './tapeSegments';
 export interface ArchivePart {
   /** archive.org item, when this tape lives in a different item from the block's. */
   id?: string;
-  /** Exact file in the item (the browser-playable .mp4 copy). */
+  /** Exact file in the item (the browser-playable .mp4 copy), or "~part of its name". */
   file: string;
+  /** Where in the file this part starts, when one file is split into several parts. */
+  from?: number;
   /** Runtime from archive.org's metadata. */
   seconds: number;
   title: string;
@@ -18,6 +21,8 @@ export interface ArchivePart {
   vault?: string;
   /** What airs inside the tape, from its captions: each entry runs until the next. */
   segments?: Segment[];
+  /** A commercial break between shows: these spots play back to back (no file of its own). */
+  spots?: Ad[];
 }
 
 /** One stretch of a tape: a show, a commercial break, or a channel bumper. */

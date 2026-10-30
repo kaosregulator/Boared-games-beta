@@ -5,6 +5,7 @@ import { ARTHUR } from './lineups/arthur';
 import { ADS_NUMBER, adsGuide } from './lineups/ads90s';
 import { MTV_CHANNEL, PICK_CHANNEL, YT_CHANNELS, ytOnAir, ytShowAt, type YtChannel } from './lineups/youtube247';
 import { PACK_SLOT, packOnAir } from './packSchedule';
+import { MTV_90S, TOONAMI } from './lineups/networks';
 
 /**
  * The cable lineup. Channel 2 is SNICK, running the archived Saturday nights
@@ -165,6 +166,9 @@ export const CHANNELS: Channel[] = [
     cartoons: filmsFor(pack.id),
   })),
   { number: 15, call: 'GOOSE', kind: 'block', name: 'Goosebumps — Season 1, every episode (1995)', block: GOOSEBUMPS_S01 },
+  // The 90s networks, off viewers' tapes and episode uploads (lineups/networks.ts).
+  { number: 16, call: 'TNMI', kind: 'block', name: 'Toonami (1999–2004)', block: TOONAMI },
+  { number: 17, call: 'MTV', kind: 'block', name: 'MTV — the 90s, off VHS', block: MTV_90S },
   // Nothing but 90s commercial breaks, on the channel number of the decade.
   { number: ADS_NUMBER, call: 'ADS', kind: 'ads', name: '90s Commercial Breaks' },
   ...(TV247_ON ? [ytChannel(MTV_CHANNEL), ytChannel(PICK_CHANNEL)] : []),
