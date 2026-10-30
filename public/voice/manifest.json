@@ -2,223 +2,223 @@
  "computer": {
   "armor": {
    "file": "armor.mp3",
-   "hash": "4eb3ae20659c",
-   "seconds": 68.2
+   "hash": "84d3df9f41cd",
+   "seconds": 77.7
   },
   "army": {
    "file": "army.mp3",
-   "hash": "a3ceaa208dad",
-   "seconds": 61.3
+   "hash": "ed70eda4aa37",
+   "seconds": 66.3
   },
   "backpack": {
    "file": "backpack.mp3",
-   "hash": "47dd54734481",
-   "seconds": 69.1
+   "hash": "42a79aa4ce4c",
+   "seconds": 71.1
   },
   "beanbag": {
    "file": "beanbag.mp3",
-   "hash": "7bc873bb1562",
-   "seconds": 66.2
+   "hash": "527dac7dfa85",
+   "seconds": 70.2
   },
   "bed": {
    "file": "bed.mp3",
-   "hash": "dd80561c9fb6",
-   "seconds": 71.6
+   "hash": "38927445872e",
+   "seconds": 76.3
   },
   "bed-pillow": {
    "file": "bed-pillow.mp3",
-   "hash": "8f2a0bc77233",
-   "seconds": 64.5
+   "hash": "af7e2cea4fa1",
+   "seconds": 70.4
   },
   "books": {
    "file": "books.mp3",
-   "hash": "3c7971dc0d95",
-   "seconds": 68.5
+   "hash": "0f2cbb2b23da",
+   "seconds": 73.3
   },
   "boombox": {
    "file": "boombox.mp3",
-   "hash": "7db768957027",
-   "seconds": 71.7
+   "hash": "f773439cfa85",
+   "seconds": 77.4
   },
   "car": {
    "file": "car.mp3",
-   "hash": "827598a32123",
-   "seconds": 58.5
+   "hash": "d53ff72d2c5c",
+   "seconds": 60.3
   },
   "cards": {
    "file": "cards.mp3",
-   "hash": "a5007c54a5b5",
-   "seconds": 74.2
+   "hash": "3ed18a1e6d73",
+   "seconds": 79.3
   },
   "cd-8ball": {
    "file": "cd-8ball.mp3",
-   "hash": "97aa9e6988fa",
-   "seconds": 62.5
+   "hash": "3f68632a2dcc",
+   "seconds": 68.7
   },
   "cd-car": {
    "file": "cd-car.mp3",
-   "hash": "30f00825cdfa",
-   "seconds": 57.8
+   "hash": "790914d146e7",
+   "seconds": 62.6
   },
   "cd-chair": {
    "file": "cd-chair.mp3",
-   "hash": "878c9a72b003",
-   "seconds": 58.1
+   "hash": "eeb0b34dad95",
+   "seconds": 58.8
   },
   "cd-clock": {
    "file": "cd-clock.mp3",
-   "hash": "5694af85aecf",
-   "seconds": 55.6
+   "hash": "84ec6b270253",
+   "seconds": 61.1
   },
   "cd-cup": {
    "file": "cd-cup.mp3",
-   "hash": "15e41634afed",
-   "seconds": 63.1
+   "hash": "9fbf07ea4c0b",
+   "seconds": 70.6
   },
   "cd-frog": {
    "file": "cd-frog.mp3",
-   "hash": "92f701d614a3",
-   "seconds": 58.6
+   "hash": "c97649e7eaee",
+   "seconds": 67.1
   },
   "cd-lamp": {
    "file": "cd-lamp.mp3",
-   "hash": "e54fd9c9bedf",
-   "seconds": 59.1
+   "hash": "cefd59bf3186",
+   "seconds": 66.3
   },
   "cd-lava": {
    "file": "cd-lava.mp3",
-   "hash": "494688321604",
-   "seconds": 55.6
+   "hash": "f797bf097999",
+   "seconds": 60.5
   },
   "cd-phone": {
    "file": "cd-phone.mp3",
-   "hash": "9172e4351434",
-   "seconds": 70.3
+   "hash": "b8fbcb3462ab",
+   "seconds": 82.3
   },
   "cd-photo": {
    "file": "cd-photo.mp3",
-   "hash": "b9437b4e33af",
-   "seconds": 54.9
+   "hash": "9ccdef0a735b",
+   "seconds": 61.8
   },
   "cd-pogs": {
    "file": "cd-pogs.mp3",
-   "hash": "61bd159dbd75",
-   "seconds": 75.1
+   "hash": "f4368f8c7525",
+   "seconds": 80.1
   },
   "cd-sketch": {
    "file": "cd-sketch.mp3",
-   "hash": "36b90aff144e",
-   "seconds": 60.9
+   "hash": "48ee978c9165",
+   "seconds": 66.2
   },
   "cd-snes": {
    "file": "cd-snes.mp3",
-   "hash": "4d184b792e8d",
-   "seconds": 68.6
+   "hash": "37c210945b3f",
+   "seconds": 73.5
   },
   "cd-sonic": {
    "file": "cd-sonic.mp3",
-   "hash": "c75c0a8a3a46",
-   "seconds": 64.4
+   "hash": "73b19d8c8764",
+   "seconds": 71.0
   },
   "cd-stickers": {
    "file": "cd-stickers.mp3",
-   "hash": "4a0fd8be16a1",
-   "seconds": 56.4
+   "hash": "3938df684bb6",
+   "seconds": 58.3
   },
   "cd-tapes": {
    "file": "cd-tapes.mp3",
-   "hash": "cfad19163e22",
-   "seconds": 61.5
+   "hash": "b6ac1658cd3e",
+   "seconds": 71.8
   },
   "cd-tmnt": {
    "file": "cd-tmnt.mp3",
-   "hash": "f8a98ab31394",
-   "seconds": 59.5
+   "hash": "91ded9f872f6",
+   "seconds": 68.9
   },
   "cd-trophy": {
    "file": "cd-trophy.mp3",
-   "hash": "124411da4e4f",
-   "seconds": 58.1
+   "hash": "b95d27827ada",
+   "seconds": 61.7
   },
   "cd-vhs": {
    "file": "cd-vhs.mp3",
-   "hash": "f8a700958cf7",
-   "seconds": 63.8
+   "hash": "eeabda048c9e",
+   "seconds": 66.7
   },
   "cd-walkman": {
    "file": "cd-walkman.mp3",
-   "hash": "a85fb4730b91",
-   "seconds": 70.1
+   "hash": "e7b94b0b6b00",
+   "seconds": 73.9
   },
   "cd-yoyo": {
    "file": "cd-yoyo.mp3",
-   "hash": "3fcceb874011",
-   "seconds": 63.4
+   "hash": "b8f885f8b631",
+   "seconds": 68.5
   },
   "clutterdesk": {
    "file": "clutterdesk.mp3",
-   "hash": "c1ab9f4ac120",
-   "seconds": 61.6
+   "hash": "023f0fd13f2c",
+   "seconds": 67.1
   },
   "crt-cable": {
    "file": "crt-cable.mp3",
-   "hash": "6788964e6abc",
-   "seconds": 71.5
+   "hash": "07031d7e1010",
+   "seconds": 83.1
   },
   "crt-tv": {
    "file": "crt-tv.mp3",
-   "hash": "fb231c2472d0",
-   "seconds": 78.8
+   "hash": "d7d1fe0f3343",
+   "seconds": 86.8
   },
   "crt-vcr": {
    "file": "crt-vcr.mp3",
-   "hash": "912284b60de3",
-   "seconds": 88.1
+   "hash": "f84d8c50096c",
+   "seconds": 95.6
   },
   "desk": {
    "file": "desk.mp3",
-   "hash": "b8ebbbd067c9",
-   "seconds": 66.5
+   "hash": "8975a89880aa",
+   "seconds": 70.3
   },
   "door": {
    "file": "door.mp3",
-   "hash": "f8b8c6c2f4be",
-   "seconds": 62.6
+   "hash": "31017ec7cbe6",
+   "seconds": 67.2
   },
   "door-cap": {
    "file": "door-cap.mp3",
-   "hash": "ea67c33f7258",
-   "seconds": 67.0
+   "hash": "da23a5c68f08",
+   "seconds": 71.4
   },
   "door-pins": {
    "file": "door-pins.mp3",
-   "hash": "662ad2553a45",
-   "seconds": 57.4
+   "hash": "01b934ef831c",
+   "seconds": 65.1
   },
   "door-poster": {
    "file": "door-poster.mp3",
-   "hash": "99e8d3d6c1be",
-   "seconds": 67.8
+   "hash": "7bcd9f95d2d5",
+   "seconds": 78.1
   },
   "dr-nofear": {
    "file": "dr-nofear.mp3",
-   "hash": "be2ee2611bea",
-   "seconds": 58.1
+   "hash": "1ae6bd4ca00e",
+   "seconds": 60.4
   },
   "dr-stickers": {
    "file": "dr-stickers.mp3",
-   "hash": "7d9ffeb25789",
-   "seconds": 65.6
+   "hash": "b66e4087e171",
+   "seconds": 71.6
   },
   "dresser": {
    "file": "dresser.mp3",
-   "hash": "566ae5d9b898",
-   "seconds": 57.9
+   "hash": "9e9a5c1a8815",
+   "seconds": 59.0
   },
   "furby": {
    "file": "furby.mp3",
-   "hash": "9fde0c6f6dc7",
-   "seconds": 109.7
+   "hash": "ed2e0aa0d8af",
+   "seconds": 96.3
   },
   "game-battleship": {
    "file": "game-battleship.mp3",
@@ -302,525 +302,525 @@
   },
   "gameboy": {
    "file": "gameboy.mp3",
-   "hash": "21f416980e3c",
-   "seconds": 77.3
+   "hash": "bf1a977696a4",
+   "seconds": 78.6
   },
   "gs-helmet": {
    "file": "gs-helmet.mp3",
-   "hash": "c002dd610012",
-   "seconds": 68.1
+   "hash": "dc08b8851ffb",
+   "seconds": 76.7
   },
   "gs-lights": {
    "file": "gs-lights.mp3",
-   "hash": "6081b7e5ef98",
-   "seconds": 70.4
+   "hash": "b1f1d371bb58",
+   "seconds": 73.9
   },
   "gs-plant": {
    "file": "gs-plant.mp3",
-   "hash": "79d25fc7da11",
-   "seconds": 54.1
+   "hash": "69ba01ee5039",
+   "seconds": 60.6
   },
   "gs-smiley": {
    "file": "gs-smiley.mp3",
-   "hash": "fb74db65bbf7",
-   "seconds": 62.5
+   "hash": "60825b3e4a34",
+   "seconds": 67.5
   },
   "gushers": {
    "file": "gushers.mp3",
-   "hash": "3fdfd5369134",
-   "seconds": 68.0
+   "hash": "4afc0f3f45e6",
+   "seconds": 71.9
   },
   "hotpockets": {
    "file": "hotpockets.mp3",
-   "hash": "1278bc264b04",
-   "seconds": 82.5
+   "hash": "0741ee2fb134",
+   "seconds": 87.2
   },
   "hotwheels": {
    "file": "hotwheels.mp3",
-   "hash": "b4aa43a10155",
-   "seconds": 80.3
+   "hash": "ebaa9bd6f93c",
+   "seconds": 76.8
   },
   "ispy-book": {
    "file": "ispy-book.mp3",
-   "hash": "b57645194275",
-   "seconds": 108.7
+   "hash": "cd36d55789a9",
+   "seconds": 92.5
   },
   "jordans": {
    "file": "jordans.mp3",
-   "hash": "907b4a56c9fb",
-   "seconds": 64.1
+   "hash": "efbda2ba117b",
+   "seconds": 68.3
   },
   "nes": {
    "file": "nes.mp3",
-   "hash": "e1ff34ec910f",
-   "seconds": 83.9
+   "hash": "34e029981ed9",
+   "seconds": 82.3
   },
   "nightstand": {
    "file": "nightstand.mp3",
-   "hash": "2a3b43c0b39b",
-   "seconds": 55.7
+   "hash": "3f97e5324b48",
+   "seconds": 66.3
   },
   "ns-clock": {
    "file": "ns-clock.mp3",
-   "hash": "6c04d6714afd",
-   "seconds": 71.9
+   "hash": "3ae0dc425f49",
+   "seconds": 76.1
   },
   "ns-gameboy": {
    "file": "ns-gameboy.mp3",
-   "hash": "ff1af8dc2a48",
-   "seconds": 67.0
+   "hash": "e6ee1a242261",
+   "seconds": 72.2
   },
   "ns-lava": {
    "file": "ns-lava.mp3",
-   "hash": "cc2d9f6085f5",
-   "seconds": 69.5
+   "hash": "8e1bb2e7f271",
+   "seconds": 71.1
   },
   "ns-mug": {
    "file": "ns-mug.mp3",
-   "hash": "8dbb8133640c",
-   "seconds": 56.4
+   "hash": "841a59d04c11",
+   "seconds": 67.2
   },
   "ns-recorder": {
    "file": "ns-recorder.mp3",
-   "hash": "e900d72bc0b2",
-   "seconds": 61.2
+   "hash": "e10c21490407",
+   "seconds": 71.0
   },
   "ns-tapes": {
    "file": "ns-tapes.mp3",
-   "hash": "2c1dcfb637e8",
-   "seconds": 72.6
+   "hash": "d9f3b67dbc77",
+   "seconds": 77.3
   },
   "ns-teddy": {
    "file": "ns-teddy.mp3",
-   "hash": "28f8808c7fa9",
-   "seconds": 58.3
+   "hash": "bccff004f6af",
+   "seconds": 63.5
   },
   "ns-vhs": {
    "file": "ns-vhs.mp3",
-   "hash": "cfbbf66fb567",
-   "seconds": 78.5
+   "hash": "9cf3b3cc2539",
+   "seconds": 88.1
   },
   "ns-yoshi": {
    "file": "ns-yoshi.mp3",
-   "hash": "055d7de532cb",
-   "seconds": 57.6
+   "hash": "5bb11a774d3d",
+   "seconds": 65.8
   },
   "pc-cds": {
    "file": "pc-cds.mp3",
-   "hash": "bbc46870022f",
-   "seconds": 67.2
+   "hash": "199d61d51a96",
+   "seconds": 74.7
   },
   "pc-games": {
    "file": "pc-games.mp3",
-   "hash": "7bf6ef75bf6a",
-   "seconds": 63.1
+   "hash": "0f6f186be0a7",
+   "seconds": 66.2
   },
   "pc-keyboard": {
    "file": "pc-keyboard.mp3",
-   "hash": "acb724ecd83b",
-   "seconds": 59.4
+   "hash": "8411746a500b",
+   "seconds": 69.9
   },
   "pc-monitor": {
    "file": "pc-monitor.mp3",
-   "hash": "97c621bd8b1a",
-   "seconds": 65.8
+   "hash": "64e68e749f68",
+   "seconds": 67.0
   },
   "pc-mouse": {
    "file": "pc-mouse.mp3",
-   "hash": "1a1e45a9b723",
-   "seconds": 62.9
+   "hash": "12102975d061",
+   "seconds": 69.9
   },
   "pc-pencils": {
    "file": "pc-pencils.mp3",
-   "hash": "6c708fcffdec",
-   "seconds": 56.6
+   "hash": "3854721f2e84",
+   "seconds": 62.3
   },
   "pc-printer": {
    "file": "pc-printer.mp3",
-   "hash": "76a9f826ff21",
-   "seconds": 64.4
+   "hash": "c4a9e711dc05",
+   "seconds": 65.5
   },
   "pc-stickers": {
    "file": "pc-stickers.mp3",
-   "hash": "1d6473075169",
-   "seconds": 58.8
+   "hash": "c5e91a10ab61",
+   "seconds": 62.5
   },
   "pc-tower": {
    "file": "pc-tower.mp3",
-   "hash": "dce5e5cb0411",
-   "seconds": 63.9
+   "hash": "23ef73063540",
+   "seconds": 66.9
   },
   "poochi": {
    "file": "poochi.mp3",
-   "hash": "e30f7ae1c8a6",
-   "seconds": 118.1
+   "hash": "4e721468fb4e",
+   "seconds": 91.7
   },
   "poster-babe": {
    "file": "poster-babe.mp3",
-   "hash": "b7a41b1d8b02",
-   "seconds": 63.0
+   "hash": "4cd65010b40b",
+   "seconds": 65.3
   },
   "poster-giant": {
    "file": "poster-giant.mp3",
-   "hash": "7a6f47e9f23f",
-   "seconds": 60.8
+   "hash": "353fa007bfba",
+   "seconds": 68.9
   },
   "poster-mummy": {
    "file": "poster-mummy.mp3",
-   "hash": "067423fc3f73",
-   "seconds": 61.1
+   "hash": "2194dc6ba173",
+   "seconds": 68.0
   },
   "poster-pokemon": {
    "file": "poster-pokemon.mp3",
-   "hash": "de28cb9b4cfa",
-   "seconds": 65.2
+   "hash": "0618534486e4",
+   "seconds": 70.2
   },
   "rubik": {
    "file": "rubik.mp3",
-   "hash": "8561c8424c77",
-   "seconds": 73.0
+   "hash": "096f577ebc51",
+   "seconds": 80.3
   },
   "sh-books": {
    "file": "sh-books.mp3",
-   "hash": "fe56653d9d4a",
-   "seconds": 70.9
+   "hash": "ba0654604548",
+   "seconds": 79.3
   },
   "sh-car": {
    "file": "sh-car.mp3",
-   "hash": "1d7d50ad935e",
-   "seconds": 59.3
+   "hash": "3f89e101b1ff",
+   "seconds": 68.3
   },
   "sh-gameboy": {
    "file": "sh-gameboy.mp3",
-   "hash": "d1d6040e2954",
-   "seconds": 62.0
+   "hash": "2386afff626a",
+   "seconds": 68.9
   },
   "sh-lava": {
    "file": "sh-lava.mp3",
-   "hash": "80aa78ede49e",
-   "seconds": 66.9
+   "hash": "226208e45cc0",
+   "seconds": 67.0
   },
   "sh-teddy": {
    "file": "sh-teddy.mp3",
-   "hash": "531a5c5ce3bf",
-   "seconds": 60.3
+   "hash": "02cbfd963009",
+   "seconds": 62.7
   },
   "sh-turtle": {
    "file": "sh-turtle.mp3",
-   "hash": "5c2d51b4cd2c",
-   "seconds": 68.4
+   "hash": "1e7fccb739a3",
+   "seconds": 71.5
   },
   "sh-vhs": {
    "file": "sh-vhs.mp3",
-   "hash": "d0c948577197",
-   "seconds": 78.5
+   "hash": "cea714b4a35c",
+   "seconds": 83.6
   },
   "sh-viewmaster": {
    "file": "sh-viewmaster.mp3",
-   "hash": "08414d7ce700",
-   "seconds": 61.7
+   "hash": "4133a3275f0a",
+   "seconds": 64.4
   },
   "shelf": {
    "file": "shelf.mp3",
-   "hash": "9574cc911356",
-   "seconds": 71.2
+   "hash": "dd2b911b55c6",
+   "seconds": 75.0
   },
   "south-shelf": {
    "file": "south-shelf.mp3",
-   "hash": "aac85f55f2d9",
-   "seconds": 54.5
+   "hash": "9228fd099933",
+   "seconds": 57.5
   },
   "tamagotchi": {
    "file": "tamagotchi.mp3",
-   "hash": "a05b06205f67",
-   "seconds": 85.4
+   "hash": "4feb321a2eb8",
+   "seconds": 83.8
   },
   "toyshelf": {
    "file": "toyshelf.mp3",
-   "hash": "6412f4dbb483",
-   "seconds": 53.7
+   "hash": "3205bb0a4c60",
+   "seconds": 54.0
   },
   "ts-clock": {
    "file": "ts-clock.mp3",
-   "hash": "186d62d008af",
-   "seconds": 53.2
+   "hash": "c1ef73af479e",
+   "seconds": 59.6
   },
   "ts-handheld": {
    "file": "ts-handheld.mp3",
-   "hash": "07adad777963",
-   "seconds": 59.2
+   "hash": "db0b39e1de54",
+   "seconds": 68.7
   },
   "ts-lava": {
    "file": "ts-lava.mp3",
-   "hash": "4849e1f55927",
-   "seconds": 60.8
+   "hash": "11ff510039c2",
+   "seconds": 64.2
   },
   "ts-magazines": {
    "file": "ts-magazines.mp3",
-   "hash": "e3fc3c2e3cf8",
-   "seconds": 70.0
+   "hash": "5f06491d6f4d",
+   "seconds": 77.1
   },
   "ts-pokebox": {
    "file": "ts-pokebox.mp3",
-   "hash": "b9981cbced8d",
-   "seconds": 67.8
+   "hash": "c79a8f74158b",
+   "seconds": 74.2
   },
   "ts-skateboard": {
    "file": "ts-skateboard.mp3",
-   "hash": "a257d7ee702a",
-   "seconds": 66.0
+   "hash": "d14402d687f5",
+   "seconds": 77.1
   },
   "ts-teddy": {
    "file": "ts-teddy.mp3",
-   "hash": "656e37024229",
-   "seconds": 52.3
+   "hash": "e00513a812c8",
+   "seconds": 63.6
   },
   "ts-vhs": {
    "file": "ts-vhs.mp3",
-   "hash": "d2aa4ff01cac",
-   "seconds": 64.7
+   "hash": "7dab77dc9e36",
+   "seconds": 73.4
   },
   "vhs-loose": {
    "file": "vhs-loose.mp3",
-   "hash": "f5372a6b1c7a",
-   "seconds": 60.0
+   "hash": "2839a25d1eaf",
+   "seconds": 64.5
   },
   "vhs-stack": {
    "file": "vhs-stack.mp3",
-   "hash": "7ef362344f73",
-   "seconds": 80.4
+   "hash": "514ee1696b8d",
+   "seconds": 82.2
   },
   "window": {
    "file": "window.mp3",
-   "hash": "14cb87d38db0",
-   "seconds": 66.7
+   "hash": "283bd28ea999",
+   "seconds": 68.7
   },
   "window-south": {
    "file": "window-south.mp3",
-   "hash": "00d35a52cbf8",
-   "seconds": 48.7
+   "hash": "a165629ed84a",
+   "seconds": 53.7
   }
  },
  "message": {
   "armor": {
    "file": "armor.mp3",
-   "hash": "6b1e94c2d4d9",
-   "seconds": 59.0
+   "hash": "902f8c82926d",
+   "seconds": 67.2
   },
   "army": {
    "file": "army.mp3",
-   "hash": "0f20f61ccbec",
-   "seconds": 53.4
+   "hash": "6a248cb6ab54",
+   "seconds": 56.3
   },
   "backpack": {
    "file": "backpack.mp3",
-   "hash": "255c464f46ed",
-   "seconds": 60.9
+   "hash": "90ced72ffee9",
+   "seconds": 63.0
   },
   "beanbag": {
    "file": "beanbag.mp3",
-   "hash": "6e765a43bb42",
-   "seconds": 56.8
+   "hash": "8cf53fc6c5a8",
+   "seconds": 60.8
   },
   "bed": {
    "file": "bed.mp3",
-   "hash": "5e4d24fdeca0",
-   "seconds": 62.2
+   "hash": "0f5df8609758",
+   "seconds": 65.1
   },
   "bed-pillow": {
    "file": "bed-pillow.mp3",
-   "hash": "297a0aaa131b",
-   "seconds": 53.8
+   "hash": "1036b6d60397",
+   "seconds": 58.8
   },
   "books": {
    "file": "books.mp3",
-   "hash": "644ce642517d",
-   "seconds": 59.2
+   "hash": "03135c37730e",
+   "seconds": 61.5
   },
   "boombox": {
    "file": "boombox.mp3",
-   "hash": "d5ba25625eab",
-   "seconds": 62.0
+   "hash": "70f7a2867f59",
+   "seconds": 66.3
   },
   "car": {
    "file": "car.mp3",
-   "hash": "f987ebfa999c",
-   "seconds": 49.7
+   "hash": "c006ce915a92",
+   "seconds": 50.6
   },
   "cards": {
    "file": "cards.mp3",
-   "hash": "237777836bb3",
-   "seconds": 63.0
+   "hash": "7bc427be5475",
+   "seconds": 68.0
   },
   "cd-8ball": {
    "file": "cd-8ball.mp3",
-   "hash": "04970723ba45",
-   "seconds": 52.8
+   "hash": "14456e453440",
+   "seconds": 58.7
   },
   "cd-car": {
    "file": "cd-car.mp3",
-   "hash": "f2bdbd1c202d",
-   "seconds": 48.6
+   "hash": "20f881a65ec2",
+   "seconds": 53.8
   },
   "cd-chair": {
    "file": "cd-chair.mp3",
-   "hash": "3de2f4c47c08",
-   "seconds": 50.1
+   "hash": "0b20d529c06a",
+   "seconds": 50.3
   },
   "cd-clock": {
    "file": "cd-clock.mp3",
-   "hash": "c23b42c76bf2",
-   "seconds": 47.6
+   "hash": "d2f3677adbb8",
+   "seconds": 52.7
   },
   "cd-cup": {
    "file": "cd-cup.mp3",
-   "hash": "ca765c93008e",
-   "seconds": 53.7
+   "hash": "20af5e10286a",
+   "seconds": 59.4
   },
   "cd-frog": {
    "file": "cd-frog.mp3",
-   "hash": "c65a199edc87",
-   "seconds": 48.4
+   "hash": "2388a4052922",
+   "seconds": 55.9
   },
   "cd-lamp": {
    "file": "cd-lamp.mp3",
-   "hash": "792868848288",
-   "seconds": 50.5
+   "hash": "19af3e10883c",
+   "seconds": 56.9
   },
   "cd-lava": {
    "file": "cd-lava.mp3",
-   "hash": "02913754e7f4",
-   "seconds": 46.5
+   "hash": "1f6e17548887",
+   "seconds": 50.3
   },
   "cd-phone": {
    "file": "cd-phone.mp3",
-   "hash": "8753b6bfb9f4",
-   "seconds": 60.9
+   "hash": "027ec1a660fa",
+   "seconds": 70.5
   },
   "cd-photo": {
    "file": "cd-photo.mp3",
-   "hash": "28a483626ccf",
-   "seconds": 48.2
+   "hash": "d3d9e1ed1b3b",
+   "seconds": 53.7
   },
   "cd-pogs": {
    "file": "cd-pogs.mp3",
-   "hash": "9286fa5be8c4",
-   "seconds": 65.5
+   "hash": "54a0a019aec5",
+   "seconds": 70.8
   },
   "cd-sketch": {
    "file": "cd-sketch.mp3",
-   "hash": "b62ad3f3d293",
-   "seconds": 52.5
+   "hash": "f02fdabedabf",
+   "seconds": 57.0
   },
   "cd-snes": {
    "file": "cd-snes.mp3",
-   "hash": "5b2147c19774",
-   "seconds": 56.3
+   "hash": "ec0f7af1780f",
+   "seconds": 63.1
   },
   "cd-sonic": {
    "file": "cd-sonic.mp3",
-   "hash": "e939080191e0",
-   "seconds": 55.8
+   "hash": "91a9a903d278",
+   "seconds": 61.9
   },
   "cd-stickers": {
    "file": "cd-stickers.mp3",
-   "hash": "31a37c7ca936",
-   "seconds": 46.9
+   "hash": "0f10e325119b",
+   "seconds": 49.5
   },
   "cd-tapes": {
    "file": "cd-tapes.mp3",
-   "hash": "80eea216bea8",
-   "seconds": 54.0
+   "hash": "c8d1837a85b5",
+   "seconds": 62.2
   },
   "cd-tmnt": {
    "file": "cd-tmnt.mp3",
-   "hash": "f1ccd082ec6f",
-   "seconds": 52.3
+   "hash": "aae2e0b31c2c",
+   "seconds": 59.7
   },
   "cd-trophy": {
    "file": "cd-trophy.mp3",
-   "hash": "1bed1de1dee7",
-   "seconds": 49.1
+   "hash": "c6112debe385",
+   "seconds": 52.7
   },
   "cd-vhs": {
    "file": "cd-vhs.mp3",
-   "hash": "f2b9741c909a",
-   "seconds": 54.4
+   "hash": "2a825e09b9b0",
+   "seconds": 57.5
   },
   "cd-walkman": {
    "file": "cd-walkman.mp3",
-   "hash": "41a76070a91e",
-   "seconds": 59.7
+   "hash": "e1e4a5f25804",
+   "seconds": 63.3
   },
   "cd-yoyo": {
    "file": "cd-yoyo.mp3",
-   "hash": "e9da1bd26644",
-   "seconds": 52.6
+   "hash": "ba882a6986fd",
+   "seconds": 57.5
   },
   "clutterdesk": {
    "file": "clutterdesk.mp3",
-   "hash": "5e211b731991",
-   "seconds": 52.4
+   "hash": "f9aec78169ca",
+   "seconds": 57.0
   },
   "crt-cable": {
    "file": "crt-cable.mp3",
-   "hash": "adf9d7734e1c",
-   "seconds": 60.2
+   "hash": "f9c369791d2a",
+   "seconds": 69.5
   },
   "crt-tv": {
    "file": "crt-tv.mp3",
-   "hash": "ac54e91cb101",
-   "seconds": 68.1
+   "hash": "5adb203b5282",
+   "seconds": 74.7
   },
   "crt-vcr": {
    "file": "crt-vcr.mp3",
-   "hash": "92ff4f274925",
-   "seconds": 76.7
+   "hash": "2e949e46a375",
+   "seconds": 81.8
   },
   "desk": {
    "file": "desk.mp3",
-   "hash": "c089d076052a",
-   "seconds": 55.9
+   "hash": "178ddc044a78",
+   "seconds": 60.1
   },
   "door": {
    "file": "door.mp3",
-   "hash": "f6518772fe23",
-   "seconds": 53.2
+   "hash": "717174da092b",
+   "seconds": 58.2
   },
   "door-cap": {
    "file": "door-cap.mp3",
-   "hash": "5ea8dad20a6a",
-   "seconds": 57.0
+   "hash": "2edc61712445",
+   "seconds": 61.1
   },
   "door-pins": {
    "file": "door-pins.mp3",
-   "hash": "c84bb597eb38",
-   "seconds": 49.8
+   "hash": "d471899019f9",
+   "seconds": 56.3
   },
   "door-poster": {
    "file": "door-poster.mp3",
-   "hash": "8f455f064bce",
-   "seconds": 57.3
+   "hash": "aa617ec7467e",
+   "seconds": 65.8
   },
   "dr-nofear": {
    "file": "dr-nofear.mp3",
-   "hash": "bc683c1e330b",
-   "seconds": 49.1
+   "hash": "8f1703b4ca03",
+   "seconds": 51.6
   },
   "dr-stickers": {
    "file": "dr-stickers.mp3",
-   "hash": "d69be5dfe757",
-   "seconds": 54.9
+   "hash": "9e252c46064e",
+   "seconds": 61.9
   },
   "dresser": {
    "file": "dresser.mp3",
-   "hash": "38f6fb339a00",
-   "seconds": 49.3
+   "hash": "cdef9737988b",
+   "seconds": 50.7
   },
   "furby": {
    "file": "furby.mp3",
-   "hash": "eb3fc9eeb422",
-   "seconds": 92.8
+   "hash": "5d37b3cc08e2",
+   "seconds": 84.1
   },
   "game-battleship": {
    "file": "game-battleship.mp3",
@@ -904,525 +904,525 @@
   },
   "gameboy": {
    "file": "gameboy.mp3",
-   "hash": "54d0be0d88b8",
-   "seconds": 65.3
+   "hash": "dad4a373c6d6",
+   "seconds": 65.6
   },
   "gs-helmet": {
    "file": "gs-helmet.mp3",
-   "hash": "d37ab6a54182",
-   "seconds": 58.0
+   "hash": "0e044dcf573d",
+   "seconds": 65.6
   },
   "gs-lights": {
    "file": "gs-lights.mp3",
-   "hash": "397d89450810",
-   "seconds": 61.0
+   "hash": "d5a0b4e35772",
+   "seconds": 63.9
   },
   "gs-plant": {
    "file": "gs-plant.mp3",
-   "hash": "6f276db60dd4",
-   "seconds": 45.2
+   "hash": "3233cc8d4a2a",
+   "seconds": 51.8
   },
   "gs-smiley": {
    "file": "gs-smiley.mp3",
-   "hash": "f7d9686a7c96",
-   "seconds": 53.2
+   "hash": "85d8abd4c1bf",
+   "seconds": 57.8
   },
   "gushers": {
    "file": "gushers.mp3",
-   "hash": "ea5dc31237eb",
-   "seconds": 56.8
+   "hash": "d941aa0bb1a0",
+   "seconds": 59.7
   },
   "hotpockets": {
    "file": "hotpockets.mp3",
-   "hash": "cfc7016c5f4e",
-   "seconds": 70.7
+   "hash": "8bb3be9d3ba4",
+   "seconds": 74.4
   },
   "hotwheels": {
    "file": "hotwheels.mp3",
-   "hash": "5617af6e477f",
-   "seconds": 69.3
+   "hash": "90846cb02326",
+   "seconds": 66.3
   },
   "ispy-book": {
    "file": "ispy-book.mp3",
-   "hash": "a39e867b241f",
-   "seconds": 91.7
+   "hash": "138c1cb77360",
+   "seconds": 78.1
   },
   "jordans": {
    "file": "jordans.mp3",
-   "hash": "8c1d6283c84d",
-   "seconds": 54.8
+   "hash": "a2a4e2390a9f",
+   "seconds": 57.5
   },
   "nes": {
    "file": "nes.mp3",
-   "hash": "20ab3e29a308",
-   "seconds": 71.2
+   "hash": "84d23755fcc2",
+   "seconds": 69.9
   },
   "nightstand": {
    "file": "nightstand.mp3",
-   "hash": "7c2cb9990f84",
-   "seconds": 49.4
+   "hash": "13867732369b",
+   "seconds": 58.0
   },
   "ns-clock": {
    "file": "ns-clock.mp3",
-   "hash": "b77826d46afc",
-   "seconds": 60.7
+   "hash": "0d03403d7e93",
+   "seconds": 66.7
   },
   "ns-gameboy": {
    "file": "ns-gameboy.mp3",
-   "hash": "ccfdf4e76f8d",
-   "seconds": 56.3
+   "hash": "1013296890a2",
+   "seconds": 61.3
   },
   "ns-lava": {
    "file": "ns-lava.mp3",
-   "hash": "63fa15d9bce4",
-   "seconds": 58.9
+   "hash": "ebf407aab736",
+   "seconds": 60.2
   },
   "ns-mug": {
    "file": "ns-mug.mp3",
-   "hash": "67b3b7bffdc3",
-   "seconds": 49.2
+   "hash": "8b4f2199281b",
+   "seconds": 57.1
   },
   "ns-recorder": {
    "file": "ns-recorder.mp3",
-   "hash": "f8b56c65ba18",
-   "seconds": 54.4
+   "hash": "df9f3a9f816e",
+   "seconds": 61.7
   },
   "ns-tapes": {
    "file": "ns-tapes.mp3",
-   "hash": "bfb7e0e73b68",
-   "seconds": 62.4
+   "hash": "07b889cd4a83",
+   "seconds": 68.0
   },
   "ns-teddy": {
    "file": "ns-teddy.mp3",
-   "hash": "8206a5d93b24",
-   "seconds": 49.7
+   "hash": "f8f7138dd959",
+   "seconds": 54.2
   },
   "ns-vhs": {
    "file": "ns-vhs.mp3",
-   "hash": "218e42206262",
-   "seconds": 66.9
+   "hash": "fd6ff6687a41",
+   "seconds": 76.1
   },
   "ns-yoshi": {
    "file": "ns-yoshi.mp3",
-   "hash": "310ea6cd6781",
-   "seconds": 48.7
+   "hash": "305b9a3dd600",
+   "seconds": 56.8
   },
   "pc-cds": {
    "file": "pc-cds.mp3",
-   "hash": "e9cefe2a97ee",
-   "seconds": 58.4
+   "hash": "7b0b5aa7f6fb",
+   "seconds": 64.1
   },
   "pc-games": {
    "file": "pc-games.mp3",
-   "hash": "9ad0ec76d59f",
-   "seconds": 54.0
+   "hash": "6f6c83197e2b",
+   "seconds": 56.1
   },
   "pc-keyboard": {
    "file": "pc-keyboard.mp3",
-   "hash": "d715b3b4f917",
-   "seconds": 51.0
+   "hash": "5dbc37c0861b",
+   "seconds": 61.1
   },
   "pc-monitor": {
    "file": "pc-monitor.mp3",
-   "hash": "329ad02cddf3",
-   "seconds": 56.3
+   "hash": "08b40326d5ce",
+   "seconds": 57.3
   },
   "pc-mouse": {
    "file": "pc-mouse.mp3",
-   "hash": "147f270c5c57",
-   "seconds": 53.4
+   "hash": "ce9aa2511d75",
+   "seconds": 59.2
   },
   "pc-pencils": {
    "file": "pc-pencils.mp3",
-   "hash": "6274c36aa731",
-   "seconds": 50.1
+   "hash": "6d5a7c9f91d4",
+   "seconds": 54.3
   },
   "pc-printer": {
    "file": "pc-printer.mp3",
-   "hash": "e02c639cc017",
+   "hash": "84bf27a45635",
    "seconds": 55.3
   },
   "pc-stickers": {
    "file": "pc-stickers.mp3",
-   "hash": "7a8a3ba6cfca",
-   "seconds": 51.3
+   "hash": "83cb66070c4d",
+   "seconds": 54.2
   },
   "pc-tower": {
    "file": "pc-tower.mp3",
-   "hash": "257ed6836b95",
-   "seconds": 56.0
+   "hash": "0261056c2ce2",
+   "seconds": 57.9
   },
   "poochi": {
    "file": "poochi.mp3",
-   "hash": "7f7a69e8bbc8",
-   "seconds": 102.0
+   "hash": "4aac45e230da",
+   "seconds": 78.4
   },
   "poster-babe": {
    "file": "poster-babe.mp3",
-   "hash": "8e23cbe4ed5d",
-   "seconds": 54.2
+   "hash": "63dc110230a4",
+   "seconds": 57.0
   },
   "poster-giant": {
    "file": "poster-giant.mp3",
-   "hash": "e436e0e6af32",
-   "seconds": 51.9
+   "hash": "735e296e364c",
+   "seconds": 59.4
   },
   "poster-mummy": {
    "file": "poster-mummy.mp3",
-   "hash": "6f6245b2e701",
-   "seconds": 52.2
+   "hash": "49326dfbe515",
+   "seconds": 57.4
   },
   "poster-pokemon": {
    "file": "poster-pokemon.mp3",
-   "hash": "1e1c9801440c",
-   "seconds": 55.6
+   "hash": "a44e6d86b7d5",
+   "seconds": 59.9
   },
   "rubik": {
    "file": "rubik.mp3",
-   "hash": "bbe125158592",
-   "seconds": 62.3
+   "hash": "e2d57ec42d23",
+   "seconds": 68.8
   },
   "sh-books": {
    "file": "sh-books.mp3",
-   "hash": "f3a1e80956c5",
-   "seconds": 60.1
+   "hash": "1584d464b2b1",
+   "seconds": 65.8
   },
   "sh-car": {
    "file": "sh-car.mp3",
-   "hash": "67ecd07f8ed6",
-   "seconds": 51.3
+   "hash": "8fc4c5227036",
+   "seconds": 58.1
   },
   "sh-gameboy": {
    "file": "sh-gameboy.mp3",
-   "hash": "bb037d36de6b",
-   "seconds": 53.1
+   "hash": "8aeddb60ca74",
+   "seconds": 58.7
   },
   "sh-lava": {
    "file": "sh-lava.mp3",
-   "hash": "00afbcbc1d24",
-   "seconds": 55.3
+   "hash": "b4904d03f411",
+   "seconds": 56.6
   },
   "sh-teddy": {
    "file": "sh-teddy.mp3",
-   "hash": "8b257c296394",
-   "seconds": 51.4
+   "hash": "0a02a74b48e6",
+   "seconds": 53.4
   },
   "sh-turtle": {
    "file": "sh-turtle.mp3",
-   "hash": "0494a4b07f82",
-   "seconds": 58.1
+   "hash": "038215756d4b",
+   "seconds": 61.1
   },
   "sh-vhs": {
    "file": "sh-vhs.mp3",
-   "hash": "bdff04dcabd6",
-   "seconds": 68.0
+   "hash": "8ee1f4573eb4",
+   "seconds": 70.5
   },
   "sh-viewmaster": {
    "file": "sh-viewmaster.mp3",
-   "hash": "c3e788201349",
-   "seconds": 53.7
+   "hash": "31d32476f5f2",
+   "seconds": 57.0
   },
   "shelf": {
    "file": "shelf.mp3",
-   "hash": "1d973641313e",
-   "seconds": 61.7
+   "hash": "d58db92602dd",
+   "seconds": 64.6
   },
   "south-shelf": {
    "file": "south-shelf.mp3",
-   "hash": "47489f0520cc",
-   "seconds": 46.9
+   "hash": "c36647cd92b9",
+   "seconds": 49.6
   },
   "tamagotchi": {
    "file": "tamagotchi.mp3",
-   "hash": "ffa4f7ca4ac0",
-   "seconds": 73.6
+   "hash": "cac0a3fb801a",
+   "seconds": 73.3
   },
   "toyshelf": {
    "file": "toyshelf.mp3",
-   "hash": "3e650b67afe5",
-   "seconds": 44.3
+   "hash": "487a07594f57",
+   "seconds": 44.7
   },
   "ts-clock": {
    "file": "ts-clock.mp3",
-   "hash": "e501a0697ca0",
-   "seconds": 44.7
+   "hash": "95662178e964",
+   "seconds": 50.0
   },
   "ts-handheld": {
    "file": "ts-handheld.mp3",
-   "hash": "607da1dbde52",
-   "seconds": 49.9
+   "hash": "ec20b476dc5b",
+   "seconds": 58.7
   },
   "ts-lava": {
    "file": "ts-lava.mp3",
-   "hash": "1983a5328a71",
-   "seconds": 52.1
+   "hash": "151c4481fa3a",
+   "seconds": 53.9
   },
   "ts-magazines": {
    "file": "ts-magazines.mp3",
-   "hash": "e1abbd9496c2",
-   "seconds": 64.6
+   "hash": "c8600b452373",
+   "seconds": 67.3
   },
   "ts-pokebox": {
    "file": "ts-pokebox.mp3",
-   "hash": "ad907f12c530",
-   "seconds": 58.5
+   "hash": "1526d268209c",
+   "seconds": 63.5
   },
   "ts-skateboard": {
    "file": "ts-skateboard.mp3",
-   "hash": "3263e26244ac",
-   "seconds": 55.6
+   "hash": "4f8ca3597b3c",
+   "seconds": 65.8
   },
   "ts-teddy": {
    "file": "ts-teddy.mp3",
-   "hash": "fd97ba9cca59",
-   "seconds": 45.2
+   "hash": "d0621a15361e",
+   "seconds": 53.6
   },
   "ts-vhs": {
    "file": "ts-vhs.mp3",
-   "hash": "c61fa8f4439a",
-   "seconds": 55.2
+   "hash": "c1d9f201a218",
+   "seconds": 64.0
   },
   "vhs-loose": {
    "file": "vhs-loose.mp3",
-   "hash": "9a76fa105567",
-   "seconds": 50.6
+   "hash": "d1932178bb03",
+   "seconds": 54.6
   },
   "vhs-stack": {
    "file": "vhs-stack.mp3",
-   "hash": "7d22d54484f2",
-   "seconds": 69.1
+   "hash": "9998d880ad29",
+   "seconds": 70.0
   },
   "window": {
    "file": "window.mp3",
-   "hash": "fd8f95f3edf5",
-   "seconds": 55.7
+   "hash": "0f3d1b01c0f5",
+   "seconds": 57.5
   },
   "window-south": {
    "file": "window-south.mp3",
-   "hash": "9bdabbab9f1b",
-   "seconds": 40.7
+   "hash": "c32d389a61e5",
+   "seconds": 45.0
   }
  },
  "transmission": {
   "armor": {
    "file": "armor.mp3",
-   "hash": "c0b9f66df45f",
-   "seconds": 73.6
+   "hash": "f7bee1ea2696",
+   "seconds": 84.5
   },
   "army": {
    "file": "army.mp3",
-   "hash": "7f24d6e4cf65",
-   "seconds": 63.8
+   "hash": "dd599db52d91",
+   "seconds": 70.1
   },
   "backpack": {
    "file": "backpack.mp3",
-   "hash": "59f0270dbd4b",
-   "seconds": 74.8
+   "hash": "37400ea51a5e",
+   "seconds": 75.8
   },
   "beanbag": {
    "file": "beanbag.mp3",
-   "hash": "369c3fb07ff4",
-   "seconds": 72.6
+   "hash": "145b1c2f9911",
+   "seconds": 76.9
   },
   "bed": {
    "file": "bed.mp3",
-   "hash": "a7d3b5f0ca83",
-   "seconds": 76.7
+   "hash": "94319ab95009",
+   "seconds": 82.5
   },
   "bed-pillow": {
    "file": "bed-pillow.mp3",
-   "hash": "a2fc877a9397",
-   "seconds": 68.0
+   "hash": "29618d019d8c",
+   "seconds": 74.8
   },
   "books": {
    "file": "books.mp3",
-   "hash": "94cecaf79621",
-   "seconds": 74.0
+   "hash": "351d0bcbb600",
+   "seconds": 79.1
   },
   "boombox": {
    "file": "boombox.mp3",
-   "hash": "200a613b0cd8",
-   "seconds": 79.5
+   "hash": "92a640e43703",
+   "seconds": 84.1
   },
   "car": {
    "file": "car.mp3",
-   "hash": "9672388f7e24",
-   "seconds": 62.8
+   "hash": "1823a21beffa",
+   "seconds": 63.6
   },
   "cards": {
    "file": "cards.mp3",
-   "hash": "1214f0ade5b5",
-   "seconds": 79.7
+   "hash": "c80b64079f38",
+   "seconds": 85.7
   },
   "cd-8ball": {
    "file": "cd-8ball.mp3",
-   "hash": "2e02ae258a7b",
-   "seconds": 68.2
+   "hash": "56c253cdd05a",
+   "seconds": 75.7
   },
   "cd-car": {
    "file": "cd-car.mp3",
-   "hash": "09dea0e20d3a",
-   "seconds": 62.2
+   "hash": "7485691f66d5",
+   "seconds": 67.6
   },
   "cd-chair": {
    "file": "cd-chair.mp3",
-   "hash": "0852c66b0374",
-   "seconds": 62.1
+   "hash": "cc50f9442c5f",
+   "seconds": 62.9
   },
   "cd-clock": {
    "file": "cd-clock.mp3",
-   "hash": "80cd636484d8",
-   "seconds": 59.6
+   "hash": "e179d9deb64a",
+   "seconds": 65.5
   },
   "cd-cup": {
    "file": "cd-cup.mp3",
-   "hash": "2a9bf186b7a9",
-   "seconds": 66.0
+   "hash": "67f99df64488",
+   "seconds": 75.3
   },
   "cd-frog": {
    "file": "cd-frog.mp3",
-   "hash": "f946f17a382a",
-   "seconds": 62.4
+   "hash": "9c814b3280be",
+   "seconds": 71.3
   },
   "cd-lamp": {
    "file": "cd-lamp.mp3",
-   "hash": "d95e4568cb1c",
-   "seconds": 64.0
+   "hash": "30dc239d1758",
+   "seconds": 72.5
   },
   "cd-lava": {
    "file": "cd-lava.mp3",
-   "hash": "1a55033fa83b",
-   "seconds": 57.7
+   "hash": "e06767f19c14",
+   "seconds": 62.8
   },
   "cd-phone": {
    "file": "cd-phone.mp3",
-   "hash": "a904960e908c",
-   "seconds": 77.0
+   "hash": "0102da39e647",
+   "seconds": 90.8
   },
   "cd-photo": {
    "file": "cd-photo.mp3",
-   "hash": "a038ea22ed7e",
-   "seconds": 60.2
+   "hash": "f18cc0394340",
+   "seconds": 66.5
   },
   "cd-pogs": {
    "file": "cd-pogs.mp3",
-   "hash": "711963de1755",
-   "seconds": 83.3
+   "hash": "f7dcb749a8c0",
+   "seconds": 88.2
   },
   "cd-sketch": {
    "file": "cd-sketch.mp3",
-   "hash": "b7a9af285e66",
-   "seconds": 64.9
+   "hash": "4e35eed5f6da",
+   "seconds": 69.9
   },
   "cd-snes": {
    "file": "cd-snes.mp3",
-   "hash": "571124d8f8b8",
-   "seconds": 71.0
+   "hash": "f418da381e11",
+   "seconds": 77.3
   },
   "cd-sonic": {
    "file": "cd-sonic.mp3",
-   "hash": "8761e322ed03",
-   "seconds": 68.1
+   "hash": "fbfa9d61f862",
+   "seconds": 75.0
   },
   "cd-stickers": {
    "file": "cd-stickers.mp3",
-   "hash": "aa157eeb6371",
-   "seconds": 60.4
+   "hash": "75f62b4245e4",
+   "seconds": 62.2
   },
   "cd-tapes": {
    "file": "cd-tapes.mp3",
-   "hash": "cf52ddddb7c2",
-   "seconds": 66.0
+   "hash": "877fee2331f7",
+   "seconds": 77.0
   },
   "cd-tmnt": {
    "file": "cd-tmnt.mp3",
-   "hash": "9bd48a83fa52",
-   "seconds": 64.1
+   "hash": "0eaed91d9b39",
+   "seconds": 74.8
   },
   "cd-trophy": {
    "file": "cd-trophy.mp3",
-   "hash": "0ee9505b39b6",
-   "seconds": 60.9
+   "hash": "a322e113979e",
+   "seconds": 64.8
   },
   "cd-vhs": {
    "file": "cd-vhs.mp3",
-   "hash": "1477557c1917",
-   "seconds": 68.4
+   "hash": "7feea43d5f6b",
+   "seconds": 72.0
   },
   "cd-walkman": {
    "file": "cd-walkman.mp3",
-   "hash": "dbc723c7c889",
-   "seconds": 74.6
+   "hash": "8543f43600db",
+   "seconds": 78.7
   },
   "cd-yoyo": {
    "file": "cd-yoyo.mp3",
-   "hash": "a7b615b8f1f8",
-   "seconds": 68.3
+   "hash": "4cd3935a1506",
+   "seconds": 73.6
   },
   "clutterdesk": {
    "file": "clutterdesk.mp3",
-   "hash": "0c3ed093a94a",
-   "seconds": 63.6
+   "hash": "51a132407d32",
+   "seconds": 70.4
   },
   "crt-cable": {
    "file": "crt-cable.mp3",
-   "hash": "dbf4fd8cd06d",
-   "seconds": 75.6
+   "hash": "d857beb0d779",
+   "seconds": 88.6
   },
   "crt-tv": {
    "file": "crt-tv.mp3",
-   "hash": "a4be54b63769",
-   "seconds": 84.4
+   "hash": "91345bda6df0",
+   "seconds": 94.4
   },
   "crt-vcr": {
    "file": "crt-vcr.mp3",
-   "hash": "20af2638d39f",
-   "seconds": 98.9
+   "hash": "509b2d7cbd23",
+   "seconds": 104.3
   },
   "desk": {
    "file": "desk.mp3",
-   "hash": "b5a57eb4ad32",
-   "seconds": 71.8
+   "hash": "28e4e117b219",
+   "seconds": 76.4
   },
   "door": {
    "file": "door.mp3",
-   "hash": "4bfba84b40df",
-   "seconds": 64.7
+   "hash": "ba55feac9c3c",
+   "seconds": 69.7
   },
   "door-cap": {
    "file": "door-cap.mp3",
-   "hash": "c89e839cbd27",
-   "seconds": 72.5
+   "hash": "f5c25f0bd3d8",
+   "seconds": 77.7
   },
   "door-pins": {
    "file": "door-pins.mp3",
-   "hash": "6127992249fc",
-   "seconds": 61.3
+   "hash": "b2dea80d7999",
+   "seconds": 68.9
   },
   "door-poster": {
    "file": "door-poster.mp3",
-   "hash": "68ecfa61868b",
-   "seconds": 75.3
+   "hash": "8bf154db7aef",
+   "seconds": 86.0
   },
   "dr-nofear": {
    "file": "dr-nofear.mp3",
-   "hash": "d387575a8225",
-   "seconds": 61.9
+   "hash": "1dd639a496a9",
+   "seconds": 65.2
   },
   "dr-stickers": {
    "file": "dr-stickers.mp3",
-   "hash": "5b57487ab715",
-   "seconds": 70.4
+   "hash": "d2bf1e71cccc",
+   "seconds": 76.4
   },
   "dresser": {
    "file": "dresser.mp3",
-   "hash": "2570cc4be20c",
-   "seconds": 60.3
+   "hash": "71bba6470182",
+   "seconds": 61.6
   },
   "furby": {
    "file": "furby.mp3",
-   "hash": "3cb17afba050",
-   "seconds": 120.6
+   "hash": "bfbcab0fe2e0",
+   "seconds": 106.0
   },
   "game-battleship": {
    "file": "game-battleship.mp3",
@@ -1506,303 +1506,303 @@
   },
   "gameboy": {
    "file": "gameboy.mp3",
-   "hash": "7f2ff5ee7dc1",
-   "seconds": 83.4
+   "hash": "e4c37bc97d80",
+   "seconds": 84.5
   },
   "gs-helmet": {
    "file": "gs-helmet.mp3",
-   "hash": "aff35af1090c",
-   "seconds": 72.8
+   "hash": "a7a152632ecc",
+   "seconds": 81.5
   },
   "gs-lights": {
    "file": "gs-lights.mp3",
-   "hash": "3b33b51b75e5",
-   "seconds": 76.7
+   "hash": "fbd3825ddaef",
+   "seconds": 79.8
   },
   "gs-plant": {
    "file": "gs-plant.mp3",
-   "hash": "d7af6b9e0d20",
-   "seconds": 56.4
+   "hash": "e69f7247c8e2",
+   "seconds": 64.5
   },
   "gs-smiley": {
    "file": "gs-smiley.mp3",
-   "hash": "1414a69507da",
-   "seconds": 69.2
+   "hash": "1b179bb9d23a",
+   "seconds": 75.0
   },
   "gushers": {
    "file": "gushers.mp3",
-   "hash": "6c3fdfe6f587",
-   "seconds": 72.0
+   "hash": "bdd0cebc6dd6",
+   "seconds": 76.2
   },
   "hotpockets": {
    "file": "hotpockets.mp3",
-   "hash": "de74a349a6d5",
-   "seconds": 92.4
+   "hash": "039359e38cff",
+   "seconds": 98.1
   },
   "hotwheels": {
    "file": "hotwheels.mp3",
-   "hash": "0f18d543f4d1",
-   "seconds": 86.6
+   "hash": "8d28882c5a54",
+   "seconds": 82.6
   },
   "ispy-book": {
    "file": "ispy-book.mp3",
-   "hash": "5f12283a58c9",
-   "seconds": 115.3
+   "hash": "1a455ed86782",
+   "seconds": 99.2
   },
   "jordans": {
    "file": "jordans.mp3",
-   "hash": "ebe2d8aec5c9",
-   "seconds": 68.4
+   "hash": "948187c42ccf",
+   "seconds": 73.5
   },
   "nes": {
    "file": "nes.mp3",
-   "hash": "12985a13603b",
-   "seconds": 89.4
+   "hash": "dacb086631c9",
+   "seconds": 88.3
   },
   "nightstand": {
    "file": "nightstand.mp3",
-   "hash": "05066d6da20e",
-   "seconds": 58.9
+   "hash": "f2bcdb84aae5",
+   "seconds": 69.9
   },
   "ns-clock": {
    "file": "ns-clock.mp3",
-   "hash": "4153254e9048",
-   "seconds": 77.5
+   "hash": "dc9cf8fa67f1",
+   "seconds": 82.3
   },
   "ns-gameboy": {
    "file": "ns-gameboy.mp3",
-   "hash": "9bf69db86c6e",
-   "seconds": 72.9
+   "hash": "5c34141dcdd6",
+   "seconds": 79.6
   },
   "ns-lava": {
    "file": "ns-lava.mp3",
-   "hash": "7db5aca6228d",
-   "seconds": 76.9
+   "hash": "1a43a4b486e7",
+   "seconds": 79.8
   },
   "ns-mug": {
    "file": "ns-mug.mp3",
-   "hash": "a6e15102fdb0",
-   "seconds": 58.8
+   "hash": "fa57e64ea3bb",
+   "seconds": 69.6
   },
   "ns-recorder": {
    "file": "ns-recorder.mp3",
-   "hash": "0e5f204c8aa5",
-   "seconds": 68.2
+   "hash": "71c9b39b06cb",
+   "seconds": 77.3
   },
   "ns-tapes": {
    "file": "ns-tapes.mp3",
-   "hash": "efa896f5bfaa",
-   "seconds": 78.0
+   "hash": "0f99ecbead5e",
+   "seconds": 82.7
   },
   "ns-teddy": {
    "file": "ns-teddy.mp3",
-   "hash": "596026dc954e",
-   "seconds": 62.1
+   "hash": "3c5c3d4a5e23",
+   "seconds": 68.1
   },
   "ns-vhs": {
    "file": "ns-vhs.mp3",
-   "hash": "87dae484542a",
-   "seconds": 86.4
+   "hash": "209b6cdbd037",
+   "seconds": 96.9
   },
   "ns-yoshi": {
    "file": "ns-yoshi.mp3",
-   "hash": "63910afdd516",
-   "seconds": 59.1
+   "hash": "e7004eca1fe7",
+   "seconds": 69.4
   },
   "pc-cds": {
    "file": "pc-cds.mp3",
-   "hash": "7367a66a1360",
-   "seconds": 73.2
+   "hash": "5acdcd86e4be",
+   "seconds": 82.3
   },
   "pc-games": {
    "file": "pc-games.mp3",
-   "hash": "64397dc575d3",
-   "seconds": 68.3
+   "hash": "4f1f8d423c4d",
+   "seconds": 71.1
   },
   "pc-keyboard": {
    "file": "pc-keyboard.mp3",
-   "hash": "fbeced3bd93a",
-   "seconds": 63.8
+   "hash": "3d914bbafc18",
+   "seconds": 75.9
   },
   "pc-monitor": {
    "file": "pc-monitor.mp3",
-   "hash": "145ba37a58e7",
-   "seconds": 71.0
+   "hash": "fdf189e059ea",
+   "seconds": 71.3
   },
   "pc-mouse": {
    "file": "pc-mouse.mp3",
-   "hash": "ce354372cdee",
-   "seconds": 68.4
+   "hash": "cae2fb0a1dd0",
+   "seconds": 76.8
   },
   "pc-pencils": {
    "file": "pc-pencils.mp3",
-   "hash": "4d2b3b2f12dd",
-   "seconds": 61.4
+   "hash": "86bf6bd598b3",
+   "seconds": 66.3
   },
   "pc-printer": {
    "file": "pc-printer.mp3",
-   "hash": "20e00e03c456",
-   "seconds": 69.5
+   "hash": "b92dc9dfaba3",
+   "seconds": 71.3
   },
   "pc-stickers": {
    "file": "pc-stickers.mp3",
-   "hash": "00fa0787bf95",
-   "seconds": 63.6
+   "hash": "6ea615afc39b",
+   "seconds": 67.9
   },
   "pc-tower": {
    "file": "pc-tower.mp3",
-   "hash": "b8a0238371b4",
-   "seconds": 71.1
+   "hash": "697ec168bb3b",
+   "seconds": 74.9
   },
   "poochi": {
    "file": "poochi.mp3",
-   "hash": "62b90c879884",
-   "seconds": 125.7
+   "hash": "f3cedf9eacc9",
+   "seconds": 97.5
   },
   "poster-babe": {
    "file": "poster-babe.mp3",
-   "hash": "e4ece99fe7dd",
-   "seconds": 66.0
+   "hash": "f089e562d4b4",
+   "seconds": 69.9
   },
   "poster-giant": {
    "file": "poster-giant.mp3",
-   "hash": "58b9f5dbfd3e",
-   "seconds": 67.2
+   "hash": "85838f0c5410",
+   "seconds": 75.6
   },
   "poster-mummy": {
    "file": "poster-mummy.mp3",
-   "hash": "d3e643a6ee77",
-   "seconds": 65.4
+   "hash": "2b2fe2af9b4d",
+   "seconds": 72.6
   },
   "poster-pokemon": {
    "file": "poster-pokemon.mp3",
-   "hash": "a90421939b3d",
-   "seconds": 68.9
+   "hash": "5dcd83edfa51",
+   "seconds": 74.8
   },
   "rubik": {
    "file": "rubik.mp3",
-   "hash": "e3ab4259ce83",
-   "seconds": 81.1
+   "hash": "635d35333d94",
+   "seconds": 90.3
   },
   "sh-books": {
    "file": "sh-books.mp3",
-   "hash": "e74a16a9544f",
-   "seconds": 76.8
+   "hash": "5bc45ebc8d5a",
+   "seconds": 86.1
   },
   "sh-car": {
    "file": "sh-car.mp3",
-   "hash": "627f8a30a3e8",
-   "seconds": 63.6
+   "hash": "deffba7a72ce",
+   "seconds": 73.1
   },
   "sh-gameboy": {
    "file": "sh-gameboy.mp3",
-   "hash": "afb5e43ee726",
-   "seconds": 69.3
+   "hash": "1d96f60c8255",
+   "seconds": 75.0
   },
   "sh-lava": {
    "file": "sh-lava.mp3",
-   "hash": "f30d81d98c9f",
-   "seconds": 72.9
+   "hash": "ccd31a14daa2",
+   "seconds": 72.6
   },
   "sh-teddy": {
    "file": "sh-teddy.mp3",
-   "hash": "54b1fce3364f",
-   "seconds": 65.2
+   "hash": "479c6f289186",
+   "seconds": 67.2
   },
   "sh-turtle": {
    "file": "sh-turtle.mp3",
-   "hash": "1039a3c40bee",
-   "seconds": 74.9
+   "hash": "92a412175744",
+   "seconds": 78.7
   },
   "sh-vhs": {
    "file": "sh-vhs.mp3",
-   "hash": "62e39acc1ada",
-   "seconds": 85.5
+   "hash": "939683117dff",
+   "seconds": 90.4
   },
   "sh-viewmaster": {
    "file": "sh-viewmaster.mp3",
-   "hash": "2af7d64b1225",
-   "seconds": 68.8
+   "hash": "e81be2bf93b3",
+   "seconds": 71.7
   },
   "shelf": {
    "file": "shelf.mp3",
-   "hash": "f8a6b3971efe",
-   "seconds": 78.0
+   "hash": "66c5810683a5",
+   "seconds": 81.4
   },
   "south-shelf": {
    "file": "south-shelf.mp3",
-   "hash": "b3357d4ca2aa",
-   "seconds": 57.8
+   "hash": "c12801af3f53",
+   "seconds": 61.3
   },
   "tamagotchi": {
    "file": "tamagotchi.mp3",
-   "hash": "81aef5556434",
-   "seconds": 93.0
+   "hash": "c6c2337f22e0",
+   "seconds": 91.6
   },
   "toyshelf": {
    "file": "toyshelf.mp3",
-   "hash": "6565171b367c",
-   "seconds": 57.0
+   "hash": "33d09c1168af",
+   "seconds": 56.9
   },
   "ts-clock": {
    "file": "ts-clock.mp3",
-   "hash": "396d05ea989f",
-   "seconds": 58.1
+   "hash": "1560ba51b250",
+   "seconds": 64.6
   },
   "ts-handheld": {
    "file": "ts-handheld.mp3",
-   "hash": "1a5d380e56e4",
-   "seconds": 63.9
+   "hash": "871e133a2d8d",
+   "seconds": 73.7
   },
   "ts-lava": {
    "file": "ts-lava.mp3",
-   "hash": "ef76416caf93",
-   "seconds": 65.6
+   "hash": "2c0324d11a34",
+   "seconds": 68.6
   },
   "ts-magazines": {
    "file": "ts-magazines.mp3",
-   "hash": "331872dc4fa2",
-   "seconds": 75.1
+   "hash": "557e9d3e848f",
+   "seconds": 84.1
   },
   "ts-pokebox": {
    "file": "ts-pokebox.mp3",
-   "hash": "3299be9078de",
-   "seconds": 73.6
+   "hash": "598d9b1a1a93",
+   "seconds": 80.9
   },
   "ts-skateboard": {
    "file": "ts-skateboard.mp3",
-   "hash": "723892756cfd",
-   "seconds": 71.5
+   "hash": "a7d4044a4247",
+   "seconds": 83.2
   },
   "ts-teddy": {
    "file": "ts-teddy.mp3",
-   "hash": "11fa4b1a8d7d",
-   "seconds": 56.3
+   "hash": "9367fd2ec4bb",
+   "seconds": 68.4
   },
   "ts-vhs": {
    "file": "ts-vhs.mp3",
-   "hash": "40c15cebb560",
-   "seconds": 69.5
+   "hash": "4cd104af7da8",
+   "seconds": 79.9
   },
   "vhs-loose": {
    "file": "vhs-loose.mp3",
-   "hash": "b5028d24c5c6",
-   "seconds": 62.2
+   "hash": "ae71545c1d50",
+   "seconds": 67.6
   },
   "vhs-stack": {
    "file": "vhs-stack.mp3",
-   "hash": "95ec52e7c8b3",
-   "seconds": 88.9
+   "hash": "1f36958d7fbb",
+   "seconds": 89.8
   },
   "window": {
    "file": "window.mp3",
-   "hash": "28b07ea0a220",
-   "seconds": 71.2
+   "hash": "c3a7c7bedfb8",
+   "seconds": 72.7
   },
   "window-south": {
    "file": "window-south.mp3",
-   "hash": "d76ab2f7a20b",
-   "seconds": 52.8
+   "hash": "827030dea082",
+   "seconds": 56.6
   }
  }
 }
