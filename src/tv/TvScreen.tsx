@@ -7,7 +7,7 @@ import { forgetVault, isVaultUrl, resolveVault } from './vault';
 import { channelClick, paintSnow, startStatic, type StaticHandle } from './noise';
 import { snickShowAt } from './snick';
 import { mayTurnOn } from '../room/houseRules';
-import { blockOnAir, showTitleAt } from './lineups/archiveBlocks';
+import { blockOnAir, showTitleAt, type ArchiveBlock } from './lineups/archiveBlocks';
 import { CARTRIDGES, cartridgeSrc, type Cartridge } from '../devices/cartridges';
 import { TV247_ON } from './tv247';
 import { YouTubeTv } from './YouTubeTv';
@@ -61,6 +61,17 @@ const hostOf = (url: string) => {
 
 /** What the set's own speaker and <video>.volume can do; the rest is the room speaker's boost. */
 const plainVolume = (v: number) => Math.min(1, v);
+
+/**
+ * What a block has on now. A part with under a second left hands straight to
+ * the next one, so a retune as a break ends goes back to the show instead of
+ * replaying the tail of the last spot.
+ */
+function partOnAir(block: ArchiveBlock, at: number) {
+  const air = blockOnAir(block, at);
+  const left = air.part.seconds - air.offset;
+  return left < 1 ? blockOnAir(block, at + left + 0.01) : air;
+}
 
 function clockLabel(at: Date) {
   return at.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -182,7 +193,7 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
     const ch = CHANNELS.find(c => c.number === channel);
     if (!ch || ch.kind !== 'block') return null;
     const at = nowSeconds();
-    const air = blockOnAir(ch.block, at);
+    const air = partOnAir(ch.block, at);
     if (!air.part.spots) return null;
     return { key: `break-${ch.number}-${retune}`, source: breakSource(air.part.spots, at - air.offset) };
   }, [channel, retune, watching]);
@@ -306,7 +317,7 @@ export function TvScreen({ width, height, command, initialMode, onStatus, inRoom
           })()
         : ch.kind === 'block'
         ? (() => {
-            const air = blockOnAir(ch.block, nowSeconds());
+            const air = partOnAir(ch.block, nowSeconds());
             const fromVault = ch.block.vaultShow && air.part.vault ? resolveVault(ch.block.vaultShow, air.part.vault) : Promise.resolve(null);
             // On a channel with commercial breaks, the show cuts away when its slot is up.
             const cutAt = ch.block.parts.some(p => p.spots) ? (air.part.from ?? 0) + air.part.seconds : undefined;
