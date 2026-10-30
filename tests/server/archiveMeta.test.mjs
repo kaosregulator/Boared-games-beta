@@ -86,6 +86,20 @@ test('a long Retry-After answers 503 at once instead of holding the visitor', as
   assert.ok(meta.status().pausedForMs > 100_000);
 });
 
+test('during a long pause, other lookups answer 503 at once instead of queueing', async () => {
+  const { calls, fetchImpl } = fakeArchive([json({}, 429, { 'retry-after': '120' }), json(ITEM)]);
+  const meta = createArchiveMeta({ ...quick, fetchImpl });
+  await assert.rejects(meta.lookup('first'));
+  const sent = [];
+  const started = Date.now();
+  await meta.handle('second', (status, body, headers) => sent.push({ status, headers }));
+  assert.ok(Date.now() - started < 100);
+  assert.equal(sent[0].status, 503);
+  assert.ok(Number(sent[0].headers['Retry-After']) >= 119);
+  assert.equal(calls.length, 1);
+  assert.equal(meta.status().queued, 0);
+});
+
 test('errors retry with growing waits, then give up', async () => {
   const { calls, fetchImpl } = fakeArchive([json({}, 502)]);
   const meta = createArchiveMeta({ ...quick, fetchImpl, maxAttempts: 4 });

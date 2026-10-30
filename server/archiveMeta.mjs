@@ -85,6 +85,13 @@ export function createArchiveMeta({
   }
 
   function pump() {
+    // A long pause: tell everyone waiting to come back later instead of
+    // holding them past the browser's timeout.
+    const paused = pausedUntil - Date.now();
+    if (paused > maxWaitMs) {
+      for (const job of waiting.splice(0)) job.reject(new ArchiveUnavailable('archive.org asked us to wait', paused));
+      return;
+    }
     if (timer) return;
     while (active < concurrency && waiting.length) {
       const wait = Math.max(pausedUntil, lastStart + spacingMs) - Date.now();
