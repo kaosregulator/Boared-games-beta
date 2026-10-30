@@ -7,3 +7,5 @@ coverage/
 .env*
 !.env.example
 .voice-models/
+data/
+__pycache__/
