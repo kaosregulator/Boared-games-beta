@@ -57,10 +57,13 @@ test('models wait for the title song, go six at a time, by content hash, and ret
   assert.equal(calls.filter(c => c.includes('.glb')).length, 6, 'six at a time');
   assert.ok(calls.includes('/models/b.glb'), 'no hash in the manifest: plain URL');
 
+  // Reading the body is what frees a slot (the loader does this). The seventh
+  // file starts once one of the first six has been read.
+  const bodies = Promise.all(got.map(async p => (await p).arrayBuffer()));
   await drain();
+  const res = await bodies;
   assert.ok(calls.includes('/models/a.glb?v=aaa111'), 'asked for by hash');
-  const res = await Promise.all(got);
-  for (const r of res) assert.equal((await r.arrayBuffer()).byteLength, 4);
+  for (const r of res) assert.equal(r.byteLength, 4);
   assert.equal(peak, 6);
   await drain();
   const p = netProgress();

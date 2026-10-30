@@ -92,6 +92,15 @@ const byKeep: (a: THREE.Object3D, b: THREE.Object3D) => number = (a, b) =>
   (b.userData.expendable as number) - (a.userData.expendable as number);
 const scratch: THREE.Object3D[] = [];
 
+/** Whether a model carries a point light of its own. Ones that don't can be marked `noPointLights`. */
+export function hasPointLight(root: THREE.Object3D) {
+  let found = false;
+  root.traverse(obj => {
+    if ((obj as THREE.PointLight).isPointLight) found = true;
+  });
+  return found;
+}
+
 /**
  * Holds the scene at exactly LightBudget's number of point lights. Lights
  * marked `userData.expendable` (a number: lower goes first) are the little
@@ -107,11 +116,20 @@ export function balanceLights(scene: THREE.Scene) {
   if (!b) return;
   let real = 0;
   scratch.length = 0;
-  scene.traverseVisible(obj => {
-    if (!(obj as THREE.PointLight).isPointLight || obj.parent === b.group) return;
-    if (typeof obj.userData.expendable === 'number') scratch.push(obj);
-    else real += 1;
-  });
+  // Furniture clones are marked noPointLights: walking into every mesh of every
+  // model, every frame, was a steady cost on the same thread as the picture.
+  // Lights live beside those models, not inside them.
+  const walk = (obj: THREE.Object3D) => {
+    if (!obj.visible || obj.userData.noPointLights) return;
+    const light = obj as THREE.PointLight;
+    if (light.isPointLight && obj.parent !== b.group) {
+      if (typeof obj.userData.expendable === 'number') scratch.push(obj);
+      else real += 1;
+    }
+    const kids = obj.children;
+    for (let i = 0; i < kids.length; i++) walk(kids[i]);
+  };
+  walk(scene);
   let room = b.budget - real;
   if (scratch.length > 1) scratch.sort(byKeep);
   for (const light of scratch) {

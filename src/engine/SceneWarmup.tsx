@@ -35,8 +35,59 @@ export function SceneWarmup({ everyMs = 700 }: { everyMs?: number }) {
       });
       return found;
     };
+    // Compiling a shader while the player is looking around or driving is the hitch.
+    // The work waits until they let go; behind the title screen nothing is held.
+    // Capture phase, so a joystick or game that stops its own events can't
+    // leave a press counted forever, and a long hold (a whole lap on the phone
+    // stick) only delays the work a few seconds: anything new still gets built
+    // in the background rather than on its first frame.
+    const pointers = new Set<number>();
+    const keys = new Set<string>();
+    const driving = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space']);
+    const HOLD_MAX_MS = 3000;
+    let heldSince = 0;
+    const touch = () => {
+      if (heldSince === 0) heldSince = performance.now();
+    };
+    const settle = () => {
+      if (pointers.size === 0 && keys.size === 0) heldSince = 0;
+    };
+    const onPointerDown = (e: PointerEvent) => {
+      pointers.add(e.pointerId);
+      touch();
+    };
+    const onPointerUp = (e: PointerEvent) => {
+      pointers.delete(e.pointerId);
+      settle();
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!driving.has(e.code)) return;
+      keys.add(e.code);
+      touch();
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      keys.delete(e.code);
+      settle();
+    };
+    const onBlur = () => {
+      pointers.clear();
+      keys.clear();
+      heldSince = 0;
+    };
+    const onVisibility = () => {
+      if (document.hidden) onBlur();
+    };
+    const held = () => heldSince !== 0 && performance.now() - heldSince < HOLD_MAX_MS;
+    const opts = { capture: true } as const;
+    window.addEventListener('pointerdown', onPointerDown, opts);
+    window.addEventListener('pointerup', onPointerUp, opts);
+    window.addEventListener('pointercancel', onPointerUp, opts);
+    window.addEventListener('keydown', onKeyDown, opts);
+    window.addEventListener('keyup', onKeyUp, opts);
+    window.addEventListener('blur', onBlur);
+    document.addEventListener('visibilitychange', onVisibility);
     const tick = () => {
-      if (busy || ac.signal.aborted || !fresh()) return;
+      if (busy || ac.signal.aborted || held() || !fresh()) return;
       busy = true;
       void warmObject(gl, scene, camera, scene, { signal: ac.signal, timeoutMs: 8000 }).finally(() => {
         busy = false;
@@ -48,6 +99,13 @@ export function SceneWarmup({ everyMs = 700 }: { everyMs?: number }) {
     return () => {
       ac.abort();
       window.clearInterval(id);
+      window.removeEventListener('pointerdown', onPointerDown, opts);
+      window.removeEventListener('pointerup', onPointerUp, opts);
+      window.removeEventListener('pointercancel', onPointerUp, opts);
+      window.removeEventListener('keydown', onKeyDown, opts);
+      window.removeEventListener('keyup', onKeyUp, opts);
+      window.removeEventListener('blur', onBlur);
+      document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [gl, scene, camera, invalidate, everyMs]);
   return null;

@@ -169,6 +169,29 @@ function Capsule({
   const realSlide = piece === true && slide === 0;
   const onImages = tab === 'images';
 
+  // Start the commercial as soon as the card is open, so Play isn't the moment the download begins.
+  // A media element, not a preload link: this browser ignores rel=preload as=video.
+  // Once the real screen is up and playing it has its own copy coming in, so the
+  // early one stops and the two never pull the same file side by side.
+  const [screenPlayed, setScreenPlayed] = useState(false);
+  useEffect(() => {
+    if (screenLive) setScreenPlayed(true);
+  }, [screenLive]);
+  useEffect(() => {
+    if (!video?.file || screenPlayed) return;
+    const el = document.createElement('video');
+    el.preload = 'auto';
+    el.muted = true;
+    el.playsInline = true;
+    el.src = archiveFile(video);
+    el.setAttribute('fetchpriority', 'low');
+    return () => {
+      el.pause();
+      el.removeAttribute('src');
+      el.load();
+    };
+  }, [video, screenPlayed]);
+
   // The card picks how the room draws the piece.
   useEffect(() => {
     setCapsuleMode(screenLive ? 'off' : onImages && realSlide ? 'real' : 'holo');

@@ -493,6 +493,7 @@ const _look = new THREE.Vector3();
 const _want = new THREE.Vector3();
 const _panFwd = new THREE.Vector3();
 const _tmp = new THREE.Vector3();
+const _up = new THREE.Vector3();
 
 const UP = new THREE.Vector3(0, 1, 0);
 const _side = new THREE.Vector3();
@@ -838,7 +839,7 @@ export function HotWheelsWorld({ spot, skipCountdown }: { spot: string | null; s
     const mode = hwRace.cam;
     if (mode === 'hood' && c.mode !== 'loop') {
       const fwd = _tmp.set(0, 0, 1).applyQuaternion(c.quat);
-      const up = new THREE.Vector3(0, 1, 0).applyQuaternion(c.quat);
+      const up = _up.set(0, 1, 0).applyQuaternion(c.quat);
       camera.position.copy(c.pos).addScaledVector(up, 0.032).addScaledVector(fwd, 0.01);
       camera.up.set(0, 1, 0);
       lookAround(fwd.applyAxisAngle(UP, look.current.yaw), look.current.pitch);
