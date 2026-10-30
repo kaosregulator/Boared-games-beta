@@ -132,10 +132,10 @@ const CARDS: PropCard[] = [
     title: 'The TV',
     era: '1990s tube · 27 inches of pure weight',
     story:
-      'It took two grown-ups and one pulled muscle to get it up on the dresser. Saturday mornings started here at 6:58 sharp, two minutes before cartoons, so you could sit through the test pattern like a professional.',
+      'Saturday morning cartoons were the main event. Kids got up before their parents, poured a bowl of cereal and sat way too close to the screen. Friday nights were TGIF on ABC, and the whole family watched the same show at the same time, because there was no other way to see it.',
     memories: [
+      'It took two grown-ups and one pulled muscle to get it up on the dresser.',
       'Rabbit ears wrapped in tinfoil, angled toward wherever the signal felt like being that day.',
-      'Touch the screen and every hair on your arm stood up.',
       'Turning it off left a little white dot that took forever to die.',
     ],
     photos: [P.tv],
@@ -147,11 +147,11 @@ const CARDS: PropCard[] = [
     title: 'The VCR',
     era: 'Be kind, rewind',
     story:
-      'The clock on it has blinked 12:00 since the day it came home. We set it to record one episode of Goosebumps and it recorded forty minutes of the weather instead.',
+      'If you missed a show, it was gone until the rerun. So somebody in every family learned the VCR timer: channel, start time, stop time, then press Timer and walk away. Get one step wrong and you came home to forty minutes of the weather instead of Goosebumps.',
     memories: [
       'Eats tapes for fun. Knew a pencil-in-the-reel rescue by age eight.',
       'The tracking button was basically a slot machine.',
-      'Late fees from the video store are still technically owed.',
+      'Fast-forward made the whole thing whine like it was in pain.',
     ],
     photos: [P.vcr, P.vhs],
   },
@@ -160,9 +160,10 @@ const CARDS: PropCard[] = [
     title: 'The cable box',
     era: 'Channels 2 through 60',
     story:
-      'Somebody always sat on the remote, so the cable box buttons were the real remote. Click through the guide and wait for the Prevue channel to scroll back around to what you wanted. It never did. You watched whatever was on.',
+      'Getting cable was a big deal. It meant Nickelodeon, MTV and, from 1992, Cartoon Network, right at home. Kids without it went over to a friend\'s house to watch Rugrats. The remote was always lost in the couch, so the buttons on the box did most of the work.',
     memories: [
       'The scrambled channels were the forbidden zone. You squinted anyway.',
+      'Waiting for the guide to scroll back around to your channel. It never came back in time.',
       'Green numbers glowing in the dark all night like a tiny nightlight.',
     ],
     action: { kind: 'tv', label: 'Turn the TV on' },
@@ -172,7 +173,7 @@ const CARDS: PropCard[] = [
     title: 'Nintendo Entertainment System',
     era: '1985 · the gray box',
     story:
-      'Step one: blow on the cartridge. Step two: blow on the console. Step three: push it down, hit Power, pray. Step four: the screen flashes, so you blow on it again even though Nintendo said blowing does nothing. It works. It always works.',
+      'Step one: blow on the cartridge. Step two: push it down, hit Power, pray. Every kid in every house did it, every time. Then you played Super Mario Bros. until somebody\'s mom called up the stairs that it was time to go home.',
     memories: [
       'The controller cord was exactly three feet too short.',
       'Duck Hunt dog laughed at you and you never forgave him.',
@@ -187,9 +188,9 @@ const CARDS: PropCard[] = [
     title: 'The boombox',
     era: '1980s · twin decks, eight D batteries',
     story:
-      'This thing recorded every Top 40 countdown, each one with the DJ talking over the first ten seconds. Mixtapes were made on it with the patience of a bomb technician: finger on Pause, waiting for the song to start.',
+      'On weekends Casey Kasem counted down the American Top 40, and kids sat by the radio with a blank tape ready for their favorite song. Then the boombox went to the park, the pool and the driveway, playing the same tape until it wore thin.',
     memories: [
-      'Ate D batteries like a car eats gas.',
+      'Every song you taped has the DJ talking over the first ten seconds.',
       'The handle is not designed for shoulders. We used it on shoulders.',
     ],
     photos: [P.boombox, P.cassette],
@@ -201,11 +202,11 @@ const CARDS: PropCard[] = [
     title: 'Game Boy',
     era: '1989 · Nintendo',
     story:
-      'This Game Boy has survived a drop down the stairs, a long car ride to Grandma\'s and one full Tetris marathon under the covers, with the worm light clipped on so nobody saw. The screen is green, the batteries are always almost dead, and that is perfect.',
+      'The Game Boy made long car rides a lot shorter. It came along to Grandma\'s, to the dentist\'s waiting room and under the covers with a clip-on worm light so nobody saw. When the screen started to fade, the batteries were dying and you had about ten minutes left.',
     memories: [
-      'Four AA batteries lasted about ten hours, or one road trip.',
-      'Link cable battles in the backseat.',
       'You had to tilt it toward a lamp to see anything.',
+      'Link cable battles in the backseat.',
+      'It survived a fall down the stairs. The stairs had a dent.',
     ],
     photos: [P.gameboy, P.gameboyFl],
     video: V('1989-nintendo-game-boy-commercial', 'Nintendo Game Boy commercial, 1989'),
@@ -216,11 +217,11 @@ const CARDS: PropCard[] = [
     title: 'Tamagotchi',
     era: '1997 · Bandai',
     story:
-      'It got confiscated in math class twice. The first one died during a fire drill. This one has been alive for nine days and it poops more than a real dog. Feed it, play with it, clean up after it, and do not, under any circumstances, let it get sick on a school night.',
+      'In 1997 they sold out everywhere, and kids clipped them to backpacks, belt loops and zipper pulls. Teachers had a whole drawer of them by lunch. When one died, the kid next to you helped hold a little funeral at recess, then you started a new one.',
     memories: [
-      'Hide it in your sock drawer and it beeps at 3 a.m. to be fed.',
+      'Hide it in your sock drawer and it beeps right when Mom opens the drawer.',
       'Pulling the battery tab was the closest thing to opening a present.',
-      'Somebody always says theirs evolved into the "good one".',
+      'Somebody always says theirs grew up into the "good one".',
     ],
     photos: [P.tamagotchi],
     video: V('youtube-OxVMTxJvd7g', 'Tamagotchi toy hunting at FAO Schwarz, 1997'),
@@ -231,11 +232,11 @@ const CARDS: PropCard[] = [
     title: 'The bed',
     era: 'Never been made',
     story:
-      'This bed has hosted every sleepover, every fort, and at least one "it was the dog" situation that is still not discussed. The quilt has been washed so many times the pattern gave up and went psychedelic.',
+      'Sleepovers meant sleeping bags all over the floor, a rented movie, a pizza, and whispering way past midnight until somebody\'s dad said "Go to sleep" for the third time. This bed has hosted every one of them, plus one "it was the dog" situation that is still not discussed.',
     memories: [
       'Monsters live under it. Snacks live under it too, so it evens out.',
-      'Jumping on it is illegal. Everybody did it anyway.',
       'Making it every morning was a rule that lasted three days.',
+      'The quilt has been washed so many times the pattern gave up.',
     ],
     photos: [P.quilt],
   },
@@ -244,8 +245,11 @@ const CARDS: PropCard[] = [
     title: 'The smiley pillow',
     era: 'Prize from the fair',
     story:
-      'Won it at the fair for three tickets after missing the ring toss eleven times. It has absorbed tears, drool and one whole juice box. Still smiling. Kind of creepy, honestly.',
-    memories: ['Best pillow-fight weapon in the house.', 'Smells faintly of Kool-Aid forever.'],
+      'Won at the county fair for three tickets after missing the ring toss eleven times. The fair was the best week of summer: corn dogs, the Gravitron, and a game booth that never really let you win. It has absorbed tears, drool and one whole juice box. Still smiling.',
+    memories: [
+      'Smells faintly of Kool-Aid forever.',
+      'Flip it over at night so it isn\'t smiling at you in the dark.',
+    ],
     photos: [P.smiley],
   },
   {
@@ -253,9 +257,9 @@ const CARDS: PropCard[] = [
     title: 'The backpack',
     era: 'One strap only',
     story:
-      'Wearing both straps was for nerds, so this lived on one shoulder for six years. Inside: a permission slip from 1996, a flattened Lunchable, three pencils with no erasers, and a library book that is now officially stolen.',
+      'Back to school started at the store, picking out a Trapper Keeper, Lisa Frank folders and a new backpack. By June, the bottom held a permission slip from October, a flattened Lunchable, three pencils with no erasers and a library book that is now officially stolen.',
     memories: [
-      'Patches and pins added until it weighed five pounds empty.',
+      'Worn on one shoulder for six years. Looking cool cost a lot of back pain.',
       'The zipper broke in October. It stayed broken until June.',
     ],
     photos: [P.backpack],
@@ -265,10 +269,10 @@ const CARDS: PropCard[] = [
     title: 'The bean bag',
     era: 'The best seat in the house',
     story:
-      'Sit down and it swallows you whole. Getting out takes two tries and a noise. One seam leaks little foam beads and they were found in the carpet for years. Grab the Game Boy and sink in.',
+      'Lots of 90s kids\' rooms had one, usually in a loud color or with a team logo. It was the best seat for video games because you could sink in right in front of the TV. One seam always leaked foam beads, and they turned up in the carpet for years.',
     memories: [
       'Everybody fought over it during sleepovers.',
-      'Slowly flattens until you\'re basically sitting on the floor in a bag.',
+      'Getting out of it took two tries and a noise.',
     ],
     photos: [P.beanbag],
   },
@@ -277,10 +281,9 @@ const CARDS: PropCard[] = [
     title: 'The window',
     era: 'Grounded view',
     story:
-      'This is the window you stared out of while grounded, listening to everybody else play outside. The blinds have one bent slat where you peeked out to see if the ice cream truck was real.',
+      'Summer break meant playing outside until the streetlights came on. That was the rule in a lot of houses. Kids rode bikes, played tag and knocked on doors to see who could come out. If you were grounded, you watched it all from here through one bent blind slat.',
     memories: [
-      'Talked to a friend through a can-and-string phone from here once. It did not work.',
-      'Summer nights: window open, box fan humming, cicadas screaming.',
+      'Opening the window at night meant one more bug in the room. Worth it.',
     ],
     photos: [P.blinds],
   },
@@ -289,8 +292,10 @@ const CARDS: PropCard[] = [
     title: 'The back window',
     era: 'Streetlight side',
     story:
-      'The streetlight outside turned the whole room orange after midnight. Perfect for reading Goosebumps when you were supposed to be asleep, which made the Goosebumps worse.',
-    memories: ['Rain on this window was the best sleep sound ever made.'],
+      'At night the streetlight out back turned the whole room orange, and the tree outside threw moving shadows on the wall. Before phones, falling asleep meant lying in the dark with your thoughts and the sound of the house settling.',
+    memories: [
+      'Rain on this window was the best sleep sound ever made.',
+    ],
     photos: [P.blinds],
   },
   {
@@ -298,10 +303,10 @@ const CARDS: PropCard[] = [
     title: 'The door',
     era: 'KEEP OUT (this means you)',
     story:
-      'This door has slammed in more arguments than any door in history. Every "you\'re not the boss of me" ended here. It never locked properly, which was the entire problem.',
+      'Slamming the door was how arguments ended in the 90s. Every "You\'re not the boss of me!" ended right here, followed by "Don\'t slam that door!" from downstairs. The KEEP OUT sign went up the same week.',
     memories: [
       'Knock first. Nobody knocked first.',
-      'The lock could be picked with a butter knife. Everybody in the house knew.',
+      'Every parent knew the trick to open it. Every kid pretended they didn\'t.',
     ],
   },
   {
@@ -309,16 +314,22 @@ const CARDS: PropCard[] = [
     title: '"I Want to Believe" poster',
     era: 'The X-Files was on at 9',
     story:
-      'Too scared to watch The X-Files, but we still wanted the poster. It stayed on the door so the aliens would know where we stood. Mom thought it was about Jesus.',
-    memories: ['Stayed up to watch the intro and then hid under the blanket for the rest.'],
+      'The X-Files was on Friday nights at first, then moved to Sundays, and the next day the whole school talked about the scary episode. We were too scared to watch the whole thing, but we still wanted the poster. Mom thought it was about Jesus.',
+    memories: [
+      'Stayed up for the theme song and then hid under the blanket for the rest.',
+      'Whistling the theme song in a dark hallway was a whole move.',
+    ],
   },
   {
     id: 'door-cap',
     title: 'Space Invaders cap',
     era: 'Worn backwards',
     story:
-      'Got this from the arcade prize counter for 4,000 tickets. That is roughly 400 rounds of Skee-Ball and one sprained wrist. It hangs on the door because hats indoors were "disrespectful".',
-    memories: ['Worn backwards, obviously.', 'Never washed. Will never be washed.'],
+      'The arcade at the mall was the place to be on a Saturday. Quarters went into Street Fighter II, tickets came out of Skee-Ball, and 4,000 of them got you this cap from the prize counter. It hangs on the door because hats indoors were "disrespectful".',
+    memories: [
+      'Worn backwards, obviously.',
+      'Never washed. Will never be washed.',
+    ],
     photos: [P.invaders],
   },
   {
@@ -326,8 +337,11 @@ const CARDS: PropCard[] = [
     title: 'The pin collection',
     era: 'Planet, smiley, alien, star',
     story:
-      'Each pin is a trade. The alien cost two Pokémon cards and a pudding cup. The star came free in a cereal box and is probably made of lead.',
-    memories: ['Pinned to the backpack until the backpack ripped.'],
+      'Every pin here was a trade. The alien cost two Pokémon cards and a pudding cup. The star came free in a cereal box. In the 90s you could tell who someone was from across the hall just by their pins.',
+    memories: [
+      'Every pin poked your finger at least once.',
+      'Pinned to the backpack until the backpack ripped.',
+    ],
     photos: [P.smiley],
   },
   // ---------- the nightstand ----------
@@ -336,16 +350,22 @@ const CARDS: PropCard[] = [
     title: 'The nightstand',
     era: 'Mission control',
     story:
-      'Everything important within arm\'s reach of the pillow: the alarm clock, the lava lamp, the spare Game Boy, and a drawer of contraband candy that was checked on every night.',
-    memories: ['The drawer sticks unless you lift and pull. Learned that by age five.'],
+      'Everything important lived within arm\'s reach of the pillow: the alarm clock, a cup of water and, if you could sneak it upstairs, the cordless phone. Late-night calls under the covers with your best friend were the whole point of a cordless phone.',
+    memories: [
+      'Candy goes in the back of the drawer, behind the socks, under the Game Boy instructions.',
+      'The drawer sticks unless you lift and pull. Learned that by age five.',
+    ],
   },
   {
     id: 'ns-clock',
     title: 'Alarm clock',
     era: '9:47 and lying',
     story:
-      'It\'s been seven minutes fast since 1994, on purpose, so you\'d "have extra time". You knew it was seven minutes fast. You hit snooze seven times.',
-    memories: ['Red numbers you could see from orbit.', 'The power went out once and it blinked 12:00 for a month.'],
+      'Before cell phones, this was how you woke up for school: red numbers, a loud beep, and a snooze button big enough to hit with your eyes closed. On weekends you stayed up just to watch it flip to 12:00 and felt like a rebel.',
+    memories: [
+      'Red numbers you could see from space.',
+      'Set it seven minutes fast so you\'d be early. Hit snooze seven times. Late anyway.',
+    ],
     photos: [P.clock],
   },
   {
@@ -353,7 +373,7 @@ const CARDS: PropCard[] = [
     title: 'Lava lamp',
     era: 'Mood lighting, 1990s edition',
     story:
-      'Takes forty-five minutes to warm up and in that time you will stare at it for forty-five minutes. Do not shake it. We shook it. It went cloudy and never forgave us.',
+      'Every mall in the 90s had a gift shop with a whole wall of lava lamps glowing in the dark, and that\'s where most of them came from. On the nightstand it doubled as a nightlight, a slow, blobby one.',
     memories: [
       'Swearing you saw a blob shaped exactly like a dinosaur.',
       'Too hot to touch, so naturally everybody touched it.',
@@ -365,8 +385,11 @@ const CARDS: PropCard[] = [
     title: 'Smiley mug',
     era: 'Hot cocoa only',
     story:
-      'Made in an art class for Mother\'s Day, then reclaimed when nobody was looking. Holds exactly one packet of Swiss Miss with too many marshmallows.',
-    memories: ['There\'s a fossilised marshmallow at the bottom. Leave it.'],
+      'Snow days were the best days. You spent the morning sledding and came inside soaked to the bone, with red cheeks and wet socks. Hot cocoa in this mug, made for Mother\'s Day in art class and then quietly taken back, was how every snow day ended.',
+    memories: [
+      'Art class glaze, a little lumpy, still holds cocoa just fine.',
+      'Correct marshmallow count: too many.',
+    ],
     photos: [P.mug],
   },
   {
@@ -374,8 +397,10 @@ const CARDS: PropCard[] = [
     title: 'Night-shift bear',
     era: 'Guarding the bed since day one',
     story:
-      'This one stays on the nightstand to keep an eye on the closet door. Has never let a single monster through. Perfect record.',
-    memories: ['Lost an eye in a tug-of-war. Still on duty.'],
+      'Almost every kid had a bear on night watch. Lights out, closet door shut all the way, and one bear on guard. This one has never let a single monster through. Perfect record.',
+    memories: [
+      'Lost an eye in a tug-of-war. Still on duty.',
+    ],
     photos: [P.teddy],
   },
   {
@@ -383,8 +408,11 @@ const CARDS: PropCard[] = [
     title: 'The blue Sony',
     era: 'Tape recorder · pause button pro',
     story:
-      'Recorded songs off the radio, prank calls (allegedly), and a forty-minute "radio show" with your cousin that is still somewhere in a shoebox. Somebody should destroy that tape.',
-    memories: ['Hearing your own voice on tape for the first time: horrifying.'],
+      'Before anybody had a camera in their pocket, a tape recorder was how you made a show. Kids recorded fake radio shows with their cousins, songs off the radio and the family singing Happy Birthday. Somewhere in a shoebox there\'s a forty-minute tape that should never be played.',
+    memories: [
+      'Prank calls were recorded. Allegedly.',
+      'Every recording starts with somebody whispering "Is it on?"',
+    ],
     photos: [P.walkman, P.cassette],
   },
   {
@@ -392,24 +420,33 @@ const CARDS: PropCard[] = [
     title: 'Yoshi sticker',
     era: 'From a cereal box',
     story:
-      'Ate a whole box of cereal in two days to get to this sticker. Put it on the drawer the second it came out. It\'s never coming off. We tried with a butter knife.',
-    memories: ['Worth the stomach ache.'],
+      'Cereal boxes used to have toys and stickers inside, sealed in a little plastic bag at the bottom. Kids picked the cereal by the prize, not the taste. This sticker took two days of eating a whole box to get, and it went on the drawer the second it came out.',
+    memories: [
+      'Worth the stomach ache.',
+      'It\'s never coming off. We tried.',
+    ],
   },
   {
     id: 'ns-tapes',
     title: 'The bedtime stack',
     era: 'Goosebumps, Space Jam, Sonic, R.L. Stine',
     story:
-      'Bottom shelf, for bedtime only, except it was never bedtime when they came out. Read under the blanket with a flashlight until the batteries died, then you had to lie there in the dark thinking about the haunted mask.',
-    memories: ['"Reader beware" was not a suggestion.', 'Scholastic book fair day was a national holiday.'],
+      'The Scholastic book order form came home in your backpack, and you circled half the page. Book order day, when the box came to class, felt like a holiday. Goosebumps covers were the thing everybody wanted, all bright colors and a monster on the front.',
+    memories: [
+      '"Reader beware" was not a suggestion.',
+      'When the flashlight died, you just lay there thinking about the Haunted Mask.',
+    ],
   },
   {
     id: 'ns-vhs',
     title: 'Movie night tapes',
     era: 'Toy Story, Hocus Pocus, Jurassic Park',
     story:
-      'Watched every October and most Tuesdays. Hocus Pocus is worn thin right at the part where they sing. Jurassic Park has a little crinkle in the kitchen scene from being paused too many times.',
-    memories: ['Rewind before returning. We never returned these.'],
+      'Movie night meant the same few tapes over and over. Hocus Pocus came out every October, Jurassic Park every Tuesday, and Toy Story whenever a little cousin came over. Watching the same movie fifty times wasn\'t weird. It was normal.',
+    memories: [
+      'Hocus Pocus is worn thin right at the part where they sing.',
+      'Jurassic Park has a crinkle in the kitchen scene from being paused too many times.',
+    ],
     photos: [P.vhs],
   },
   {
@@ -417,8 +454,10 @@ const CARDS: PropCard[] = [
     title: 'Backup Game Boy',
     era: 'For emergencies',
     story:
-      'The spare one, for when the main Game Boy\'s batteries died at the worst possible moment. Took the batteries out of the TV remote to keep it running. Blamed the remote on the cat.',
-    memories: ['Every house had one TV remote with no batteries in it. This is why.'],
+      'The spare one, for when the main Game Boy\'s batteries died at the worst possible moment. In a lot of houses batteries were a big deal, kept in the kitchen drawer and counted. When they ran out, you took them from the TV remote and blamed the cat.',
+    memories: [
+      'Every house had one TV remote with no batteries in it. This is why.',
+    ],
     photos: [P.gameboy],
   },
   // ---------- the high shelf on the south wall ----------
@@ -427,16 +466,20 @@ const CARDS: PropCard[] = [
     title: 'The high shelf',
     era: 'Display only, do not touch',
     story:
-      'The good stuff lives up here where little cousins can\'t reach. Lava lamp, the big teddy, the Game Boy you\'re not allowed to bring to school, and the View-Master that nobody remembers how to load.',
-    memories: ['Needed the desk chair to reach it. The chair spins. That went great.'],
+      'When family came over for the holidays, the good stuff went up here. Little cousins got the toy bins. Big Ted, the lava lamp, the good Game Boy and the View-Master nobody remembers how to load stayed safe, out of reach.',
+    memories: [
+      'Needed the desk chair to reach it. The chair spins. That went great.',
+    ],
   },
   {
     id: 'sh-lava',
     title: 'The other lava lamp',
     era: 'Yes, we had two',
     story:
-      'Birthday present from the aunt who gave everybody lava lamps. This one took a full hour to bloop. Turn it on before homework and check on it every five minutes instead of doing homework.',
-    memories: ['If the blobs stick at the top, it\'s too hot. Nobody listened.'],
+      'In the 90s a lava lamp was the go-to present for any kid who was hard to shop for. Every aunt knew it. This one came on a birthday with a card that said "Groovy!" and it sat on the shelf glowing purple for years.',
+    memories: [
+      'Named it. It never answered.',
+    ],
     photos: [P.lava],
   },
   {
@@ -444,9 +487,9 @@ const CARDS: PropCard[] = [
     title: 'Home Alone, Jurassic Park, Aladdin',
     era: 'The holy trinity',
     story:
-      'Every kid tried a Home Alone trap at least once. Ours was a paint can on a string over the door, and it got Dad. We were not allowed to watch Home Alone for a while after that.',
+      'Disney movies came out on tape in big white plastic cases, and every kid had a stack of them. Home Alone was on every holiday, and every kid tried a trap at least once. Ours was a paint can on a string over the door. It got Dad.',
     memories: [
-      '"Keep the change, ya filthy animal."',
+      'Rewound the trap scene until the tape got wobbly.',
       'The Aladdin tape is the white clamshell one. The good one.',
     ],
     photos: [P.vhs],
@@ -456,8 +499,11 @@ const CARDS: PropCard[] = [
     title: 'Red Hot Wheels',
     era: 'Fastest car on the orange track',
     story:
-      'This one won every race on the orange track loop-de-loop, except when it flew off and hit the dog. It has paint chips from launching it off the stairs, for science.',
-    memories: ['The orange track connectors left marks on everything.'],
+      'Hot Wheels cost about a dollar each at the grocery store checkout, right where kids could see them. Every trip with Mom was a chance to beg for one more. This red one won every race on the loop, except when it flew off and hit the dog.',
+    memories: [
+      'The orange track connectors left marks on everything.',
+      'Paint chips from launching it off the stairs. For science.',
+    ],
     video: V('DET-012_52007-52915', 'Hot Wheels Attack Pack commercial, 1993'),
   },
   {
@@ -465,8 +511,10 @@ const CARDS: PropCard[] = [
     title: 'Big Ted',
     era: 'Retired with honors',
     story:
-      'Big Ted has been through the washing machine four times and a tea party with very strict rules. Retired to the high shelf when you got "too old for teddy bears". He still comes down during thunderstorms.',
-    memories: ['The bow tie has been retied by every person in the family.'],
+      'Big Ted came to every tea party, sat in the car seat next to you, and rode in the shopping cart to the store. He went through the washing machine four times. Retired to the high shelf around fourth grade, where he can still see the whole room.',
+    memories: [
+      'The bow tie has been retied by every person in the family.',
+    ],
     photos: [P.teddy],
   },
   {
@@ -474,8 +522,10 @@ const CARDS: PropCard[] = [
     title: 'The good Game Boy',
     era: 'Not allowed at school',
     story:
-      'The one that went to school once, got confiscated, and spent a terrifying weekend in the principal\'s desk. It lives up here now. Safe.',
-    memories: ['The principal definitely played it over the weekend.'],
+      'Bringing a Game Boy to school was risky. Teachers took them away and gave them back at the end of the day, or sometimes the end of the week. This one spent a terrifying weekend in the principal\'s desk. It lives up here now. Safe.',
+    memories: [
+      'The principal definitely played it over the weekend.',
+    ],
     photos: [P.gameboyFl],
   },
   {
@@ -483,8 +533,11 @@ const CARDS: PropCard[] = [
     title: 'Leonardo',
     era: 'Leads, does not do machines',
     story:
-      'Everybody wanted to be Raphael or Michelangelo, so you got stuck with Leonardo and acted like you didn\'t care. You cared. Both swords got lost by Christmas.',
-    memories: ['"Cowabunga" was a full answer to any question.', 'Turtle-shaped pizza was technically just pizza.'],
+      'Everybody wanted to be Raphael or Michelangelo, so you got stuck with Leonardo and acted like you didn\'t care. You cared. The figures came with tiny weapons, and both of his swords were gone by Christmas.',
+    memories: [
+      '"Cowabunga" was a full answer to any question.',
+      'Turtle-shaped pizza was technically just pizza.',
+    ],
     photos: [P.tmnt],
     video: V('teenage-mutant-ninja-turtles-toon-turtles-action-figure-commercial', 'TMNT Toon Turtles action figure commercial'),
   },
@@ -493,8 +546,10 @@ const CARDS: PropCard[] = [
     title: 'View-Master',
     era: 'Click. Click. Click.',
     story:
-      'Seven tiny pictures in 3D, and somehow you looked at the same Grand Canyon reel four hundred times. Pointing it at the lamp made it work better. Pointing it at the sun was a mistake.',
-    memories: ['The orange lever had the most satisfying click in history.'],
+      'View-Master reels came in little paper envelopes, with cartoons, movies and faraway places on them. Kids got them at gift shops on family trips, and somehow you looked at the same Grand Canyon reel four hundred times.',
+    memories: [
+      'The orange lever had the most satisfying click in history.',
+    ],
     photos: [P.viewmaster],
     video: V('youtube-JxG0HuHNqKU', 'Talking View-Master commercial, 1983'),
     action: { kind: 'viewmaster', label: 'Look through it' },
@@ -504,8 +559,10 @@ const CARDS: PropCard[] = [
     title: 'Goosebumps & The Lost World',
     era: 'Too scary, read it anyway',
     story:
-      'The Lost World was way too long for a fifth grader but it had a T. rex on the cover, so you carried it around to look smart. Goosebumps you actually read. Twice.',
-    memories: ['Night of the Living Dummy ruined ventriloquists forever.'],
+      'Reading programs like Book It! gave you a free Pizza Hut pizza for reading books. So kids read a lot, especially short ones. The Lost World was way too long for a fifth grader, but it had a T. rex on the cover. Goosebumps you actually read. Twice.',
+    memories: [
+      'Nobody ever finished The Lost World. Not even the teacher.',
+    ],
   },
   // ---------- toy cubby on the east wall ----------
   {
@@ -513,16 +570,21 @@ const CARDS: PropCard[] = [
     title: 'The toy cubby',
     era: 'Where everything got thrown at cleanup time',
     story:
-      '"Clean your room" meant throwing everything into these bins in under ninety seconds. Archaeologists will one day find a Pokémon box, three socks and a single roller skate in here.',
-    memories: ['The bins never closed. They were never meant to close.'],
+      '"Go clean your room" was the most said sentence in the 90s. Archaeologists will one day dig into these bins and find a Pokémon box, three socks and a single roller skate.',
+    memories: [
+      'The bins never closed. They were never meant to close.',
+    ],
   },
   {
     id: 'ts-teddy',
     title: 'Scruffy',
     era: 'Loved too hard',
     story:
-      'Scruffy went everywhere: the store, the car, the bath, the dog\'s mouth once. All the fur rubbed off one ear from being held while falling asleep.',
-    memories: ['Mom sewed his arm back on during a sleepover emergency.'],
+      'Scruffy went everywhere: the store, the car, the bath, and the dog\'s mouth once. If he got left at a restaurant, the whole family drove back. Every 90s family had a story about the stuffed animal they almost lost.',
+    memories: [
+      'Mom sewed his arm back on during a sleepover emergency.',
+      'All the fur rubbed off one ear from being held while falling asleep.',
+    ],
     photos: [P.teddy],
   },
   {
@@ -530,16 +592,21 @@ const CARDS: PropCard[] = [
     title: 'Pocket game',
     era: 'Tiger handheld energy',
     story:
-      'One game, one sound effect, no pause button. It came from a birthday party goodie bag and kept everybody busy for a whole car ride.',
-    memories: ['The beep could not be turned off. Parents tried.'],
+      'Tiger handhelds cost about twenty dollars and were everywhere at Christmas and birthday parties. One game, one sound effect, no pause button. This one came from a birthday party goodie bag and kept everybody busy for a whole car ride.',
+    memories: [
+      'The beep. Just the beep. Forever.',
+      'The pictures on the screen never moved, they just lit up.',
+    ],
   },
   {
     id: 'ts-clock',
     title: 'Clock radio',
     era: 'Woke you up to the morning DJ',
     story:
-      'Set it to the radio instead of the buzzer and woke up to a stranger yelling about traffic. Hit snooze, dreamed about traffic.',
-    memories: ['The radio station only came in if the antenna wire touched the window.'],
+      'On snowy mornings, the whole family listened to this. The radio read the list of school closings in alphabetical order, and you lay there waiting for your school\'s name. If it came, you went back to sleep happy.',
+    memories: [
+      'The radio station only came in if the antenna wire touched the window.',
+    ],
     photos: [P.clock],
   },
   {
@@ -547,8 +614,11 @@ const CARDS: PropCard[] = [
     title: 'The RAD skateboard',
     era: 'Mostly for sitting on',
     story:
-      'Learned exactly one trick: sitting on it and rolling down the driveway. Still a skater. The griptape shredded three pairs of jeans and one knee.',
-    memories: ['The stickers are worth more than the board.'],
+      'In the 90s, skateboarding was everywhere: Tony Hawk was on TV, skate shops were in every mall, and kids wore skate shoes who had never touched a board. We learned exactly one trick: sitting on it and rolling down the driveway. Still a skater.',
+    memories: [
+      'The stickers are worth more than the board.',
+      'The griptape shredded three pairs of jeans and one knee.',
+    ],
     photos: [P.skate],
   },
   {
@@ -556,8 +626,10 @@ const CARDS: PropCard[] = [
     title: 'Recorded-off-TV tapes',
     era: 'Labels in three handwritings',
     story:
-      'Half these tapes say one thing on the label and have something completely different on them. The one marked "Lion King" is a Bears game and twenty minutes of a cooking show.',
-    memories: ['Commercials included, which, honestly, were the best part.'],
+      'Families recorded everything: the Super Bowl, a special TV movie, Grandma\'s favorite show. Tapes got reused over and over, so most of them say one thing on the label and have something else on them. The one marked "Lion King" is a Bills game and twenty minutes of a cooking show.',
+    memories: [
+      'Commercials included, which, honestly, were the best part.',
+    ],
     photos: [P.vhsKodak],
   },
   {
@@ -565,8 +637,10 @@ const CARDS: PropCard[] = [
     title: 'Orange lava lamp',
     era: 'The tall one',
     story:
-      'This is the tall one that glows like a campfire. Turn the big light off, turn this on, and the whole room looks like the inside of a fruit roll-up.',
-    memories: ['It took up the entire desk outlet. Nobody could charge anything.'],
+      'Turning the big light off and the lava lamp on was how you set the mood in the 90s, for a sleepover or a sad song. This tall one glows like a campfire, and the whole room looks like the inside of a fruit roll-up.',
+    memories: [
+      'Fell asleep watching it once. Woke up still watching it.',
+    ],
     photos: [P.lava],
   },
   {
@@ -574,8 +648,10 @@ const CARDS: PropCard[] = [
     title: 'Pokémon bin',
     era: 'Gotta catch \'em all, gotta store \'em somewhere',
     story:
-      'Card binders, a Pikachu that talks when you squeeze it too hard, and the box the Game Boy Pokémon came in. The Charizard is not in here. Nobody knows where the Charizard went. Ask your cousin.',
-    memories: ['Banned at school by October 1999.'],
+      'In 1999 Pokémon was everything: the cards, the cartoon after school, the Game Boy game and the toys in Burger King kids\' meals. This bin has the card binders, a Pikachu that talks when you squeeze it too hard and the box the Game Boy game came in. The Charizard is not in here.',
+    memories: [
+      'Nobody knows where the Charizard went. Ask your cousin.',
+    ],
     photos: [P.pokemon],
     video: V('2000-commercial-for-pokemon-trading-card-game', 'Pokémon Trading Card Game commercial, 2000'),
   },
@@ -584,8 +660,11 @@ const CARDS: PropCard[] = [
     title: 'Magazine bin',
     era: 'Strategy guides and posters',
     story:
-      'Game magazines with the cheat codes circled in pen, a poster pulled out of the middle, and an order form for sea-monkeys that we did fill out.',
-    memories: ['Up, Up, Down, Down, Left, Right, Left, Right, B, A, Start.'],
+      'Before the internet, game magazines were how you learned secrets. Kids passed them around at school and copied codes onto notebook paper. The back pages had ads for sea-monkeys and X-ray glasses, and we did fill out the sea-monkey form.',
+    memories: [
+      'Sea-Monkeys did not look like the ad. At all.',
+      'The poster in the middle was pulled out the day it came.',
+    ],
   },
   // ---------- the game shelf ----------
   {
@@ -593,24 +672,31 @@ const CARDS: PropCard[] = [
     title: 'The game closet',
     era: 'String lights stay on all year',
     story:
-      'Every family game night started with an argument here about which game, and ended with somebody flipping the Monopoly board. The Christmas lights went up in 1995 and were never taken down.',
-    memories: ['Half the boxes are missing pieces. The other half have pieces from other boxes.'],
+      'Family game night was a weekly thing in a lot of 90s houses. It started with an argument about which game and ended with somebody flipping the Monopoly board. The Christmas lights went up in 1995 and never came down.',
+    memories: [
+      'Half the boxes are missing pieces. The other half have pieces from other boxes.',
+    ],
   },
   {
     id: 'gs-helmet',
     title: 'Bills helmet',
     era: 'Four Super Bowls in a row',
     story:
-      'Four straight Super Bowl trips in the early 90s, and that\'s all we\'ll say about that. Wore it in the backyard for every big game and tackled the hedges.',
-    memories: ['Football in the yard ended when somebody cried. Usually you.'],
+      'Super Bowl Sunday was a holiday in a lot of houses: chips, dip, everybody on the couch and the commercials that came out that day. Buffalo kids wore this helmet in the backyard for every big game and tackled the hedges.',
+    memories: [
+      'Football in the yard ended when somebody cried. Usually you.',
+      'Four Super Bowl trips in a row. That\'s all we\'ll say.',
+    ],
   },
   {
     id: 'gs-smiley',
     title: 'Smiley lamp',
     era: 'Have a nice day',
     story:
-      'A glowing smiley face that stays on all night and stares directly at the bed. Comforting when you\'re five. Terrifying at eleven. Back to comforting at thirty.',
-    memories: ['Won it at the fair along with a goldfish that lasted three days.'],
+      'The smiley face was everywhere in the 90s, on shirts, stickers, notebooks and lamps. This one glows all night and stares directly at the bed. Comforting when you\'re five. Terrifying at eleven. Back to comforting at thirty.',
+    memories: [
+      'Won it at the fair along with a goldfish that lasted three days.',
+    ],
     photos: [P.smiley],
   },
   {
@@ -618,16 +704,20 @@ const CARDS: PropCard[] = [
     title: 'The plant',
     era: 'Somehow alive',
     story:
-      'Nobody waters this plant. Nobody has ever watered this plant. It is thriving. Science can\'t explain it.',
-    memories: ['Got the leftover Kool-Aid once. Grew an inch.'],
+      'Every 90s house had a plant somebody brought home from the grocery store and nobody ever watered. This one lives in a kid\'s room, next to the game closet, and it is somehow thriving. Science can\'t explain it.',
+    memories: [
+      'Got the leftover Kool-Aid once. Grew an inch.',
+    ],
   },
   {
     id: 'gs-lights',
     title: 'The string lights',
     era: 'Christmas, forever',
     story:
-      'Put up for Christmas 1995 and never taken down, because the room just looked better. One bulb goes out and you have to test every single bulb on the strand. It took an entire Saturday.',
-    memories: ['Unplug them at night or they "start fires" (they never started fires).'],
+      'Putting up Christmas lights was a family job. Somebody untangled the strand on the living room floor, somebody held the ladder and somebody yelled "Try it now!" These went up in 1995 and never came down, because the room just looked better.',
+    memories: [
+      'Unplug them at night or they "start fires" (they never started fires).',
+    ],
   },
   // ---------- dresser ----------
   {
@@ -635,24 +725,30 @@ const CARDS: PropCard[] = [
     title: 'The dresser',
     era: 'Sticker museum',
     story:
-      'Nobody was allowed to put stickers on the furniture. We put stickers on the furniture. Now the dresser is basically a history book: Mario, Yoshi, No Fear, and a smiley face that won\'t come off.',
-    memories: ['Bottom drawer: clothes. Top drawer: anything important.'],
+      'Nobody was allowed to put stickers on the furniture. We put stickers on the furniture. In a lot of 90s rooms, the dresser was basically a history book: Mario, Yoshi, No Fear and a smiley face that won\'t come off.',
+    memories: [
+      'The top drawer never closed all the way.',
+    ],
   },
   {
     id: 'dr-stickers',
     title: 'Mario & Yoshi stickers',
     era: 'Nintendo Power freebies',
     story:
-      'They came free in a magazine and went straight onto the dresser before anybody could stop it. They\'ve survived three moves and one aggressive scrubbing.',
-    memories: ['Peeling one off halfway and then putting it back was worse than leaving it.'],
+      'Stickers came free in magazines, cereal boxes and at the doctor\'s office, and kids put them on everything. These went straight onto the dresser before anybody could stop it. They\'ve survived three moves and one very hard scrubbing.',
+    memories: [
+      'Peeling one off halfway and then putting it back was worse than leaving it.',
+    ],
   },
   {
     id: 'dr-nofear',
     title: 'No Fear sticker',
     era: 'The most 90s sentence',
     story:
-      'No Fear shirts had sayings like "Second place is the first loser". We thought that was deep. Put this sticker on the dresser and immediately got scared of getting caught.',
-    memories: ['Fear: medium.'],
+      'No Fear shirts were the cool shirts in the 90s, with sayings like "Second place is the first loser" across the back. We thought that was deep. Some schools even banned the shirts, which only made them cooler.',
+    memories: [
+      'Fear: medium.',
+    ],
   },
   // ---------- the cluttered desk (west) ----------
   {
@@ -660,16 +756,21 @@ const CARDS: PropCard[] = [
     title: 'The homework desk',
     era: 'Homework was never done here',
     story:
-      'This desk was for homework. It was used for building Lego, drawing, eating pizza rolls, playing Super Nintendo with the sound off, and hiding the report card. Homework happened on the bus.',
-    memories: ['Every drawer is a junk drawer.', 'The stickers are load-bearing.'],
+      'After school, the routine was a snack, cartoons, and "homework" at the desk. This desk was used for building LEGO, drawing, eating pizza rolls, playing Super Nintendo with the sound off and hiding the report card. Homework happened on the bus.',
+    memories: [
+      'Every drawer is a junk drawer.',
+      'The stickers are load-bearing.',
+    ],
   },
   {
     id: 'cd-lava',
     title: 'Desk lava lamp',
     era: 'Homework mood lighting',
     story:
-      'Turned on "to help focus". Spent the next hour naming the blobs. That one\'s Gary. Gary just split into two Garys.',
-    memories: ['Do not put your crayons next to it. Learned that the waxy way.'],
+      'A lava lamp on a homework desk was supposed to help you focus. Instead you spent the next hour naming the blobs. That one\'s Gary. Gary just split into two Garys.',
+    memories: [
+      'Lost one blue crayon to science. It\'s still stuck to the base.',
+    ],
     photos: [P.lava],
   },
   {
@@ -677,8 +778,10 @@ const CARDS: PropCard[] = [
     title: 'Smiley pencil cup',
     era: 'Full of pens that don\'t work',
     story:
-      'Twenty pens in here and not one writes. Somehow you keep putting dead pens back in. There\'s a gel pen at the bottom that smells like grapes.',
-    memories: ['Click pens: clicked eight thousand times during tests.'],
+      'Gel pens took over schools in the late 90s: glitter, milky, scented, the works. Kids traded them and wrote notes in every color. Somehow this cup has twenty pens and not one of them writes, except the grape-scented gel pen at the bottom.',
+    memories: [
+      'Click pens: clicked eight thousand times during tests.',
+    ],
     photos: [P.pencils],
   },
   {
@@ -686,8 +789,11 @@ const CARDS: PropCard[] = [
     title: 'Video game tape stack',
     era: 'Rented, not returned',
     story:
-      'A stack from the rental store, a couple of them still in their own cases with the store\'s sticker. The late fee is now worth more than the store.',
-    memories: ['Blockbuster night was a Friday-night ritual.'],
+      'Renting was how you tried new games. Walking the aisles at the video store on a Friday night, picking one game for the weekend, and then begging for one more day. A couple of these still have the store\'s sticker on the case.',
+    memories: [
+      'The late fee is now worth more than the store.',
+      'Blockbuster night was a Friday-night ritual.',
+    ],
     photos: [P.vhs],
   },
   {
@@ -695,8 +801,10 @@ const CARDS: PropCard[] = [
     title: 'Red sports car',
     era: 'Dream car, 1:64 scale',
     story:
-      'Somebody\'s going to buy this car for real one day. Somebody being you. Until then it lives next to the lava lamp, doing laps around the pencil cup.',
-    memories: ['Engine noises: done with your mouth, very loud.'],
+      'Every kid had a dream car picked out by age ten, usually red and usually Italian. Posters of sports cars went on the wall next to the basketball players. This one does laps around the pencil cup until you can buy the real one.',
+    memories: [
+      'Engine noises: done with your mouth, very loud.',
+    ],
     video: V('hotwheels-commercial', 'Hot Wheels commercial, 1980s'),
   },
   {
@@ -704,8 +812,10 @@ const CARDS: PropCard[] = [
     title: 'Clock radio',
     era: '5:41 · way too early',
     story:
-      'The alarm was set for paper-route time once, as a business venture. The business lasted a week. The alarm stayed at 5:41 for another year because nobody knew how to change it.',
-    memories: ['Hitting the snooze button blind in the dark is a skill.'],
+      'Lots of kids had a paper route in the 90s, up before school to toss newspapers onto porches for a few dollars a week. The alarm got set for paper route time once, as a business plan. The business lasted a week. The alarm stayed at 5:41 for another year.',
+    memories: [
+      'Hitting the snooze button blind in the dark is a skill.',
+    ],
     photos: [P.clock],
   },
   {
@@ -713,8 +823,11 @@ const CARDS: PropCard[] = [
     title: 'Brick phone',
     era: 'Only for emergencies',
     story:
-      'Mom\'s old phone, "only for emergencies". Every time it was used was not an emergency. Twenty minutes of Snake counts as a call to grandma, right?',
-    memories: ['Ringtone: composed yourself, note by note, one awful afternoon.'],
+      'Cell phones in the 90s were for grown-ups and emergencies. Calls cost money by the minute, so kids barely got to touch one. This was Mom\'s old phone, "only for emergencies". Twenty minutes of Snake counted as an emergency, right?',
+    memories: [
+      'Ringtone: composed yourself, note by note, one awful afternoon.',
+      'The antenna pulled out. It did nothing. You pulled it out anyway.',
+    ],
     photos: [P.nokia],
     video: V('nokia-1998-tv-commercial-drew-carey', 'Nokia commercial, 1998'),
   },
@@ -723,8 +836,11 @@ const CARDS: PropCard[] = [
     title: 'POGs',
     era: 'Playing for keeps',
     story:
-      'POGs got banned at school because a kid lost his whole collection playing "for keeps" and cried in the nurse\'s office. The heavy slammer on top is the one that won all these.',
-    memories: ['The skull slammer was the most powerful object in the cafeteria.', 'Named after a juice. Nobody drank the juice.'],
+      'POGs swept through schools in the mid-90s. Kids carried them in plastic tubes and played at recess, and a lot of schools banned them after kids lost whole collections playing "for keeps". The heavy slammer on top is the one that won all these.',
+    memories: [
+      'The skull slammer was the most powerful object in the cafeteria.',
+      'Named after a juice. Nobody drank the juice.',
+    ],
     photos: [P.pogs],
   },
   {
@@ -732,8 +848,11 @@ const CARDS: PropCard[] = [
     title: 'The sketchbook (and the Cool S)',
     era: 'Graffiti letters, every page',
     story:
-      'Every page is the same cool S, over and over, plus a dragon that doesn\'t look like a dragon. Everyone drew the S. Nobody knows who invented the S.',
-    memories: ['Drew in the margins of every worksheet too.', 'Back page: fake signatures, practicing for the report card.'],
+      'Doodling in the margins was a 90s art form. Every notebook had the same things: the Cool S, a 3D cube, bubble letters and a dragon that doesn\'t look like a dragon. Nobody taught it. Everybody knew it.',
+    memories: [
+      'Back page: fake signatures, practicing for the report card.',
+      'Everybody drew the S. Nobody knows who invented the S.',
+    ],
     photos: [P.sketchbook],
   },
   {
@@ -741,8 +860,11 @@ const CARDS: PropCard[] = [
     title: 'Desk lamp',
     era: 'Burns fingers on contact',
     story:
-      'The bulb got so hot you could warm up a Hot Pocket on it. We did not try that. Okay, we tried that.',
-    memories: ['Pointed at your face during "interrogations" with your little brother.'],
+      'Old light bulbs got hot. Really hot. The desk lamp kept your hands warm during winter homework, and once, as a test, a Hot Pocket. We did not try that. Okay, we tried that.',
+    memories: [
+      'Burned a finger on the shade at least once a year.',
+      'Moths found it every summer night.',
+    ],
     photos: [P.lamp],
   },
   {
@@ -750,8 +872,10 @@ const CARDS: PropCard[] = [
     title: 'Little green guy',
     era: 'Came free with a kid\'s meal',
     story:
-      'Came free with a kid\'s meal. Worth more than the meal. He\'s been the desk lamp\'s security guard ever since.',
-    memories: ['Had a name once. Nobody remembers it.'],
+      'Kids\' meals came with a toy, and the toys changed every few weeks, so you begged to go back until you had the whole set. This little guy came free with one. Worth more than the meal. He\'s been the desk lamp\'s security guard ever since.',
+    memories: [
+      'Had a name once. Nobody remembers it.',
+    ],
     photos: [P.figures],
   },
   {
@@ -759,8 +883,10 @@ const CARDS: PropCard[] = [
     title: 'Magic 8 Ball',
     era: 'Reply hazy, try again',
     story:
-      'Asked it if you\'d pass the spelling test. It said "Outlook not so good". It was right. Asked it if your crush liked you back. It said "Ask again later". It\'s been later for a long time.',
-    memories: ['Shook it until it gave you the answer you wanted.'],
+      'The Magic 8 Ball was the sleepover question machine. Kids passed it around the circle asking about crushes, tests and if it would snow tomorrow. Asked it if you\'d pass the spelling test. It said "Outlook not so good". It was right.',
+    memories: [
+      'Asked if your crush liked you back. It said "Ask again later". It\'s been later for a long time.',
+    ],
     photos: [P.eightBall],
   },
   {
@@ -768,16 +894,22 @@ const CARDS: PropCard[] = [
     title: 'The photo',
     era: 'School picture day',
     story:
-      'School picture day: laser background, a comb the photographer used on everyone, and a smile you practiced in the mirror. Ordered the wallet sizes, gave them to everybody.',
-    memories: ['The retake was somehow worse.'],
+      'School picture day meant your nicest shirt, a laser background, and a photographer combing your hair with the same comb as everyone else. Then you traded wallet-size photos with friends and wrote on the back.',
+    memories: [
+      'The retake was somehow worse.',
+      'Practiced a smile in the mirror for a week. Blinked.',
+    ],
   },
   {
     id: 'cd-tmnt',
     title: 'Ninja Turtles cup',
     era: 'From the pizza place',
     story:
-      'This cup came with a large pizza and a toy that broke in the car. It holds markers now. Smells faintly of Sprite and a little like pizza.',
-    memories: ['Turtle Power.'],
+      'Pizza places and fast food spots sold big plastic cups with movie and cartoon characters on them, and kids collected the whole set. This one came with a large pizza and a toy that broke in the car. It holds markers now.',
+    memories: [
+      'Turtle Power.',
+      'Smells faintly of Sprite and a little like pizza.',
+    ],
     photos: [P.markers],
     video: V('tmnt-pizza_202509', 'Pizza Hut Ninja Turtles kids meal commercial, 1990'),
   },
@@ -786,8 +918,11 @@ const CARDS: PropCard[] = [
     title: 'Walkman',
     era: 'Headphones on, world off',
     story:
-      'Bus rides were a whole movie with this on. The foam earpieces were orange once. Now they\'re a color science doesn\'t have a name for. Auto-reverse was basically magic.',
-    memories: ['Rewinding a tape with a pencil to save batteries.', 'The tape got eaten right at the best part. Every time.'],
+      'Bus rides and long car trips were a whole movie with headphones on. Kids carried a little case of tapes and swapped them with friends. The foam earpieces were orange once. Now they\'re a color science doesn\'t have a name for.',
+    memories: [
+      'The tape got eaten right at the best part. Every time.',
+      'Sharing one pair of headphones, one ear each.',
+    ],
     photos: [P.walkmanFamily, P.cassette],
     video: V('walkmandec81', 'Walkman commercial, 1981'),
   },
@@ -796,8 +931,10 @@ const CARDS: PropCard[] = [
     title: 'Donkey Kong Country cartridge',
     era: 'Super Nintendo · 1994',
     story:
-      'Christmas morning 1994. Unwrapped, plugged in, played until the TV got hot. The minecart levels made grown men throw controllers. This cartridge has seen things.',
-    memories: ['Blowing on SNES carts did nothing either. We did it anyway.'],
+      'Christmas morning 1994. Unwrapped, plugged in, played until the TV got hot. Donkey Kong Country looked like nothing else on the Super Nintendo, and the minecart levels made grown-ups throw controllers. This cartridge has seen things.',
+    memories: [
+      'Blowing on Super Nintendo carts did nothing either. We did it anyway.',
+    ],
     photos: [P.snesCarts, P.snes],
     video: V('Super_Nintendo_commercial_1992', 'Super Nintendo commercial, 1992'),
   },
@@ -806,8 +943,10 @@ const CARDS: PropCard[] = [
     title: 'Yo-yo',
     era: 'Walk the dog, hit the dog',
     story:
-      '"Walk the dog" actually hit the dog. "Around the world" hit the lamp. "Rock the baby" got the string tangled into a knot that\'s still in there.',
-    memories: ['The yo-yo guy came to school and everybody bought one that afternoon.'],
+      'The yo-yo guy came to school, did tricks in the gym and everybody bought one that afternoon. For a few months the whole playground was yo-yos. "Around the world" hit the lamp. "Rock the baby" tied the string into a knot that\'s still in there.',
+    memories: [
+      '"Walk the dog" actually hit the dog.',
+    ],
     photos: [P.yoyo],
     video: V('youtube-dfqykR14O3Y', 'Duncan Yo-yo commercial, 1976'),
   },
@@ -816,16 +955,20 @@ const CARDS: PropCard[] = [
     title: 'Sonic tape',
     era: 'Gotta go fast',
     story:
-      'The Sonic cartoon taped off Saturday morning TV. Sonic vs Mario was the real war of the 90s, and this desk was Switzerland: both of them lived here.',
-    memories: ['Chili dogs became the only acceptable food for a month.'],
+      'Sega vs Nintendo was the real war of the 90s. Kids picked a side, and the TV ads picked fights too. Sonic had two cartoons on Saturday mornings, taped and watched again on Sunday. This desk was Switzerland: both of them lived here.',
+    memories: [
+      'Chili dogs became the only acceptable food for a month.',
+    ],
   },
   {
     id: 'cd-vhs',
     title: 'The movie row',
     era: 'Space Jam on top',
     story:
-      'Space Jam came out and everybody tried to dunk like Michael Jordan on the mini hoop on the closet door. Monstars were the scariest villains ever made, change my mind.',
-    memories: ['The Space Jam soundtrack lived in the Walkman for a year.'],
+      'Space Jam came out in 1996 and every kid wanted to be Michael Jordan. Mini hoops went up on closet doors everywhere. The Space Jam soundtrack lived in the Walkman for a year.',
+    memories: [
+      'Monstars were the scariest villains ever made, change my mind.',
+    ],
     photos: [P.vhs],
     video: V('trailer-for-space-jam', 'Space Jam trailer, 1996'),
   },
@@ -834,24 +977,30 @@ const CARDS: PropCard[] = [
     title: 'Participation trophy',
     era: 'Everybody won',
     story:
-      'Tee-ball, 1995. The team lost every single game and everybody got a trophy anyway. It\'s gold-colored plastic and it is the proudest thing on this desk.',
-    memories: ['Orange slices at halftime were the actual reason anybody played.'],
+      'Saturday mornings in spring meant tee-ball. Parents in folding chairs, a snack schedule on the fridge and juice boxes after the game. This team lost every single game and everybody got a trophy anyway. It is the proudest thing on this desk.',
+    memories: [
+      'Orange slices at halftime were the actual reason anybody played.',
+    ],
   },
   {
     id: 'cd-stickers',
     title: 'Drawer stickers',
     era: 'Skater, No Fear, Saturn',
     story:
-      'Every drawer has a sticker from a different phase: the skater phase, the space phase, the No Fear phase. The drawers are a timeline of who you were trying to be.',
-    memories: ['The planet sticker glows in the dark if the lights were on long enough.'],
+      'Every drawer has a sticker from a different phase: the skater phase, the space phase, the No Fear phase. In the 90s, the stickers on your stuff told everybody who you were trying to be.',
+    memories: [
+      'The planet sticker glows if the lights were on long enough.',
+    ],
   },
   {
     id: 'cd-chair',
     title: 'The spinny chair',
     era: 'Mission control',
     story:
-      'Its main job: spin until you feel sick, then spin back the other way to "unwind". The cushion has a hole that grows a little every year. It still rolls perfectly to the TV.',
-    memories: ['Office chair races down the hallway. Banned.'],
+      'The spinny chair was the best seat in the house, and every kid with one tested how fast it could go. The cushion has a hole that grows a little every year. It still rolls perfectly to the TV.',
+    memories: [
+      'Office chair races down the hallway. Banned.',
+    ],
     photos: [P.chair],
   },
   // ---------- the computer desk (east corner) ----------
@@ -860,8 +1009,11 @@ const CARDS: PropCard[] = [
     title: 'The family computer',
     era: 'Windows 98, dial-up, one phone line',
     story:
-      'The computer desk in the corner, where the whole house took turns. Somebody always picked up the phone in the middle of a download and the whole thing started over.',
-    memories: ['That dial-up screech meant you were about to be online.', 'Get off the internet, I need to use the phone!'],
+      'The family computer sat in the corner and the whole house took turns. A kitchen timer decided whose turn it was. Kids did homework in Encarta, played games, and waited an hour for one song to download.',
+    memories: [
+      'That dial-up screech meant you were about to be online.',
+      '"Get off the internet, I need to use the phone!"',
+    ],
     action: { kind: 'pc', label: 'Use the computer' },
   },
   {
@@ -869,8 +1021,11 @@ const CARDS: PropCard[] = [
     title: 'Beige CRT monitor',
     era: 'Fifteen glorious inches',
     story:
-      'Heavier than you were. The Windows 98 logo came up and you waited, and waited, and then the desktop showed up and you waited some more. The screen buzzed and made the hair on your arm stand up.',
-    memories: ['3D Pipes screensaver, for hours.', 'Wallpapers you set and forgot for a whole year.'],
+      'Starting the computer took a while. The Windows logo came up and you waited, and waited, and then the desktop showed up and you waited some more. Kids changed the wallpaper the first day and then forgot about it for a whole year.',
+    memories: [
+      '3D Pipes screensaver, for hours.',
+      'Heavier than you were.',
+    ],
     action: { kind: 'pc', label: 'Turn on the computer' },
   },
   {
@@ -878,8 +1033,10 @@ const CARDS: PropCard[] = [
     title: 'The tower',
     era: 'Pentium inside',
     story:
-      'A beige box with a Turbo button nobody understood and a CD tray that made a perfect cup holder. The sticker on the front was more important than anything inside it.',
-    memories: ['Pressing the power button and hearing every fan in the house wake up.'],
+      'A beige box under the desk was the most expensive thing in a lot of 90s houses. It came with a CD tray that kids used as a cup holder at least once, and a sticker on the front that seemed more important than anything inside.',
+    memories: [
+      'Pressing the power button and hearing every fan wake up.',
+    ],
     action: { kind: 'pc', label: 'Press the power button' },
   },
   {
@@ -887,16 +1044,21 @@ const CARDS: PropCard[] = [
     title: 'Inkjet printer',
     era: 'Out of cyan again',
     story:
-      'Printed every school report the night before it was due, one slow line at a time. Ran out of colour ink right when you needed the cover page.',
-    memories: ['Banner paper with the holes down the sides, torn off strip by strip.'],
+      'Printing a school report was an event. You hit Print and listened to it go one slow line at a time while the whole house heard it. Most reports got printed the night before they were due.',
+    memories: [
+      'It jammed every single time it was the night before.',
+    ],
   },
   {
     id: 'pc-keyboard',
     title: 'Clicky keyboard',
     era: 'Typing class, home edition',
     story:
-      'Loud enough to wake the house at midnight. You learned to type on Mavis Beacon and on instant messages, mostly the instant messages.',
-    memories: ['Crumbs between the keys. All of them.'],
+      'Lots of schools had computer class in the 90s, with a whole lab of beige computers and typing games. Kids learned to type there, and then got really fast at home typing instant messages late at night.',
+    memories: [
+      'Crumbs between the keys. All of them.',
+      'Loud enough to wake the house at midnight.',
+    ],
     action: { kind: 'pc', label: 'Use the computer' },
   },
   {
@@ -904,8 +1066,11 @@ const CARDS: PropCard[] = [
     title: 'Ball mouse',
     era: 'Clean the ball, clean the rollers',
     story:
-      'When the cursor started skipping, you popped out the ball and scraped the gunk off the rollers with a fingernail. Good as new.',
-    memories: ['The mouse pad was a free one from a bank.'],
+      'Kids learned the mouse playing Solitaire and Minesweeper, and the family computer had a free mouse pad from a bank or a store. Double-clicking was a skill that took grown-ups years.',
+    memories: [
+      'The mouse pad was a free one from a bank.',
+      'Grandma clicked once and waited. Every time.',
+    ],
     action: { kind: 'pc', label: 'Use the computer' },
   },
   {
@@ -913,16 +1078,20 @@ const CARDS: PropCard[] = [
     title: 'CD-ROMs and floppies',
     era: 'Insert disk 2 of 7',
     story:
-      'Encyclopedia discs, a demo disc from a cereal box and a stack of free AOL CDs that showed up in the mail every single week.',
-    memories: ['1,000 free hours! (must be used within one month).'],
+      'Encyclopedias came on CD in the 90s, so school reports started with Encarta instead of the big books at the library. Demo discs came in cereal boxes and magazines, and the free AOL discs showed up in the mail almost every week.',
+    memories: [
+      '1,000 free hours! (must be used within one month).',
+    ],
   },
   {
     id: 'pc-pencils',
     title: 'Pencil cup',
     era: 'Every colour but the one you need',
     story:
-      'Colored pencils for the state project, all sharpened to a point except the one color you need for the ocean. Someone always took the blue.',
-    memories: ['Electric pencil sharpeners: ate half the pencil every time.'],
+      'State projects, science fair posters and book report covers were all colored in pencil. Every class had one kid with the 64-pack, and everybody was nice to that kid. Somebody always took the blue.',
+    memories: [
+      'Electric pencil sharpeners: ate half the pencil every time.',
+    ],
     photos: [P.pencils],
   },
   {
@@ -930,16 +1099,20 @@ const CARDS: PropCard[] = [
     title: 'Drawer stickers',
     era: 'MTV, a smiley and a bit of rebellion',
     story:
-      'Every drawer got a sticker the day you got it. Peeling them off now would take the paint with them, so they stay.',
-    memories: ['The drawer with the RAD sticker is where the good stuff is hidden.'],
+      'Every drawer got a sticker the day you got it. Free stickers came with magazines, CDs and every trip to the mall. Peeling them off now would take the paint with them, so they stay.',
+    memories: [
+      'The drawer with the RAD sticker is where the good stuff is hidden.',
+    ],
   },
   {
     id: 'pc-games',
     title: 'PC game boxes',
     era: 'Big boxes, tiny discs',
     story:
-      'Giant cardboard boxes holding one CD and a manual you actually read. The system requirements on the back were a test your computer never quite passed.',
-    memories: ['Installing took an hour. Worth it.'],
+      'Computer games were sold in big boxes on shelves at the electronics store, and kids picked them by the picture on the front. The system requirements on the back were a test your computer never quite passed.',
+    memories: [
+      'Installing took an hour. Worth it.',
+    ],
   },
   // ---------- little things on the floor and walls ----------
   {
@@ -947,8 +1120,11 @@ const CARDS: PropCard[] = [
     title: 'Fruit Gushers',
     era: 'Snack trading currency',
     story:
-      'At lunch one pack of Gushers could buy two Fruit Roll-Ups and a Capri Sun, or one pudding cup if the market was bad. Bite down and your head turns into a fruit, said the commercial. Did not happen. Still tried.',
-    memories: ['Gushers were worth more than money in the cafeteria.'],
+      'Lunch tables in the 90s worked like a stock market. One pack of Gushers could buy two Fruit Roll-Ups and a Capri Sun, or one pudding cup if the market was bad. Everybody\'s lunch box was open for business.',
+    memories: [
+      'Gushers were worth more than money in the cafeteria.',
+      'The commercial said your head would turn into a fruit. Still waiting.',
+    ],
     photos: [P.gushers],
     video: V('fruit-gushers-1992-commercial', 'Fruit Gushers commercial, 1992'),
   },
@@ -957,9 +1133,9 @@ const CARDS: PropCard[] = [
     title: 'Pokémon cards',
     era: '1999 · Base Set',
     story:
-      'The pile on the floor is the trade pile, the doubles and the "you can have it" cards. The binder is somewhere safe. The holographic Charizard was traded for a bike and that is a decision we live with.',
+      'In 1999 every recess was a trading floor. Kids carried binders to school, traded doubles at lunch, and argued over who got the better deal. The pile on the floor here is the trade pile. The holographic Charizard was traded for a bike, and that is a decision we live with.',
     memories: [
-      'Sleeves that never fit. Rubber bands that ruined everything.',
+      'Rubber bands ruined everything.',
       'Banned at school after the "it\'s mine, you traded it" incident.',
     ],
     photos: [P.pokemon],
@@ -970,7 +1146,7 @@ const CARDS: PropCard[] = [
     title: 'Hot Pockets & pizza rolls',
     era: 'After-school dinner',
     story:
-      'Two minutes in the microwave: lava on the outside, still frozen in the middle. Pizza rolls were worse, a little pocket of sun that burned the roof of your mouth every time. Every time. We never learned.',
+      'After school in the 90s, a lot of kids made their own snack while their parents were still at work. The microwave was the kitchen. Two minutes: lava on the outside, still frozen in the middle. Pizza rolls were worse, a tiny pocket of sun in every bite. We never learned.',
     memories: [
       'The crisping sleeve did nothing and we all knew it.',
       'Eaten on the floor because the desk was full and the table was "for grown-ups".',
@@ -983,8 +1159,10 @@ const CARDS: PropCard[] = [
     title: 'The high-tops',
     era: 'Do not step on them',
     story:
-      'Saved birthday money for six months for these. Wore them once outside, got a scuff, cried, and they\'ve lived on the floor next to the shelf ever since, toes pointed out like they\'re on display. Because they are.',
-    memories: ['Pump them up, lace them tight, walk weird so they don\'t crease.'],
+      'Saved birthday money for six months for these. In the 90s, new sneakers came out on Saturdays, and kids lined up at the mall before it opened. Wore them once outside, got a scuff, and they\'ve lived on the floor by the shelf ever since, toes pointed out like they\'re on display. Because they are.',
+    memories: [
+      'Pump them up, lace them tight, look fresh.',
+    ],
     photos: [P.jordans],
   },
   {
@@ -992,19 +1170,21 @@ const CARDS: PropCard[] = [
     title: 'RC trucks',
     era: 'Batteries not included',
     story:
-      'Christmas morning: three RC trucks and zero batteries in the whole house. Had to wait till the store opened on the 26th. Then they drove under the bed and never came out for three years.',
-    memories: ['The remotes used the same frequency, so racing friends was chaos.'],
+      'Christmas morning: three RC trucks and zero batteries in the whole house. Most stores were closed, so you had to wait until the next day. Then they drove under the bed and didn\'t come out for three years.',
+    memories: [
+      'Racing a friend meant both remotes drove both trucks. Chaos.',
+    ],
   },
   {
     id: 'hotwheels',
     title: 'Hot Wheels track',
     era: '1968 · Mattel · orange track forever',
     story:
-      'It started as one loop. Then the track went off the toy shelf, under the bed, across the hallway and down the stairs, held together with tape and a dictionary for the jump. Every car got launched off it at least once. Only the slow, ugly station wagon ever made it all the way through the loop.',
+      'It started as one loop. Then the track went off the toy shelf, under the bed, across the hallway and down the stairs, held together with tape and a dictionary for the jump. Building track all over the house was a whole Saturday plan.',
     memories: [
       'The orange track doubled as a sword, a whip and the thing Mom swore she\'d throw out.',
       'Zero to sixty in one flick of the finger. Sixty to under the couch forever.',
-      'Somebody always said their car was "the fastest" and then it flew off the first curve.',
+      'Only the slow, ugly station wagon ever made it all the way through the loop.',
     ],
     photos: [P.hwCollection, P.hwFleet],
     video: V('videoplayback_20240819_1919', 'Hot Wheels Criss Cross Crash commercial, 1999'),
@@ -1015,8 +1195,11 @@ const CARDS: PropCard[] = [
     title: 'Army men',
     era: 'Green plastic war',
     story:
-      'Hundreds of them. Whole battles across the carpet, the bed, the bathtub. The guy with the bazooka was the most valuable soldier. The guy lying down with the rifle could never stand up for anything.',
-    memories: ['Stepping on one barefoot is worse than Lego. Fight us.'],
+      'A bag of army men cost about a dollar, and one bag gave you a whole war. Battles went across the carpet, the bed and the bathtub, and the losers got flicked. The guy lying down with the rifle could never stand up for anything.',
+    memories: [
+      'Stepping on one barefoot is worse than LEGO. Fight us.',
+      'The parachute guys never once landed where you threw them.',
+    ],
     photos: [P.army],
     action: { kind: 'army', label: 'Send the troops!' },
   },
@@ -1025,12 +1208,11 @@ const CARDS: PropCard[] = [
     title: 'I Spy',
     era: '1992 · Scholastic · picture riddles by Jean Marzollo & Walter Wick',
     story:
-      'Every Scholastic book fair it was right there on the front table, shrink-wrapped, $12.95, and you had exactly 85 cents and a pencil topper. So you checked it out from the school library instead. Then you checked it out again. Then it just sort of... lived under your bed. This copy still has the library pocket glued in the front. The due date says October 1998. The librarian has not forgotten.',
+      'Every Scholastic book fair it was right there on the front table, shrink-wrapped, $12.95, and you had exactly 85 cents and a pencil topper. So you checked it out from the school library instead. Then you checked it out again. This copy still has the library pocket glued in the front. The due date says October 1998.',
     memories: [
       'Somebody always circled the answers in pen, so every library copy was already half solved.',
-      'Walter Wick built every page with real toys and photographed it. No computers. Just a guy with a LOT of marbles.',
       'The riddles rhyme, so you read them in a sing-song voice whether you wanted to or not.',
-      'Late fee is ten cents a day. It has been a while. The librarian is now playing I Spy with YOU, and you are the missing book.',
+      'Late fee is ten cents a day. It has been a while. The librarian has not forgotten.',
     ],
     video: V('how-i-spy-books-are-made', "How 'I Spy' books are made"),
     action: { kind: 'ispy', label: 'Open the book' },
@@ -1040,11 +1222,11 @@ const CARDS: PropCard[] = [
     title: 'Furby',
     era: '1998 · the Christmas everyone fought over',
     story:
-      'Mom stood in line at Toys"R"Us at 6 a.m. for this one, and a lady in the next aisle offered her a hundred dollars for it. It speaks Furbish, it learns English the longer you keep it, and it has no off switch. None. The only way to shut it up is to take the batteries out with a screwdriver, and it wakes up in the middle of the night anyway to say "me sleepy" in a dark closet.',
+      'Furby was the toy of Christmas 1998. Stores sold out, parents waited in line before the doors opened, and some people paid hundreds of dollars for one. Mom stood in line at 6 a.m. for this one, and a lady in the next aisle offered her a hundred dollars for it.',
     memories: [
-      'The NSA actually banned Furbies from its offices in 1999 in case they were recording secrets. They weren\'t. They were just saying "kah may-may".',
+      'It says "me sleepy" in a dark closet at 3 a.m. anyway.',
       'Two Furbies in the same room will talk to each other forever. Nobody knows what they\'re planning.',
-      'Feed it too much and it gets sick. Turn it upside down and it screams. Turn off the light and it snores. Basically a little brother.',
+      'Turn it upside down and it screams. Turn off the light and it snores. Basically a little brother.',
       'Somebody at school swore you could make it say a bad word. You could not.',
     ],
     photos: [P.furby, P.furbyBoxed],
@@ -1056,12 +1238,11 @@ const CARDS: PropCard[] = [
     title: 'Poo-Chi',
     era: '2000 · Sega Toys and Tiger Electronics · $24.99',
     story:
-      'Everybody had a Furby, so this was the cool new thing: a robot puppy with red LED eyes that turned into hearts. Press the button on his head and he wakes up, barks, and sings. He came with his own bone, and he loved that bone more than he loved you. The box said Poo-Chis could talk to each other. Every kid on the street tried it. Ours never did. We never got the version that could, and nobody ever sent the update.',
+      'After the Furby craze, Poo-Chi was the cool new thing for Christmas 2000: a robot puppy whose eyes turned into hearts when he was happy. He came with his own bone, and he loved that bone more than he loved you. The box said Poo-Chis could talk to each other. Every kid on the street tried it.',
     memories: [
-      'He sang six songs: the Wedding March, Camptown Races, Bingo, the Railroad and Home on the Range, Ode to Joy, and When the Saints Go Marching In. All in beeps.',
-      'Ten million of them sold in eight months. Then in 2002 they were just gone, and nobody ever made him better.',
-      'His "voice" was a speaker the size of a dime, so a bark sounded like a calculator having feelings.',
-      'Held two of them nose to nose for a whole recess, waiting for them to talk. One of them fell asleep.',
+      'He sang six songs, all in beeps.',
+      'His voice was a speaker the size of a dime, so a bark sounded like a calculator having feelings.',
+      'Held two of them nose to nose for a whole recess, waiting for them to talk. One fell asleep.',
       'His bones are all over this room somewhere. He never could find them on his own.',
     ],
     photos: [P.poochi, P.poochiHearts, P.poochiPair],
@@ -1073,8 +1254,11 @@ const CARDS: PropCard[] = [
     title: 'Action figure',
     era: 'Cool guy with a backpack',
     story:
-      'Came with tiny guns and a tiny backpack, all lost within the first hour. He keeps watch over the NES now, which is a very important job.',
-    memories: ['Had a real name and a whole backstory on the card. Never read it.'],
+      'Action figures were the toy aisle in the 90s: G.I. Joe, Ninja Turtles, Power Rangers, a whole wall of them. Each came with tiny gear that was all gone within the first hour. This one keeps watch over the NES now, which is a very important job.',
+    memories: [
+      'Had a whole backstory on the card. Never read it.',
+      'Gun: couch. Backpack: vacuum. Helmet: the dog.',
+    ],
     photos: [P.figures],
   },
   {
@@ -1082,7 +1266,7 @@ const CARDS: PropCard[] = [
     title: "Rubik's Cube",
     era: 'Solved once, by peeling the stickers',
     story:
-      'Never solved it legit. Peeled the stickers off and put them back once, and showed everybody. Nobody believed it. They were right not to.',
+      'Lots of 90s kids found their parents\' old Rubik\'s Cube from the 80s in a closet. Never solved it for real. Peeled the stickers off and put them back once, and showed everybody. Nobody believed it. They were right not to.',
     memories: [
       'Took it apart with a screwdriver. Couldn\'t get it back together.',
       'One kid at school could solve it in a minute and everybody treated him like a wizard.',
@@ -1096,10 +1280,10 @@ const CARDS: PropCard[] = [
     title: 'The big VHS tower',
     era: 'Space Jam to Home Alone',
     story:
-      'Every tape here has been watched so many times the box art is worn white at the corners. Power Rangers on the tape, a little white rental sticker on the spine. The Pokémon tape has the Pikachu Thunderbolt part worn out.',
+      'Every kid had a stack like this. Saturday morning shows, a few Disney movies and the tape you watched every day after school. These have been watched so many times the box art is worn white at the corners. The Pokémon tape has the Pikachu Thunderbolt part worn out.',
     memories: [
-      'Fast-forwarding through the previews while holding Play so you could see them speed by.',
       'Be kind, rewind.',
+      'Power Rangers on the tape, a little rental sticker on the spine.',
     ],
     photos: [P.vhs, P.vhsKodak],
   },
@@ -1108,8 +1292,10 @@ const CARDS: PropCard[] = [
     title: 'Loose tapes',
     era: 'Out of their cases',
     story:
-      'Tapes out of their cases, because the cases were in the other room, because nobody puts things back. One is labeled "DO NOT TAPE OVER" and has been taped over.',
-    memories: ['The cases are somewhere. Probably.'],
+      'Tapes out of their cases, because the cases were in the other room, because nobody puts things back. In the 90s, every TV stand had a pile like this. One is labeled "DO NOT TAPE OVER" and has been taped over.',
+    memories: [
+      'The cases are somewhere. Probably.',
+    ],
     photos: [P.vhsKodak],
   },
   {
@@ -1117,40 +1303,50 @@ const CARDS: PropCard[] = [
     title: 'The book stack',
     era: 'Book report material',
     story:
-      'Goosebumps, Harry Potter, Captain Underpants. Somebody snuck a Diary of a Wimpy Kid in here and it\'s from the wrong decade. Clearly a little brother.',
-    memories: ['Book reports written from the back cover only.'],
+      'In the late 90s Harry Potter got kids reading books thicker than their arms. Kids read them at recess, at dinner and in the car, and a few years later whole towns had midnight parties for the new book.',
+    memories: [
+      'Book reports written from the back cover only.',
+    ],
   },
   {
     id: 'poster-pokemon',
     title: 'Pokémon poster',
     era: 'Came with the magazine',
     story:
-      'Pulled from the middle of a magazine. The staple holes are right through Pikachu\'s face. It\'s still the best poster in the room.',
-    memories: ['Taped up, fell down, taped up again with way more tape.'],
+      'Posters came folded up in the middle of magazines, and kids pulled them out the second they got home. This one has staple holes right through Pikachu\'s face. It\'s still the best poster in the room.',
+    memories: [
+      'Taped up, fell down, taped up again with way more tape.',
+    ],
   },
   {
     id: 'poster-mummy',
     title: 'The Mummy poster',
     era: '1999 · watched at a sleepover',
     story:
-      'The scarab beetle scene. That\'s all there is to say. Nobody slept.',
-    memories: ['The poster faces the bed. That was a mistake.'],
+      'The Mummy was the big movie of summer 1999, and kids who were too young went anyway. The scarab beetle scene. That\'s all there is to say. Nobody slept.',
+    memories: [
+      'The poster faces the bed. That was a mistake.',
+    ],
   },
   {
     id: 'poster-giant',
     title: 'The Iron Giant poster',
     era: '1999',
     story:
-      '"Superman." If you know, you know. Watched it once at a sleepover and three kids cried and said they had something in their eye.',
-    memories: ['Everyone wanted a giant robot friend after this.'],
+      'Hardly anyone saw The Iron Giant in theaters, so most kids found it on tape. Then it got passed around from friend to friend. "Superman." If you know, you know. Watched it at a sleepover and three kids said they had something in their eye.',
+    memories: [
+      'Everyone wanted a giant robot friend after this.',
+    ],
   },
   {
     id: 'poster-babe',
     title: 'Babe poster',
     era: '1995 · that\'ll do, pig',
     story:
-      'Got it free with a Happy Meal. Sang "La la la" around the house for a month. Nobody in the house ate bacon for a week after the movie.',
-    memories: ['"That\'ll do, pig. That\'ll do."'],
+      'After Babe hit theaters, kids across America were suddenly very into pigs. Got this poster free with a Happy Meal. Sang "La la la" around the house for a month.',
+    memories: [
+      'Tried to herd the dog. The dog did not herd.',
+    ],
   },
 ];
 
