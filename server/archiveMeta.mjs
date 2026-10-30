@@ -80,7 +80,7 @@ export function createArchiveMeta({
         reject(new ArchiveUnavailable('archive lookup queue is full', 5_000));
         return;
       }
-      const job = { task, resolve, reject, expiry: null };
+      const job = { task, resolve, reject, expiresAt, expiry: null };
       if (Number.isFinite(expiresAt)) {
         // Its visitor gives up at the deadline: drop it then, even while every
         // slot is still busy, rather than spend a request on it later.
@@ -119,6 +119,11 @@ export function createArchiveMeta({
       }
       const job = waiting.shift();
       clearTimeout(job.expiry);
+      if (job.expiresAt <= Date.now()) {
+        // Past its deadline before its timer ran: never send it.
+        job.reject(new ArchiveUnavailable('archive lookup waited too long in the queue', 5_000));
+        continue;
+      }
       active++;
       lastStart = Date.now();
       Promise.resolve()

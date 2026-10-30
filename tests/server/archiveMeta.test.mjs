@@ -116,6 +116,15 @@ test('a lookup still queued at its deadline gives up without using a request', a
   assert.equal(calls, 1);
 });
 
+test('an attempt already past its deadline is never sent, even with a slot free', async () => {
+  const { calls, fetchImpl } = fakeArchive([json({}, 502), json(ITEM)]);
+  // the retry wait (40 ms) ends after the 20 ms deadline; the deadline check is
+  // made loose so the retry still gets queued
+  const meta = createArchiveMeta({ ...quick, baseDelayMs: 40, maxDelayMs: 40, timeoutMs: -1000, deadlineMs: 20, fetchImpl });
+  await assert.rejects(meta.lookup('late'), /waited too long/);
+  assert.equal(calls.length, 1);
+});
+
 test('errors retry with growing waits, then give up', async () => {
   const { calls, fetchImpl } = fakeArchive([json({}, 502)]);
   const meta = createArchiveMeta({ ...quick, fetchImpl, maxAttempts: 4 });
