@@ -238,7 +238,13 @@
   top: 50%;
   min-width: 7.2em;
   pointer-events: auto;
-  transform: translate(-50%, -50%) rotate(var(--a)) translateY(-31cqw);
+  transform: translate(-50%, -50%) rotate(calc(var(--a) * var(--spread, 1))) translateY(-31cqw);
+}
+/* The real thing and the video screen sit in the middle on their own: the ring round the hologram steps aside. */
+.hc[data-tab='images'] .hm-core-ring,
+.hc:has(.hm-screen) .hm-core-ring {
+  opacity: 0;
+  transition: opacity 0.3s;
 }
 
 .hm-x {
@@ -833,6 +839,14 @@
   }
   .hm-wire {
     display: none;
+  }
+  .hm {
+    --spread: 1.45;
+  }
+  .hm-tab {
+    min-width: 0;
+    padding: 0.5em 0.75em;
+    letter-spacing: 0.1em;
   }
 }
 

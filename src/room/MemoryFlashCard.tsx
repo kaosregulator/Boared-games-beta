@@ -269,8 +269,8 @@ function Capsule({
             </textPath>
           </text>
           {/* The ring around the hologram, and the wires out to each block. */}
-          <circle className="hm-line hm-line--bright" cx="50" cy="47" r="17.4" />
-          <circle className="hm-line hm-spin" cx="50" cy="47" r="19.2" strokeDasharray="6 2.4" style={{ transformOrigin: '50px 47px' }} />
+          <circle className="hm-line hm-line--bright hm-core-ring" cx="50" cy="47" r="17.4" />
+          <circle className="hm-line hm-spin hm-core-ring" cx="50" cy="47" r="19.2" strokeDasharray="6 2.4" style={{ transformOrigin: '50px 47px' }} />
           {tab === 'history' &&
             nodes.map((_, i) => (
               <g key={`${at}-${i}`} className="hm-wire">
