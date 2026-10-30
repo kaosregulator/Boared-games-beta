@@ -32,8 +32,14 @@ function archiveMetaPlugin(): Plugin {
       server.middlewares.use((req, res, next) => {
         const m = req.url?.match(/^\/api\/archive\/([^/?#]+)/);
         if (!m) return next();
+        let id = '';
+        try {
+          id = decodeURIComponent(m[1]);
+        } catch {
+          // a bad %-escape: the handler answers 400 for an empty id
+        }
         void import('./server/archiveMeta.mjs').then(({ archiveMeta }) =>
-          archiveMeta.handle(decodeURIComponent(m[1]), (status: number, body: unknown, headers: Record<string, string>) => {
+          archiveMeta.handle(id, (status: number, body: unknown, headers: Record<string, string>) => {
             res.statusCode = status;
             for (const [k, v] of Object.entries(headers)) res.setHeader(k, v);
             res.setHeader('Content-Type', 'application/json');
