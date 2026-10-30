@@ -1,117 +1,150 @@
-# Game Room Beta
+# Boared Games Beta: the 90s room
 
-First-person interactive mini-game menu demo. The **whole room is the menu** — walk around a midnight 90s bedroom, aim at glowing hotspots, pull a board-game box off the shelf, and jump into a mini-game.
+**A 90s bedroom that preserves the feeling of being there.** This is an interactive 3D room you can walk around in the browser, built to bring back that nostalgia and keep the history of the decade alive. The whole room is the menu. Turn on the TV and flip through real broadcasts, tune the boombox, sit at the Windows 98 PC, play a board game on the card table, race Hot Wheels across the floor, or shrink down into an army men war on the rug.
 
-This project is intentionally branded as a **public beta**, end to end.
+## Why it exists
 
-## What works in the room
+The idea behind this room is to bring back the feeling of being a kid in the 90s, and to **preserve that history**. The shows, the commercials, the radio, the toys, the games and the computer you grew up with are kept here in one place, so anyone can step back into that room. Every object has a memory card with its story, real photos, and often an old commercial for it.
 
-- **Controls**: phone and tablet — left thumb stick walks, drag to look, tap things;
-  the TV gets an on-screen remote and the NES / Game Boy get a thumb pad. Laptop —
-  WASD walks, arrow keys look (up/down too), two-finger swipe to look, click things.
-  Mouse — drag to look, the cursor aims. No pointer lock, no run key.
-- **View**: top right while walking — *FOV* steps the field of view (fine-tune it in
-  the menu; it's remembered), pinch / ctrl+scroll / + − zooms in without leaving the
-  first-person view, and ⤢ goes full screen. Close up on the TV, NES, boombox or
-  Game Boy: pinch or scroll to zoom, drag to pan, double-tap to reset, and *Big
-  screen* (F) lays the picture over the whole display. The framing follows the phone
-  when it turns, so the remote and thumb pad never cover the screen. On iPhone, Add
-  to Home Screen for a true full screen (Safari only lets videos go full screen).
-- **Stability**: the room's textures are GPU-compressed KTX2 (about a tenth of the
-  graphics memory), a lost graphics context rebuilds the room in place, and a reload
-  puts you back where you were instead of the intro.
-- **Memory cards**: everything in the room has one, including the things baked into
-  the desks and shelves (lamps, clocks, tapes, the Walkman, POGs, View-Master,
-  stickers, posters). Each has a story, swipeable photos from Wikimedia Commons and,
-  for a lot of them, an old commercial from the Internet Archive. Hotspot boxes are in
-  `src/room/hotspots.ts`; the copy is in `src/room/propCards.ts`.
-- **Lava lamps**: the four lamps baked into the props are live — raymarched wax
-  (`src/room/LavaLamp.tsx`). The desk lamps light their desks. Menu → Mood → *Lamps
-  only* turns the ceiling light down.
-- **Tamagotchi** on the bed: its card opens Dammagotchi
-  ([dammafra/dammagotchi](https://github.com/dammafra/dammagotchi), AGPL-3.0, built
-  into `public/tamagotchi`; our changes are in `public/tamagotchi/CHANGES.patch`).
-  Big A / B / C buttons sit beside it on phones; on a computer Tab, Enter and
-  Backspace press them.
-- **Rubik's Cube**: its card (wall shelf, or the little cube on the game closet) has
-  *Pick it up & twist it* — swipe a sticker to turn that layer, drag around it to
-  look, U D L R F B keys or buttons, Scramble, timer, and a solved check.
-- **Music**: *Snowfall (slowed, birds)* is the default track; *Bedroom tape* is in the
-  menu.
-- **TV** (click it, then Turn it on): power-on menu with *Watch TV* or *Gaming*. Watch TV is a
-  cable lineup — channel 2 runs archived SNICK broadcasts back to back (data from
-  [chairpants/snick-tv](https://github.com/chairpants/snick-tv)), every other channel
-  is a Golden Age cartoon streamed from the Internet Archive (the Cartoon Vault
-  shorts). Static between channels, a scrolling cable guide (G), and 3D buttons on
-  the set and the cable box. Gaming plays the NES carts in `public/roms`.
-- **NES** next to the TV: Tetris and Pac-Man in EmulatorJS (self-hosted in `public/emu`).
-- **Boombox**: an FM tuner — live SomaFM stations and real 80s/90s airchecks from the
-  Internet Archive, with static, signal bleed, SEEK and SCAN.
-- **Game Boy** on the bean bag: sit down and play the owner's Game Boy Tetris.
-- **Board games**: pick any game and the card table spawns on the rug, you crouch at
-  it, and the box unfolds. Seven games play in 3D on the table:
-  - **Monopoly** (US / Atlantic City board printed from the rules engine's data): choose
-    your silver token up close (top hat, race car, dog, battleship, thimble, cannon,
-    horse, rubber ducky, penguin) and one to three opponents; title deeds, paper money,
-    Chance and Community Chest cards lie on the table; houses and hotels go on the board.
-  - **Chess** (Tabletop Club's set) and **Checkers** (Kytric's voxel set): pick a piece up
-    and carry it, or tap it then a glowing square; the opponent's ghost hand moves its pieces.
-  - **Blackjack** with real cards and poker chips, dealt by a ghost hand.
-  - **Battleship** and **Connect Four**.
+> **No video is stored in this repo.** All of the TV shows, cartoons, commercials and old clips stream straight from the [Internet Archive](https://archive.org). (The only video file here is the menu's short trailer, which was recorded inside the room itself.)
 
-  The table camera works like Tabletop Club's: drag (or two fingers) to orbit, scroll or
-  pinch to zoom, arrows/Q/E/+/- on a keyboard, V or the *Game view* button for overhead,
-  side and seat views, and *Follow action* swings the camera to each roll, shot and
-  move. The other games open their board over the room. Space stands you up; Pack up
-  puts it all away. Asset credits are in `public/games/CREDITS.md`.
-- **Army men**: click the army men tin: "We're under attack! Send the troops!" shrinks you into a
-  toy town on the road rug (`src/room/army/`). Green plastic patrols, a drill squad, guards and a
-  tower lookout run the town; the tan army attacks in three waves from behind a wall of books, and
-  hit soldiers tip over like real toys. Walk as a green soldier (W/S, A/D turn, Shift run, Space
-  fire), or press F at the helipad for the toy helicopter: a ten-ring course round the room, or free
-  flight (W/S, A/D, Space up, Shift down, Q/E slide, Tab boost, drag to turn). C switches third
-  person, first person and bird's-eye. Test links: `?army=1`, `?army=heli&ring=N`, `&calm=1`, `&armyCam=birdseye`.
-- **Posters**: seven on the walls, in `src/room/WallPosters.tsx` (one line each to swap).
-- **Neon wall**: the smaller games hang on the east wall as neon signs.
+## What's in the room
 
-Capture links: `?cam=x,y,z,lx,ly,lz`, `?device=crt|nes|boombox`, `?seat=gameboy`,
-`?play=<game id>`, `?card=<card id>`, `?probe=<model>`, `?hotspots` (outline every
-hotspot), `?pick-probe=<prop>&pick=x,y` (read a point off a mesh, for placing hotspots).
+- **Walk around** a midnight 90s bedroom: thumb stick and drag to look on phones and tablets, WASD and arrow keys on a laptop. Field of view, zoom and full screen are in the corner.
+- **Memory cards and time capsule cards** for everything in the room: lamps, clocks, tapes, the Walkman, POGs, View-Master, posters and more, each with a story, photos and old commercials.
+- **TV**: a full cable lineup of real broadcasts streamed from the Internet Archive, including SNICK, Toonami, Saturday morning cartoons, MTV, PBS Kids, TGIF and more, plus a channel that is nothing but 90s commercials. There's static between channels and a scrolling cable guide.
+- **Boombox**: an FM tuner with live SomaFM stations and real 80s and 90s radio airchecks, with SEEK, SCAN and static.
+- **Windows 98 PC** on the corner desk: boot it up and play Space Cadet Pinball, Minesweeper, Solitaire, FreeCell, Hearts, Spider, Tetris, TaiPei and Pegged, or use Paint, WordArt, Media Player, and Internet Explorer on 1998 to 2003 web pages from the Wayback Machine. Sandwich Stacker, Thing-Thing and Cartoon Network games play in their own windows.
+- **NES and Game Boy**: Tetris and Pac-Man on the NES, Game Boy Tetris on the bean bag.
+- **Board games on the card table**: Monopoly, Wizard Chess, Checkers, Blackjack, Battleship, Connect Four and more play in 3D, with Clue, Sorry!, Yahtzee, Guess Who, Mouse Trap, The Game of Life, Go Fish, Poker, a casino and Throwback Trivia too.
+- **Army men**: shrink into a toy town on the rug, fight off the tan army in waves, or fly the toy helicopter through a ring course.
+- **Hot Wheels**: race the orange track over the ramp, across the bed and onto the desk, or free roam the floor.
+- **Toys that come alive**: a Tamagotchi, a Furby (and a Furby Boom), Poo-Chi the robot dog and his bone hunt, a Rubik's Cube you can twist, the View-Master in 3D, and four live lava lamps.
+- **Music** in the room, with a shuffle and a Sound menu.
 
-## Local
+## What it runs on
+
+| Part | Used for |
+|---|---|
+| **React 19** + **Vite** + **TypeScript** | the app and the build |
+| **Three.js**, **React Three Fiber**, **drei** | the 3D room |
+| **Rapier** and **cannon-es** | physics |
+| **Tailwind CSS** and **98.css** | the menus and the Windows 98 look |
+| **Howler** | sound |
+| **EmulatorJS** | the NES and Game Boy |
+| **Express** on **Node 24** | the server (`server.mjs`) |
+| **Railway** | hosting, deployed from the `Dockerfile` |
+| **GitHub Actions** | tests and checks on every pull request |
+
+## Run it
+
+You need Node 24 or newer.
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`.
-
-## Railway
-
-This repo is Railway-ready:
-
-- `Dockerfile` builds the Vite client and runs `server.mjs`
-- `railway.toml` sets health check at `/api/health`
-- `PORT` is read from the environment (Railway injects it)
-
-Deploy steps:
-
-1. Create a new Railway project from this GitHub repo
-2. Ensure the service uses the Dockerfile (or Railway auto-detects `railway.toml`)
-3. Optional: set `GEMINI_API_KEY` for trivia pack generation
-4. Deploy — open the public URL for the demo site
-
-The server writes JSON logs to stdout (`logCore.mjs`). Build logs are not visible to that process. For deploy, HTTP, and build logs together, the [intermodal](https://railway.com/deploy/intermodal) Railway template is the add-on to attach; it is not wired from this repo. See `docs/ENGINE.md`.
+Then open `http://localhost:3000`. To test the production build:
 
 ```bash
 npm run build
 npm start
 ```
 
-## Stack
+Run the tests with `npm test` and the type check with `npm run lint`.
 
-- React 19 + Vite
-- Three.js / React Three Fiber (first-person room)
-- Existing tabletop mini-games (Battleship, Connect Four, Chess, Poker, Trivia, …)
-- Express production server for Railway
+## Deploy on Railway
+
+The repo is ready for Railway:
+
+- The `Dockerfile` builds the Vite client and runs `server.mjs` on Node 24.
+- `railway.toml` sets the health check at `/api/health`.
+- `PORT` is read from the environment, which Railway sets for you.
+
+Create a Railway project from this GitHub repo and deploy. Setting `GEMINI_API_KEY` is optional; it turns on trivia pack generation. The server writes JSON logs to stdout. See `docs/ENGINE.md` and `docs/deploy-logs.md` for more.
+
+## For developers
+
+Test links: `?cam=x,y,z,lx,ly,lz`, `?device=crt|nes|boombox`, `?seat=gameboy`, `?play=<game id>`, `?card=<card id>`, `?probe=<model>`, `?hotspots` (outline every hotspot), `?pick-probe=<prop>&pick=x,y`, `?army=1`, `?army=heli&ring=N`, `&calm=1`, `&armyCam=birdseye`.
+
+Where things live: hotspots are in `src/room/hotspots.ts`, card text is in `src/room/propCards.ts`, the TV lineup is in `src/tv/channels.ts`, the radio dial is in `src/radio/stations.ts`, and the PC is in `src/pc/`. Detailed asset credits for the table games are in `public/games/CREDITS.md`.
+
+---
+
+## ❤️ Thank you
+
+This room would not exist without the people and projects below. They made, saved and shared the things that bring it to life. Thank you, all of you.
+
+### ❤️ The Internet Archive
+
+A huge thank you to **Brewster Kahle**, founder of the Internet Archive, and the whole Internet Archive team for preserving these amazing pieces of history. Every TV show, cartoon, commercial and radio aircheck in this room, plus the Wayback Machine pages on the PC, comes from them.
+
+- [archive.org](https://archive.org) · [Wayback Machine](https://web.archive.org)
+- If you'd like to support them: [archive.org/donate](https://archive.org/donate)
+
+### ❤️ Music and radio
+
+- **SomaFM**, the listener-supported radio stations on the boombox (Left Coast 70s, Underground 80s, Seven Inch Soul, PopTron, Secret Agent, Groove Salad). If you'd like to support them: [somafm.com/support](https://somafm.com/support/)
+- **Radio Browser**, the free open radio directory the boombox falls back on. If you'd like to support them: [radio-browser.info](https://www.radio-browser.info)
+- **junguler/m3u-radio-music-playlists**, daily radio playlists used as a last backup: [github.com/junguler/m3u-radio-music-playlists](https://github.com/junguler/m3u-radio-music-playlists)
+- **Punch Deck**, for "Brahe" (CC BY 4.0), the title screen song and the PC's Media Player track. If you'd like to support them: [punch-deck.com](https://punch-deck.com)
+- **Scott Buckley**, for "Growing Up". If you'd like to support him: [scottbuckley.com.au](https://www.scottbuckley.com.au)
+- **Hayden Folker**, for "To See The Past" (CC BY 3.0). If you'd like to support him: [his song page on Breaking Copyright](https://breakingcopyright.com/song/hayden-folker-to-see-the-past)
+
+### ❤️ Open-source projects
+
+**The Windows 98 PC**
+- **Sandwich Stacker** by elan-rubin: [github.com/elan-rubin/Sandwich-Stacker](https://github.com/elan-rubin/Sandwich-Stacker)
+- **Space Cadet Pinball** by alula, from the decompilation by Andrey Muzychenko (MIT): [github.com/alula/SpaceCadetPinball](https://github.com/alula/SpaceCadetPinball)
+- **stillplay** by btahir, for FreeCell, Hearts and Spider (MIT): [github.com/btahir/stillplay](https://github.com/btahir/stillplay)
+- **Win95** by wieslawsoltes, for the Windows icons: [github.com/wieslawsoltes/Win95](https://github.com/wieslawsoltes/Win95)
+- **all-windows-sounds** by MCPlayer2015, for the Windows 98 sounds: [github.com/MCPlayer2015/all-windows-sounds](https://github.com/MCPlayer2015/all-windows-sounds)
+- **98.css** by Jordan Scales (MIT): [github.com/jdan/98.css](https://github.com/jdan/98.css)
+- **Flashpoint Archive**, which saved the old Flash games, played through **9o3o** by Dri0m: [github.com/Dri0m/9o3o](https://github.com/Dri0m/9o3o). If you'd like to support them: [flashpointarchive.org](https://flashpointarchive.org)
+
+**Toys, TV and consoles**
+- **Dammagotchi** by dammafra, the Tamagotchi (AGPL-3.0): [github.com/dammafra/dammagotchi](https://github.com/dammafra/dammagotchi)
+- **snick-tv** by chairpants, the SNICK channel data: [github.com/chairpants/snick-tv](https://github.com/chairpants/snick-tv)
+- **EmulatorJS**, the NES and Game Boy (GPL-3.0). If you'd like to support them: [emulatorjs.org](https://emulatorjs.org)
+- **MiDaS** by isl-org, the depth for the View-Master's 3D (MIT): [github.com/isl-org/MiDaS](https://github.com/isl-org/MiDaS)
+- **webxr-input-profiles** by the Immersive Web group, the hand models (MIT): [github.com/immersive-web/webxr-input-profiles](https://github.com/immersive-web/webxr-input-profiles)
+
+**Board games**
+- **threejs-3d-game-battleships** by Arrq54 (Arkadiusz Wojdyla, Michał Frączek): [github.com/Arrq54/threejs-3d-game-battleships](https://github.com/Arrq54/threejs-3d-game-battleships)
+- **3D-Connect-Four** by BertovDev (GPL-3.0): [github.com/BertovDev/3D-Connect-Four](https://github.com/BertovDev/3D-Connect-Four)
+- **MonopolyClone** by Bizangel (MIT): [github.com/Bizangel/MonopolyClone](https://github.com/Bizangel/MonopolyClone)
+- **3d-monopoly** by DanielGRasmussen (CMU Team16): [github.com/DanielGRasmussen/3d-monopoly](https://github.com/DanielGRasmussen/3d-monopoly)
+- **Tabletop Club** by drwhut (MIT), whose camera the table camera is modeled on: [github.com/drwhut/tabletop-club](https://github.com/drwhut/tabletop-club). If you'd like to support them: [tabletopclub.net](https://tabletopclub.net)
+- **market-assets** by pmndrs, for the Monopoly tokens: [github.com/pmndrs/market-assets](https://github.com/pmndrs/market-assets)
+- **glTF Sample Assets** by Khronos, for the rubber ducky: [github.com/KhronosGroup/glTF-Sample-Assets](https://github.com/KhronosGroup/glTF-Sample-Assets)
+
+**The engine**
+- **three.js** (MIT), including the soldier model from its examples: [github.com/mrdoob/three.js](https://github.com/mrdoob/three.js). If you'd like to support them: [threejs.org](https://threejs.org)
+- **React Three Fiber**, **drei** and the rest of **pmndrs**: [github.com/pmndrs](https://github.com/pmndrs). If you'd like to support them: [opencollective.com/pmndrs](https://opencollective.com/pmndrs)
+- **Rapier** by Dimforge: [rapier.rs](https://rapier.rs)
+
+### ❤️ Artists and asset makers
+
+- **Kenney**, for the race car, ship and cannon tokens (CC0). If you'd like to support him: [kenney.nl](https://kenney.nl)
+- **Kytric**, for the Voxel Board Games checkers set (CC0). If you'd like to support them: [kytric.itch.io](https://kytric.itch.io/board-game-assets)
+- **OpenGameArt** artists rehcub, Thane "pennomi" Brimhall, Tiziana and jeffshee, for the chess set, board and cards. If you'd like to support them: [opengameart.org](https://opengameart.org)
+- **Sketchfab** artists Feraxion, davevink and Ana Vassallo, for the Battleship models (CC BY 4.0): [sketchfab.com](https://sketchfab.com)
+- **MarkLaBarr** for the horse token ([Blend Swap](https://blendswap.com)), and Reuben Sotomayor and Alejandro León for the dog token
+- **Lentikula**, for the "Sci-Fi Ship Voices" sound (CC0): [lentikula.itch.io](https://lentikula.itch.io)
+
+### ❤️ Websites that keep history alive
+
+- **Wikimedia Commons** and **Wikipedia**, for the photos on the memory cards. If you'd like to support them: [donate.wikimedia.org](https://donate.wikimedia.org)
+- **View-Master Database** and Dave Machin's collection, for the reel scans: [vm.vmdatabase.com](https://vm.vmdatabase.com)
+- **IMP Awards**, for the movie poster scans: [impawards.com](http://www.impawards.com)
+- **Geek Guilt**, whose Retro Viewer inspired the 90s commercials channel: [geekguilt.com](https://geekguilt.com)
+- **itch.io**, which hosts the Sandwich Stacker web build: [itch.io](https://itch.io)
+
+### ❤️ Hosting
+
+- **Railway**, which keeps the room online: [railway.com](https://railway.com)
+
+---
+
+The toys, shows, games, songs and brands in this room belong to their owners. They're here as a tribute, to remember them and to keep that history from being lost.
