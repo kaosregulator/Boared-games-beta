@@ -73,13 +73,14 @@ export function createArchiveMeta({
 
   // ---- the shared queue ----------------------------------------------------
 
-  function enqueue(task) {
+  /** Run task in the shared queue; give up if it hasn't started by expiresAt. */
+  function enqueue(task, expiresAt = Infinity) {
     return new Promise((resolve, reject) => {
       if (waiting.length >= maxQueue) {
         reject(new ArchiveUnavailable('archive lookup queue is full', 5_000));
         return;
       }
-      waiting.push({ task, resolve, reject });
+      waiting.push({ task, resolve, reject, expiresAt });
       pump();
     });
   }
@@ -103,6 +104,11 @@ export function createArchiveMeta({
         return;
       }
       const job = waiting.shift();
+      if (job.expiresAt <= Date.now()) {
+        // Its visitor has given up; don't spend a request slot on it.
+        job.reject(new ArchiveUnavailable('archive lookup waited too long in the queue', 5_000));
+        continue;
+      }
       active++;
       lastStart = Date.now();
       Promise.resolve()
@@ -146,7 +152,7 @@ export function createArchiveMeta({
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       let res = null;
       try {
-        res = await enqueue(() => request(id));
+        res = await enqueue(() => request(id), started + deadlineMs);
       } catch (err) {
         if (err instanceof ArchiveUnavailable) throw err;
         lastError = err?.name === 'AbortError' ? 'archive.org timed out' : 'archive.org could not be reached';

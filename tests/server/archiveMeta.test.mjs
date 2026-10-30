@@ -100,6 +100,19 @@ test('during a long pause, other lookups answer 503 at once instead of queueing'
   assert.equal(meta.status().queued, 0);
 });
 
+test('a lookup still queued at its deadline gives up without using a request', async () => {
+  const fetchImpl = async () => {
+    await new Promise(r => setTimeout(r, 60));
+    return json(ITEM);
+  };
+  let calls = 0;
+  const meta = createArchiveMeta({ ...quick, concurrency: 1, deadlineMs: 30, fetchImpl: (...a) => (calls++, fetchImpl(...a)) });
+  const first = meta.lookup('slow');
+  await assert.rejects(meta.lookup('stuck'), /waited too long/);
+  assert.equal((await first).files.length, 2);
+  assert.equal(calls, 1);
+});
+
 test('errors retry with growing waits, then give up', async () => {
   const { calls, fetchImpl } = fakeArchive([json({}, 502)]);
   const meta = createArchiveMeta({ ...quick, fetchImpl, maxAttempts: 4 });
