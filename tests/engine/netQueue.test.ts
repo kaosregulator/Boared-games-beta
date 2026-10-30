@@ -15,6 +15,7 @@ const native = async (input: RequestInfo | URL) => {
     return new Response(JSON.stringify({ '/models/a.glb': { h: 'aaa111', s: 4 } }), { status: 200 });
   }
   if (!url.pathname.endsWith('.glb')) return new Response('{}', { status: 200 });
+  if (url.pathname === '/models/missing.glb') return new Response('', { status: 404 });
   if (failNext > 0) {
     failNext -= 1;
     return new Response('', { status: 503 });
@@ -75,4 +76,14 @@ test('models wait for the title song, go six at a time, by content hash, and ret
   await drain();
   assert.equal((await retried).status, 200);
   assert.equal(calls.filter(c => c === '/models/g.glb').length, 2);
+
+  // a missing file is a failure the room waits on; one the page called off is not
+  const before = netProgress().failed;
+  const missing = await page.fetch('http://room.test/models/missing.glb');
+  assert.equal(missing.status, 404);
+  const ctl = new AbortController();
+  ctl.abort();
+  await assert.rejects(page.fetch('http://room.test/models/gone.glb', { signal: ctl.signal }));
+  await drain();
+  assert.equal(netProgress().failed, before + 1);
 });
