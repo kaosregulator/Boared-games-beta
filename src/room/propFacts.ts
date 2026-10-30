@@ -3,8 +3,9 @@ import type { CardFact, CardVideo } from './propCards';
 /**
  * The hologram card's extra content, per card id: the header line (kind,
  * year, maker), the "Childhood Pro Tip", "The Real Story" and a few facts.
- * Kept apart from propCards.ts so the stories and jokes there stay as they
- * were written. Every card works without an entry here.
+ * "The Real Story" is told in plain, everyday words, so a kid can read it
+ * without guessing. Kept apart from propCards.ts so the stories and jokes
+ * there stay as they were written. Every card works without an entry here.
  */
 export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; maker?: string | null; joke?: string; history?: string; facts?: CardFact[] }> = {
   "crt-tv": {
@@ -12,23 +13,23 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1990s",
     "maker": null,
     "joke": "Picture fuzzy? Smack the side of the TV. Still fuzzy? Smack it with feeling.",
-    "history": "Through the 1990s almost every living room and lucky bedroom had a cathode-ray tube TV: a glass picture tube firing electrons at a phosphor-coated screen. Big sets were famously deep and heavy, and the tube held a strong static charge, which is why the screen made your arm hair stand up. Flat panels replaced them during the 2000s.",
+    "history": "Back then, TVs were big glass boxes with a tube inside that shot tiny beams at the screen to make the picture. That's why they were so deep, so heavy, and why the screen zapped your arm hair. Flat TVs replaced them in the 2000s.",
     "facts": [
       {
         "label": "How it works",
-        "value": "An electron beam sweeps the screen line by line, lighting up phosphor dots"
+        "value": "A beam inside paints the picture one line at a time, super fast"
       },
       {
-        "label": "Standard in the US",
-        "value": "NTSC, 525 lines at about 30 frames per second"
+        "label": "Weight",
+        "value": "A big one weighed as much as a kid"
       },
       {
         "label": "V-chip",
-        "value": "Required by US law on most new sets 13 inches and up from January 1, 2000"
+        "value": "From 2000, new TVs had to let parents block shows"
       },
       {
         "label": "The static zap",
-        "value": "The tube runs on tens of thousands of volts, so the glass builds up a charge"
+        "value": "The tube runs on so much power the glass holds a charge"
       }
     ]
   },
@@ -37,7 +38,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1980s–90s",
     "maker": null,
     "joke": "Set the clock? Absolutely not. Put a piece of electrical tape over the blinking 12:00 and live your life.",
-    "history": "JVC introduced the VHS format in Japan in 1976, and it went on to beat Sony's Betamax to become the home video standard. By the 1990s a VCR sat under most TVs, recording shows and playing rentals. The last known VCRs were made in 2016 by Funai in Japan.",
+    "history": "The VCR played and recorded VHS tapes. JVC made VHS in 1976, and it beat Sony's Betamax to become the tape everyone used. By the 90s one sat under almost every TV, blinking 12:00. The last ones were made in 2016.",
     "facts": [
       {
         "label": "VHS introduced",
@@ -66,19 +67,19 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1990s",
     "maker": null,
     "joke": "Cable box lost signal? Unplug it, count to ten, plug it back in. You are now a cable technician.",
-    "history": "Cable converter boxes let a TV tune dozens of channels it couldn't receive on its own, and they descrambled the premium ones you paid for. The famous scrolling listings came from the Prevue Channel, whose grid ran on Commodore Amiga computers at cable headends. Prevue became the TV Guide Channel on February 1, 1999.",
+    "history": "The cable box gave your TV dozens of extra channels and unlocked the ones your family paid for. The scrolling channel guide was the Prevue Channel, which ran on old Amiga computers. In 1999 it became the TV Guide Channel.",
     "facts": [
       {
-        "label": "Prevue listings ran on",
-        "value": "Commodore Amiga computers"
+        "label": "Channel guide ran on",
+        "value": "Old Commodore Amiga computers"
       },
       {
-        "label": "Prevue renamed",
-        "value": "TV Guide Channel, February 1, 1999"
+        "label": "Became",
+        "value": "The TV Guide Channel, in 1999"
       },
       {
-        "label": "Scrambled channels",
-        "value": "Premium channels were encoded so only paying boxes could show them clearly"
+        "label": "Fuzzy channels",
+        "value": "Paid channels were scrambled unless your family paid"
       }
     ]
   },
@@ -87,23 +88,23 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1985",
     "maker": "Nintendo",
     "joke": "Game won't load? Blow in the cartridge, push it down, then pray. Repeat until it works or dinner.",
-    "history": "The Nintendo Entertainment System was the American version of Japan's 1983 Famicom, redesigned as a gray, front-loading box so it looked less like a video game after the 1983 industry crash. It test-launched in New York City on October 18, 1985, with Super Mario Bros. close behind, and brought home video games back to life in North America. Blowing in cartridges never actually fixed anything; reseating the cart did, and moisture from your breath could corrode the pins.",
+    "history": "The Nintendo Entertainment System came out in the US in 1985, made to look like a VCR so stores would sell it. With Super Mario Bros., it brought video games back. Blowing in the cartridge never really fixed it. Pushing it back in did.",
     "facts": [
       {
-        "label": "North American debut",
-        "value": "October 18, 1985 (New York City test market)"
+        "label": "US launch",
+        "value": "October 18, 1985, in New York first"
       },
       {
-        "label": "Japanese original",
-        "value": "Famicom, July 1983"
+        "label": "In Japan it was",
+        "value": "The Famicom, from 1983"
       },
       {
-        "label": "Units sold",
-        "value": "About 61.9 million worldwide"
+        "label": "Sold",
+        "value": "About 62 million"
       },
       {
-        "label": "The blinking problem",
-        "value": "Worn connector pins in the front-loading slot, not dust"
+        "label": "The blinking screen",
+        "value": "Worn-out pins in the slot, not dust"
       }
     ]
   },
@@ -112,7 +113,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1980s",
     "maker": null,
     "joke": "Making a mixtape? Finger on Pause, other finger on Record, breathe only during commercials.",
-    "history": "Portable stereos with big speakers and cassette decks became a street-culture icon in the late 1970s and 1980s, especially in hip-hop and breakdancing scenes. Dual-deck models let you copy one tape to another, which made them mixtape factories. They were also famously hungry for batteries, often running on six to ten D cells.",
+    "history": "A boombox was a big radio with tape decks and speakers you could carry anywhere. Two tape decks meant you could copy tapes and make mixtapes. They ate a lot of batteries, sometimes ten big D batteries at once.",
     "facts": [
       {
         "label": "Peak era",
@@ -137,27 +138,23 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1989",
     "maker": "Nintendo",
     "joke": "Can't see the screen? Tilt it toward the lamp at exactly 43 degrees and stop breathing.",
-    "history": "Nintendo's Game Boy launched in Japan on April 21, 1989 and in North America on July 31, 1989, where it came bundled with Tetris. Designed by Gunpei Yokoi's team, it chose a simple green-tinted screen over color so it could run for many hours on four AA batteries. Together with the Game Boy Color it sold about 118.69 million units.",
+    "history": "The Game Boy came out in 1989 with Tetris in the box. Nintendo gave it a simple green screen instead of color so four AA batteries would last for hours. With the Game Boy Color, it sold about 118 million.",
     "facts": [
       {
-        "label": "Released (NA)",
-        "value": "July 31, 1989, at $89.95"
+        "label": "Came out",
+        "value": "July 31, 1989, for $89.95"
       },
       {
-        "label": "Pack-in game",
+        "label": "In the box",
         "value": "Tetris"
       },
       {
         "label": "Screen",
-        "value": "160 × 144 pixels, four shades of green-gray"
+        "value": "Four shades of green-gray"
       },
       {
         "label": "Sold",
-        "value": "About 118.69 million (with Game Boy Color)"
-      },
-      {
-        "label": "Lead designer",
-        "value": "Gunpei Yokoi"
+        "value": "About 118 million, with the Game Boy Color"
       }
     ]
   },
@@ -166,7 +163,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1997",
     "maker": "Bandai",
     "joke": "Pet dying during class? Ask to use the bathroom. Stay twenty minutes. Clean up its poop in peace.",
-    "history": "Tamagotchi was created by Aki Maita of Bandai and Akihiro Yokoi of WiZ. It launched in Japan on November 23, 1996 and in the US on May 1, 1997, and its egg-shaped screen pet that needed feeding and cleaning got it banned in plenty of schools. Bandai reports about 98 million sold worldwide as of 2025.",
+    "history": "Tamagotchi was a tiny egg-shaped pet on a keychain. You fed it, cleaned up after it, and if you forgot, it died. It came to the US in 1997 and got banned at a lot of schools. About 98 million have been sold.",
     "facts": [
       {
         "label": "Released",
@@ -191,7 +188,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": null,
     "maker": null,
     "joke": "Making your bed is pointless. You're getting back in it tonight. Present this argument calmly.",
-    "history": "The kid's twin bed was the base for sleepovers, couch-cushion forts and secret flashlight reading. Twin mattresses became the standard single bed in American kids' rooms in the 20th century. Bed-jumping was banned in every house and practiced in every house.",
+    "history": "The bed was home base for sleepovers, pillow forts and reading with a flashlight after lights out. Twin beds became the normal kid bed in America. Jumping on the bed was banned in every house, and done in every house.",
     "facts": [
       {
         "label": "Standard twin size",
@@ -212,7 +209,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": null,
     "maker": null,
     "joke": "Missing every ring toss on purpose lowers their guard. Then you still miss. Take the smiley pillow anyway.",
-    "history": "The smiley face itself was drawn in 1963 by commercial artist Harvey Ball, for a Worcester, Massachusetts insurance company's staff morale campaign. He was paid $45 and never trademarked it. The grin went on to cover buttons, shirts, and plenty of carnival prizes.",
+    "history": "The smiley face was drawn in 1963 by an artist named Harvey Ball. He got paid $45 for it and never owned the rights. It ended up on buttons, shirts and carnival prizes everywhere.",
     "facts": [
       {
         "label": "Smiley designed",
@@ -237,7 +234,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1990s",
     "maker": null,
     "joke": "Both straps is for nerds. One strap is for legends with a permanent lean to the left.",
-    "history": "Nylon backpacks became standard school gear in the 1970s and 80s, when outdoor brands like JanSport started selling them to students. By the 90s a backpack was a personality: pins, patches, keychains and markered names. Kids really did argue about one strap versus two.",
+    "history": "Backpacks became normal school gear in the 70s and 80s, with brands like JanSport. By the 90s your backpack showed who you were: pins, patches, keychains and your name in marker. One strap or two was a real debate.",
     "facts": [
       {
         "label": "JanSport founded",
@@ -258,7 +255,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1968",
     "maker": null,
     "joke": "Getting out of a bean bag requires a plan, a grunt, and someone to blame for the noise.",
-    "history": "The bean bag chair began as Italian design: the Sacco, created in 1968 by Piero Gatti, Cesare Paolini and Franco Teodoro for the furniture company Zanotta. Filled with polystyrene pellets, it shaped itself to whoever sat in it. Cheaper versions became a staple of kids' rooms and dorms for decades.",
+    "history": "The bean bag chair started as a fancy Italian chair in 1968, a bag full of tiny foam beads that shapes itself around you. Cheaper ones landed in kids' rooms everywhere. Getting out of one gracefully is still impossible.",
     "facts": [
       {
         "label": "Original design",
@@ -283,7 +280,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": null,
     "maker": null,
     "joke": "Grounded? Bend one blind slat. Peek. Count how many kids are having fun without you.",
-    "history": "Thin vinyl and aluminum mini blinds were in nearly every 1980s and 90s house. On summer nights, the window let in box-fan air and cicada noise. Periodical cicadas only come up every 13 or 17 years, so some summers were much louder than others.",
+    "history": "Thin mini blinds were in almost every 80s and 90s house. Summer nights meant a box fan in the window and loud bugs outside. Some cicadas only come out every 13 or 17 years, so some summers were way louder.",
     "facts": [
       {
         "label": "Mini blind slats",
@@ -304,19 +301,15 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": null,
     "maker": null,
     "joke": "Reading Goosebumps by streetlight counts as bedtime if you're technically lying down.",
-    "history": "The orange glow outside came from high-pressure sodium streetlights, which spread across American streets from the 1970s because they were very efficient. They give off a narrow band of yellow-orange light that makes colors hard to tell apart. Most cities have since switched to white LED lights.",
+    "history": "That orange glow outside came from streetlights made to save power. Their orange light made every color look the same at night. Most towns have since switched to bright white LED lights.",
     "facts": [
       {
         "label": "Streetlight type",
-        "value": "High-pressure sodium"
-      },
-      {
-        "label": "Color",
-        "value": "Yellow-orange, around 2,000 K"
+        "value": "Orange power-saving lamps"
       },
       {
         "label": "Replaced by",
-        "value": "LED streetlights, mostly from the 2010s"
+        "value": "White LED streetlights"
       }
     ]
   },
@@ -325,7 +318,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": null,
     "maker": null,
     "joke": "A KEEP OUT sign is legally binding for siblings. Parents, unfortunately, have a butter knife.",
-    "history": "Most bedroom doors use a 'privacy' lock, not a real security lock. It has a small hole or slot on the outside so someone can unlock it in an emergency with a thin tool, which is how every parent got in. KEEP OUT signs were mostly for show.",
+    "history": "Bedroom door locks aren't real locks. There's a little hole on the outside so anyone can pop it open with a thin tool in an emergency. That's how every parent got in. KEEP OUT signs were mostly for show.",
     "facts": [
       {
         "label": "Lock type",
@@ -346,7 +339,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1993",
     "maker": null,
     "joke": "Hang the alien poster facing out. That way they know you're on their side.",
-    "history": "The X-Files premiered on Fox on September 10, 1993, created by Chris Carter, and followed FBI agents Fox Mulder and Dana Scully investigating the unexplained. The 'I Want to Believe' poster, a UFO over trees, hung in Mulder's basement office and became one of the show's best-known images. The original run lasted nine seasons, to 2002.",
+    "history": "The X-Files started on TV in 1993. Two FBI agents, Mulder and Scully, chased aliens and weird mysteries. Mulder had an 'I Want to Believe' poster with a UFO in his office, and kids everywhere hung one too.",
     "facts": [
       {
         "label": "Premiered",
@@ -375,7 +368,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1978",
     "maker": "Taito",
     "joke": "Wear the cap backwards. Forwards is for dads and baseball players who aren't cool.",
-    "history": "Space Invaders was designed by Tomohiro Nishikado and released by Taito in Japan in 1978. Its marching rows of aliens became one of the first video game blockbusters and are still recognized everywhere. The aliens speed up as you shoot them because the hardware draws fewer of them faster, a happy accident that made the game more exciting.",
+    "history": "Space Invaders came out in 1978 and was one of the first giant video game hits. Rows of aliens march down at you. They speed up as you shoot them because the machine has fewer to draw. That was an accident, and it made the game better.",
     "facts": [
       {
         "label": "Released",
@@ -400,7 +393,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": null,
     "maker": null,
     "joke": "One alien pin equals two Pokémon cards and a pudding cup. Do not let them talk you down.",
-    "history": "Pin-back buttons and enamel pins have been collected and traded for over a century, from political campaigns to cereal-box prizes. In the 90s they ended up on jean jackets, hats and backpacks. Pin trading is still a big hobby, especially at theme parks.",
+    "history": "People have collected and traded pins for more than 100 years. In the 90s they went on jean jackets, hats and backpacks. Pin trading is still a big hobby, especially at theme parks.",
     "facts": [
       {
         "label": "Celluloid button patent",
@@ -421,7 +414,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": null,
     "maker": null,
     "joke": "Candy goes in the back of the drawer. Behind the socks. Under the instructions for the Game Boy.",
-    "history": "The bedside table became mission control in a 90s kid's room: alarm clock, lamp, and a drawer full of things that weren't supposed to be there. Most were particleboard with a single drawer that stuck if you pulled it straight out.",
+    "history": "The bedside table was mission control: alarm clock, lamp, and a drawer full of things that weren't supposed to be there. Most were cheap wood-look boards, and the drawer stuck unless you lifted it as you pulled.",
     "facts": [
       {
         "label": "Usual contents",
@@ -442,7 +435,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1990s",
     "maker": "RCA",
     "joke": "Set it seven minutes fast. Then remember it's seven minutes fast. Then snooze seven times. Science.",
-    "history": "RCA, General Electric and the rest sold millions of these red-LED clock radios, the kind that lived on every 90s nightstand. A glowing red seven-segment display, an AM/FM dial, a buzzer or wake-to-radio alarm, and a snooze bar the size of the whole top. Many lost the time whenever the power blinked, which is why so many houses had a clock flashing 12:00. Snooze buttons go back to the 1950s.",
+    "history": "Red number clock radios sat on every nightstand. Big glowing numbers, a radio, an alarm, and a snooze button as big as the top. When the power blinked, they lost the time, so half the clocks in America flashed 12:00.",
     "facts": [
       {
         "label": "Display",
@@ -467,7 +460,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1963",
     "maker": null,
     "joke": "Do not shake the lava lamp. If you shake the lava lamp, do not tell anyone you shook the lava lamp.",
-    "history": "British inventor Edward Craven Walker came up with the lava lamp after seeing a homemade egg timer bubbling on a pub stove, and launched the first one, the Astro, in 1963. A bulb heats a waxy blob that rises, cools and sinks in liquid. They came back in a big way in the 1990s.",
+    "history": "A British man named Edward Craven Walker invented the lava lamp in 1963 after seeing a homemade egg timer bubbling in a pub. A bulb warms a blob of wax so it rises, cools and sinks. They came back big in the 90s.",
     "facts": [
       {
         "label": "Invented",
@@ -492,7 +485,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": null,
     "maker": null,
     "joke": "Correct marshmallow ratio: one cocoa packet, nine marshmallows, zero adult supervision.",
-    "history": "Instant hot cocoa packets became an after-school and snow-day staple in American kitchens from the mid-20th century on, with tiny dehydrated marshmallows mixed right in. A homemade art-class mug was the official vessel. A fossilized marshmallow at the bottom is traditional.",
+    "history": "Instant hot cocoa packets were made for snow days and after school, with tiny dried marshmallows right in the mix. A mug you made in art class was the official cup. A hard old marshmallow at the bottom was tradition.",
     "facts": [
       {
         "label": "Recipe",
@@ -513,7 +506,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1902",
     "maker": null,
     "joke": "Monsters can't get you if a bear is watching the closet. This is a known rule. Look it up.",
-    "history": "The teddy bear is named after President Theodore Roosevelt, who refused to shoot a tied-up bear on a 1902 hunting trip in Mississippi. A Clifford Berryman cartoon of the moment inspired Brooklyn shopkeeper Morris Michtom to make a stuffed 'Teddy's bear.' Around the same time, Germany's Steiff company was making its own jointed bears.",
+    "history": "The teddy bear is named after President Teddy Roosevelt. In 1902 he refused to shoot a tied-up bear on a hunting trip, a newspaper drew a cartoon of it, and a shop owner started selling stuffed 'Teddy's bears.'",
     "facts": [
       {
         "label": "Named after",
@@ -538,7 +531,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1980s",
     "maker": "Sony",
     "joke": "Record your own radio show. Then hide the tape forever. Future you will thank you.",
-    "history": "Philips introduced the Compact Cassette in 1963, and small portable cassette recorders soon made it easy for anyone to record voices, radio and music. Sony's handheld cassette-corders, and its bright kid-sized My First Sony line in the late 1980s, put recording in kids' hands. Hearing your own voice played back was a shock for a whole generation.",
+    "history": "Cassette tapes came out in 1963, and small tape recorders let anyone record their voice, the radio or music. Sony even made bright My First Sony recorders for kids. Hearing your own voice played back was a shock.",
     "facts": [
       {
         "label": "Cassette format",
@@ -559,7 +552,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1990",
     "maker": "Nintendo",
     "joke": "Fastest way to the cereal-box prize: pour the whole box into a mixing bowl. Act natural.",
-    "history": "Yoshi first appeared in Super Mario World, which launched with the Super Famicom in Japan on November 21, 1990, and came to North America in 1991 with the Super Nintendo. Designed by Shigefumi Hino, the green dinosaur eats enemies with his long tongue and lets Mario ride on his back.",
+    "history": "Yoshi first showed up in Super Mario World, which came with the Super Nintendo in 1991. He's a green dinosaur who eats bad guys with his long tongue and lets Mario ride on his back.",
     "facts": [
       {
         "label": "Debut",
@@ -584,7 +577,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1992–1997",
     "maker": null,
     "joke": "Read Goosebumps under the covers. If the flashlight dies, the haunted mask wins.",
-    "history": "R.L. Stine's Goosebumps series started in July 1992 with Welcome to Dead House, published by Scholastic. Sixty-two books came out in the original series through 1997, and at its peak it sold about four million copies a month. Each book ended chapters on a cliffhanger, and the covers by Tim Jacobus were half the appeal.",
+    "history": "Goosebumps started in 1992 with Welcome to Dead House. R.L. Stine wrote 62 books in the first series, and at its peak it sold about four million copies a month. Every chapter ended on a scary cliffhanger.",
     "facts": [
       {
         "label": "First book",
@@ -613,7 +606,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1993–1995",
     "maker": null,
     "joke": "Pausing a tape too long chews it up. Pause anyway. The kitchen scene needs studying.",
-    "history": "These three were 90s movie-night staples. Jurassic Park (June 1993) mixed Stan Winston's animatronics with ILM's computer-generated dinosaurs. Hocus Pocus (July 1993) underperformed in theaters and became a Halloween classic on home video, and Toy Story (November 1995) was the first entirely computer-animated feature film.",
+    "history": "Three movie night favorites. Jurassic Park (1993) mixed robot dinosaurs with computer ones. Hocus Pocus (1993) flopped in theaters and became a Halloween classic on tape. Toy Story (1995) was the first movie made all on computers.",
     "facts": [
       {
         "label": "Jurassic Park",
@@ -638,7 +631,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1989",
     "maker": "Nintendo",
     "joke": "Batteries dying mid-boss? Raid the TV remote. Blame the cat. The cat can't argue.",
-    "history": "The original Game Boy (model DMG-01) ran on four AA batteries, and its simple screen was a big reason they lasted so long. It was tough too: one Game Boy damaged in a fire during the 1991 Gulf War still worked and was displayed at Nintendo's New York store. Nintendo kept making Game Boy hardware until 2003.",
+    "history": "The first Game Boy ran on four AA batteries and was really tough. One got caught in a fire during the 1991 Gulf War and still worked, and Nintendo showed it off in its New York store. Nintendo made Game Boys until 2003.",
     "facts": [
       {
         "label": "Model number",
@@ -663,7 +656,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": null,
     "maker": null,
     "joke": "High shelf rule: if a little cousin can reach it, it's no longer yours. Stack accordingly.",
-    "history": "Every 90s kid's room had a display zone for the stuff that mattered most: collectibles, the good Game Boy and toys that were 'too old' for play but too loved to give away. Wall-mounted shelves kept them out of reach of younger siblings.",
+    "history": "Every 90s kid had a shelf for the most important stuff: collectibles, the good Game Boy, and toys too old to play with but too loved to give away. Up high, away from little cousins.",
     "facts": [
       {
         "label": "Purpose",
@@ -684,7 +677,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1965",
     "maker": null,
     "joke": "Lava lamp homework method: check on it every five minutes. Lava done, homework not done.",
-    "history": "In 1965 Adolph Wertheimer and Hy Spector spotted Edward Craven Walker's lamp at a German trade show, bought the American rights, and sold it as the Lava Lite from Chicago. Lava lamps were a 60s icon, faded, and boomed again in the 1990s.",
+    "history": "In 1965 two American businessmen saw the lava lamp at a trade show in Germany and started selling it in the US as the Lava Lite. Lava lamps were huge in the 60s, faded away, then came back big in the 90s.",
     "facts": [
       {
         "label": "US rights bought",
@@ -709,7 +702,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1990–1993",
     "maker": null,
     "joke": "Home Alone traps work great on burglars. On dads, less great. Test on a pillow first.",
-    "history": "Home Alone (November 1990), written by John Hughes and directed by Chris Columbus, became one of the highest-grossing comedies ever. Aladdin (November 1992), with Robin Williams as the Genie, was the top-grossing film of 1992. Jurassic Park (June 1993) became the highest-grossing film ever at the time, until Titanic.",
+    "history": "Home Alone (1990) was one of the biggest comedies ever. Aladdin (1992), with Robin Williams as the Genie, was the top movie of its year. Jurassic Park (1993) was the biggest movie ever made, until Titanic.",
     "facts": [
       {
         "label": "Home Alone",
@@ -734,7 +727,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1968",
     "maker": "Mattel",
     "joke": "Launching cars off the stairs is science. Write 'experiment' on a piece of paper first to make it official.",
-    "history": "Mattel launched Hot Wheels in 1968, pushed by co-founder Elliot Handler, as faster, flashier rivals to Matchbox cars. Low-friction wheels made them fly down the orange track. The first 16 cars are known to collectors as the 'Sweet Sixteen,' and the first one made was a dark blue Custom Camaro.",
+    "history": "Mattel made Hot Wheels in 1968 to beat Matchbox cars. Their wheels barely touched anything, so they flew down the orange track. The very first one made was a dark blue Camaro.",
     "facts": [
       {
         "label": "Launched",
@@ -763,7 +756,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1902",
     "maker": null,
     "joke": "Being too old for teddy bears ends the moment thunder starts. Nobody needs to know.",
-    "history": "Steiff, the German toy company founded by Margarete Steiff, showed its jointed mohair bear at the 1903 Leipzig Toy Fair, where an American buyer ordered thousands. That helped kick off the teddy bear craze on both sides of the Atlantic. Steiff bears still carry the company's 'Button in Ear' tag.",
+    "history": "In 1903 a German toy company called Steiff brought its teddy bear to a big toy fair, and an American store ordered thousands. That started the teddy bear craze. Real Steiff bears still have a little button in one ear.",
     "facts": [
       {
         "label": "Steiff founded by",
@@ -788,7 +781,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1989",
     "maker": "Nintendo",
     "joke": "Taking the Game Boy to school is fine as long as nobody sees it, hears it, or knows you exist.",
-    "history": "Game Boys were the most confiscated item in 90s classrooms. Nintendo's handheld sold 40,000 units on its first day in the US and passed a million within weeks. Pokémon Red and Blue in 1998 kept it alive for years after most consoles of its age had retired.",
+    "history": "Game Boys were the thing teachers took away most in the 90s. In the US, 40,000 sold on day one. Pokémon Red and Blue in 1998 kept it going for years after other game systems from its time were gone.",
     "facts": [
       {
         "label": "US release day sales",
@@ -813,7 +806,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1988",
     "maker": "Playmates",
     "joke": "Being Leonardo is fine. Just tell everyone Leonardo is the leader, so technically you're in charge.",
-    "history": "The Teenage Mutant Ninja Turtles started as a black-and-white comic by Kevin Eastman and Peter Laird in 1984. Playmates Toys launched the action figure line in 1988, alongside the cartoon that began in 1987, and it became one of the best-selling toy lines of its time. Leonardo wears the blue mask and fights with two katana swords.",
+    "history": "The Ninja Turtles started as a comic book in 1984. The cartoon came in 1987 and the toys in 1988, and they were some of the best-selling toys of the time. Leonardo wears blue and fights with two swords.",
     "facts": [
       {
         "label": "Created by",
@@ -842,7 +835,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1939",
     "maker": null,
     "joke": "Point it at a lamp for better pictures. Never point it at the sun. Ask someone who tried.",
-    "history": "View-Master was introduced around 1939 by Sawyer's of Portland, Oregon, built on photographer William Gruber's idea of putting stereo color slides on a paper reel. Each reel holds seven pairs of tiny Kodachrome slides, one for each eye, which makes the 3D effect. It began as a scenic souvenir and became a classic kids' toy.",
+    "history": "The View-Master came out around 1939. Each paper reel holds seven pairs of tiny photos, one for each eye, so the pictures pop out in 3D. It started as a travel souvenir and turned into a classic kids' toy.",
     "facts": [
       {
         "label": "Introduced",
@@ -867,7 +860,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1993–1995",
     "maker": null,
     "joke": "Carry the giant book to look smart. Actually read the Goosebumps. Nobody needs the details.",
-    "history": "Michael Crichton's The Lost World (1995) was his sequel to Jurassic Park, and the movie version followed in 1997. Night of the Living Dummy (1993), the seventh Goosebumps book, introduced Slappy the ventriloquist dummy, who became the series' most famous villain.",
+    "history": "The Lost World (1995) was the sequel to Jurassic Park, and the movie came in 1997. Night of the Living Dummy (1993) was the Goosebumps book that brought us Slappy, the creepy dummy who became the most famous villain in the series.",
     "facts": [
       {
         "label": "The Lost World",
@@ -892,7 +885,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": null,
     "maker": null,
     "joke": "Cleaning your room takes ninety seconds if you don't look at what goes in which bin.",
-    "history": "Cube shelving with fabric or plastic bins became the standard toy-storage setup in kids' rooms. 'Clean your room' usually meant everything went into the nearest bin. Whatever ended up in there wasn't seen again for months.",
+    "history": "Cube shelves with bins became the toy storage every kid's room had. 'Clean your room' meant throw everything in the closest bin. Whatever went in there wasn't seen again for months.",
     "facts": [
       {
         "label": "Method",
@@ -913,7 +906,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": null,
     "maker": null,
     "joke": "A teddy with no fur on one ear is how you know it's been doing its job.",
-    "history": "Most kids had one stuffed animal that went everywhere and came back worn down from love. Psychologists call it a 'transitional object,' something that comforts a child as they become more independent. The idea was described by pediatrician Donald Winnicott in 1951.",
+    "history": "Most kids had one stuffed animal that went everywhere and came back worn out from being loved. Doctors even have a name for it: a comfort object that helps kids feel safe as they grow up.",
     "facts": [
       {
         "label": "Psychology term",
@@ -934,15 +927,15 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1990s",
     "maker": "Tiger Electronics",
     "joke": "There is no volume button. There is only the beep. Parents learn to live with the beep.",
-    "history": "Tiger Electronics, founded in 1978, made cheap handheld LCD games based on everything from Batman to Sonic. Each one could play only a single game, using fixed pre-printed images that lit up on the screen. They were the company's biggest earner through much of the 1990s, and Hasbro bought Tiger in 1998.",
+    "history": "Tiger Electronics made cheap handheld games of everything from Batman to Sonic. Each one played just one game, with pictures already printed on the screen that lit up. Toy maker Hasbro bought Tiger in 1998.",
     "facts": [
       {
-        "label": "Company founded",
-        "value": "June 15, 1978"
+        "label": "Company started",
+        "value": "1978"
       },
       {
         "label": "Screen",
-        "value": "Fixed LCD segments, not pixels"
+        "value": "Pictures printed in, they just light up"
       },
       {
         "label": "Games per unit",
@@ -950,7 +943,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
       },
       {
         "label": "Bought by Hasbro",
-        "value": "1998, for about $335 million"
+        "value": "1998"
       }
     ]
   },
@@ -959,7 +952,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1990s",
     "maker": null,
     "joke": "Set the alarm to radio, not buzzer. Waking up to traffic news is worse, but at least it's somebody.",
-    "history": "Clock radios put an alarm clock and an AM/FM radio in one bedside box and were in bedrooms everywhere by the late 20th century. You could wake up to music or the morning DJ instead of a buzzer. Many used a thin wire antenna, so reception depended on where you strung it.",
+    "history": "Clock radios put an alarm and a radio in one box by the bed, so you could wake up to music or the morning DJ instead of a buzzer. The radio wire had to be moved around until the station came in.",
     "facts": [
       {
         "label": "Bands",
@@ -980,7 +973,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1990s",
     "maker": null,
     "joke": "Sitting on the skateboard and rolling downhill is a real trick. It's called 'the Survivor.'",
-    "history": "Skateboarding started with California surfers in the 1950s and took off after Frank Nasworthy's urethane wheels arrived in 1972, giving boards real grip. By the 90s, street skating ruled, and in 1999 Tony Hawk landed the first 900 at the X Games. Gritty griptape on top kept your feet on the board, and wore through jeans.",
+    "history": "Skateboarding started with California surfers in the 1950s and took off in 1972 when new rubbery wheels gave boards real grip. In 1999 Tony Hawk landed the first 900, two and a half spins in the air, at the X Games.",
     "facts": [
       {
         "label": "Origins",
@@ -1005,7 +998,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1980s–90s",
     "maker": null,
     "joke": "Label every tape. Then tape over it anyway. The label is more of a guess.",
-    "history": "Recording TV onto blank VHS tapes was a household hobby, and it was legal: in 1984 the US Supreme Court ruled in Sony v. Universal that taping shows to watch later was fair use. Slower recording speeds like EP fit up to six hours on one tape, with lower picture quality.",
+    "history": "Taping shows off TV onto blank VHS tapes was a family hobby, and in 1984 the Supreme Court said it was legal. The slowest speed fit six hours on one tape, but the picture looked worse.",
     "facts": [
       {
         "label": "Key ruling",
@@ -1030,7 +1023,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1992",
     "maker": "Mathmos",
     "joke": "Lava lamps need the whole outlet. Your Game Boy charger can wait. Priorities.",
-    "history": "Edward Craven Walker's British company, originally Crestworth, was renamed Mathmos in 1992 after new partners Cressida Granger and David Mulley took over. Mathmos led the lava lamp's big 1990s comeback and still makes lamps in Poole, England, where they've been made since 1963.",
+    "history": "The company that makes the original lava lamps changed its name to Mathmos in 1992, right as lava lamps got popular again. It still makes them in the same English town where they've been made since 1963.",
     "facts": [
       {
         "label": "Renamed Mathmos",
@@ -1055,7 +1048,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1998",
     "maker": null,
     "joke": "Lent your cousin the Charizard? That's not a loan. That's a goodbye.",
-    "history": "Pokémon Red and Blue arrived in North America on September 28, 1998, a few weeks after the anime started airing in the US. The trading cards followed in January 1999, and Pokémania took over playgrounds. Many schools banned the cards by the end of 1999 because of trading fights.",
+    "history": "Pokémon Red and Blue came to the US in September 1998, right after the cartoon. The cards came a few months later and took over every playground. Lots of schools banned them by the end of 1999 because of trading fights.",
     "facts": [
       {
         "label": "Pokémon Red/Blue (US)",
@@ -1080,7 +1073,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1988",
     "maker": "Nintendo",
     "joke": "Up, Up, Down, Down, Left, Right, Left, Right, B, A, Start. Try it on homework. Didn't work.",
-    "history": "Nintendo Power debuted with a July/August 1988 issue and became the go-to source for maps, tips and cheat codes. The Konami Code was created by Kazuhisa Hashimoto for the NES version of Gradius and became famous in Contra, where it gives you 30 lives. The Sea-Monkeys ads in the back were selling brine shrimp.",
+    "history": "Nintendo Power came out in 1988 and was where you got maps, tips and cheat codes. The most famous code was up, up, down, down, left, right, left, right, B, A, Start, which gave you 30 lives in Contra.",
     "facts": [
       {
         "label": "Nintendo Power first issue",
@@ -1105,7 +1098,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1935",
     "maker": "Parker Brothers",
     "joke": "Monopoly ends one of two ways: bankruptcy or somebody 'accidentally' flipping the board.",
-    "history": "Parker Brothers began selling Monopoly in 1935, after Charles Darrow sold them a version of the game. It was based on The Landlord's Game, patented by Lizzie Magie in 1904 to show the dangers of monopolies. Classic family game nights relied on boxes like Monopoly, Mouse Trap and Sorry!, each missing a few pieces.",
+    "history": "Monopoly has been sold since 1935. It was based on an older game from 1904 that was made to show why monopolies are bad. Family game night meant Monopoly, Mouse Trap and Sorry!, all of them missing a few pieces.",
     "facts": [
       {
         "label": "Monopoly by Parker Brothers",
@@ -1130,7 +1123,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1990–1993",
     "maker": null,
     "joke": "Tackling the hedges builds character. The hedges will not tackle back, which is the whole appeal.",
-    "history": "The Buffalo Bills are the only NFL team to play in four straight Super Bowls, XXV through XXVIII, after the 1990 to 1993 seasons. Led by Jim Kelly, Thurman Thomas and coach Marv Levy, they lost all four. Super Bowl XXV ended with Scott Norwood's 47-yard field goal going wide right.",
+    "history": "The Buffalo Bills went to four Super Bowls in a row in the early 90s, the only team ever to do it. They lost all four. The first one ended when the winning kick sailed just wide right.",
     "facts": [
       {
         "label": "Super Bowls",
@@ -1159,7 +1152,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1970s",
     "maker": null,
     "joke": "A smiley lamp is comforting until midnight. After midnight, don't make eye contact.",
-    "history": "Harvey Ball drew the yellow smiley face in 1963. In the early 1970s, brothers Bernard and Murray Spain paired it with 'Have a nice day' and sold millions of buttons and novelties. It was everywhere again in the late 80s and 90s, from rave flyers to bedroom lamps.",
+    "history": "Harvey Ball drew the yellow smiley face in 1963. In the 70s two brothers added 'Have a nice day' and sold millions of buttons. It came back in the late 80s and 90s on everything, even bedroom lamps.",
     "facts": [
       {
         "label": "Smiley created",
@@ -1180,7 +1173,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": null,
     "maker": null,
     "joke": "The secret to keeping a plant alive is forgetting it exists. Leftover Kool-Aid optional.",
-    "history": "Hardy houseplants like pothos and snake plants survive almost any amount of neglect, which is why they've lasted in kids' rooms for decades. A famous 1989 NASA Clean Air Study tested common houseplants for removing chemicals from sealed chambers, though a normal room would need a huge number of plants to make a difference.",
+    "history": "Tough houseplants like pothos and snake plants can live through almost anything, which is why they survive kids' rooms. NASA once tested plants for cleaning the air, but you'd need a jungle to make a real difference.",
     "facts": [
       {
         "label": "Hard-to-kill picks",
@@ -1201,7 +1194,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1882",
     "maker": null,
     "joke": "One bulb dies, the whole strand dies. Test them one by one. Cancel your Saturday.",
-    "history": "Electric Christmas lights were first used in 1882 by Edward H. Johnson, a partner of Thomas Edison, who hand-wired 80 red, white and blue bulbs on his tree. Cheaper pre-wired strands followed in the early 1900s. Older series-wired strands go dark when one bulb fails, which is why you had to test every bulb.",
+    "history": "The first electric Christmas tree lights were put up in 1882 by a friend of Thomas Edison, with 80 red, white and blue bulbs. On older strands, one dead bulb makes the whole string go dark, so you had to test every bulb.",
     "facts": [
       {
         "label": "First electric tree lights",
@@ -1226,7 +1219,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": null,
     "maker": null,
     "joke": "Stickers on furniture are illegal. Unless they're Nintendo stickers. Then they're art.",
-    "history": "The bedroom dresser held clothes in the bottom drawers and secrets in the top one. In a lot of 90s houses it was also a gallery for stickers from magazines, cereal boxes and the school book fair. Sticker residue is famously hard to get off.",
+    "history": "The dresser kept clothes in the bottom drawers and secrets in the top one. In a lot of 90s houses it was also covered in stickers from magazines, cereal boxes and the book fair. Those stickers never come all the way off.",
     "facts": [
       {
         "label": "Bottom drawer",
@@ -1247,7 +1240,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1988",
     "maker": "Nintendo",
     "joke": "Peeling a sticker halfway is the worst choice. Commit. Leave it or lose it forever.",
-    "history": "Mario first appeared in 1981's Donkey Kong, where he was called Jumpman. By the late 80s and 90s Nintendo characters were on everything, and Nintendo Power often came with pull-out posters and other extras. The magazine ran from 1988 to 2012.",
+    "history": "Mario first showed up in Donkey Kong in 1981, where he was called Jumpman. By the 90s Nintendo characters were on everything, and Nintendo Power came with posters and stickers. The magazine ran until 2012.",
     "facts": [
       {
         "label": "Mario's debut",
@@ -1272,7 +1265,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1989",
     "maker": null,
     "joke": "No Fear means no fear. Except of Mom finding the sticker on the dresser. That's normal fear.",
-    "history": "No Fear was founded in 1989 by Mark and Brian Simo, with Marty Moates, in Southern California, coming out of motocross and racing culture. Its shirts carried bold sayings about winning and toughness, and by the mid-90s it was one of the most recognizable logos in America, on shirts, stickers and car windows.",
+    "history": "No Fear started in 1989 in Southern California, from the dirt bike racing crowd. Its shirts had big tough sayings about winning, and by the mid-90s the logo was everywhere: shirts, stickers and car windows.",
     "facts": [
       {
         "label": "Founded",
@@ -1297,7 +1290,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": null,
     "maker": null,
     "joke": "Homework done on the bus counts the same. The bus is just a moving desk.",
-    "history": "The bedroom desk was officially for homework and mostly for everything else: Lego, drawing, snacks and games. LEGO's modern interlocking brick was patented in 1958, and by the 90s every desk drawer had a few loose bricks.",
+    "history": "The desk was for homework, officially. Really it was for LEGO, drawing, snacks and games. The LEGO brick we know came out in 1958, and by the 90s every desk drawer had a few loose ones.",
     "facts": [
       {
         "label": "Modern LEGO brick",
@@ -1318,19 +1311,15 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1963",
     "maker": null,
     "joke": "Never put crayons next to the lava lamp. Unless you want a new crayon shaped like a puddle.",
-    "history": "A lava lamp is a bulb under a glass bottle holding liquid and a waxy blend. Heat makes the wax expand and rise, then it cools at the top and sinks, over and over. Early formulas used carbon tetrachloride, which was banned in US-market lamps from 1970 for being toxic.",
+    "history": "A lava lamp is just a bulb under a bottle of liquid and wax. The heat makes the wax rise, it cools off at the top, and it sinks again, over and over. The base gets really hot, so don't touch it.",
     "facts": [
       {
-        "label": "Heat source",
-        "value": "An incandescent bulb in the base"
+        "label": "Heat comes from",
+        "value": "A light bulb in the base"
       },
       {
-        "label": "Inspiration",
-        "value": "An egg timer bubbling on a pub stove"
-      },
-      {
-        "label": "Old formula ingredient",
-        "value": "Carbon tetrachloride, dropped in the US by 1970"
+        "label": "Idea came from",
+        "value": "An egg timer bubbling on a stove"
       },
       {
         "label": "The base gets",
@@ -1343,7 +1332,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": null,
     "maker": null,
     "joke": "Every dead pen goes back in the cup. Someday one will work again. Hope is free.",
-    "history": "Sakura Color Products of Japan invented the gel pen in 1984, and its Gelly Roll line and scented, glittery gel pens were everywhere in 90s schools. Retractable click pens are much older; Parker's Jotter came out in 1954.",
+    "history": "Gel pens were invented in Japan in 1984, and the glitter, milky and scented ones were all over 90s schools. Clicky pens are older: Parker's Jotter came out in 1954. Somebody always borrowed your best one.",
     "facts": [
       {
         "label": "Gel pen invented",
@@ -1368,7 +1357,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1990s",
     "maker": null,
     "joke": "Return the rental before it's due. Or don't, and owe the store a car payment.",
-    "history": "Video rental stores rented out movies and video game cartridges, and Blockbuster was the biggest. Founded in Dallas in 1985 by David Cook, it reached about 9,000 stores by 2004, then shrank as DVD-by-mail and streaming took over. One store, in Bend, Oregon, is still open.",
+    "history": "You rented movies and video games from the video store, and Blockbuster was the biggest one. It started in 1985 and had about 9,000 stores by 2004, then streaming took over. One store is still open, in Bend, Oregon.",
     "facts": [
       {
         "label": "Blockbuster founded",
@@ -1397,7 +1386,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1953",
     "maker": null,
     "joke": "Car noises must be made with your mouth. The louder the noise, the faster the car. Facts.",
-    "history": "Small die-cast cars took off with Lesney's Matchbox line in 1953, reportedly started when Jack Odell made a tiny brass model that fit in a matchbox for his daughter's school. Mattel answered with Hot Wheels in 1968, and around 1:64 became the standard pocket-car scale.",
+    "history": "Tiny metal toy cars took off in 1953 when a man made one small enough to fit in a matchbox for his daughter, and Matchbox was born. Mattel answered with Hot Wheels in 1968.",
     "facts": [
       {
         "label": "Matchbox launched",
@@ -1418,7 +1407,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1990s",
     "maker": null,
     "joke": "Don't know how to change the alarm? Leave it. You're now an early riser. Congratulations.",
-    "history": "Classic clock radios mixed an alarm, a clock and an AM/FM radio, with a big snooze bar on top for hitting in the dark. Many people believe the common 9-minute snooze length came from old clock gears, though the exact reason is debated. Setting the time and alarm took holding down a button and waiting.",
+    "history": "Clock radios had an alarm, a clock and a radio, with a big snooze button for slapping in the dark. Snooze usually gave you nine more minutes. Setting the time meant holding a button while the numbers raced by.",
     "facts": [
       {
         "label": "Common snooze",
@@ -1439,7 +1428,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1983",
     "maker": null,
     "joke": "Snake isn't a game. It's 'checking if the phone still works.' For twenty minutes.",
-    "history": "The first handheld cell phone sold to the public, the Motorola DynaTAC 8000X, came out in 1983 for $3,995 and earned the nickname 'the brick.' Phones got much smaller through the 90s. In 1997 Nokia engineer Taneli Armanto put Snake on the Nokia 6110, making it one of the first famous mobile games.",
+    "history": "The first cell phone you could buy came out in 1983, cost $3,995, and was so big people called it 'the brick.' Phones got much smaller in the 90s, and in 1997 Nokia added Snake, one of the first famous phone games.",
     "facts": [
       {
         "label": "First handheld cell phone",
@@ -1464,7 +1453,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "Early 1990s",
     "maker": null,
     "joke": "Never play for keeps. If you do play for keeps, bring the skull slammer and no feelings.",
-    "history": "POG was a passion fruit, orange and guava juice created in 1971 by Mary Soon for Haleakala Dairy on Maui, and its bottle caps gave the game its name. A Hawaiian teacher, Blossom Galbiso, revived the old milk-cap flipping game with her students in 1991, and it spread to mainland schools by the mid-90s. You stacked caps, threw a heavy slammer, and kept whatever landed face up.",
+    "history": "POG was a juice from Hawaii: Passion fruit, Orange and Guava. A teacher there brought back an old game of flipping the bottle caps in 1991, and by the mid-90s every school had it. Stack the caps, throw the slammer, keep what flips.",
     "facts": [
       {
         "label": "Name comes from",
@@ -1493,7 +1482,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": null,
     "maker": null,
     "joke": "Drawing the Cool S is easy. Six lines, then six more, then connect. Takes a lifetime to master.",
-    "history": "The 'Cool S' (also called the Stussy S, Superman S or Pointy S) was doodled by schoolkids around the world for decades, and nobody has proven where it came from. It's built from a simple grid of parallel lines, which is why so many kids figured it out on their own. Researchers and fans still argue about where it started.",
+    "history": "The 'Cool S' was drawn on every notebook in every school, and nobody knows who started it. It's made from two rows of three lines, which is why so many kids figured it out on their own.",
     "facts": [
       {
         "label": "Also called",
@@ -1514,7 +1503,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": null,
     "maker": null,
     "joke": "Old desk lamps double as interrogation lights. Point it at your little brother. Ask where the remote went.",
-    "history": "Incandescent bulbs give off around 90% of their energy as heat instead of light, which is why old desk lamps burned fingertips. The adjustable balanced-arm desk lamp traces back to George Carwardine's Anglepoise design in the early 1930s. Cooler LED bulbs have mostly replaced incandescents.",
+    "history": "Old light bulbs turned most of their power into heat instead of light, which is why desk lamps burned your fingers. The bendy desk lamp design comes from the 1930s. Cooler LED bulbs have mostly taken over.",
     "facts": [
       {
         "label": "Incandescent waste",
@@ -1535,7 +1524,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1979",
     "maker": null,
     "joke": "The toy is the meal. The food is just packaging. Every kid knows this.",
-    "history": "McDonald's rolled out the Happy Meal nationwide in 1979, and the little toy inside became the main reason kids wanted it. Burger King and others followed with their own kids' meals, and fast-food toys became huge collectibles in the 90s, peaking with Teenie Beanie Babies in 1997.",
+    "history": "McDonald's started the Happy Meal across the US in 1979, and the toy inside became the real reason kids wanted one. Burger King and others followed. The biggest 90s toy craze was Teenie Beanie Babies in 1997.",
     "facts": [
       {
         "label": "Happy Meal launched",
@@ -1556,22 +1545,22 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1950",
     "maker": null,
     "joke": "If the Magic 8 Ball says no, shake it again. Keep shaking until it agrees. That's how science works.",
-    "history": "The Magic 8 Ball came from Albert C. Carter and Abe Bookman, who developed a fortune-telling tube in the late 1940s. It took its 8-ball shape around 1950 in a promotion for the Brunswick billiards company. Inside, a 20-sided die floats in blue liquid, and Mattel owns it today after buying Tyco Toys in 1997.",
+    "history": "The Magic 8 Ball came out around 1950. Shake it, flip it, and a floating answer shows up in the window. Inside is a 20-sided shape in blue liquid with 10 yes answers, 5 no answers and 5 maybes.",
     "facts": [
       {
-        "label": "Inventors",
-        "value": "Albert C. Carter and Abe Bookman"
+        "label": "Came out",
+        "value": "Around 1950"
       },
       {
         "label": "Inside",
-        "value": "A 20-sided die in blue-dyed liquid"
+        "value": "A 20-sided shape floating in blue liquid"
       },
       {
         "label": "Answers",
-        "value": "10 yes, 5 non-committal, 5 no"
+        "value": "10 yes, 5 maybe, 5 no"
       },
       {
-        "label": "Owner today",
+        "label": "Owned by",
         "value": "Mattel"
       }
     ]
@@ -1581,7 +1570,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1990s",
     "maker": null,
     "joke": "Practice your smile in the mirror for a week. Blink right as the flash goes off.",
-    "history": "School picture day was run by companies like Lifetouch, founded in 1936, which photographed millions of students every year. The 90s were known for laser and colorful abstract backgrounds, comb handouts and wallet-sized prints traded with friends. Retake day was the second chance that rarely helped.",
+    "history": "Picture day meant a laser background, a free plastic comb, and tiny wallet photos to trade with friends. Companies like Lifetouch took millions of school pictures every year. Retake day was a second chance that rarely helped.",
     "facts": [
       {
         "label": "Lifetouch founded",
@@ -1606,7 +1595,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1990",
     "maker": null,
     "joke": "A pizza place cup holds markers forever. It also holds the smell of Sprite forever. Fair trade.",
-    "history": "Turtlemania ruled the turn of the decade: the cartoon began in 1987, and the first live-action movie came out in March 1990, with Jim Henson's Creature Shop building the turtle suits. Turtle merch included cups, cereal and toys, and pizza places loved the tie-ins because the turtles loved pizza.",
+    "history": "Turtle mania was huge: the cartoon started in 1987 and the first live-action movie came out in 1990, with turtle suits made by Jim Henson's team. Turtles were on cups, cereal and toys, and pizza places loved them.",
     "facts": [
       {
         "label": "First movie",
@@ -1631,7 +1620,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1979",
     "maker": "Sony",
     "joke": "Save batteries: rewind tapes with a pencil. Spin it fast. Your wrist will survive.",
-    "history": "Sony's first Walkman, the TPS-L2, went on sale in Japan on July 1, 1979, and made music something you could carry with you. Auto-reverse arrived on Walkman models in the early 80s, so you didn't have to flip the tape. Sony sold about 220 million cassette Walkmans before ending production in Japan in 2010.",
+    "history": "Sony's first Walkman came out in 1979 and let you carry your music anywhere. Later ones could flip the tape for you, called auto-reverse. Sony sold about 220 million tape Walkmans before stopping in 2010.",
     "facts": [
       {
         "label": "First model",
@@ -1656,27 +1645,23 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1994",
     "maker": "Rare",
     "joke": "If it doesn't work, just blow in it. Nothing says advanced troubleshooting like a little 90s spit.",
-    "history": "Donkey Kong Country was developed by the British studio Rare and released for the Super Nintendo in November 1994. Rare built the characters as 3D models on Silicon Graphics workstations and turned them into pre-rendered sprites, a method called Advanced Computer Modeling, so the SNES looked far ahead of its time. It sold 9.3 million copies, the third best-selling SNES game.",
+    "history": "Donkey Kong Country came out for the Super Nintendo in 1994. The team built the characters on powerful computers first, so the game looked way better than anything else on the system. It sold over 9 million copies.",
     "facts": [
       {
-        "label": "Released",
+        "label": "Came out",
         "value": "November 1994"
       },
       {
-        "label": "Developer",
-        "value": "Rare"
+        "label": "Made by",
+        "value": "Rare, a game studio in England"
       },
       {
-        "label": "Graphics",
-        "value": "Pre-rendered 3D models made on Silicon Graphics workstations"
+        "label": "The look",
+        "value": "Built as 3D models first, then turned into game art"
       },
       {
         "label": "Sold",
         "value": "9.3 million copies"
-      },
-      {
-        "label": "Composer",
-        "value": "David Wise, with Eveline Fischer and Robin Beanland"
       }
     ]
   },
@@ -1685,7 +1670,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1929",
     "maker": "Duncan",
     "joke": "Practice 'walk the dog' away from the dog. Practice 'around the world' away from the lamp. So, outside.",
-    "history": "Pedro Flores started making yo-yos in California in 1928, and Donald F. Duncan bought his company soon after and built the Duncan brand. Duncan made yo-yos big by sending demonstrators into schools and neighborhoods to show off tricks and run contests, and later yo-yo crazes in the 1990s used the same idea.",
+    "history": "Yo-yos took off in America in the 1920s and 30s when Duncan sent yo-yo pros to schools to show off tricks and run contests. The 90s had its own yo-yo craze, done the same way.",
     "facts": [
       {
         "label": "Pedro Flores Yo-yo Company",
@@ -1710,7 +1695,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1991",
     "maker": "Sega",
     "joke": "Sonic or Mario? Say 'both' and you'll be fine. Say 'Mario' at the wrong lunch table and you won't.",
-    "history": "Sega released Sonic the Hedgehog for the Genesis on June 23, 1991, made by Yuji Naka and Naoto Ohshima at Sonic Team, to compete with Mario. Two Sonic cartoons debuted in 1993: the goofy Adventures of Sonic the Hedgehog, where he loved chili dogs, and the darker Saturday-morning series on ABC.",
+    "history": "Sega made Sonic the Hedgehog in 1991 to take on Mario. Two Sonic cartoons came out in 1993: a silly one where he loved chili dogs, and a more serious Saturday morning one.",
     "facts": [
       {
         "label": "Game released",
@@ -1739,7 +1724,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1996",
     "maker": "Warner Bros.",
     "joke": "To dunk like Michael Jordan, lower the hoop to four feet. Then tell everyone it was regulation.",
-    "history": "Space Jam, directed by Joe Pytka, teamed Michael Jordan with Bugs Bunny and the Looney Tunes against the alien Monstars. It opened at No. 1 in November 1996 and grossed about $250 million worldwide, the biggest basketball movie of its time. Its soundtrack was a huge seller too.",
+    "history": "Space Jam (1996) put Michael Jordan on a basketball team with Bugs Bunny and the Looney Tunes against aliens called the Monstars. It was the number one movie when it came out, and the soundtrack was everywhere.",
     "facts": [
       {
         "label": "Released",
@@ -1768,7 +1753,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1990s",
     "maker": null,
     "joke": "Losing every game still gets a trophy. Keep losing with confidence. The trophy doesn't know.",
-    "history": "Tee-ball, where kids hit off a stationary tee instead of a pitched ball, became a common first sport for young kids in the US by the 70s and 80s. Plenty of youth leagues gave every player a trophy at the end of the season, plastic figure on a fake-marble base.",
+    "history": "Tee-ball, where you hit the ball off a stand instead of a pitch, was the first sport for a lot of little kids. Many leagues gave every player a trophy at the end of the season, win or lose.",
     "facts": [
       {
         "label": "Tee-ball ages",
@@ -1789,15 +1774,15 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1990s",
     "maker": null,
     "joke": "Charge glow-in-the-dark stickers with a flashlight right before bed. Then immediately fall asleep and miss it.",
-    "history": "Glow-in-the-dark stickers and ceiling stars use phosphors that soak up light and slowly let it out in the dark. Older ones used zinc sulfide and faded fast; strontium aluminate, introduced in the 1990s, glows brighter and for much longer. Skater and surf stickers were a whole other collection.",
+    "history": "Glow-in-the-dark stickers soak up light and slowly give it back in the dark. Older ones faded fast. New ones from the 90s glowed brighter and much longer. Skater and surf stickers were a whole other collection.",
     "facts": [
       {
-        "label": "Older glow material",
-        "value": "Zinc sulfide (short glow)"
+        "label": "Old glow stickers",
+        "value": "Faded in a few minutes"
       },
       {
-        "label": "Newer glow material",
-        "value": "Strontium aluminate, 1990s (longer glow)"
+        "label": "90s glow stickers",
+        "value": "Glowed bright for much longer"
       },
       {
         "label": "Charge them with",
@@ -1810,7 +1795,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": null,
     "maker": null,
     "joke": "Spin until dizzy. Spin back the other way to cancel it out. This does not work. Spin anyway.",
-    "history": "Thomas Jefferson is said to have used a swivel chair while drafting the Declaration of Independence in 1776, and Charles Darwin is said to have put wheels on his study chair. Modern rolling office chairs spread in the 20th century, and kids discovered they're perfect for racing down hallways.",
+    "history": "Thomas Jefferson is said to have used a spinning chair while writing the Declaration of Independence. Rolling desk chairs became normal in offices later, and kids found out they're perfect for hallway races.",
     "facts": [
       {
         "label": "Early swivel chair",
@@ -1831,7 +1816,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1998",
     "maker": null,
     "joke": "Downloading something big? Tape a sign to every phone in the house: DO NOT PICK UP.",
-    "history": "In the late 90s many families shared one computer in a corner, online through a dial-up modem on the home phone line. The 56k V.90 modem standard was approved in 1998, the same year Windows 98 came out. Anyone picking up a phone in the house could cut the connection.",
+    "history": "In the late 90s a lot of families shared one computer and got online through the phone line. Windows 98 came out in 1998. If anyone picked up the phone, the internet hung up on you.",
     "facts": [
       {
         "label": "Windows 98 released",
@@ -1856,23 +1841,19 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1990s",
     "maker": null,
     "joke": "Turn on the 3D Pipes screensaver and stare at it. You are now doing computer stuff.",
-    "history": "Beige CRT monitors were standard on 90s computers, with 14 and 15 inch screens common in homes. A 15-inch CRT actually showed only about 13.8 inches of viewable picture because the tube's edges were hidden by the case. They were heavy, hummed, and built up static just like TVs.",
+    "history": "Computer screens in the 90s were big beige boxes with a tube inside, just like TVs. A 15-inch one only showed about 14 inches of picture. They were heavy, they hummed, and they zapped you with static.",
     "facts": [
       {
         "label": "Common sizes",
         "value": "14 and 15 inches"
       },
       {
-        "label": "Viewable area",
-        "value": "About 13.8 inches on a 15-inch tube"
-      },
-      {
-        "label": "Typical resolution",
-        "value": "640×480 or 800×600"
+        "label": "Picture you could see",
+        "value": "About 14 inches on a 15-inch screen"
       },
       {
         "label": "Screensavers",
-        "value": "Invented to stop images burning into the phosphor"
+        "value": "Made so a picture left on too long wouldn't burn into the screen"
       }
     ]
   },
@@ -1881,7 +1862,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1993",
     "maker": "Intel",
     "joke": "Press the Turbo button. Nothing happens. Feel faster anyway.",
-    "history": "Intel launched the Pentium processor on March 22, 1993, and the 'Intel Inside' sticker, a marketing campaign started in 1991, ended up on millions of beige PCs. The Turbo button was confusing because it mostly slowed the computer down for old software that ran too fast on newer chips.",
+    "history": "Intel's Pentium chip came out in 1993, and the 'Intel Inside' sticker ended up on millions of beige computers. The Turbo button was confusing: it mostly slowed the computer down so old games wouldn't run too fast.",
     "facts": [
       {
         "label": "Pentium launch",
@@ -1906,7 +1887,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1988",
     "maker": null,
     "joke": "Out of color ink? Print the cover page in black and white and call it 'artistic.'",
-    "history": "Hewlett-Packard's DeskJet line, launched in 1988, helped make inkjet printers affordable at home. Before that, many families used dot-matrix printers fed with continuous paper that had perforated holes down the sides, perfect for printing banners. Running out of one color cartridge became a classic school-night crisis.",
+    "history": "HP's DeskJet printers, starting in 1988, made color printing cheap enough for home. Before that, printers used long paper with holes down the sides, great for banners. Running out of one ink color the night before a project was a classic.",
     "facts": [
       {
         "label": "HP DeskJet launch",
@@ -1931,7 +1912,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1987",
     "maker": null,
     "joke": "Learn to type with Mavis Beacon. Then actually learn to type in chat rooms at 2 a.m.",
-    "history": "Mavis Beacon Teaches Typing came out in 1987 and became the classic typing program in homes and schools. Mavis was a made-up character; the woman on the box was model Renée L'Espérance. The loud, clicky IBM Model M keyboard from 1985 set the standard for heavy-duty keyboards.",
+    "history": "Mavis Beacon Teaches Typing came out in 1987 and was how kids learned to type. Fun fact: Mavis wasn't a real person. The woman on the box was a model. Old IBM keyboards were loud, clicky and nearly unbreakable.",
     "facts": [
       {
         "label": "Mavis Beacon released",
@@ -1956,7 +1937,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1972",
     "maker": null,
     "joke": "Cursor skipping? Pop out the ball, scrape the rollers with a fingernail, and never discuss the gunk.",
-    "history": "Douglas Engelbart's team at SRI built the first computer mouse in 1964, a wooden box with two wheels, and got a patent in 1970. Bill English designed the rolling-ball mouse at Xerox PARC in 1972, and ball mice were standard until optical mice took over around the turn of the millennium. The rollers inside collected dust and gunk constantly.",
+    "history": "The first computer mouse was a wooden box with wheels, built in 1964. Later mice used a rolling ball underneath, and the rollers inside always got gunked up. Light-based mice replaced them around 2000.",
     "facts": [
       {
         "label": "First mouse",
@@ -1981,27 +1962,23 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1990s",
     "maker": null,
     "joke": "Free AOL CDs make great coasters, mirrors, and ninja stars. Only one of those is allowed.",
-    "history": "In the 90s, software came on 3.5-inch floppy disks holding 1.44 MB each, and big programs needed stacks of them; Windows 95 was even sold on 13 floppies. CD-ROMs held about 650 MB and took over, bringing multimedia encyclopedias like Microsoft Encarta (1993). AOL mailed out huge numbers of free trial disks and CDs to sign people up.",
+    "history": "Software used to come on floppy disks, and Windows 95 needed 13 of them. CDs held way more, about as much as 450 floppies, so they took over. AOL mailed free trial discs to basically every house in America.",
     "facts": [
       {
-        "label": "3.5-inch floppy",
-        "value": "1.44 MB (high density)"
+        "label": "A floppy held",
+        "value": "1.44 MB, about one song"
       },
       {
-        "label": "CD-ROM",
-        "value": "About 650 MB"
+        "label": "A CD held",
+        "value": "About 650 MB, like 450 floppies"
       },
       {
-        "label": "Windows 95 on floppy",
+        "label": "Windows 95 on floppies",
         "value": "13 disks"
       },
       {
-        "label": "Encarta launched",
-        "value": "1993"
-      },
-      {
-        "label": "AOL trial offers",
-        "value": "Free hours, mailed on disks and CDs"
+        "label": "AOL offers",
+        "value": "Free hours, mailed to every house"
       }
     ]
   },
@@ -2010,19 +1987,19 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": null,
     "maker": null,
     "joke": "Hide the blue pencil before the state project. Everyone needs the ocean. Supply and demand.",
-    "history": "Pencils have never contained lead. The 'lead' is graphite mixed with clay, a habit of speech from the 1500s, when a big graphite deposit found in Borrowdale, England was mistaken for a kind of lead. Colored pencils use pigment held together with wax or binder instead of graphite.",
+    "history": "There's no lead in a pencil. It's graphite mixed with clay. People called it lead hundreds of years ago, when they found graphite in England and thought it was lead. Colored pencils use colored wax instead.",
     "facts": [
       {
         "label": "Pencil 'lead'",
-        "value": "Graphite mixed with clay"
+        "value": "Graphite and clay, no lead at all"
       },
       {
-        "label": "Graphite source",
-        "value": "Borrowdale, England, 1500s"
+        "label": "Name comes from",
+        "value": "People in the 1500s mixing up graphite and lead"
       },
       {
-        "label": "Colored pencil core",
-        "value": "Pigment plus wax or binder"
+        "label": "Colored pencils",
+        "value": "Color mixed with wax"
       }
     ]
   },
@@ -2031,7 +2008,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1981",
     "maker": "MTV",
     "joke": "Put the rebel sticker on the drawer. Being caught means you're a rebel. Not being caught means you're a genius.",
-    "history": "MTV launched on August 1, 1981, with The Buggles' 'Video Killed the Radio Star' as its first music video. By the 90s it meant more than music videos, with shows like The Real World and Total Request Live, and the logo was all over notebooks, stickers and T-shirts.",
+    "history": "MTV started on August 1, 1981, playing music videos all day. By the 90s it had shows like The Real World and TRL, and the logo was on notebooks, stickers and shirts everywhere.",
     "facts": [
       {
         "label": "Launched",
@@ -2056,7 +2033,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1990s",
     "maker": null,
     "joke": "Read the whole manual while it installs. You've got an hour. Learn the backstory of every elf.",
-    "history": "PC games of the 90s came in big cardboard boxes with thick manuals, maps and extras, even when the disc inside was tiny. Myst (1993), from Cyan and Broderbund, helped sell CD-ROM drives and was the best-selling PC game until The Sims took over in 2002. The big boxes faded out in the early 2000s.",
+    "history": "90s computer games came in huge boxes with thick manuals and maps, even though the disc was tiny. Myst (1993) was the best-selling computer game until The Sims in 2002. The big boxes went away in the early 2000s.",
     "facts": [
       {
         "label": "Myst released",
@@ -2081,7 +2058,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1991",
     "maker": "Betty Crocker",
     "joke": "Gushers are cafeteria currency. Never spend them on gum. Gum has terrible exchange rates.",
-    "history": "Fruit Gushers came out in 1991 under General Mills' Betty Crocker brand: chewy fruit snacks with a liquid center. The original flavors were Strawberry Splash and Gushin' Grape. TV ads showed kids' heads turning into fruit after a bite, which, for the record, never happened.",
+    "history": "Fruit Gushers came out in 1991: chewy fruit snacks with juice inside. The first flavors were strawberry and grape. The commercials showed kids' heads turning into fruit after one bite. That never happened. We checked.",
     "facts": [
       {
         "label": "Introduced",
@@ -2106,7 +2083,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1999",
     "maker": "Wizards of the Coast",
     "joke": "Never trade a holo Charizard for a bike. Unless it's a really good bike. It's never a good enough bike.",
-    "history": "The Pokémon Trading Card Game started in Japan in October 1996, and Wizards of the Coast released the English Base Set in the US on January 9, 1999. The 102-card set included 16 holographic Pokémon, and the holo Charizard became the most wanted card on every playground. First-edition copies are now some of the most valuable cards in the world.",
+    "history": "Pokémon cards hit the US on January 9, 1999. The first set had 102 cards, 16 of them shiny, and the shiny Charizard was the card every kid wanted. First-edition ones are now worth a fortune.",
     "facts": [
       {
         "label": "US release",
@@ -2135,7 +2112,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1983",
     "maker": "Chef America",
     "joke": "Hot Pocket strategy: bite the frozen middle first. The lava edge is a trap. It's always a trap.",
-    "history": "Brothers Paul and David Merage, who founded Chef America in 1977, introduced Hot Pockets in 1983, first selling them to restaurants. The crisping sleeve was part of the pitch. Nestlé bought Chef America in 2002 for $2.6 billion. Pizza rolls came from Jeno Paulucci's company in 1968 and became Totino's Pizza Rolls in 1993.",
+    "history": "Hot Pockets came out in 1983, made by two brothers, and the crispy sleeve was the big idea. Pizza rolls are older, from 1968, and became Totino's in 1993. Both burned the roof of your mouth. Both were worth it.",
     "facts": [
       {
         "label": "Hot Pockets introduced",
@@ -2164,7 +2141,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1985",
     "maker": "Nike",
     "joke": "New sneakers rule: walk like a robot so they don't crease. Look weird. Stay fresh.",
-    "history": "Nike signed rookie Michael Jordan and released the first Air Jordan in 1985, designed by Peter Moore. The line became the most famous sneaker franchise ever, with Tinker Hatfield designing many of the most-loved models starting with the Air Jordan III in 1988. Kids saved up for months, and creases were a tragedy.",
+    "history": "Nike signed Michael Jordan and made the first Air Jordans in 1985. They became the most famous sneakers ever. Kids saved up for months, and a crease in the toe felt like the end of the world.",
     "facts": [
       {
         "label": "First Air Jordan",
@@ -2189,19 +2166,15 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1990s",
     "maker": null,
     "joke": "Batteries not included means no fun on Christmas until the store opens. Steal from the remote. You know the drill.",
-    "history": "Cheap radio-control trucks were a top Christmas gift in the 80s and 90s. Most toy RC cars ran on a few shared radio bands, often 27 MHz or 49 MHz, so two trucks on the same band could hijack each other. Batteries were famously not included.",
+    "history": "Cheap remote control trucks were a top Christmas gift in the 80s and 90s. Many used the same radio signal, so your remote could steer your friend's truck. Batteries were never included.",
     "facts": [
       {
-        "label": "Common toy RC bands",
-        "value": "27 MHz and 49 MHz"
-      },
-      {
-        "label": "Same-band problem",
-        "value": "One remote could control both trucks"
+        "label": "The problem",
+        "value": "Two trucks on the same signal, one remote drives both"
       },
       {
         "label": "Power",
-        "value": "AA or 9V, plus rechargeable packs"
+        "value": "AA or 9-volt batteries, never included"
       }
     ]
   },
@@ -2210,7 +2183,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1968",
     "maker": "Mattel",
     "joke": "Every loop needs a test car. Use your sibling's. That's not cruel, that's engineering.",
-    "history": "Mattel launched Hot Wheels in 1968 with the first 16 cars and bright orange plastic track you could clip into loops, jumps and long downhill runs. The track pieces join with small connectors, and kids built everything from simple loops to whole-house tracks. Hot Wheels went on to become one of the best-selling toy brands ever.",
+    "history": "Mattel made Hot Wheels in 1968, with bright orange track you could snap into loops, jumps and long ramps. Kids built tracks across whole houses. Hot Wheels became one of the best-selling toys of all time.",
     "facts": [
       {
         "label": "Launched",
@@ -2239,23 +2212,19 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1950s",
     "maker": null,
     "joke": "Never step on army men barefoot. If you do, the bazooka guy was obviously aiming for you.",
-    "history": "Green plastic army men became a cheap bag-of-toys staple after World War II, when injection-molded plastic replaced older lead and dimestore soldiers. Companies like Louis Marx and Company sold them in huge playsets in the 1950s. Toy Story (1995) made them famous all over again.",
+    "history": "Green plastic army men became a cheap bag-of-toys classic after World War II, when plastic replaced old metal toy soldiers. Toy Story made them famous all over again in 1995.",
     "facts": [
       {
-        "label": "Material",
-        "value": "Injection-molded plastic"
+        "label": "Made of",
+        "value": "Cheap molded plastic"
       },
       {
         "label": "Before plastic",
-        "value": "Lead and composition 'dimestore' soldiers"
+        "value": "Toy soldiers were made of metal"
       },
       {
-        "label": "Big 1950s maker",
-        "value": "Louis Marx and Company"
-      },
-      {
-        "label": "Toy Story cameo",
-        "value": "Sarge and the Bucket O' Soldiers, 1995"
+        "label": "Movie fame",
+        "value": "Sarge and his troops in Toy Story, 1995"
       }
     ]
   },
@@ -2264,7 +2233,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1992",
     "maker": "Scholastic",
     "joke": "Found every item? Circle them in pen for the next kid. Being helpful is its own reward.",
-    "history": "I Spy: A Book of Picture Riddles was published by Scholastic in 1992, with rhyming riddles by Jean Marzollo and photographs by Walter Wick. Wick built every scene by hand from real objects and photographed it, no computers involved. The series grew to dozens of books with tens of millions of copies in print.",
+    "history": "I Spy came out in 1992 with rhyming riddles by Jean Marzollo and photos by Walter Wick. Every page was built by hand from real toys and things, then photographed. No computers. The series sold tens of millions.",
     "facts": [
       {
         "label": "First published",
@@ -2293,7 +2262,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1998",
     "maker": "Tiger Electronics",
     "joke": "Furby can't be turned off. Put it in a drawer. It will say 'me sleepy' at 3 a.m. anyway.",
-    "history": "Furby was invented by Dave Hampton and Caleb Chung and launched by Tiger Electronics on October 2, 1998, at about $35. It started out speaking Furbish and slowly 'learned' English, though the words were all preprogrammed. It sold 1.8 million in 1998 and 14 million in 1999, and the NSA banned it from its offices in 1999 just in case.",
+    "history": "Furby came out in October 1998 for about $35. It spoke its own language, Furbish, and seemed to learn English over time, but the words were already inside it. It sold millions, and the NSA banned it from its offices just in case.",
     "facts": [
       {
         "label": "Launched",
@@ -2322,7 +2291,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "2000",
     "maker": "Sega Toys",
     "joke": "Poo-Chis can talk to each other. Hold two nose to nose all recess. Report back. Nobody reports back.",
-    "history": "Poo-Chi was a robot puppy made by Sega Toys and sold by Tiger Electronics in most countries, launching in 2000 for $24.99 in the US. It had red LED eyes, reacted to voice commands, and sang one of six songs when you pressed its head. It sold over 10 million within about eight months, and was replaced by FurReal Friends in 2002.",
+    "history": "Poo-Chi was a robot puppy from Sega Toys that came out in 2000 for $24.99. He had red light-up eyes, listened to your voice, and sang songs when you pressed his head. Over 10 million sold in about eight months.",
     "facts": [
       {
         "label": "Released",
@@ -2351,7 +2320,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1982",
     "maker": "Hasbro",
     "joke": "Accessories last one hour. Gun: couch. Backpack: vacuum. Helmet: the dog. Read the file card while it lasts.",
-    "history": "Hasbro coined the term 'action figure' in 1964 for G.I. Joe, so boys' dolls would sound tougher. In 1982 it relaunched G.I. Joe: A Real American Hero as 3¾-inch figures, the size Kenner made popular with Star Wars, and printed a character file card with a code name and backstory on the back of each package. The tiny guns and backpacks were famously easy to lose.",
+    "history": "Hasbro made up the term 'action figure' in 1964 for G.I. Joe, so boys' dolls would sound tougher. In 1982 the figures got small, and each package had a card on the back with the character's code name and story.",
     "facts": [
       {
         "label": "'Action figure' coined",
@@ -2376,7 +2345,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1974",
     "maker": null,
     "joke": "Peeling the stickers counts as solving it. Peeling them back on badly is the real puzzle.",
-    "history": "Hungarian architecture professor Ernő Rubik invented the cube in 1974 to teach spatial thinking. It was sold in Hungary as the Magic Cube, then went worldwide in 1980 through Ideal Toy Company as Rubik's Cube. It has about 43 quintillion possible positions, and it was proven in 2010 that any of them can be solved in 20 moves or fewer.",
+    "history": "Ernő Rubik invented the cube in Hungary in 1974 and it went worldwide in 1980. It can be scrambled about 43 quintillion ways, and in 2010 people proved every one can be solved in 20 moves or less.",
     "facts": [
       {
         "label": "Invented",
@@ -2401,7 +2370,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1993–1999",
     "maker": null,
     "joke": "Holding Play while fast-forwarding is how you watch previews in fast motion. It's also how VCRs die.",
-    "history": "Mighty Morphin Power Rangers premiered on Fox Kids on August 28, 1993, built from Japanese Super Sentai fight footage, and became a huge hit. The Pokémon anime reached the US in September 1998, and Pokémon: The First Movie came out in November 1999. Tapes like these got rewatched until the cases wore white.",
+    "history": "Power Rangers started on TV in 1993, built from Japanese fight scenes with American kids added in. The Pokémon cartoon came to the US in 1998 and the first movie in 1999. Tapes like these got watched until the boxes wore white.",
     "facts": [
       {
         "label": "Power Rangers premiere",
@@ -2426,7 +2395,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1980s–90s",
     "maker": null,
     "joke": "Want to protect a tape forever? Snap out the little tab on the back. Lose it. Tape over it anyway.",
-    "history": "Every VHS cassette has a small plastic tab on its back edge. Break it off and the VCR won't record on that tape, which is how studios protected their releases. Cover the hole with a piece of tape and you can record again, which is how 'DO NOT TAPE OVER' tapes got taped over.",
+    "history": "Every VHS tape has a little plastic tab on the back. Break it off and the VCR won't record over that tape. Put a piece of tape over the hole and it will, which is how 'DO NOT TAPE OVER' tapes got taped over.",
     "facts": [
       {
         "label": "Record-protect tab",
@@ -2451,7 +2420,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1997–2007",
     "maker": null,
     "joke": "Book report hack: read the back cover, the first page, and the last page. Call it 'a summary.'",
-    "history": "Harry Potter and the Sorcerer's Stone reached the US in September 1998 from Scholastic, a year after the UK edition, and turned millions of kids into readers. Dav Pilkey's Captain Underpants began in 1997. Diary of a Wimpy Kid didn't arrive until 2007, so that one is definitely a little brother's.",
+    "history": "Harry Potter came to the US in September 1998 and turned millions of kids into readers. Captain Underpants started in 1997. Diary of a Wimpy Kid didn't come out until 2007, so that one belongs to a little brother.",
     "facts": [
       {
         "label": "Harry Potter (US)",
@@ -2476,7 +2445,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1998",
     "maker": null,
     "joke": "Hang a magazine poster with one piece of tape. When it falls, use the entire roll. That's the rule.",
-    "history": "Pokémon began as Pokémon Red and Green for the Game Boy in Japan on February 27, 1996, created by Satoshi Tajiri's Game Freak. Pikachu, #025, became the face of the series thanks to the anime. In the US, pull-out posters in game magazines were the easiest way to get Pokémon on your wall.",
+    "history": "Pokémon started in Japan in 1996 as a Game Boy game. Pikachu, number 25, became the face of it all because of the cartoon. In the US, posters from game magazines were the easiest way to get Pokémon on your wall.",
     "facts": [
       {
         "label": "Japan debut",
@@ -2501,7 +2470,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1999",
     "maker": "Universal",
     "joke": "Never hang a scary movie poster facing your bed. It watches. It always watches.",
-    "history": "The Mummy, directed by Stephen Sommers and starring Brendan Fraser and Rachel Weisz, came out on May 7, 1999. It loosely remade Universal's 1932 Boris Karloff film as a big action adventure. It made over $400 million worldwide, and its flesh-eating scarab beetles traumatized a lot of sleepovers.",
+    "history": "The Mummy came out in 1999, starring Brendan Fraser, a big action adventure remake of a 1932 monster movie. It made over $400 million, and its flesh-eating scarab beetles ruined a lot of sleepovers.",
     "facts": [
       {
         "label": "Released",
@@ -2530,7 +2499,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1999",
     "maker": "Warner Bros.",
     "joke": "If you cry at the ending, say it was allergies. Everyone else will say the same thing.",
-    "history": "The Iron Giant, Brad Bird's first feature as director, was released by Warner Bros. in August 1999. Based loosely on Ted Hughes' 1968 book The Iron Man, it starred Vin Diesel as the voice of the Giant. It flopped in theaters, grossing about $31 million, then became a beloved classic on home video and TV.",
+    "history": "The Iron Giant came out in 1999, about a boy who makes friends with a giant robot from space. Hardly anyone saw it in theaters, but it became a favorite once it hit tape and TV.",
     "facts": [
       {
         "label": "Released",
@@ -2559,7 +2528,7 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
     "year": "1995",
     "maker": "Universal",
     "joke": "Watching Babe means no bacon for a week. Plan breakfast accordingly. Pancakes are pig-friendly.",
-    "history": "Babe, directed by Chris Noonan and co-written and produced by George Miller, came out in the US on August 4, 1995. Based on Dick King-Smith's 1983 novel The Sheep-Pig, it followed a pig who learns to herd sheep. It earned seven Academy Award nominations, including Best Picture, and won for Best Visual Effects.",
+    "history": "Babe came out in 1995, about a pig who learns to herd sheep. It was nominated for seven Oscars, including Best Picture, and won one for its special effects. That'll do, pig.",
     "facts": [
       {
         "label": "Released",
@@ -2585,412 +2554,330 @@ export const PROP_FACTS: Record<string, { kind?: string; year?: string | null; m
   }
 };
 
-/** A video per card, checked against archive.org. Overrides the card's own; null means none. */
+/**
+ * A video per card, checked against archive.org: the file to play and how long
+ * it runs (scripts/cards/resolve-media.mjs). Overrides the card's own; null
+ * means none. Only the things that were a big deal in the 90s get one: a
+ * sticker or a lamp doesn't need a commercial.
+ */
 export const PROP_VIDEOS: Record<string, CardVideo | null> = {
   "crt-tv": {
     "archiveId": "1989-commercial-for-sony-trinitron",
-    "title": "Sony Trinitron commercial, 1989"
+    "title": "Sony Trinitron commercial, 1989",
+    "file": "1989 commercial for Sony Trinitron.mp4",
+    "length": 15
   },
   "crt-vcr": {
     "archiveId": "panasonic-vcr-commercial",
-    "title": "Panasonic VCR \"So easy to programme\" commercial, 1980s"
+    "title": "Panasonic VCR \"So easy to programme\" commercial, 1980s",
+    "file": "Panasonic VCR Commercial.mp4",
+    "length": 30
   },
   "crt-cable": {
     "archiveId": "prevue-july-3-1994",
-    "title": "Prevue Channel clip, 1994"
+    "title": "Prevue Channel clip, 1994",
+    "file": "Prevue July 3 1994 02.mp4",
+    "length": 80
   },
   "nes": {
     "archiveId": "nintendo-woolworths",
-    "title": "Woolworth Nintendo: NES & Game Boy (1990)"
+    "title": "Woolworth Nintendo: NES & Game Boy (1990)",
+    "file": "Nintendo Woolworths.mp4",
+    "length": 30
   },
-  "boombox": {
-    "archiveId": "walkmandec81",
-    "title": "Walkman commercial, 1981"
-  },
+  "boombox": null,
   "gameboy": {
     "archiveId": "1989-nintendo-game-boy-commercial",
-    "title": "Nintendo Game Boy commercial, 1989"
+    "title": "Nintendo Game Boy commercial, 1989",
+    "file": "1989 Nintendo GameBoy Commercial.mp4",
+    "length": 30
   },
   "tamagotchi": {
     "archiveId": "youtube-OxVMTxJvd7g",
-    "title": "Tamagotchi toy hunting at FAO Schwarz, 1997"
+    "title": "Tamagotchi toy hunting at FAO Schwarz, 1997",
+    "file": "OxVMTxJvd7g.mp4",
+    "length": 795
   },
-  "bed": {
-    "archiveId": "simmons-beautyrest-mattress-commercial-1989",
-    "title": "Simmons Beautyrest mattress commercial, 1989"
-  },
-  "bed-pillow": {
-    "archiveId": "youtube-qfS67eQr_Es",
-    "title": "Chuck E. Cheese commercial, 1997"
-  },
-  "backpack": {
-    "archiveId": "CLE-B12_478673-479583",
-    "title": "Target back-to-school commercial, 1994"
-  },
-  "beanbag": {
-    "archiveId": "youtube-sy9rXXh4WlU",
-    "title": "JC Penney bean bag chair commercial, 1980"
-  },
-  "window": {
-    "archiveId": "2002-commercial-for-windex",
-    "title": "Windex commercial, 2002"
-  },
-  "window-south": {
-    "archiveId": "MNN-001_452917-453519",
-    "title": "Ultimate Goosebumps special promo, 1997"
-  },
-  "door": {
-    "archiveId": "1984-kool-aid-roller-hockey-with-kool-aid-man-commercial",
-    "title": "Kool-Aid Man commercial, 1984"
-  },
+  "bed": null,
+  "bed-pillow": null,
+  "backpack": null,
+  "beanbag": null,
+  "window": null,
+  "window-south": null,
+  "door": null,
   "door-poster": {
     "archiveId": "1995-promo-for-the-x-files",
-    "title": "The X-Files promo, 1995"
+    "title": "The X-Files promo, 1995",
+    "file": "1995 promo for The X-Files.mp4",
+    "length": 15
   },
   "door-cap": {
     "archiveId": "Space_Invaders_1980_Atari_US.mp4",
-    "title": "Atari Space Invaders commercial, 1980"
+    "title": "Atari Space Invaders commercial, 1980",
+    "file": "Space_Invaders_1980_Atari_US.mp4",
+    "length": 30
   },
   "door-pins": null,
   "nightstand": null,
-  "ns-clock": {
-    "archiveId": "genral-electric-c-4315-a-clock-radio-1980s-esgw-zao-ke-wc",
-    "title": "Vintage red-LED clock radio, like the RCA on the nightstand"
-  },
+  "ns-clock": null,
   "ns-lava": {
     "archiveId": "pm-lamp",
-    "title": "Power Macintosh lava lamp ad, 1990s"
+    "title": "Power Macintosh lava lamp ad, 1990s",
+    "file": "PM_Lamp.mp4",
+    "length": 30
   },
-  "ns-mug": {
-    "archiveId": "swiss-miss-hot-cocoa-commercial-1999",
-    "title": "Swiss Miss hot cocoa commercial, 1999"
-  },
-  "ns-teddy": {
-    "archiveId": "duracell-singing-bear-commercial-1989",
-    "title": "Duracell singing bear commercial, 1989"
-  },
-  "ns-recorder": {
-    "archiveId": "DET-012_70838-71748",
-    "title": "Home Alone 2 Talkboy tape recorder ad, 1993"
-  },
-  "ns-yoshi": {
-    "archiveId": "Nintendo_-_Yoshi_commercial_USA_1992",
-    "title": "Nintendo Yoshi commercial, 1992"
-  },
-  "ns-tapes": {
-    "archiveId": "goosebumps-s01",
-    "file": "S01_01-02.mp4",
-    "title": "Goosebumps · The Haunted Mask (1995)"
-  },
+  "ns-mug": null,
+  "ns-teddy": null,
+  "ns-recorder": null,
+  "ns-yoshi": null,
+  "ns-tapes": null,
   "ns-vhs": {
     "archiveId": "toy-story-1995_202411",
-    "title": "Toy Story TV spot, 1995"
+    "title": "Toy Story TV spot, 1995",
+    "file": "Toy Story (1995) TV Spot.mp4",
+    "length": 33
   },
-  "ns-gameboy": {
-    "archiveId": "game-boy-ice-blue",
-    "title": "Game Boy Pocket commercial, 1997"
-  },
-  "south-shelf": {
-    "archiveId": "yt-5s.com-the-lost-world-jurassic-park-talking-view-master-commercial-1997-360p",
-    "title": "Talking View-Master: The Lost World commercial, 1997"
-  },
-  "sh-lava": {
-    "archiveId": "pm-lamp",
-    "title": "Power Macintosh lava lamp ad, 1990s"
-  },
-  "sh-vhs": {
-    "archiveId": "DET-012_246062-247002",
-    "title": "Disney Aladdin VHS commercial, 1993"
-  },
-  "sh-car": {
-    "archiveId": "DET-012_52007-52915",
-    "title": "Hot Wheels Attack Pack commercial, 1993"
-  },
-  "sh-teddy": {
-    "archiveId": "snuggle-morning-fresh-commercial-1988",
-    "title": "Snuggle bear commercial, 1988"
-  },
+  "ns-gameboy": null,
+  "south-shelf": null,
+  "sh-lava": null,
+  "sh-vhs": null,
+  "sh-car": null,
+  "sh-teddy": null,
   "sh-gameboy": {
     "archiveId": "2001-commercial-for-game-boy-color",
-    "title": "Game Boy Color commercial, 2001"
+    "title": "Game Boy Color commercial, 2001",
+    "file": "2001 commercial for Game Boy Color.mp4",
+    "length": 30
   },
   "sh-turtle": {
     "archiveId": "teenage-mutant-ninja-turtles-toon-turtles-action-figure-commercial",
-    "title": "TMNT Toon Turtles action figure commercial"
+    "title": "TMNT Toon Turtles action figure commercial",
+    "file": "Teenage Mutant Ninja Turtles Toon Turtles action figure commercial.mp4",
+    "length": 30
   },
   "sh-viewmaster": {
     "archiveId": "youtube-JxG0HuHNqKU",
-    "title": "Talking View-Master commercial, 1983"
+    "title": "Talking View-Master commercial, 1983",
+    "file": "JxG0HuHNqKU.mp4",
+    "length": 30
   },
-  "sh-books": {
-    "archiveId": "09-lost-world-jurassic-park-1997-tv-spot",
-    "title": "The Lost World: Jurassic Park TV spot, 1997"
-  },
-  "toyshelf": {
-    "archiveId": "dvdvolumet01c17",
-    "title": "Toys \"R\" Us grand opening commercial, 1991"
-  },
-  "ts-teddy": {
-    "archiveId": "mc-donalds-muppet-babies-plush-commercial-1988",
-    "title": "McDonald's Muppet Babies plush commercial, 1988"
-  },
+  "sh-books": null,
+  "toyshelf": null,
+  "ts-teddy": null,
   "ts-handheld": {
     "archiveId": "TigerVirtuaFighter95",
-    "title": "Tiger Electronics handheld commercial, 1995"
+    "title": "Tiger Electronics handheld commercial, 1995",
+    "file": "TigerVirtuaFighter95.mp4",
+    "length": 15
   },
-  "ts-clock": {
-    "archiveId": "z-100-radio",
-    "title": "Z-100 radio station commercial, 1990s"
-  },
-  "ts-skateboard": {
-    "archiveId": "1986-mountain-dew-skateboarding-dew-it-country-cool-tv-commercial",
-    "title": "Mountain Dew skateboarding commercial, 1986"
-  },
-  "ts-vhs": {
-    "archiveId": "fujivideotape_12-17-1989",
-    "title": "Fuji blank video tape commercial, 1989"
-  },
-  "ts-lava": {
-    "archiveId": "pm-lamp",
-    "title": "Power Macintosh lava lamp ad, 1990s"
-  },
+  "ts-clock": null,
+  "ts-skateboard": null,
+  "ts-vhs": null,
+  "ts-lava": null,
   "ts-pokebox": {
     "archiveId": "2000-commercial-for-pokemon-trading-card-game",
-    "title": "Pokémon Trading Card Game commercial, 2000"
+    "title": "Pokémon Trading Card Game commercial, 2000",
+    "file": "2000 commercial for Pokémon trading card game.mp4",
+    "length": 30
   },
   "ts-magazines": {
     "archiveId": "1990-nintendo-power-magazine-get-the-power-super-mario-3-tv-commercial",
-    "title": "Nintendo Power magazine commercial, 1990"
+    "title": "Nintendo Power magazine commercial, 1990",
+    "file": "1990 Nintendo Power Magazine _Get the power_ _Super Mario 3_ TV Commercial.mp4",
+    "length": 60
   },
   "shelf": {
     "archiveId": "monopoly-jr-and-rare-headline-news-1994",
     "title": "Monopoly Junior commercial, 1994",
-    "file": "0monoply.mp4"
+    "file": "0monoply.mp4",
+    "length": 15
   },
-  "gs-helmet": {
-    "archiveId": "1990AFCChampionshipBillsClinch1stSuperBowlAppearanceRaidersVs.BillsNFLFullGame",
-    "title": "Bills clinch 1st Super Bowl, 1990 AFC Championship"
-  },
-  "gs-smiley": {
-    "archiveId": "wal-mart-smiley-tv-commercial-1999",
-    "title": "Wal-Mart smiley commercial, 1999"
-  },
-  "gs-plant": {
-    "archiveId": "windex-plant-commercial-2000",
-    "title": "Windex plant commercial, 2000"
-  },
-  "gs-lights": {
-    "archiveId": "christmas-vacation",
-    "title": "National Lampoon's Christmas Vacation VHS promo, 1989"
-  },
-  "dresser": {
-    "archiveId": "super-mario-world-for-super-nintendo-1991-tv-commercial-2-remastered-hd",
-    "title": "Super Mario World commercial #2, 1991"
-  },
-  "dr-stickers": {
-    "archiveId": "super-mario-world-for-super-nintendo-1991-tv-commercial-1-remastered-hd",
-    "title": "Super Mario World commercial, 1991"
-  },
+  "gs-helmet": null,
+  "gs-smiley": null,
+  "gs-plant": null,
+  "gs-lights": null,
+  "dresser": null,
+  "dr-stickers": null,
   "dr-nofear": null,
-  "clutterdesk": {
-    "archiveId": "CLE-014_79826-80724",
-    "title": "LEGO System commercial, 1993"
-  },
-  "cd-lava": {
-    "archiveId": "pm-lamp",
-    "title": "Power Macintosh lava lamp ad, 1990s"
-  },
-  "cd-cup": {
-    "archiveId": "1996-commercial-for-bic-pens",
-    "title": "Bic pens commercial, 1996"
-  },
+  "clutterdesk": null,
+  "cd-lava": null,
+  "cd-cup": null,
   "cd-tapes": {
     "archiveId": "blockbuster-video-commercial-1990s-a",
-    "title": "Blockbuster Video commercial, 1990s"
+    "title": "Blockbuster Video commercial, 1990s",
+    "file": "Blockbuster Video Commercial 1990's a.mp4",
+    "length": 30
   },
-  "cd-car": {
-    "archiveId": "hotwheels-commercial",
-    "title": "Hot Wheels commercial, 1980s"
-  },
-  "cd-clock": {
-    "archiveId": "1998-radio-105-1-the-edge-michigan",
-    "title": "105.1 The Edge radio station commercial, 1998"
-  },
+  "cd-car": null,
+  "cd-clock": null,
   "cd-phone": {
     "archiveId": "nokia-1998-tv-commercial-drew-carey",
-    "title": "Nokia commercial, 1998"
+    "title": "Nokia commercial, 1998",
+    "file": "Nokia (1998) TV Commercial - Drew Carey.mp4",
+    "length": 30
   },
   "cd-pogs": {
     "archiveId": "pogs-1995-t-6-a-7ir-szv-58",
-    "title": "POG's commercial, 1995"
+    "title": "POG's commercial, 1995",
+    "file": "POG's (1995)-T6A7irSZV58.mp4",
+    "length": 203
   },
-  "cd-sketch": {
-    "archiveId": "crayola_how_to_draw",
-    "title": "Crayola \"Learn to Draw\" VHS, 1992"
-  },
-  "cd-lamp": {
-    "archiveId": "pixar-short-film-animation-luxo-jr.-1986-hd-dvd-rip",
-    "title": "Pixar Luxo Jr. short, 1986"
-  },
-  "cd-frog": {
-    "archiveId": "burger-king-kids-club-commercial-1990",
-    "title": "Burger King Kids Club meal commercial, 1990"
-  },
+  "cd-sketch": null,
+  "cd-lamp": null,
+  "cd-frog": null,
   "cd-8ball": null,
-  "cd-photo": {
-    "archiveId": "kodak-advantix-film-commercial-1996",
-    "title": "Kodak Advantix film commercial, 1996"
-  },
-  "cd-tmnt": {
-    "archiveId": "tmnt-pizza_202509",
-    "title": "Pizza Hut Ninja Turtles kids meal commercial, 1990"
-  },
+  "cd-photo": null,
+  "cd-tmnt": null,
   "cd-walkman": {
     "archiveId": "walkmandec81",
-    "title": "Walkman commercial, 1981"
+    "title": "Walkman commercial, 1981",
+    "file": "walkmandec81.mp4",
+    "length": 31
   },
   "cd-snes": {
     "archiveId": "Super_Nintendo_commercial_1992",
-    "title": "Super Nintendo commercial, 1992"
+    "title": "Super Nintendo commercial, 1992",
+    "file": "Super Nintendo commercial (1992)-UxqGyCG5YEE.mp4",
+    "length": 30
   },
-  "cd-yoyo": {
-    "archiveId": "youtube-dfqykR14O3Y",
-    "title": "Duncan Yo-yo commercial, 1976"
-  },
+  "cd-yoyo": null,
   "cd-sonic": {
     "archiveId": "sonic-3-commercial",
-    "title": "Sonic 3 commercial, 1994"
+    "title": "Sonic 3 commercial, 1994",
+    "file": "sonic3.mp4",
+    "length": 29
   },
   "cd-vhs": {
     "archiveId": "trailer-for-space-jam",
-    "title": "Space Jam trailer, 1996"
+    "title": "Space Jam trailer, 1996",
+    "file": "Trailer for Space Jam.mp4",
+    "length": 75
   },
-  "cd-trophy": {
-    "archiveId": "TheSandlotTrailer",
-    "title": "The Sandlot trailer, 1993"
-  },
-  "cd-stickers": {
-    "archiveId": "SEGA_Saturn_commercial_USA_1997",
-    "title": "Sega Saturn commercial, 1997"
-  },
-  "cd-chair": {
-    "archiveId": "1997-staples-commercial",
-    "title": "Staples office supplies commercial, 1997"
-  },
+  "cd-trophy": null,
+  "cd-stickers": null,
+  "cd-chair": null,
   "desk": {
     "archiveId": "windows-98-commercial",
-    "title": "Windows 98 commercial, 1998"
+    "title": "Windows 98 commercial, 1998",
+    "file": "Windows 98 Commercial.mp4",
+    "length": 59
   },
-  "pc-monitor": {
-    "archiveId": "20230625-124621",
-    "title": "Compaq computer commercial, 1997"
-  },
+  "pc-monitor": null,
   "pc-tower": {
     "archiveId": "1997-pentium-commercial",
-    "title": "Intel Pentium commercial, 1997"
+    "title": "Intel Pentium commercial, 1997",
+    "file": "1997 Pentium Commercial.mp4",
+    "length": 30
   },
-  "pc-printer": {
-    "archiveId": "HPDeskjet693cxDisney101DalmationsPrintStudioBundleAdvert1996",
-    "title": "HP DeskJet printer commercial, 1996"
-  },
-  "pc-keyboard": {
-    "archiveId": "radio-shack-tandy-1000-rl-computer-commercial-1991",
-    "title": "Radio Shack Tandy 1000 RL computer commercial, 1991"
-  },
-  "pc-mouse": {
-    "archiveId": "000713_202006",
-    "title": "Microsoft Mouse commercial"
-  },
+  "pc-printer": null,
+  "pc-keyboard": null,
+  "pc-mouse": null,
   "pc-cds": {
     "archiveId": "aol-america-online-commercial-1998",
-    "title": "AOL America Online commercial, 1998"
+    "title": "AOL America Online commercial, 1998",
+    "file": "AOL America Online Commercial 1998.mp4",
+    "length": 30
   },
-  "pc-pencils": {
-    "archiveId": "youtube-diScJF-k5g4",
-    "title": "Crayola Caddy commercial, 1983"
-  },
-  "pc-stickers": {
-    "archiveId": "1981-mtv-commercial-i-want-my-mtv-early-promo",
-    "title": "\"I want my MTV\" promo, 1981"
-  },
-  "pc-games": {
-    "archiveId": "1996-commercial-for-games-on-cd-rom",
-    "title": "Games on CD-ROM commercial, 1996"
-  },
+  "pc-pencils": null,
+  "pc-stickers": null,
+  "pc-games": null,
   "gushers": {
     "archiveId": "fruit-gushers-1992-commercial",
-    "title": "Fruit Gushers commercial, 1992"
+    "title": "Fruit Gushers commercial, 1992",
+    "file": "FRUIT GUSHERS - 1992 Commercial.mp4",
+    "length": 30
   },
   "cards": {
     "archiveId": "2000-commercial-for-pokemon-trading-card-game",
-    "title": "Pokémon Trading Card Game commercial, 2000"
+    "title": "Pokémon Trading Card Game commercial, 2000",
+    "file": "2000 commercial for Pokémon trading card game.mp4",
+    "length": 30
   },
   "hotpockets": {
     "archiveId": "1992-hot-pockets-a-hot-meal-without-a-big-deal-tv-commercial",
-    "title": "Hot Pockets commercial, 1992"
+    "title": "Hot Pockets commercial, 1992",
+    "file": "1992 Hot Pockets _A hot meal without a big deal_ TV Commercial.mp4",
+    "length": 31
   },
   "jordans": {
     "archiveId": "nike-air-jordan",
-    "title": "Air Jordan commercial with Bugs Bunny, 1992"
+    "title": "Air Jordan commercial with Bugs Bunny, 1992",
+    "file": "NIKE Air Jordan.mp4",
+    "length": 60
   },
-  "car": {
-    "archiveId": "DET-011_562051-562529",
-    "title": "Tyco Hijacker RC car commercial, 1993"
-  },
+  "car": null,
   "hotwheels": {
     "archiveId": "videoplayback_20240819_1919",
-    "title": "Hot Wheels Criss Cross Crash commercial, 1999"
+    "title": "Hot Wheels Criss Cross Crash commercial, 1999",
+    "file": "videoplayback.mp4",
+    "length": 31
   },
   "army": {
     "archiveId": "small-soldiers-burger-king-kids-club-meal-commercial-1998",
-    "title": "Small Soldiers Burger King Kids Club commercial, 1998"
+    "title": "Small Soldiers Burger King Kids Club commercial, 1998",
+    "file": "Small Soldiers Burger King Kids Club Meal commercial (1998).mp4",
+    "length": 32
   },
   "ispy-book": {
     "archiveId": "how-i-spy-books-are-made",
-    "title": "How 'I Spy' books are made"
+    "title": "How 'I Spy' books are made",
+    "file": "How 'I Spy' Books Are Made.mp4",
+    "length": 259
   },
   "furby": {
     "archiveId": "youtube-ouh2Q_-pYLQ",
-    "title": "Tiger Electronics Furby TV commercial"
+    "title": "Tiger Electronics Furby TV commercial",
+    "file": "ouh2Q_-pYLQ.mp4",
+    "length": 30
   },
   "poochi": {
     "archiveId": "2001-commercial-for-robo-chi-pets",
-    "title": "Robo-Chi Pets commercial, 2001"
+    "title": "Robo-Chi Pets commercial, 2001",
+    "file": "2001 commercial for Robo Chi Pets.mp4",
+    "length": 30
   },
-  "armor": {
-    "archiveId": "youtube-8QqAxY6Zzu8",
-    "title": "Kenner Ghostbusters action figures commercial, 1987"
-  },
+  "armor": null,
   "rubik": {
     "archiveId": "youtube-_OHcaVc6ehQ",
-    "title": "Rubik's Cube commercial, 1980"
+    "title": "Rubik's Cube commercial, 1980",
+    "file": "_OHcaVc6ehQ.mp4",
+    "length": 10
   },
   "vhs-stack": {
     "archiveId": "home-alone-video",
-    "title": "Home Alone VHS TV spot, 1991"
+    "title": "Home Alone VHS TV spot, 1991",
+    "file": "Home Alone Video.mp4",
+    "length": 15
   },
-  "vhs-loose": {
-    "archiveId": "1998-blockbuster-dancing-vhs-tapes-commercial",
-    "title": "Blockbuster dancing VHS tapes commercial, 1998"
-  },
+  "vhs-loose": null,
   "books": {
     "archiveId": "HarryPotterTheSorcerersStoneTrailer1",
-    "title": "Harry Potter and the Sorcerer's Stone trailer, 2001"
+    "title": "Harry Potter and the Sorcerer's Stone trailer, 2001",
+    "file": "HarryPotterTheSorcerersStoneTrailer1.mp4",
+    "length": 111
   },
   "poster-pokemon": {
     "archiveId": "Pokemon_The_First_Movie_Trailer_1999",
-    "title": "Pokemon: The First Movie trailer, 1999"
+    "title": "Pokemon: The First Movie trailer, 1999",
+    "file": "Pokemon - The First Movie Trailer (1999)-DfRbFf-m1no.mp4",
+    "length": 30
   },
   "poster-mummy": {
     "archiveId": "TheMummy1999Trailer",
-    "title": "The Mummy trailer, 1999"
+    "title": "The Mummy trailer, 1999",
+    "file": "TheMummy1999Trailer.mp4",
+    "length": 101
   },
   "poster-giant": {
     "archiveId": "iron-giant-screening-promo",
-    "title": "The Iron Giant VHS screening promo, 1999"
+    "title": "The Iron Giant VHS screening promo, 1999",
+    "file": "iron giant screening promo.mp4",
+    "length": 257
   },
   "poster-babe": {
     "archiveId": "1996-commercial-for-babe",
-    "title": "Babe commercial, 1996"
+    "title": "Babe commercial, 1996",
+    "file": "1996 commercial for Babe.mp4",
+    "length": 30
   }
 };

@@ -5,6 +5,8 @@ import { useSyncExternalStore } from 'react';
  * piece to cut out of the room, the window on the card it should turn in, and
  * where on screen the thing itself is, for the beam up to the card.
  */
+export type CapsuleMode = 'holo' | 'real' | 'off';
+
 export const capsule = {
   /** Hotspot id of the open card, or null. */
   id: null as string | null,
@@ -14,6 +16,11 @@ export const capsule = {
   piece: null as boolean | null,
   /** Where the real thing is on screen, in CSS pixels (null when off screen). */
   source: null as null | { x: number; y: number },
+  /**
+   * How the piece is drawn: 'holo' is the blue hologram, 'real' is the real
+   * thing in its own colours (the Images tab), 'off' hides it (a video is up).
+   */
+  mode: 'holo' as CapsuleMode,
   listeners: new Set<() => void>(),
 };
 
@@ -26,6 +33,13 @@ export function openCapsule(id: string | null) {
   capsule.id = id;
   capsule.piece = null;
   capsule.source = null;
+  capsule.mode = 'holo';
+  emit();
+}
+
+export function setCapsuleMode(mode: CapsuleMode) {
+  if (capsule.mode === mode) return;
+  capsule.mode = mode;
   emit();
 }
 

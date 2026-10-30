@@ -1477,6 +1477,7 @@ export function WalkRoom({
                 onOpenRulesForGame?.(cardGame);
               }}
               onClose={() => setCardOpen(false)}
+              onSound={onCardVideo}
             />
           ) : cardProp ? (
             <MemoryFlashCard

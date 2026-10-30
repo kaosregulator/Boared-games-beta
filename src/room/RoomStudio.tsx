@@ -5,6 +5,7 @@ import { useGraphics } from '../engine/useGraphics';
 import { setControlPreset, setInvertLook, setLookSensitivity, useControlSettings, type ControlPreset } from './controls';
 import { MOOD_LABEL, type RoomMood } from './moods';
 import { sound, MUSIC_CREDITS, ROOM_TRACKS, type RoomTrackId } from '../utils/audio';
+import { setHoloBeeps, setHoloVoice, useHoloBeeps, useHoloVoice, VOICES, type VoiceId } from './capsule/holoVoice';
 
 interface RoomStudioProps {
   open: boolean;
@@ -309,6 +310,7 @@ export function RoomStudio(props: RoomStudioProps) {
             className="h-11 w-full min-w-0 accent-amber-200"
           />
         </label>
+        <HoloVoicePicker />
         <div className="flex flex-col gap-1 text-[10px] leading-relaxed text-white/45">
           <span className="font-bold uppercase tracking-[0.18em] text-white/50">Music credits</span>
           {MUSIC_CREDITS.map(c => (
@@ -443,5 +445,38 @@ export function RoomStudio(props: RoomStudioProps) {
         )}
       </div>
     </aside>
+  );
+}
+
+/** Which voice reads a time capsule aloud when you press Listen, and the beeps when one opens. */
+function HoloVoicePicker() {
+  const voice = useHoloVoice();
+  const beeps = useHoloBeeps();
+  return (
+    <>
+      <label className="flex flex-col gap-1">
+        <span className="text-[10px] uppercase tracking-[0.18em] text-white/50 font-bold">Hologram voice</span>
+        <select
+          value={voice}
+          onChange={e => {
+            sound.playButtonClick();
+            setHoloVoice(e.target.value as VoiceId | 'off');
+          }}
+          className="min-h-11 rounded-xl border border-white/15 bg-black/40 px-3 py-2"
+        >
+          {VOICES.map(v => (
+            <option key={v.id} value={v.id}>
+              {v.name}
+            </option>
+          ))}
+          <option value="off">Off</option>
+        </select>
+        <span className="text-[10px] text-white/40">{VOICES.find(v => v.id === voice)?.blurb ?? 'Cards stay quiet. Press Listen on a card to hear it read.'}</span>
+      </label>
+      <label className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/30 px-3 py-2">
+        <span>Beeps when a card opens</span>
+        <input type="checkbox" className="h-5 w-5" checked={beeps} onChange={e => setHoloBeeps(e.target.checked)} />
+      </label>
+    </>
   );
 }

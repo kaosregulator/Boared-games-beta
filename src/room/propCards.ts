@@ -18,8 +18,10 @@ export interface CardVideo {
   /** archive.org item identifier. */
   archiveId: string;
   title: string;
-  /** One file inside the item, when the item is a compilation and this is the right clip. */
+  /** The .mp4 inside the item to play. */
   file?: string;
+  /** How long it runs, in seconds. */
+  length?: number | null;
 }
 
 export interface CardFact {
@@ -119,6 +121,7 @@ const P = {
 };
 
 import { PROP_FACTS, PROP_VIDEOS } from './propFacts';
+import { EXTRA_PHOTOS } from './cardPhotos';
 
 const V = (archiveId: string, title: string): CardVideo => ({ archiveId, title });
 
@@ -1156,10 +1159,20 @@ export const PROP_CARDS: Record<string, PropCard> = Object.fromEntries(CARDS.map
 /** Old ids from before the shelf got its own card. */
 const ALIASES: Record<string, string> = { teddy: 'south-shelf' };
 
+/** The Commons file name behind a photo, to drop the same picture found twice. */
+const photoKey = (photo: CardPhoto) => decodeURIComponent(photo.src.replace(/\?.*$/, '').split('/').pop() ?? '').replace(/^\d+px-/, '').replace(/_/g, ' ');
+
 export function propCardFor(id: string): PropCard | null {
   const card = PROP_CARDS[id] ?? PROP_CARDS[ALIASES[id] ?? ''] ?? null;
   if (!card) return null;
   const extra = PROP_FACTS[card.id];
   const video = PROP_VIDEOS[card.id];
-  return extra || video !== undefined ? { ...card, ...(extra ?? {}), video: video === undefined ? card.video : video ?? undefined } : card;
+  const seen = new Set<string>();
+  const photos = [...(card.photos ?? []), ...(EXTRA_PHOTOS[card.id] ?? [])].filter(photo => {
+    const key = photoKey(photo);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  return { ...card, ...(extra ?? {}), photos: photos.slice(0, 5), video: video === undefined ? card.video : video ?? undefined };
 }
