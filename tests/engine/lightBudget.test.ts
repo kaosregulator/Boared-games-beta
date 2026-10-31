@@ -54,6 +54,33 @@ test('balanceLights keeps the point-light count steady as lights come and go', (
   assert.equal(visiblePointLights(scene), 7);
 });
 
+test('a spare spot light stands in until a game brings its own', () => {
+  const { scene } = budgetScene(2);
+  const spare = new THREE.SpotLight(0x000000, 0);
+  spare.visible = false;
+  scene.userData.lightBudget.group.add(spare);
+  scene.userData.lightBudget.spotSpares = [spare];
+  const spots = (s: THREE.Scene) => {
+    let n = 0;
+    s.traverseVisible(o => {
+      if ((o as THREE.SpotLight).isSpotLight) n += 1;
+    });
+    return n;
+  };
+  balanceLights(scene);
+  assert.equal(spots(scene), 1);
+  // The Hot Wheels headlight comes in: still one spot, so no shader rebuilds.
+  const head = new THREE.SpotLight();
+  scene.add(head);
+  balanceLights(scene);
+  assert.equal(spots(scene), 1);
+  assert.equal(spare.visible, false);
+  scene.remove(head);
+  balanceLights(scene);
+  assert.equal(spots(scene), 1);
+  assert.equal(spare.visible, true);
+});
+
 test('pendingTextures finds each unsent picture once and skips video', () => {
   const root = new THREE.Group();
   const img = { width: 4, height: 4 } as unknown as HTMLImageElement;

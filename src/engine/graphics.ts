@@ -24,9 +24,12 @@ const COOLDOWN_MS = 8000;
 const WARMUP_MS = 10000;
 
 let userPreset: GraphicsPreset = 'high';
-// On by default: High stays sharp where the device keeps up, and a slow phone or
-// laptop steps its pixel ratio down instead of being stuck at 2x with no fallback.
-let adaptiveOn = true;
+// Off by default: every phone, laptop and PC gets the same sharp High picture.
+// Stepping the pixel ratio down on a slow device made its picture softer than
+// everyone else's (and the resize itself was a hitch). The smoothness comes
+// from the room doing less work instead (docs/performance.md). A player can
+// still turn it on in the Engine panel.
+let adaptiveOn = false;
 let effective: GraphicsPreset = 'high';
 /** Highest preset adaptive may climb back to. A level that could not hold 40 fps is not retried. */
 let ceiling: GraphicsPreset = 'high';
@@ -170,7 +173,7 @@ export function noteFrameRate(fps: number, at?: number) {
 
 export function resetGraphicsForTests() {
   userPreset = 'high';
-  adaptiveOn = true;
+  adaptiveOn = false;
   effective = 'high';
   ceiling = 'high';
   firstSample = null;

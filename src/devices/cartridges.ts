@@ -61,15 +61,23 @@ let warmPromise: Promise<void> | null = null;
 const cartridgeDone = new Set<string>();
 
 export function cartridgeWarmList() {
-  const legacy = typeof WebGL2RenderingContext === 'undefined' ? '-legacy' : '';
+  // EmulatorJS only takes the WebGL2 build of a core when its report sets
+  // defaultWebGL2 (or a player switched it on in its own settings menu, which
+  // the room hides). Neither report does, so every browser plays the -legacy
+  // file. Warming the other one left the Game Boy downloading its core on the
+  // spot every first time.
   return [
     '/emu/data/loader.js',
     '/emu/data/emulator.min.js',
     '/emu/data/emulator.min.css',
     '/emu/data/compression/extract7z.js',
     '/emu/data/cores/reports/gambatte.json',
-    `/emu/data/cores/gambatte${legacy}-wasm.data`,
+    '/emu/data/cores/gambatte-legacy-wasm.data',
+    // The NES under the TV: same player, its own core.
+    '/emu/data/cores/reports/fceumm.json',
+    '/emu/data/cores/fceumm-legacy-wasm.data',
     ...GAME_PAKS.map(c => c.rom),
+    ...CARTRIDGES.map(c => c.rom),
   ];
 }
 

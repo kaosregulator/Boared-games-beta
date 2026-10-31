@@ -197,12 +197,43 @@ test('a missing item is a 404, cached briefly, and not retried', async () => {
 test('when archive.org is down, an item looked up before keeps its old answer', async () => {
   const answers = [json(ITEM), json({}, 503)];
   const { fetchImpl } = fakeArchive(answers);
-  const meta = createArchiveMeta({ ...quick, fetchImpl, ttlMs: 1, maxAttempts: 2 });
+  const meta = createArchiveMeta({ ...quick, fetchImpl, ttlMs: 1, maxAttempts: 2, serveStaleMs: 0 });
   await meta.lookup('known');
   await new Promise(r => setTimeout(r, 5));
   const got = await meta.lookup('known');
   assert.equal(got.files.length, 2);
   assert.equal(meta.status().stale, 1);
+});
+
+test('an expired answer is sent at once while one refresh runs behind it', async () => {
+  let release;
+  const slow = () => new Promise(r => (release = () => r(json({ files: [{ name: 'new.mp4' }] }))));
+  const { calls, fetchImpl } = fakeArchive([json(ITEM), slow]);
+  const meta = createArchiveMeta({ ...quick, fetchImpl, ttlMs: 1 });
+  await meta.lookup('show');
+  await new Promise(r => setTimeout(r, 5));
+  // Five visitors after it expired: all answered from the old copy, one request between them.
+  const old = await Promise.all([1, 2, 3, 4, 5].map(() => meta.lookup('show')));
+  assert.ok(old.every(r => r.files.length === 2));
+  assert.equal(calls.length, 2);
+  await new Promise(r => setTimeout(r, 5));
+  release();
+  await new Promise(r => setTimeout(r, 5));
+  const fresh = await meta.lookup('show');
+  assert.deepEqual(fresh.files.map(f => f.name), ['new.mp4']);
+});
+
+test('the cache survives a restart through snapshot and restore', async () => {
+  const { fetchImpl } = fakeArchive([json(ITEM)]);
+  const before = createArchiveMeta({ ...quick, fetchImpl });
+  await before.lookup('show');
+  const saved = JSON.parse(JSON.stringify(before.snapshot()));
+  const { calls, fetchImpl: none } = fakeArchive([json({}, 500)]);
+  const after = createArchiveMeta({ ...quick, fetchImpl: none });
+  assert.equal(after.restore([...saved, ['../bad', { files: [], expires: Date.now() + 1000 }], 'junk']), 1);
+  const got = await after.lookup('show');
+  assert.equal(got.files.length, 2);
+  assert.equal(calls.length, 0);
 });
 
 test('rejects anything that is not an archive.org identifier', async () => {

@@ -121,6 +121,10 @@ test('cartridge warming lists every player file once', () => {
     assert.equal(new Set(files).size, files.length);
     assert.ok(files.includes('/emu/data/loader.js'));
     assert.ok(files.includes('/roms/tetris-gb.gb'));
+    // the core files EmulatorJS really asks for, for both consoles
+    assert.ok(files.includes('/emu/data/cores/gambatte-legacy-wasm.data'));
+    assert.ok(files.includes('/emu/data/cores/fceumm-legacy-wasm.data'));
+    assert.ok(files.includes('/roms/tetris.nes'));
   } finally {
     host.WebGL2RenderingContext = previous;
   }

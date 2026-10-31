@@ -8,6 +8,7 @@ import { handleRadioRequest } from './radioBrowserApi.mjs';
 import { configureLog, getCorrelationId, log } from './logCore.mjs';
 import { createRoomApi } from './server/api.mjs';
 import { archiveMeta } from './server/archiveMeta.mjs';
+import { readJson, writeJson } from './server/dataDir.mjs';
 
 dotenv.config();
 configureLog({ console: 'json' });
@@ -370,13 +371,25 @@ if (isMain) {
   process.on('unhandledRejection', reason => {
     log('error', 'unhandled rejection', { source: 'process', err: reason instanceof Error ? reason : new Error(String(reason)) });
   });
-  for (const sig of ['SIGTERM', 'SIGINT']) {
-    process.once(sig, () => {
-      log('info', 'shutting down', { source: 'server', signal: sig, uptimeSec: Math.round(process.uptime()) });
-      process.exit(0);
-    });
+  // The archive.org answers outlive a restart or a deploy (a volume keeps them
+  // across deploys too), so the channels don't all queue for archive.org again.
+  const ARCHIVE_CACHE = 'archive-cache.json';
+  const saveArchive = () => {
+    try {
+      writeJson(ARCHIVE_CACHE, archiveMeta.snapshot());
+    } catch (err) {
+      log('warn', 'archive cache not saved', { source: 'archive', detail: err?.message });
+    }
+  };
+  try {
+    const restored = archiveMeta.restore(readJson(ARCHIVE_CACHE, []));
+    if (restored) log('info', 'archive cache restored', { source: 'archive', items: restored });
+  } catch (err) {
+    log('warn', 'archive cache not restored', { source: 'archive', detail: err?.message });
   }
-  app.listen(port, '0.0.0.0', () => {
+  setInterval(saveArchive, 2 * 60_000).unref();
+
+  const server = app.listen(port, '0.0.0.0', () => {
     const mem = process.memoryUsage();
     log('info', 'listening', {
       source: 'server',
@@ -390,4 +403,23 @@ if (isMain) {
       dist: distSummary(),
     });
   });
+  // Railway's proxy keeps connections to us open for reuse. Node's default
+  // closes an idle one after 5 s, and a request the proxy sends down a socket
+  // just as Node closes it comes back to the player as a 502. Under a rush of
+  // visitors that is a steady trickle of failed files; outlasting the proxy's
+  // own idle timeout stops it.
+  server.keepAliveTimeout = 65_000;
+  server.headersTimeout = 66_000;
+
+  // A deploy sends SIGTERM: stop taking new connections, let the downloads in
+  // flight finish (up to 10 s), save the archive cache, then exit.
+  for (const sig of ['SIGTERM', 'SIGINT']) {
+    process.once(sig, () => {
+      log('info', 'shutting down', { source: 'server', signal: sig, uptimeSec: Math.round(process.uptime()) });
+      saveArchive();
+      server.close(() => process.exit(0));
+      server.closeIdleConnections();
+      setTimeout(() => process.exit(0), 10_000).unref();
+    });
+  }
 }
