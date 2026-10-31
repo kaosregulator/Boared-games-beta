@@ -33,10 +33,10 @@ const MENU_DEVICES: { id: Exclude<ControlPreset, 'custom'>; label: string }[] = 
 
 /** The room's download, under the enter button. Its own subscriber, so the video's parent does not re-render on every byte. */
 function MenuLoadMeter() {
-  const { ready, progress } = useRoomReady();
+  const { ready, preparing, progress } = useRoomReady();
   return (
     <div className="menu-load-meter" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.6)' }} aria-live="polite">
-      <LoadingMeter progress={progress} ready={ready} className="w-[min(19rem,82vw)]" lineClassName="whitespace-nowrap tracking-[0.16em] sm:tracking-[0.22em]" />
+      <LoadingMeter progress={progress} ready={ready} preparing={preparing} className="w-[min(19rem,82vw)]" lineClassName="whitespace-nowrap tracking-[0.16em] sm:tracking-[0.22em]" />
     </div>
   );
 }
@@ -251,14 +251,14 @@ function RoomReadyWatch({ onReady }: { onReady: () => void }) {
 
 /** The black screen's bar. Subscribes to the download on its own, and tells the reel when the room is in. */
 function MenuWait({ onReady, onSkip }: { onReady: () => void; onSkip: () => void }) {
-  const { ready, stalled, progress } = useRoomReady();
+  const { ready, preparing, stalled, progress } = useRoomReady();
   useEffect(() => {
     if (ready) onReady();
   }, [ready, onReady]);
   if (ready) return null;
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center gap-5">
-      <LoadingMeter progress={progress} />
+      <LoadingMeter progress={progress} preparing={preparing} />
       {stalled && (
         <button
           type="button"

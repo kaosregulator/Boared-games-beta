@@ -195,3 +195,64 @@ TV lookups right after a deploy (`archload.mjs`: 300 viewers at once across 40 c
 - The room is 1.36M triangles and 175 draws at spawn. The big Tripo models (80–270k each) were restored to full detail on purpose. Merging static props into fewer draws would be the next GPU win that changes nothing on screen.
 - The Game Boy still takes a few seconds to boot after the files arrive: EmulatorJS unpacks its 7z core and compiles the WebAssembly each time.
 - Measuring on a real GPU (a phone over USB with remote debugging) would give real frame times. Watch `?diag=1` → Engine panel.
+
+# Responsiveness pass (October 31 2026, after PR #87)
+
+Handoff notes for the pass after the launch pass. Reported: the room felt less smooth and less responsive than before the caching/loading work and PR #87, on Chromebook, iPad and other browsers, with caches cleared and on every graphics preset. **Nothing visual changed**: same models, textures, lights, light count, shadows, effects, draw distance and pixel ratio.
+
+## What was wrong
+
+| Symptom | Cause |
+| --- | --- |
+| Looking around felt delayed and floaty (touch, trackpad, arrow keys) | PR #87 put touch and trackpad/wheel looks through an exponential glide (`LOOK_GLIDE = 0.045` s) and eased the arrow-key turn (`KEY_TURN_EASE = 0.08` s). At 60 fps a swipe was 31% applied on the frame it arrived, 67% after 50 ms, 89% after 100 ms, 95% after 135 ms. The arrow keys reached 63% of their turn speed after 80 ms and 95% after 240 ms, then kept turning for about 9° after you let go. The mouse was never glided, which is why it showed most on iPad and Chromebook trackpads. |
+| Steady per-frame cost | Two full scene walks before every frame: `FirstDrawGate` looked at every object for a material it hadn't seen, and `LightBudget` walked the scene again to count lights. On the loaded room (553 objects) that was 0.29 ms a frame with the CPU throttled 4x, on every frame, to catch the rare frame where something mounted. |
+| A hitch when a model or game arrived mid-session | `FirstDrawGate` called `gl.compile()` once per new mesh. three's `compile()` walks the whole scene to gather lights on every call (0.33 ms each, 4x throttled), so a model with a hundred meshes walked the scene a hundred times in one frame. |
+| Repeated full-room compiles while loading | `SceneWarmup` recompiled every material in the scene whenever anything new appeared: about forty times while the room loaded, each one rebuilding the program key of every material. |
+| "Room ready" wasn't ready | Ready meant "the downloads are done". Parsing, shader compiles, texture uploads and vertex uploads were still to come: on a repeat visit (downloads in ~4 s) pressing Play at "Room ready" spent the next 2.5 s mostly blocked, about 0.8 s linking shaders and 0.4 s uploading textures (CPU profile, software GL), with 57–76 texture uploads and 10 frames over 50 ms after Play. |
+| A long first frame after Play | The warm-up compiled shaders and sent textures, but vertex buffers only go to the GPU on a mesh's first draw. The first frame after Play sent about 36 MB of them at once. |
+| Texture warm-up could bunch up | Three textures per task, whatever their size: three large uploads with mipmaps back to back on a phone. The gate allowed four in one frame. |
+
+## What changed
+
+- **Scene change tracking** (`src/engine/sceneGraph.ts`). three's `Object3D.add` / `remove` are wrapped once. An add or remove anywhere under a tracked scene bumps the scene's version and, while the gate is collecting, remembers the new subtree's root. Work outside a tracked scene (a GLTF being parsed, a clone being built) costs a short walk up its parents and nothing else.
+- **`FirstDrawGate`** only looks at what was added since the last frame. On a frame where nothing was added and nothing is held it does nothing. New drawn things are compiled in **one** batched `compileBatch()` call (a stand-in root whose `traverse` visits exactly them, so three gathers the lights once). Holding, one link per frame without parallel compile, the 1.5 s cap, `noGate` and the strike rule are as before. Things whose material the renderer has already built (by the warm-up, or another copy of the same model) are not held. Texture uploads in a frame are time-sliced (4 ms, at least one).
+- **`LightBudget`** calls `syncLights()`: it rebuilds its list of the room's lights only when the scene graph changed, and otherwise checks only whether one of those lights was shown or hidden (a walk up its few parents). It rebalances only when something changed, and ends up with exactly the lights `balanceLights()` gives (tested). `balanceLights()` is unchanged in what it does.
+- **`SceneWarmup`** compiles only the drawn things whose material is new or changed (by material version, so `needsUpdate` changes are caught too), in one batch, then uploads textures in 6 ms slices (at least one per task). Behind the title (the canvas draws nothing then: `hidden`), once a batch's shaders and textures are done, it draws just those things once on a spare layer with the same lights (`drawHidden`), so their vertex buffers go up behind the title instead of in the first frame. The same lights pass the camera's layer test, so the same programs are used and nothing new is built. Nothing is uploaded that isn't already in the scene.
+- **Loading stages** (`src/engine/roomPrep.ts`). "Room ready" now means downloaded (`netQueue`), parsed (GLTF loads in flight, counted in `gltfCache.ts`), placed, compiled and uploaded (a warm-up scan after the last parse found nothing new). Between the last byte and ready the bar says "Preparing the room". If preparing takes more than 15 s (`PREP_MAX_MS`) the room opens anyway, and the gate covers the rest; "Go in anyway" still shows after 20 s of no progress.
+- **Looking** (`WalkController.tsx`). Touch and trackpad/wheel looks turn the camera on the event again, as they did before PR #87, and the arrow keys turn at full speed while held and stop when released. Sensitivity, zoom scaling, presets and walking (`walkSpeed`, `crouchSpeed`, `accel` in `videoRoom.ts`) are unchanged.
+
+### Not changed, and why
+
+- **Title reel and model line.** Measured cold at 50 Mbps (`net.cjs`): the link is saturated until the room is in, so "Room ready" is the total bytes over bandwidth. Chromium keeps about 20 s of the reel buffered ahead while it plays (about 2.3x its 4.4 Mbps rate during the load: 34 MB of the 164 MB moved before the room was in). `preload="metadata"` made no difference once the reel plays (tested: same bytes, same buffer). The reel request stays open for its whole download, throttled by the browser, which is why Railway logs it at 25–38 s; it doesn't block the model downloads. The hashed cache and immutable headers work (a repeat visit downloads 0 MB of models). A lighter encode would help on a slow link, but that would change the reel's quality, so it's left for a decision.
+- **Graphics.** Adaptive graphics stays off. The point-light budget (21) and the spot stand-in stay, so no shader is rebuilt when a game brings a lamp.
+
+## How it was measured
+
+Production build, `node server.mjs`. "Before" is main at `76a0a68` (PR #87), served from a copy of its `dist` on another port. Playwright's Chromium on SwiftShader (software GL, no parallel shader compile), 160×90. Software GL exaggerates GPU time and draws this room at a few frames a second, so frame rates here say nothing about a real device. What carries over is the main-thread work.
+
+| | Before | After |
+| --- | --- | --- |
+| Gate + light budget, per frame, nothing changing (`framecost.ts`, room-shaped scene) | 43 µs | 0.7 µs |
+| Same two walks on the real loaded room, CPU 4x throttled (`walkcost`) | 0.29 ms every frame | none while nothing changes |
+| `gl.compile` calls for a model of N new meshes arriving mid-session | N (0.33 ms each, 4x) | 1 |
+| Repeat visit, Play at "Room ready": main-thread time in shader links / texture uploads, first 2.5 s (CPU profile, `first.cjs`) | 791 ms `getProgramInfoLog`, 416 ms `texSubImage2D`, 491 ms `getExtension` | ~0 (main thread idle 2.3 of 2.5 s) |
+| Play at "Room ready": texture uploads inside frames, next 10 s (`ready.cjs`, cold / repeat) | 57 / 76 | 0 / 0 |
+| Play at "Room ready": vertex data uploaded inside frames | 35.7 MB, in frame 0 | 0 MB |
+| Play at "Room ready": frames over 50 ms (cold / repeat) | 2 / 10 | 1 / 1 |
+| "Room ready" shows (no throttle, cold / repeat) | 12.2 / 4.7 s | 15.6–20.3 / 10.0–15.5 s, see below |
+| "Room ready" shows, cold at 50 Mbps (`net.cjs`) | 27.0 s | 28.2 s (the prep overlaps the downloads) |
+| TV on, Hot Wheels start: longest task (`events.cjs`, two sequential runs each) | 146–205 ms, 508–534 ms | 157–184 ms, 597–604 ms |
+
+"Room ready" comes later because it now includes the parse, compile and upload work that used to land in your first seconds in the room. In software GL that work is very slow (each shader link blocks for a long time, and drawing a model once costs real time), so this is the worst case. On a GPU with `KHR_parallel_shader_compile` the shaders build on driver threads and the uploads take milliseconds, so the extra wait is small. It's work you would have waited through anyway, now spent behind the title song instead of as freezes in the room.
+
+Starting Hot Wheels came out about 70 ms longer in both runs (5 new shaders in software GL, where one link blocks for hundreds of ms). That is within this setup's noise but was consistent, so it's worth a look on a real device; the number of shaders built and the one-link-per-frame rule are unchanged.
+
+The single long frame that remains after Play (0.4–1 s in software GL) is the GPU drawing the full 1.36M-triangle room for the first time. It shows as idle in the CPU profile: the main thread is waiting on the software GPU, not doing work.
+
+Scripts: `scripts/perf/framecost.ts` (`npx tsx scripts/perf/framecost.ts`), `scripts/perf/ready.cjs <port> [mbps] [repeat 0|1]`, `scripts/perf/net.cjs <out.json> [mbps] [port]`, `scripts/perf/first.cjs <port>`.
+
+## Left to do / ideas
+
+- Measure on real devices (iPad and a Chromebook with remote debugging) with `ready.cjs` and the Engine panel; the software-GL numbers are only good for before/after comparison.
+- If the title reel is ever re-encoded, a phone-sized version would leave more of the link to the room on a first visit.
+- If something is added to the room with `scene.children.push` instead of `add`, the gate won't see it. Everything in the codebase (and r3f) uses `add`.

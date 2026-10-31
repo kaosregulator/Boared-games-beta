@@ -1222,7 +1222,8 @@ export function WalkRoom({
       >
         <color attach="background" args={['#2a2030']} />
         <EngineBridge />
-        <SceneWarmup />
+        {/* Behind the title the canvas draws nothing, so the warm-up may also send vertex buffers. */}
+        <SceneWarmup hidden={!engaged && !scripted} />
         <FirstDrawGate />
         {atPcStill && <DemandTicker idleFps={8} />}
         {atNesStill && <DemandTicker idleFps={20} />}

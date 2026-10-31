@@ -1,5 +1,7 @@
 // First: holds the model downloads in line before any module asks for one.
 import './engine/netQueue';
+// Counts model parses for the loading bar; before anything asks for a model.
+import './engine/gltfCache';
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
