@@ -230,7 +230,8 @@ export async function openPostgres(url) {
   // COUNT(*) and BIGINT columns come back as strings by default; they are all well inside Number range here.
   pg.types.setTypeParser(20, v => Number(v));
   const ssl = /sslmode=require|railway\.app|rlwy\.net/.test(url) && !/sslmode=disable/.test(url) ? { rejectUnauthorized: false } : undefined;
-  const pool = new pg.Pool({ connectionString: url, max: Number(process.env.PG_POOL_MAX) || 5, ssl });
+  // 10 connections, so a rush of players saving results does not queue behind five.
+  const pool = new pg.Pool({ connectionString: url, max: Number(process.env.PG_POOL_MAX) || 10, ssl });
   const api = pgAdapter(pool);
   await migrate(api);
   return api;

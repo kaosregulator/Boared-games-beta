@@ -50,6 +50,17 @@ const RIGHT = new THREE.Vector3();
 const WISH = new THREE.Vector3();
 const LOOK = new THREE.Euler(0, 0, 0, 'YXZ');
 
+/**
+ * Touch and trackpad looks glide in over this long (seconds) rather than
+ * jumping by each event. A finger or trackpad reports at its own rate, out of
+ * step with the screen, so applied raw some frames turn twice as far as the
+ * next and the room judders while you look around. The turn is the same size;
+ * it is only spread over a few frames. A mouse stays direct.
+ */
+const LOOK_GLIDE = 0.045;
+/** Arrow keys ease their turn in and out over about this long instead of starting at full speed. */
+const KEY_TURN_EASE = 0.08;
+
 /** A press that moves less than this is a click or tap, not a look-drag. */
 const TAP_SLOP = { mouse: 6, touch: 12 };
 
@@ -96,6 +107,10 @@ export function WalkController({ enabled, engaged, onStep, atTable = false }: Wa
   enabledRef.current = enabled;
   const atTableRef = useRef(atTable);
   atTableRef.current = atTable;
+  /** Look still to apply from touch and trackpad, radians. */
+  const glide = useRef({ yaw: 0, pitch: 0 });
+  /** The arrow keys' current turn speed, eased toward what is held. */
+  const keyTurn = useRef({ yaw: 0, pitch: 0 });
 
   useEffect(() => {
     const pose = walkRig.lastPose ?? resumedSession()?.pose ?? null;
@@ -235,7 +250,10 @@ export function WalkController({ enabled, engaged, onStep, atTable = false }: Wa
       // Zoomed in, the same swipe turns less, so aiming stays steady.
       const base = (press.touch ? 3.4 / Math.max(window.innerWidth, window.innerHeight) : 0.0032) / walkView.zoom;
       const look = lookTurn(dx, dy, base, controlSettings);
-      turn(camera, look.yaw, look.pitch);
+      if (press.touch) {
+        glide.current.yaw += look.yaw;
+        glide.current.pitch += look.pitch;
+      } else turn(camera, look.yaw, look.pitch);
     };
     const up = (event: PointerEvent) => {
       touches.delete(event.pointerId);
@@ -264,7 +282,8 @@ export function WalkController({ enabled, engaged, onStep, atTable = false }: Wa
       }
       const scale = event.deltaMode === 1 ? 16 : 1;
       const clamp = (v: number) => THREE.MathUtils.clamp(v * scale, -60, 60);
-      turn(camera, (clamp(event.deltaX) * 0.0042) / walkView.zoom, (clamp(event.deltaY) * 0.0032) / walkView.zoom);
+      glide.current.yaw += (clamp(event.deltaX) * 0.0042) / walkView.zoom;
+      glide.current.pitch += (clamp(event.deltaY) * 0.0032) / walkView.zoom;
     };
     const menu = (event: Event) => event.preventDefault();
 
@@ -336,6 +355,10 @@ export function WalkController({ enabled, engaged, onStep, atTable = false }: Wa
     }
     if (!enabled || !engagedRef.current) {
       velocity.current.multiplyScalar(0.8);
+      glide.current.yaw = 0;
+      glide.current.pitch = 0;
+      keyTurn.current.yaw = 0;
+      keyTurn.current.pitch = 0;
       return;
     }
 
@@ -416,7 +439,24 @@ export function WalkController({ enabled, engaged, onStep, atTable = false }: Wa
     // Arrows look: left / right turn, up / down look up and down.
     const yaw = (k.ArrowLeft ? -1 : 0) + (k.ArrowRight ? 1 : 0);
     const pitch = (k.ArrowUp ? 1 : 0) - (k.ArrowDown ? 1 : 0);
-    if (yaw || pitch) turn(camera, (yaw * 1.9 * delta) / walkView.zoom, (-pitch * 1.3 * delta) / walkView.zoom);
+    const ease = 1 - Math.exp(-delta / KEY_TURN_EASE);
+    const kt = keyTurn.current;
+    kt.yaw += (yaw * 1.9 - kt.yaw) * ease;
+    kt.pitch += (-pitch * 1.3 - kt.pitch) * ease;
+    if (!yaw && Math.abs(kt.yaw) < 0.01) kt.yaw = 0;
+    if (!pitch && Math.abs(kt.pitch) < 0.01) kt.pitch = 0;
+    if (kt.yaw || kt.pitch) turn(camera, (kt.yaw * delta) / walkView.zoom, (kt.pitch * delta) / walkView.zoom);
+    // Touch and trackpad: the rest of the look glides in.
+    const g = glide.current;
+    if (g.yaw || g.pitch) {
+      const share = 1 - Math.exp(-rawDelta / LOOK_GLIDE);
+      const done = Math.abs(g.yaw) < 1e-4 && Math.abs(g.pitch) < 1e-4;
+      const yawNow = done ? g.yaw : g.yaw * share;
+      const pitchNow = done ? g.pitch : g.pitch * share;
+      turn(camera, yawNow, pitchNow);
+      g.yaw -= yawNow;
+      g.pitch -= pitchNow;
+    }
 
     // + / - hold to zoom.
     const zoomKey = (k.Equal || k.NumpadAdd ? 1 : 0) - (k.Minus || k.NumpadSubtract ? 1 : 0);

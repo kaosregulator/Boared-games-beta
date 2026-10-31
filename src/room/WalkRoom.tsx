@@ -71,7 +71,7 @@ import { registerRoomCatalog } from '../engine/registerRoom';
 import { bootOptionalContent } from '../engine/preload';
 import { useGraphics } from '../engine/useGraphics';
 import { EngineBridge } from '../engine/EngineBridge';
-import { LightBudget, SceneWarmup } from '../engine/SceneWarmup';
+import { FirstDrawGate, LightBudget, SceneWarmup } from '../engine/SceneWarmup';
 import { DemandTicker } from '../engine/DemandTicker';
 import { diagnosticsEnabled } from '../engine/diagGate';
 import { noteContextLoss, noteContextRestored } from '../engine/recovery';
@@ -177,6 +177,12 @@ interface WalkRoomProps {
  * glow. A game's lamps take the place of the shelf bulbs and lava lamp glows.
  */
 const ROOM_LIGHT_BUDGET = 21;
+/**
+ * Spot lights held steady the same way: the Hot Wheels headlight and the
+ * board game's table lamp. Without the stand-in, starting a race rebuilt
+ * every lit shader in the room in one frame (13 of them).
+ */
+const ROOM_SPOT_BUDGET = 1;
 
 const ALL_SLOTS = [...SHELF_SLOTS, ...SHELF_SLOTS_LOWER, ...DESK_SLOTS];
 
@@ -400,6 +406,11 @@ export function WalkRoom({
   /** Sandwich Stacker is out on the desk: the room draws every frame and has the keys. */
   const sandwichOn = useSandwichStage() !== 'off' && atPc;
   const atPcStill = atPc && flashPhase === 'idle' && !sandwichOn;
+  // Playing the NES the view holds still on the TV, so the room only redraws
+  // a few times a second (any drag or touch still gets full rate) and the
+  // emulator, on the same thread, gets the rest. The room was redrawing all
+  // 1.4M triangles every frame behind the game.
+  const atNesStill = emulatorOn && flashPhase === 'idle';
   // Stepping away from the desk mid-game ends it.
   useEffect(() => {
     if (!atPc) stopSandwich();
@@ -1147,9 +1158,18 @@ export function WalkRoom({
   useEffect(() => () => openCapsule(null), []);
 
 
+  const frameloop =
+    !engaged && !scripted
+      ? 'never'
+      : override.capture || seated || atPcStill || atNesStill
+        ? 'demand'
+        : holding
+          ? 'never'
+          : 'always';
+
   return (
     // isolate: the TV left on in the room sits just under the canvas, above this background
-    <div data-room data-crouch={crouched ? '1' : '0'} data-dpr={gfx.dpr} data-graphics={gfx.effective} className="relative isolate w-full h-[100dvh] overflow-hidden bg-[#140c14] select-none overscroll-none">
+    <div data-room data-frameloop={frameloop} data-crouch={crouched ? '1' : '0'} data-dpr={gfx.dpr} data-graphics={gfx.effective} className="relative isolate w-full h-[100dvh] overflow-hidden bg-[#140c14] select-none overscroll-none">
       <Canvas
         key={glKey}
         style={{ touchAction: 'none' }}
@@ -1160,15 +1180,7 @@ export function WalkRoom({
         // is ready the moment play is pressed and the reel plays smoothly meanwhile.
         // At the PC the view is still, so it only draws when something changes
         // and Windows (same thread, in its iframe) gets the time.
-        frameloop={
-          !engaged && !scripted
-            ? 'never'
-            : override.capture || seated || atPcStill
-              ? 'demand'
-              : holding
-                ? 'never'
-                : 'always'
-        }
+        frameloop={frameloop}
         dpr={override.capture ? override.dpr : gfx.dpr}
         camera={{ fov: 72, near: 0.08, far: 40, position: [0.02, 1.58, 1.32] }}
         // alpha so the room TV's picture can show through the hole cut for it (RoomTvGlass)
@@ -1211,9 +1223,11 @@ export function WalkRoom({
         <color attach="background" args={['#2a2030']} />
         <EngineBridge />
         <SceneWarmup />
+        <FirstDrawGate />
         {atPcStill && <DemandTicker idleFps={8} />}
+        {atNesStill && <DemandTicker idleFps={20} />}
         {/* The light count never changes, so no shader is rebuilt when a game or the PC switches on. */}
-        <LightBudget budget={ROOM_LIGHT_BUDGET} />
+        <LightBudget budget={ROOM_LIGHT_BUDGET} spots={ROOM_SPOT_BUDGET} />
         <RealRoomScene
           games={games}
           hoveredId={aimed?.inReach ? aimed.id : null}

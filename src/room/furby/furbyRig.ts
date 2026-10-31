@@ -210,7 +210,13 @@ export function buildFurbyRig(source: THREE.Object3D, tint?: THREE.ColorRepresen
 
   const mesh = new THREE.SkinnedMesh(geo, material);
   mesh.name = 'furby';
-  mesh.frustumCulled = false;
+  // Culled like everything else, against a sphere roomy enough for any pose:
+  // the bones nod, lean, squash and hop it at most a hand's width out of its
+  // rest shape. Never culling it drew its 130k triangles in every frame, even
+  // with the bed behind you.
+  geo.computeBoundingSphere();
+  mesh.boundingSphere = geo.boundingSphere!.clone();
+  mesh.boundingSphere.radius = mesh.boundingSphere.radius * 1.5 + 0.25;
   mesh.add(bones.root);
   // Bind in the rest pose: the inverses come from the bones' world matrices.
   mesh.updateMatrixWorld(true);

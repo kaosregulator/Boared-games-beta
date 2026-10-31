@@ -22,7 +22,8 @@ test('high preset caps pixel ratio at 2 and, with adaptive off, does not drop', 
   assert.equal(dprForPreset('balanced', 3), 1.5);
   assert.equal(dprForPreset('low', 3), 1);
   assert.equal(currentGraphics().preset, 'high');
-  assert.equal(currentGraphics().adaptive, true);
+  // Off unless the player turns it on: every device keeps the same picture.
+  assert.equal(currentGraphics().adaptive, false);
   setAdaptive(false);
   assert.equal(currentGraphics().dpr, 2);
   noteFrameRate(10, 0);
@@ -59,6 +60,7 @@ test('a level that could not hold 40 fps is not climbed back to', () => {
   resetLogForTests();
   resetGraphicsForTests();
   setMeasuredDevicePixelRatio(2);
+  setAdaptive(true);
   // A dip while the room is still warming up can be climbed back from.
   noteFrameRate(30, 0);
   noteFrameRate(30, 3000);
@@ -106,7 +108,7 @@ test('a saved choice is explicit and a missing save stays high', () => {
   Object.defineProperty(globalThis, 'localStorage', { value: storage, configurable: true });
   hydrateGraphicsFromStorage();
   assert.equal(currentGraphics().preset, 'high');
-  assert.equal(currentGraphics().adaptive, true);
+  assert.equal(currentGraphics().adaptive, false);
   resetGraphicsForTests();
   memory.set('engine:graphics-preset', 'balanced');
   memory.set('engine:graphics-adaptive', '0');

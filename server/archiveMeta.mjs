@@ -14,7 +14,12 @@ import { log as defaultLog } from '../logCore.mjs';
  *  - failures retry with exponential backoff and jitter, for up to 2 minutes
  *    in the background; a visitor waits at most 20 s, then asks again and
  *    joins the same lookup or finds the answer cached;
- *  - while archive.org is down, an item already looked up keeps its old answer.
+ *  - while archive.org is down, an item already looked up keeps its old answer;
+ *  - an answer past its 6 h is still sent at once (for up to a day) while a
+ *    fresh one is fetched behind it, so a channel never waits on archive.org
+ *    for an item someone already watched;
+ *  - snapshot() / restore() carry the cache across a restart or a deploy, so
+ *    a launch-day redeploy doesn't send every channel back to the queue.
  *
  * Only the media files are sent on, so the browser gets a few KB, not the
  * whole item record.
@@ -63,6 +68,8 @@ export function createArchiveMeta({
   ttlMs = 6 * 60 * 60 * 1000,
   missTtlMs = 10 * 60 * 1000,
   staleGraceMs = 5 * 60 * 1000,
+  /** How long past its ttl an answer is still sent at once while a fresh one is fetched. 0 turns it off. */
+  serveStaleMs = 24 * 60 * 60 * 1000,
   maxEntries = 2_000,
   maxQueue = 200,
   random = Math.random,
@@ -77,7 +84,7 @@ export function createArchiveMeta({
   let lastStart = 0;
   let pausedUntil = 0;
   let timer = null;
-  const stats = { lookups: 0, hits: 0, shared: 0, upstream: 0, rateLimited: 0, retries: 0, stale: 0, failures: 0 };
+  const stats = { lookups: 0, hits: 0, shared: 0, upstream: 0, rateLimited: 0, retries: 0, stale: 0, failures: 0, refreshed: 0 };
 
   // ---- the shared queue ----------------------------------------------------
 
@@ -225,16 +232,27 @@ export function createArchiveMeta({
   function lookup(id) {
     stats.lookups++;
     const hit = cache.get(id);
-    if (hit && hit.expires > Date.now()) {
+    const now = Date.now();
+    if (hit && hit.expires > now) {
       stats.hits++;
       remember(id, hit);
       return Promise.resolve({ files: hit.files, missing: hit.missing });
     }
     const pending = inflight.get(id);
+    if (hit && !hit.missing && now - hit.expires < serveStaleMs) {
+      // Old but good: answer now, refresh behind it (one refresh, however many ask).
+      stats.refreshed++;
+      if (!pending) fetchFresh(id, hit).catch(() => {});
+      return Promise.resolve({ files: hit.files, missing: hit.missing });
+    }
     if (pending) {
       stats.shared++;
       return pending;
     }
+    return fetchFresh(id, hit);
+  }
+
+  function fetchFresh(id, hit) {
     const job = fetchFiles(id)
       .then(files => {
         const missing = files.length === 0;
@@ -277,7 +295,8 @@ export function createArchiveMeta({
       }
       const { files, missing } = result;
       if (missing) send(404, { error: 'No playable files', id }, { 'Cache-Control': 'public, max-age=600' });
-      else send(200, { id, files }, { 'Cache-Control': 'public, max-age=3600' });
+      // A browser or CDN may reuse it for an hour, and keep showing it for a day while it checks again.
+      else send(200, { id, files }, { 'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400' });
     } catch (err) {
       const secs = Math.max(1, Math.ceil((err?.retryAfterMs || 5_000) / 1000));
       send(503, { error: 'archive.org is busy, try again soon' }, { 'Cache-Control': 'no-store', 'Retry-After': String(secs) });
@@ -297,7 +316,29 @@ export function createArchiveMeta({
     };
   }
 
-  return { lookup, handle, status };
+  /** The cache as plain data, for saving: [[id, { files, missing, expires }], ...]. */
+  function snapshot() {
+    return [...cache.entries()];
+  }
+
+  /** Put a snapshot back, skipping anything too old to send even while refreshing. */
+  function restore(entries) {
+    if (!Array.isArray(entries)) return 0;
+    const now = Date.now();
+    let n = 0;
+    for (const entry of entries) {
+      if (!Array.isArray(entry) || entry.length !== 2) continue;
+      const [id, e] = entry;
+      if (typeof id !== 'string' || !ID.test(id) || !e || !Array.isArray(e.files) || typeof e.expires !== 'number') continue;
+      if (e.missing ? e.expires <= now : now - e.expires >= serveStaleMs) continue;
+      if (cache.has(id)) continue;
+      remember(id, { files: e.files, missing: Boolean(e.missing), expires: e.expires });
+      n++;
+    }
+    return n;
+  }
+
+  return { lookup, handle, status, snapshot, restore };
 }
 
 /** The one instance the server (and the Vite dev server) shares. */

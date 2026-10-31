@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { balanceLights, warmObject } from './warmup';
+import { balanceLights, finished, pendingTextures, warmObject, type ProgramLike } from './warmup';
 
 /**
  * Keeps the GPU a step ahead of the room. Every so often it looks for
@@ -123,7 +123,7 @@ export function SceneWarmup({ everyMs = 700 }: { everyMs?: number }) {
  * that switches on or off rebuilds a shader, and walking about costs the GPU
  * no more lights than before.
  */
-export function LightBudget({ budget }: { budget: number }) {
+export function LightBudget({ budget, spots = 0 }: { budget: number; spots?: number }) {
   const scene = useThree(state => state.scene);
   const spares = useMemo(() => {
     const group = new THREE.Group();
@@ -137,12 +137,23 @@ export function LightBudget({ budget }: { budget: number }) {
       group.add(light);
       list.push(light);
     }
-    return { group, list };
-  }, [budget]);
+    // Spot lights are counted apart from point lights, so a game's spot
+    // (the Hot Wheels headlight) gets a dark stand-in of its own.
+    const spotList: THREE.SpotLight[] = [];
+    for (let i = 0; i < spots; i++) {
+      const light = new THREE.SpotLight(0x000000, 0, 0.001, 0.1, 0, 2);
+      light.position.set(0, -50, 0);
+      light.target.position.set(0, -51, 0);
+      light.visible = false;
+      group.add(light, light.target);
+      spotList.push(light);
+    }
+    return { group, list, spotList };
+  }, [budget, spots]);
 
   useEffect(() => {
     scene.add(spares.group);
-    scene.userData.lightBudget = { budget, spares: spares.list, group: spares.group };
+    scene.userData.lightBudget = { budget, spares: spares.list, spotSpares: spares.spotList, group: spares.group };
     return () => {
       scene.remove(spares.group);
       delete scene.userData.lightBudget;
@@ -184,4 +195,147 @@ export function useWarmReveal(ref: React.RefObject<THREE.Object3D | null>, armed
   }, [armed, ready, ref, gl, scene, camera, invalidate, timeoutMs]);
 
   return ready;
+}
+
+interface Held {
+  mask: number;
+  since: number;
+  mats: THREE.Material[];
+  textures: THREE.Texture[];
+}
+
+type Drawable = THREE.Mesh | THREE.Points | THREE.Line | THREE.Sprite;
+
+/**
+ * The room's last line against first-draw freezes. SceneWarmup only looks
+ * every 0.7 s, and anything that mounts and draws in the same frame (the Hot
+ * Wheels track, the TV's picture, a game's pieces, the army men) used to have
+ * its shaders built inside that frame: one frame held for every new shader.
+ * Starting Hot Wheels built 16 in one frame.
+ *
+ * Before each frame this looks for drawn things whose material it hasn't seen.
+ * It starts their shaders and textures and keeps those things out of the
+ * picture (an empty layer mask; nothing else in the room uses layers) until
+ * they are ready, usually a frame or two later:
+ *  - with KHR_parallel_shader_compile (Chrome, Edge, Safari, most phones) the
+ *    driver builds them on its own threads and the frame never waits;
+ *  - without it, one shader is linked per frame, so twelve new shaders are
+ *    twelve short frames instead of one long freeze.
+ * Nothing is drawn differently once it shows, and nothing waits longer than
+ * `holdMaxMs`. Whatever is already in the scene when the room first draws
+ * goes through untouched: the loading cover and the title warm-up have it.
+ */
+export function FirstDrawGate({ holdMaxMs = 1500 }: { holdMaxMs?: number }) {
+  const gl = useThree(state => state.gl);
+  const scene = useThree(state => state.scene);
+  const camera = useThree(state => state.camera);
+  const st = useMemo(
+    () => ({
+      started: false,
+      ready: new WeakMap<THREE.Material, number>(),
+      held: new Map<Drawable, Held>(),
+      /** Things that keep getting new materials (a material made per frame): never held again. */
+      strikes: new WeakMap<Drawable, number>(),
+      fresh: [] as Drawable[],
+    }),
+    [],
+  );
+
+  useFrame(() => {
+    const parallel = gl.extensions.has('KHR_parallel_shader_compile');
+    const props = gl.properties as unknown as { get: (m: object) => { currentProgram?: ProgramLike; __version?: number } };
+    const now = performance.now();
+    const seen = (m: THREE.Material) => st.ready.get(m) === m.version;
+    const mark = (m: THREE.Material) => st.ready.set(m, m.version);
+
+    // Find drawn things with a material not seen before.
+    const fresh = st.fresh;
+    fresh.length = 0;
+    const walk = (obj: THREE.Object3D) => {
+      if (!obj.visible) return;
+      const d = obj as Drawable;
+      const mat = (d as THREE.Mesh).material;
+      if (mat && !st.held.has(d) && ((d as THREE.Mesh).isMesh || (d as THREE.Points).isPoints || (d as THREE.Line).isLine || (d as THREE.Sprite).isSprite)) {
+        if (Array.isArray(mat)) {
+          for (let i = 0; i < mat.length; i++) {
+            if (!seen(mat[i])) {
+              fresh.push(d);
+              break;
+            }
+          }
+        } else if (!seen(mat)) fresh.push(d);
+      }
+      const kids = obj.children;
+      for (let i = 0; i < kids.length; i++) walk(kids[i]);
+    };
+    walk(scene);
+
+    if (!st.started) {
+      // The first frame drawn: the room as it is goes straight in.
+      st.started = true;
+      for (const d of fresh) ([] as THREE.Material[]).concat(d.material).forEach(mark);
+      fresh.length = 0;
+    }
+
+    if (fresh.length) {
+      balanceLights(scene);
+      for (const d of fresh) {
+        const mats = ([] as THREE.Material[]).concat(d.material);
+        const n = (st.strikes.get(d) ?? 0) + 1;
+        st.strikes.set(d, n);
+        if (n > 4 || d.userData.noGate) {
+          mats.forEach(mark);
+          continue;
+        }
+        try {
+          gl.compile(d, camera, scene);
+        } catch {
+          mats.forEach(mark);
+          continue;
+        }
+        // Only what isn't on the GPU yet (the title warm-up or an earlier frame may have sent it).
+        const textures = pendingTextures(d).filter(t => props.get(t).__version !== t.version);
+        st.held.set(d, { mask: d.layers.mask, since: now, mats, textures });
+        d.layers.mask = 0;
+      }
+    }
+
+    if (!st.held.size) return;
+    // Let through what is ready. Without parallel compile, link one new shader per frame.
+    let linkBudget = 1;
+    let uploadBudget = 4;
+    for (const [d, h] of st.held) {
+      let done = true;
+      for (const m of h.mats) {
+        const prog = props.get(m).currentProgram;
+        if (!prog || finished.has(prog)) continue;
+        if (parallel) {
+          if (prog.isReady()) finished.add(prog);
+          else done = false;
+        } else if (linkBudget > 0) {
+          linkBudget -= 1;
+          prog.getUniforms();
+          finished.add(prog);
+        } else done = false;
+      }
+      while (done && h.textures.length && uploadBudget > 0) {
+        uploadBudget -= 1;
+        const tex = h.textures.pop()!;
+        try {
+          gl.initTexture(tex);
+        } catch {
+          // it uploads (or fails) on first draw, as before
+        }
+      }
+      if (h.textures.length) done = false;
+      if (done || now - h.since > holdMaxMs || !d.parent) {
+        // Leave a mask alone if its owner set one meanwhile.
+        if (d.layers.mask === 0) d.layers.mask = h.mask;
+        h.mats.forEach(mark);
+        st.held.delete(d);
+      }
+    }
+  }, -1);
+
+  return null;
 }

@@ -85,6 +85,8 @@ export async function uploadTextures(gl: THREE.WebGLRenderer, textures: THREE.Te
 interface Budget {
   budget: number;
   spares: THREE.PointLight[];
+  /** Dark spot lights standing in for a game's spot (the Hot Wheels headlight, the board game lamp). */
+  spotSpares?: THREE.SpotLight[];
   group: THREE.Object3D;
 }
 
@@ -115,6 +117,7 @@ export function balanceLights(scene: THREE.Scene) {
   const b = scene.userData.lightBudget as Budget | undefined;
   if (!b) return;
   let real = 0;
+  let spots = 0;
   scratch.length = 0;
   // Furniture clones are marked noPointLights: walking into every mesh of every
   // model, every frame, was a steady cost on the same thread as the picture.
@@ -125,7 +128,7 @@ export function balanceLights(scene: THREE.Scene) {
     if (light.isPointLight && obj.parent !== b.group) {
       if (typeof obj.userData.expendable === 'number') scratch.push(obj);
       else real += 1;
-    }
+    } else if ((obj as THREE.SpotLight).isSpotLight && obj.parent !== b.group) spots += 1;
     const kids = obj.children;
     for (let i = 0; i < kids.length; i++) walk(kids[i]);
   };
@@ -139,15 +142,18 @@ export function balanceLights(scene: THREE.Scene) {
     } else light.layers.disable(0);
   }
   for (let i = 0; i < b.spares.length; i++) b.spares[i].visible = i < room;
+  const spotSpares = b.spotSpares ?? [];
+  for (let i = 0; i < spotSpares.length; i++) spotSpares[i].visible = i < spotSpares.length - spots;
   scratch.length = 0;
 }
 
-interface ProgramLike {
+export interface ProgramLike {
   isReady: () => boolean;
   getUniforms: () => unknown;
 }
 
-const finished = new WeakSet<object>();
+/** Programs known to be linked, so asking for their uniforms won't wait on the driver. */
+export const finished = new WeakSet<object>();
 
 /**
  * Like WebGLRenderer.compileAsync, and where the browser has

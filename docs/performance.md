@@ -107,3 +107,91 @@ The last model lands about 3 s later on a cold HTTP/2 load. With the models no l
 - Textures loaded through `ImageLoader` (posters) and the radio/TV media don't go through the line. They are small or streamed.
 - `YahtzeeGame` is a 2.2 MB lazy chunk (something big is inlined); worth a look.
 - If a model is added under a new extension, add it to `HEAVY` in `netQueue.ts` and `VERSIONED` in `precompress.mjs`.
+
+# Launch pass (October 31 2026)
+
+Handoff notes for the pass before the public Discord launch. The goal was smoother walking, turning, TV + mini game and shrunk-down play, the Game Boy and NES, and a server ready for a rush of visitors, **with the same picture and features on phone, laptop and PC**. No texture, model, light, pixel-ratio or feature was cut.
+
+## What was wrong
+
+| Symptom | Cause |
+| --- | --- |
+| Freeze when the TV turns on, a race starts, a game opens | `SceneWarmup` only looks for new materials every 0.7 s. Anything that mounts and draws in the same frame (the TV picture, the Hot Wheels track, the board game lamp) had its shaders built inside that frame. Starting Hot Wheels built 16 in one frame. |
+| Starting a race rebuilt the room | The Hot Wheels headlight is a spot light. The spot count is part of every lit shader, and `LightBudget` only held point lights steady, so the whole room's lit shaders were rebuilt. |
+| Extra GPU work while walking | The bed Furby (130k triangles) was never frustum culled, so it was drawn in every frame, even with the bed behind you. |
+| Turning judders on touch and trackpads | Each touch / trackpad event turned the camera straight away. Those events arrive at the device's own rate, out of step with the screen, so some frames turned twice as far as the next. Arrow keys started and stopped at full speed. |
+| Slow phones looked worse | Adaptive graphics was on by default: a device that dipped under 40 fps had its pixel ratio stepped down (a softer picture than everyone else, and a canvas resize hitch). |
+| Game Boy slow the first time | The idle preload fetched `gambatte-wasm.data`, but EmulatorJS plays `gambatte-legacy-wasm.data` (neither core report sets `defaultWebGL2`), so the real core downloaded on the spot. The NES core and NES carts weren't preloaded at all. |
+| NES stutters | Playing the NES, the view is still on the TV, yet the room redrew all of its 1.4M triangles every frame on the emulator's thread. |
+| TV channels slow after a deploy | The archive.org lookup cache lived only in memory. Every deploy emptied it, and every channel queued for archive.org again (2 at a time). An answer past its 6 h also made the next viewer wait for a fresh one. |
+| Occasional failed files under load | Node closes idle keep-alive sockets after 5 s. Railway's proxy reuses its connections longer, and a request sent down a socket just as Node closes it comes back as a 502. |
+| Deploys cut downloads | SIGTERM called `process.exit(0)` straight away. |
+
+## What changed
+
+- **`FirstDrawGate`** (`src/engine/SceneWarmup.tsx`, mounted in `WalkRoom`). Before each frame it looks for drawn things whose material it hasn't seen yet. It starts their shaders (`gl.compile`) and textures, and keeps them out of the picture (an empty `layers.mask`; nothing else in the room uses layers) until they are ready. With `KHR_parallel_shader_compile` (Chrome, Edge, Safari, most phones) the driver builds them on its own threads and the frame never waits. Without it, one shader is linked per frame. Nothing waits more than 1.5 s. Whatever is in the scene on the first drawn frame goes straight through, and a thing that keeps getting new materials is let through after 4 holds. `userData.noGate` opts something out.
+- **Spot lights in the light budget.** `LightBudget spots={1}` keeps one dark stand-in spot light that steps out when a game brings its own (`ROOM_SPOT_BUDGET` in `WalkRoom.tsx`). **If something can bring a second spot light at the same time, raise it.** The board game lamp no longer has `castShadow`: the room renderer has no shadow maps, so it did nothing except change the shader key.
+- **Furby culling.** `furbyRig.ts` gives the skinned mesh a bounding sphere 1.5x its rest size + 0.25, which covers any nod, lean, squash or hop, instead of `frustumCulled = false`.
+- **Look glide** (`WalkController.tsx`). Touch and trackpad/wheel turns are applied over about 45 ms (`LOOK_GLIDE`). The turn is the same size, spread over a few frames. The mouse stays direct. Arrow-key turns ease in and out over about 80 ms (`KEY_TURN_EASE`).
+- **Adaptive graphics off by default** (`graphics.ts`). Every device stays on High. A player can still turn it on in the Engine panel.
+- **Cartridges**: `cartridgeWarmList()` preloads the `-legacy` cores EmulatorJS really uses, for both consoles, plus the NES carts.
+- **NES**: while the emulator plays and the view is still, the room draws on demand at 20 fps (`atNesStill`, a `DemandTicker`). A drag or touch still gets the full rate. The room div has `data-frameloop` for scripts.
+- **Server** (`server.mjs`, `server/archiveMeta.mjs`, `server/db.mjs`):
+  - The archive.org cache is saved to the data dir (`archive-cache.json`) every 2 minutes and on shutdown, then restored at boot. **Attach a Railway volume and set `DATA_DIR`** (or rely on `RAILWAY_VOLUME_MOUNT_PATH`) so it survives deploys, not only restarts.
+  - An answer past its 6 h is still sent at once, for up to a day (`serveStaleMs`), while one refresh runs behind it.
+  - `/api/archive` 200s also carry `stale-while-revalidate=86400`.
+  - `keepAliveTimeout` 65 s, `headersTimeout` 66 s.
+  - SIGTERM saves the cache, stops taking connections, lets requests in flight finish (10 s at most), then exits.
+  - The Postgres pool defaults to 10 (`PG_POOL_MAX`).
+
+## How it was measured
+
+Production build, `node server.mjs`, Playwright's Chromium on SwiftShader (software GL, 4 cores, no `KHR_parallel_shader_compile`). The scripts are in `scripts/perf/` (they need `playwright`, which the cloud sandbox has; `TV_CLIP` points at any short H.264 mp4 that stands in for archive.org, made with `ffmpeg -i public/menu/reel.mp4 -t 60 -vf scale=640:-2 tvclip.mp4`). "Before" is main at `0b635c0`.
+
+Software GL draws this room at well under 1 fps, so frame rates here say nothing about a real GPU. What carries over to any device is the work: shaders built inside a frame, triangles drawn, and the longest main-thread task when something starts. SwiftShader is the worst case for the shader rows: it has no parallel compile, so each build blocks. On a GPU that has it, the gate's waits drop to zero.
+
+| Moment (`events.cjs`, `cpu.cjs`, `views.cjs`) | Before | After |
+| --- | --- | --- |
+| Turning the TV on: longest main-thread task | 9.2 s | 0.13 s |
+| Starting Hot Wheels: shaders built in one frame | 16 | 0–3 (one per frame at most) |
+| Starting Hot Wheels: new shaders needed | 20 | 5 |
+| Starting Hot Wheels: longest frame | 7.3 s | 0.12–0.25 s (one run hit 7.5 s; see below) |
+| Triangles drawn, looking at the ceiling | 129k | 0.6k |
+| Triangles drawn, looking back toward the door | 546k | 417k |
+| Triangles drawn, looking right | 735k | 606k |
+| Triangles drawn, spawn view | 1.49M | 1.36M |
+| Walking and turning: shaders built mid-walk | 0 | 0 |
+| Graphics level after a slow minute (test browser) | stepped down to Low (dpr 1) | stays High |
+| Game Boy: core file preloaded | the wrong one (`gambatte-wasm.data`) | the one it plays (`gambatte-legacy-wasm.data`) |
+| NES: core and carts preloaded | no | yes |
+| NES playing: room redraws | every frame | 20 a second while the view is still |
+
+Starting a race still needs 5 new shaders for the race's own pieces. Without parallel compile each one blocks once (one per frame now, not all in one), which is the 7.5 s outlier in software GL.
+
+The army men town still builds 12 shaders for its pieces. It already sat behind "Shrinking you down…" (`useWarmReveal`), so on a GPU with parallel compile there is no freeze. In software GL the longest task went from 14.8 s to 7.1 s.
+
+Server, `load.mjs` (localhost, 100 visitors, 50 loading at once; each loads the page, its bundles, the manifest and all 45 room models as `?v=hash` brotli, six at a time like the room):
+
+| | Result |
+| --- | --- |
+| Errors | 0 of 5,300 files |
+| Page | p50 54 ms, p99 122 ms |
+| Bundles | p50 484 ms, p99 871 ms |
+| Models | p50 0.9 s, p99 3.7 s |
+| Throughput | about 190 MB/s from one Node process |
+
+That was the same before and after: the server wasn't the bottleneck. On Railway the limit is bandwidth. Each first visit is about 117 MB of models. The keep-alive change only shows behind a proxy that reuses connections, which localhost doesn't have.
+
+TV lookups right after a deploy (`archload.mjs`: 300 viewers at once across 40 channel items, archive.org answering in 0.6–1.2 s):
+
+| | Before (empty cache) | After (cache restored, refreshing behind) |
+| --- | --- | --- |
+| Wait for a channel, p50 | 9.1 s | 1 ms |
+| Wait for a channel, p95 | 17.1 s | 3 ms |
+
+## Left to do / ideas
+
+- **Put Cloudflare (free plan) in front of the Railway URL.** It gives the most for the launch. The headers are already CDN-ready: hashed models and `/assets` are `immutable` for a year, the rest is a day plus a week of stale-while-revalidate, and pages are `no-cache`. A CDN would serve the 117 MB per visitor from the edge instead of from one Railway container.
+- The room is 1.36M triangles and 175 draws at spawn. The big Tripo models (80–270k each) were restored to full detail on purpose. Merging static props into fewer draws would be the next GPU win that changes nothing on screen.
+- The Game Boy still takes a few seconds to boot after the files arrive: EmulatorJS unpacks its 7z core and compiles the WebAssembly each time.
+- Measuring on a real GPU (a phone over USB with remote debugging) would give real frame times. Watch `?diag=1` → Engine panel.

@@ -236,7 +236,6 @@ export function BoardUnfoldScene({
         distance={5}
         decay={2}
         color="#ffe6bd"
-        castShadow
       />
       <Suspense fallback={null}>
         <VideoRoomScene hoveredId={null} pulledGameId={null} tapeOn={false} lampsWarm={false} />
